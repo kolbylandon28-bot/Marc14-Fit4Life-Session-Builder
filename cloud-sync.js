@@ -14,12 +14,14 @@
     checkins: "fit4life_checkins_v1",
     metrics: "fit4life_athlete_metrics_v1",
     gymBrand: "fit4life_gym_brand_v1",
+    gymEquipment: "fit4life_gym_equipment_v1",
     teams: "fit4life_teams_v1",
     mentalPlans: "fit4life_mental_plans_v1",
     marketPrograms: "fit4life_market_programs_v1",
     wearableConnections: "fit4life_wearable_connections_v1",
     automations: "fit4life_automations_v1",
     automationAlerts: "fit4life_automation_alerts_v1",
+    exerciseLibraryEdits: "fit4life_exercise_library_edits_v1",
     clientDaily: "fit4life_client_daily_v1",
     clientMessages: "fit4life_client_messages_v1",
     activeWorkout: "fit4life_active_workout_v1",
@@ -32,7 +34,7 @@
     CLOUD_KEYS.goals, CLOUD_KEYS.checkins, CLOUD_KEYS.metrics,
     CLOUD_KEYS.teams, CLOUD_KEYS.mentalPlans, CLOUD_KEYS.marketPrograms,
     CLOUD_KEYS.automations, CLOUD_KEYS.automationAlerts,
-    CLOUD_KEYS.clientMessages
+    CLOUD_KEYS.clientMessages, CLOUD_KEYS.exerciseLibraryEdits
   ]);
 
   let cloudClient = null;
@@ -47,6 +49,10 @@
   let cloudChannel = null;
   let cloudRegistrationChannel = null;
   let cloudRegistrationRequests = [];
+  let portalOrganizationId = "";
+  let portalOrganizationSlug = "fit-4-life";
+  let portalPublicRegistrationEnabled = true;
+  let cloudOrganizationSlug = "";
   let authMode = "signin";
   const pendingScopes = new Set();
   const remoteProfilesByExternalId = new Map();
@@ -54,6 +60,8 @@
   window.fit4lifeCloudRole = "";
   window.fit4lifeCloudReady = false;
   window.fit4lifeCloudRegistrationRequests = [];
+  window.fit4lifeCloudOrganizationId = "";
+  window.fit4lifeCloudOrganizationSlug = "";
 
   function readJson(key, fallback) {
     try {
@@ -86,6 +94,51 @@
 
   function sameClientName(a, b) {
     return Boolean(a && b) && normalizedName(a) === normalizedName(b);
+  }
+
+  function requestedPortalSlug() {
+    try {
+      const value = new URLSearchParams(window.location.search).get("gym");
+      return String(value || "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function portalName() {
+    const brand = readJson(CLOUD_KEYS.gymBrand, {});
+    return String(brand.name || "your gym").trim();
+  }
+
+  function applyPortalContext(context) {
+    if (!context) return null;
+    portalOrganizationId = context.organization_id || portalOrganizationId;
+    portalOrganizationSlug = context.slug || portalOrganizationSlug;
+    portalPublicRegistrationEnabled = context.public_registration_enabled !== false;
+    if (context.brand_config && typeof context.brand_config === "object") writeJson(CLOUD_KEYS.gymBrand, context.brand_config);
+    if (context.equipment_config && typeof context.equipment_config === "object") writeJson(CLOUD_KEYS.gymEquipment, context.equipment_config);
+    try { if (typeof applyGymBrand === "function") applyGymBrand(); } catch (_) {}
+    const signupTab = document.querySelector && document.querySelector('[data-auth-mode="signup"]');
+    if (signupTab) signupTab.style.display = portalPublicRegistrationEnabled ? "" : "none";
+    return context;
+  }
+
+  async function loadPortalContext() {
+    if (!cloudClient) return null;
+    const slug = requestedPortalSlug();
+    const hostname = String(window.location.hostname || "").toLowerCase();
+    let response = await cloudClient.rpc("resolve_gym_portal", {
+      requested_slug: slug || null,
+      requested_hostname: hostname || null
+    });
+    let context = !response.error && Array.isArray(response.data) ? response.data[0] : null;
+    if (!context && !slug) {
+      response = await cloudClient.rpc("resolve_gym_portal", { requested_slug: null, requested_hostname: null });
+      context = !response.error && Array.isArray(response.data) ? response.data[0] : null;
+    }
+    if (context) return applyPortalContext(context);
+    portalOrganizationSlug = slug || "fit-4-life";
+    return null;
   }
 
   function itemBelongsToProfile(item, profile) {
@@ -164,9 +217,9 @@
       signin: ["Sign in to your workspace", "Access your workouts and progress from any device."],
       signup: ["Create your client account", "Choose your login details. A trainer will approve or connect your coaching profile."],
       reset: ["Reset your password", "We will email you a secure link to choose a new password."],
-      update: ["Choose a new password", "Enter a new password for your FIT 4 LIFE account."],
+      update: ["Choose a new password", "Enter a new password for your training account."],
       pending: ["Account status", "Your secure login is active while your client access is reviewed."]
-    }[authMode] || ["FIT 4 LIFE account", "Secure shared training system."];
+    }[authMode] || ["Training account", "Secure shared training system."];
     setText("cloudAuthTitle", copy[0]);
     setText("cloudAuthIntro", copy[1]);
     authMessage("", false);
@@ -195,12 +248,12 @@
     if (status === "rejected") {
       setText("cloudPendingIcon", "!");
       setText("cloudPendingTitle", "Request needs attention");
-      setText("cloudPendingCopy", request.review_note || "A trainer could not approve this request. Contact FIT 4 LIFE for help.");
+      setText("cloudPendingCopy", request.review_note || "A trainer could not approve this request. Contact " + portalName() + " for help.");
       setText("cloudPendingCheck", "Check status again");
     } else if (needsVerification) {
       setText("cloudPendingIcon", "✉");
       setText("cloudPendingTitle", "Check your email");
-      setText("cloudPendingCopy", "Open the verification email from FIT 4 LIFE. After verification, return here and sign in while a trainer reviews your request.");
+      setText("cloudPendingCopy", "Open the verification email for " + portalName() + ". After verification, return here and sign in while a trainer reviews your request.");
       setText("cloudPendingCheck", "I verified my email");
     } else {
       setText("cloudPendingIcon", "✓");
@@ -242,23 +295,29 @@
       .select("organization_id, role, is_active")
       .eq("user_id", cloudUser.id)
       .eq("is_active", true)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .order("created_at", { ascending: true });
 
-    if (!response.error && response.data) return response.data;
+    if (!response.error && Array.isArray(response.data)) {
+      const selected = portalOrganizationId
+        ? response.data.find((membership) => membership.organization_id === portalOrganizationId)
+        : response.data[0];
+      if (selected) return selected;
+    }
 
-    const claim = await cloudClient.rpc("claim_my_client_profile");
+    const claim = portalOrganizationId
+      ? await cloudClient.rpc("claim_my_client_profile_for_org", { target_organization: portalOrganizationId })
+      : await cloudClient.rpc("claim_my_client_profile");
     if (claim.error) return null;
 
     response = await cloudClient
       .from("memberships")
       .select("organization_id, role, is_active")
       .eq("user_id", cloudUser.id)
-      .eq("is_active", true)
-      .limit(1)
-      .maybeSingle();
-    return response.error ? null : response.data;
+      .eq("is_active", true);
+    if (response.error || !Array.isArray(response.data)) return null;
+    return portalOrganizationId
+      ? response.data.find((membership) => membership.organization_id === portalOrganizationId) || null
+      : response.data[0] || null;
   }
 
   async function getMyRegistrationRequest() {
@@ -296,6 +355,55 @@
     try { if (typeof renderProfileRequests === "function") renderProfileRequests(); } catch (_) {}
     return cloudRegistrationRequests;
   }
+
+  async function loadOrganizationSettings() {
+    if (!cloudClient || !cloudOrganizationId) return null;
+    const response = await cloudClient
+      .from("organizations")
+      .select("id,slug,name,brand_config,equipment_config,public_registration_enabled,status,default_timezone,default_units,plan_code")
+      .eq("id", cloudOrganizationId)
+      .maybeSingle();
+    if (response.error || !response.data) {
+      if (response.error) console.error("Gym settings could not be loaded", response.error);
+      return null;
+    }
+    cloudOrganizationSlug = response.data.slug || portalOrganizationSlug;
+    window.fit4lifeCloudOrganizationId = cloudOrganizationId;
+    window.fit4lifeCloudOrganizationSlug = cloudOrganizationSlug;
+    applyPortalContext({
+      organization_id: response.data.id,
+      slug: response.data.slug,
+      name: response.data.name,
+      brand_config: response.data.brand_config,
+      equipment_config: response.data.equipment_config,
+      public_registration_enabled: response.data.public_registration_enabled
+    });
+    return response.data;
+  }
+
+  window.fit4lifeCloudSaveOrganizationSettings = async function fit4lifeCloudSaveOrganizationSettings(brand, equipment) {
+    if (!cloudClient || !cloudOrganizationId || cloudRole !== "owner") {
+      if (typeof showToast === "function") showToast("Only the gym owner can change shared branding and equipment");
+      return false;
+    }
+    if (!brand || typeof brand !== "object" || !equipment || typeof equipment !== "object") return false;
+    const response = await cloudClient.rpc("update_my_organization_setup", {
+      target_organization: cloudOrganizationId,
+      new_brand_config: brand,
+      new_equipment_config: equipment
+    });
+    const saved = !response.error && Array.isArray(response.data) ? response.data[0] : response.data;
+    if (response.error || !saved) {
+      if (typeof showToast === "function") showToast(response.error && response.error.message || "Gym settings could not be saved");
+      return false;
+    }
+    applyPortalContext(saved);
+    pendingScopes.add("organization");
+    clearTimeout(cloudPushTimer);
+    cloudPushTimer = setTimeout(pushPending, 200);
+    if (typeof showToast === "function") showToast("Gym setup saved for every device");
+    return true;
+  };
 
   function subscribeToPendingRegistration() {
     if (!cloudClient || !cloudUser) return;
@@ -441,10 +549,12 @@
       version: 1,
       profileRequests: readJson(CLOUD_KEYS.requests, []),
       gymBrand: readJson(CLOUD_KEYS.gymBrand, {}),
+      gymEquipment: readJson(CLOUD_KEYS.gymEquipment, {}),
       teams: readJson(CLOUD_KEYS.teams, []),
       marketPrograms: readJson(CLOUD_KEYS.marketPrograms, []),
       automations: readJson(CLOUD_KEYS.automations, []),
       automationAlerts: readJson(CLOUD_KEYS.automationAlerts, []),
+      exerciseLibraryEdits: readJson(CLOUD_KEYS.exerciseLibraryEdits, []),
       savedAt: new Date().toISOString()
     };
   }
@@ -508,10 +618,13 @@
     if (!payload) return;
     writeJson(CLOUD_KEYS.requests, payload.profileRequests || []);
     writeJson(CLOUD_KEYS.gymBrand, payload.gymBrand || {});
+    writeJson(CLOUD_KEYS.gymEquipment, payload.gymEquipment || {});
     writeJson(CLOUD_KEYS.teams, payload.teams || []);
     writeJson(CLOUD_KEYS.marketPrograms, payload.marketPrograms || []);
     writeJson(CLOUD_KEYS.automations, payload.automations || []);
     writeJson(CLOUD_KEYS.automationAlerts, payload.automationAlerts || []);
+    writeJson(CLOUD_KEYS.exerciseLibraryEdits, payload.exerciseLibraryEdits || []);
+    if (typeof window.applyExerciseLibraryEdits === "function") window.applyExerciseLibraryEdits();
   }
 
   function applyBundles(profileRows, records) {
@@ -589,9 +702,12 @@
 
       const isTrainer = cloudRole === "owner" || cloudRole === "trainer";
       const localProfiles = readJson(CLOUD_KEYS.profiles, []);
-      if (initial && isTrainer && profileResponse.data.length === 0 && localProfiles.length) {
+      const mayImportLegacyFit4Life = cloudOrganizationSlug === "fit-4-life"
+        && localStorage.getItem("fit4life_legacy_migration_complete_v1") !== "yes";
+      if (initial && isTrainer && mayImportLegacyFit4Life && profileResponse.data.length === 0 && localProfiles.length) {
         cloudStatus("Uploading existing records…", "syncing");
         await pushTrainerState(new Set(["all"]));
+        localStorage.setItem("fit4life_legacy_migration_complete_v1", "yes");
         profileResponse = await cloudClient
           .from("client_profiles")
           .select("id,organization_id,external_id,auth_user_id,full_name,username,email,status,updated_at")
@@ -615,6 +731,7 @@
         if (orgRecord) applyOrganizationBundle(orgRecord.payload);
         await loadTrainerRegistrationRequests();
       }
+      await loadOrganizationSettings();
       cloudApplying = false;
       refreshVisibleApp();
       cloudStatus("Saved across devices", "synced");
@@ -670,7 +787,7 @@
       return;
     }
 
-    authMessage("Confirming your FIT 4 LIFE access…", false);
+    authMessage("Confirming your gym access…", false);
     const membership = await getMembership();
     if (!membership) {
       cloudReady = false;
@@ -687,7 +804,7 @@
         showPendingRequest({ email: cloudUser.email || "", status: "pending" }, false);
         setText("cloudPendingIcon", "!");
         setText("cloudPendingTitle", "No client access assigned");
-        setText("cloudPendingCopy", "This login exists, but it is not connected to a client profile or registration request. Contact a FIT 4 LIFE trainer.");
+        setText("cloudPendingCopy", "This login exists, but it is not connected to a client profile or registration request for " + portalName() + ". Contact that gym's trainer.");
         cloudStatus("Access not assigned", "error");
       }
       return;
@@ -695,6 +812,7 @@
 
     cloudRole = membership.role;
     cloudOrganizationId = membership.organization_id;
+    await loadOrganizationSettings();
     if (cloudRole === "client") {
       try { await cloudClient.rpc("complete_my_fit4life_registration"); } catch (_) {}
     }
@@ -750,6 +868,10 @@
       authMessage("The secure account service is still connecting. Try again in a moment.", true);
       return false;
     }
+    if (!portalPublicRegistrationEnabled) {
+      authMessage("This gym is not accepting public client account requests. Ask a trainer for an invitation.", true);
+      return false;
+    }
     const fullName = String(document.getElementById("cloudSignUpName").value || "").trim().replace(/\s+/g, " ");
     const username = String(document.getElementById("cloudSignUpUsername").value || "").trim().toLowerCase().replace(/^@/, "");
     const email = normalizedEmail(document.getElementById("cloudSignUpEmail").value);
@@ -793,7 +915,8 @@
           full_name: fullName,
           username,
           requested_role: "client",
-          registration_source: "fit4life_web"
+          registration_source: "fit4life_web",
+          organization_slug: portalOrganizationSlug || "fit-4-life"
         }
       }
     });
@@ -822,7 +945,7 @@
     }
     const email = normalizedEmail(document.getElementById("cloudResetEmail").value || document.getElementById("cloudAuthEmail").value);
     if (!email || !email.includes("@")) {
-      authMessage("Enter the email used for your FIT 4 LIFE account.", true);
+      authMessage("Enter the email used for your training account.", true);
       return false;
     }
     const button = document.getElementById("cloudResetSubmit");
@@ -898,7 +1021,7 @@
   window.fit4lifeCloudRejectRegistration = async function fit4lifeCloudRejectRegistration(requestId) {
     if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return false;
     if (!window.confirm("Reject this client account request? The person will keep their login but will not receive client access.")) return false;
-    const response = await cloudClient.rpc("reject_fit4life_registration", { target_request: requestId, trainer_note: "Please contact FIT 4 LIFE so we can verify your account details." });
+    const response = await cloudClient.rpc("reject_fit4life_registration", { target_request: requestId, trainer_note: "Please contact the gym so a trainer can verify your account details." });
     if (response.error) {
       if (typeof showToast === "function") showToast(response.error.message || "The request could not be rejected");
       return false;
@@ -932,7 +1055,7 @@
   function scopeForLocalKey(key) {
     if ([CLOUD_KEYS.progress, CLOUD_KEYS.checkins, CLOUD_KEYS.clientMessages, CLOUD_KEYS.clientDaily, CLOUD_KEYS.activeWorkout].includes(key)) return "activity";
     if ([CLOUD_KEYS.profiles, CLOUD_KEYS.assignments, CLOUD_KEYS.programs, CLOUD_KEYS.summaryMeta, CLOUD_KEYS.scans, CLOUD_KEYS.goals, CLOUD_KEYS.metrics, CLOUD_KEYS.mentalPlans, CLOUD_KEYS.wearableConnections].includes(key)) return cloudRole === "client" ? "activity" : "plan";
-    if ([CLOUD_KEYS.requests, CLOUD_KEYS.gymBrand, CLOUD_KEYS.teams, CLOUD_KEYS.marketPrograms, CLOUD_KEYS.automations, CLOUD_KEYS.automationAlerts].includes(key)) return "organization";
+    if ([CLOUD_KEYS.requests, CLOUD_KEYS.gymBrand, CLOUD_KEYS.gymEquipment, CLOUD_KEYS.teams, CLOUD_KEYS.marketPrograms, CLOUD_KEYS.automations, CLOUD_KEYS.automationAlerts, CLOUD_KEYS.exerciseLibraryEdits].includes(key)) return "organization";
     return "all";
   }
 
@@ -983,13 +1106,14 @@
   async function initializeCloud() {
     showAuthGate(true);
     cloudStatus("Connecting…", "syncing");
-    authMessage("Connecting to the shared FIT 4 LIFE records…", false);
+    authMessage("Connecting to your gym's secure records…", false);
     try {
       const config = await loadPublicConfig();
       if (!window.supabase || typeof window.supabase.createClient !== "function") throw new Error("The secure sign-in library did not load. Check the internet connection and retry.");
       cloudClient = window.supabase.createClient(config.url, config.key, {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
       });
+      await loadPortalContext();
       installWriterHooks();
       const sessionResponse = await cloudClient.auth.getSession();
       if (sessionResponse.error) throw sessionResponse.error;

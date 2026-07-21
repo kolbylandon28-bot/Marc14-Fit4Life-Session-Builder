@@ -51,14 +51,14 @@
     -webkit-font-smoothing:antialiased;
     padding-bottom:env(safe-area-inset-bottom);
     background-image:
-      linear-gradient(180deg,rgba(8,9,12,.72),rgba(8,9,12,.82)),
-      radial-gradient(ellipse 920px 540px at 8% -6%,rgba(57,105,218,.17),transparent 62%),
-      radial-gradient(ellipse 720px 480px at 102% 12%,rgba(90,166,240,.09),transparent 58%),
+      linear-gradient(180deg,rgba(6,8,12,.62),rgba(6,8,12,.78)),
+      radial-gradient(ellipse 980px 580px at 8% -6%,rgba(57,105,218,.25),transparent 62%),
+      radial-gradient(ellipse 760px 520px at 102% 12%,rgba(90,166,240,.15),transparent 58%),
       url("dark-rock-texture.png");
     background-attachment:fixed;
     background-size:auto,auto,auto,660px 440px;
     background-repeat:no-repeat,no-repeat,no-repeat,repeat;
-    background-blend-mode:normal,screen,screen,soft-light;
+    background-blend-mode:normal,screen,screen,normal;
   }
   button{font-family:inherit;cursor:pointer;color:inherit}
   ::selection{background:var(--blue);color:#fff}
@@ -870,16 +870,24 @@
   .toast{position:fixed;right:18px;bottom:18px;z-index:20;background:var(--slate-2);border:1px solid var(--blue);color:var(--text);border-radius:8px;padding:11px 14px;box-shadow:var(--shadow-lg);font-size:12.5px;opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s}
   .toast.show{opacity:1;transform:translateY(0)}
 
+  /* Exercise-bank management + whole-library replacement */
+  .library-toolbar{display:grid;grid-template-columns:minmax(220px,1.6fr) repeat(3,minmax(145px,.7fr)) auto;gap:9px;align-items:end;margin:14px 0}.library-toolbar .compact-field{margin:0}.library-count{font:600 9px var(--mono);color:var(--text-faint);margin:8px 0 12px}.library-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}.library-item-tags{display:flex;gap:5px;flex-wrap:wrap;margin:7px 0}.library-item-tags span,.library-source-badge{border:1px solid var(--line);border-radius:999px;padding:3px 7px;font:600 7px var(--mono);text-transform:uppercase;color:var(--text-faint)}.library-source-badge.custom{border-color:rgba(90,166,240,.45);color:var(--blue-bright);background:var(--blue-glow)}.library-item-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.library-empty-tip{padding:11px;border:1px solid rgba(90,166,240,.26);border-radius:10px;background:var(--blue-glow);color:var(--text-dim);font-size:10.5px;line-height:1.55;margin-top:12px}
+  .exercise-editor-dialog{width:min(820px,calc(100vw - 28px));max-height:92vh;overflow:auto}.exercise-editor-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}.exercise-editor-grid .wide{grid-column:span 2}.exercise-editor-grid .full{grid-column:1/-1}.exercise-editor-grid select[multiple]{min-height:124px}.exercise-editor-checks{display:flex;gap:12px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#090a0e}.exercise-editor-checks label{display:flex;align-items:center;gap:7px;color:var(--text-dim);font-size:10px}.exercise-editor-checks input{accent-color:var(--blue)}
+  .swap-bank-filters{display:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}.swap-bank-filters.show{display:grid}.swap-tab-note{font-size:10px;color:var(--text-faint);margin:8px 0}.swap-option-meta .safe{color:#76d9b1;border-color:rgba(118,217,177,.3)}
+  .manual-workout-card{border-style:dashed;background:radial-gradient(circle at 90% 0,rgba(90,166,240,.14),transparent 40%),var(--slate-1)}.manual-workout-card .workout-choice-lifts{border-color:rgba(90,166,240,.32)}
+  .constraint-summary{margin-top:10px;padding:10px 12px;border:1px solid rgba(90,166,240,.25);border-radius:9px;background:rgba(36,64,184,.09);color:var(--text-dim);font-size:10px;line-height:1.5}.constraint-summary b{color:var(--blue-bright)}
+  .panel,.card,.utility-card,.coach-module-card,.client-card{box-shadow:0 10px 30px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.025)}
+
   @media (max-width:900px){
     .goal-grid,.training-route-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .set-log-row{grid-template-columns:52px minmax(86px,1fr) 70px minmax(78px,1fr)}
     .set-log-row .log-set-btn{grid-column:2/-1}
     .set-log-row.bodyweight,.set-log-row.cardio{grid-template-columns:52px 1fr 1fr}
     .set-log-row.bodyweight .log-set-btn,.set-log-row.cardio .log-set-btn{grid-column:2/-1}
-    body.coach-shell-on main{margin-left:74px;padding-left:18px;padding-right:18px}.coach-sidebar{width:74px;padding:12px 7px}.coach-sidebar h2{font-size:0;padding:5px 6px 12px}.coach-sidebar h2::after{content:"COACH";font-size:12px}.coach-sidebar button{font-size:0;text-align:center;padding:0}.coach-sidebar button::first-letter{font-size:14px}.workout-preview{grid-template-columns:1fr}.simple-stat-grid{grid-template-columns:repeat(2,1fr)}
+    body.coach-shell-on main{margin-left:74px;padding-left:18px;padding-right:18px}.coach-sidebar{width:74px;padding:12px 7px}.coach-sidebar h2{font-size:0;padding:5px 6px 12px}.coach-sidebar h2::after{content:"COACH";font-size:12px}.coach-sidebar button{font-size:0;text-align:center;padding:0}.coach-sidebar button::first-letter{font-size:14px}.workout-preview{grid-template-columns:1fr}.simple-stat-grid{grid-template-columns:repeat(2,1fr)}.library-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}.library-toolbar>.compact-field:first-child{grid-column:1/-1}.exercise-editor-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.swap-bank-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
   }
   @media (max-width:560px){
-    .goal-grid,.training-route-grid{grid-template-columns:1fr}
+    .goal-grid,.training-route-grid{grid-template-columns:1fr}.library-toolbar,.exercise-editor-grid,.swap-bank-filters{grid-template-columns:1fr}.library-toolbar>.compact-field:first-child,.exercise-editor-grid .wide,.exercise-editor-grid .full{grid-column:auto}.library-item{grid-template-columns:1fr}.library-item-actions{justify-content:flex-start}
     .workout-choice-head{align-items:flex-start;flex-direction:column}.workout-choice-grid{grid-template-columns:1fr}
     .audit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.preference-editor{grid-template-columns:1fr}
     .hero h1{font-size:42px}
@@ -1014,7 +1022,7 @@
           <label>Password<input id="cloudSignUpPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>
           <label>Confirm password<input id="cloudSignUpConfirm" type="password" autocomplete="new-password" placeholder="Repeat password" onkeydown="if(event.key==='Enter')fit4lifeCloudSignUp()"></label>
         </div>
-        <label class="cloud-auth-checkbox"><input id="cloudSignUpConsent" type="checkbox"><span>I understand that this creates a client login request. A FIT 4 LIFE trainer must approve my profile before I can access training records.</span></label>
+        <label class="cloud-auth-checkbox"><input id="cloudSignUpConsent" type="checkbox"><span>I understand that this creates a client login request. A trainer at this gym must approve my profile before I can access training records.</span></label>
       </div>
       <button class="cloud-auth-submit" id="cloudSignUpSubmit" onclick="fit4lifeCloudSignUp()">Create client account</button>
       <div class="cloud-auth-note">Client accounts only. Trainer access can never be selected or created from this form. If your email already belongs to a trainer-created profile, approval will connect this login to it instead of making a duplicate.</div>
@@ -1041,7 +1049,7 @@
         <div class="cloud-auth-actions"><button class="cloud-auth-link" type="button" onclick="fit4lifeCloudSignOut()">Sign out</button></div>
       </div>
     </div>
-    <div class="cloud-auth-message" id="cloudAuthMessage" role="status" aria-live="polite">Connecting to the shared FIT 4 LIFE records…</div>
+    <div class="cloud-auth-message" id="cloudAuthMessage" role="status" aria-live="polite">Connecting to your gym’s secure records…</div>
     <p class="cloud-auth-help">Clients can request access here, but only verified trainers can approve, edit, or delete profiles. <button class="cloud-auth-retry" onclick="fit4lifeCloudRetry()">Retry connection</button></p>
   </div>
 </div>
@@ -1101,6 +1109,7 @@
     <div class="tools-grid">
       <button class="tool-card primary" onclick="openNewClientProfile()"><div class="tc-icon">+</div><div class="tc-title">Create client profile</div><span class="portal-question">Who is new?</span><div class="tc-desc">Search first, then create a new profile only when there is no duplicate or near-duplicate match.</div></button>
       <button class="tool-card live" onclick="openBuilder()"><div class="tc-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v18M18 3v18M6 8h12M6 16h12"/></svg></div><div class="tc-title">Build a workout</div><span class="portal-question">What are we training today?</span><div class="tc-desc">Choose the client, goals, focus, and time; then compare three genuinely different workout approaches.</div></button>
+      <button class="tool-card" onclick="openScratchWorkoutBuilder()"><div class="tc-icon">&#9998;</div><div class="tc-title">Build from scratch</div><span class="portal-question">Do I want full control?</span><div class="tc-desc">Load a client, then build every phase from warm-up through cool-down using the complete filtered exercise bank.</div></button>
       <button class="tool-card live" onclick="openTools()"><div class="tc-icon">&#9201;</div><div class="tc-title">Trainer tools</div><span class="portal-question">What do I need on the floor?</span><div class="tc-desc">Fullscreen timers, plate math, warm-up ramps, 1RM estimates, and RPE coaching guides.</div></button>
     </div>
     <div class="section-eyebrow">Manage &amp; review</div>
@@ -1215,6 +1224,7 @@
 
       <div class="build-actions">
         <button class="btn btn-primary" id="buildBtn" onclick="generate()">Generate 3 workout options</button>
+        <button class="btn btn-ghost" id="scratchBuildBtn" onclick="startWorkoutFromScratch()">Build from scratch</button>
         <button class="btn btn-ghost" id="reshuffleBtn" onclick="reshuffle()" style="display:none">&#8635; Reshuffle</button>
         <span class="hint-inline" id="buildHint"></span>
       </div>
@@ -1338,7 +1348,7 @@
       <div class="compact-field" style="margin-top:14px"><label>Equipment available (leave blank for full gym)</label><div class="filter-chips" id="programZoneChips">
         <button type="button" class="chip" onclick="toggleProgramFilter('zones','cardio',this)">Cardio</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','platform',this)">Platforms</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','rack',this)">Racks</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','crossfit',this)">Functional</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','dumbbell',this)">Dumbbells</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','machine',this)">Machines</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','cable',this)">Cables</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','bodyweight',this)">Bodyweight</button>
       </div></div>
-      <p class="storage-note">The exercise bank is matched to this gym’s equipment, including trap bars, landmine attachments, ab wheels, TRX straps, agility ladders, resistance bands, jump ropes, machines, pulleys, platforms, free weights, and cardio equipment. Sled and battle-rope movements are excluded.</p>
+      <p class="storage-note">The exercise bank is automatically limited by the shared equipment setup for this gym. Client-level equipment choices can narrow it further for an individual session.</p>
       <div class="tool-actions"><button class="small-btn primary" onclick="generateProgram()">Build program draft</button><button class="small-btn" id="programApproveBtn" onclick="approveCurrentProgram()" disabled>Coach approve program</button><button class="small-btn" id="programPrintBtn" onclick="printProgram()" disabled>Print take-home cards</button><button class="small-btn" id="programSaveBtn" onclick="saveCurrentProgram()" disabled>Save approved program</button></div>
     </div>
     <div id="programOutput" class="empty-state">Choose the client details and build a program.</div>
@@ -1502,17 +1512,51 @@
     <p id="exerciseSwapCopy">Choose an exact replacement or shuffle this movement.</p>
     <div class="swap-toolbar" aria-label="Replacement choices">
       <button class="small-btn on" id="swapRecommendedBtn" onclick="setSwapMode('recommended')">Recommended</button>
-      <button class="small-btn" id="swapAllBtn" onclick="setSwapMode('all')">All compatible movements</button>
+      <button class="small-btn" id="swapSimilarBtn" onclick="setSwapMode('similar')">Similar</button>
+      <button class="small-btn" id="swapBankBtn" onclick="setSwapMode('bank')">Workout bank</button>
       <button class="small-btn primary" onclick="shuffleExerciseFromModal()">&#8635; Shuffle this movement</button>
     </div>
     <input class="swap-search" id="exerciseSwapSearch" type="text" placeholder="Search by exercise name…" aria-label="Search replacement exercises" oninput="renderSwapOptions()">
+    <div class="swap-bank-filters" id="swapBankFilters">
+      <div class="compact-field"><label for="swapPatternFilter">Movement</label><select id="swapPatternFilter" onchange="renderSwapOptions()"><option value="">All patterns</option></select></div>
+      <div class="compact-field"><label for="swapRegionFilter">Body part</label><select id="swapRegionFilter" onchange="renderSwapOptions()"><option value="">All body areas</option></select></div>
+      <div class="compact-field"><label for="swapZoneFilter">Equipment</label><select id="swapZoneFilter" onchange="renderSwapOptions()"><option value="">All equipment</option></select></div>
+      <div class="compact-field"><label for="swapSafetyFilter">Current filters</label><select id="swapSafetyFilter" onchange="renderSwapOptions()"><option value="safe">Only filter-matching</option><option value="all">Show overrides with warnings</option></select></div>
+    </div>
+    <p class="swap-tab-note" id="swapTabNote">Recommended choices match this phase, the client, the available equipment, and every reported limitation.</p>
     <div class="compact-grid" id="clientSwapFields" style="margin-top:10px">
       <div class="compact-field"><label for="exerciseSwapReason">Why change it?</label><select id="exerciseSwapReason"><option value="preference">Preference</option><option value="equipment">Equipment unavailable</option><option value="unfamiliar">Not confident yet</option><option value="discomfort">Discomfort or pain</option></select></div>
       <div class="compact-field"><label for="exerciseSwapScope">Apply this preference</label><select id="exerciseSwapScope"><option value="today">Today only</option><option value="future">Future workouts too</option></select></div>
     </div>
     <div id="exerciseSwapOptions" class="swap-list"></div>
-    <p class="swap-help">“All compatible movements” keeps the same movement pattern, but can intentionally override the equipment, experience, age, or injury filters. Any override is labeled before you choose it.</p>
+    <p class="swap-help">The workout bank can place any exercise in any phase. Filter-matching choices are shown first; deliberate equipment, experience, phase, age, or limitation overrides stay clearly labeled and require confirmation.</p>
     <div class="tool-actions"><button class="small-btn" onclick="closeExerciseSwap()">Cancel</button></div>
+  </div>
+</div>
+
+<div id="exerciseEditorModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="exerciseEditorTitle">
+  <div class="review-dialog exercise-editor-dialog">
+    <h2 id="exerciseEditorTitle">Add exercise</h2>
+    <p>These categories are not just labels. They determine when the generator, warm-up builder, exercise search, and substitution system may use this movement.</p>
+    <input id="exerciseBankId" type="hidden">
+    <div class="exercise-editor-grid">
+      <div class="compact-field wide"><label for="exerciseBankName">Exercise name</label><input id="exerciseBankName" type="text" autocomplete="off" placeholder="Use one clear, unique name"></div>
+      <div class="compact-field"><label for="exerciseBankRole">Programming role</label><select id="exerciseBankRole"><option value="standard">Working exercise</option><option value="primary">Primary-lift candidate</option><option value="warmup">Warm-up / mobility</option><option value="finisher">Finisher</option></select></div>
+      <div class="compact-field"><label for="exerciseBankPattern">Movement pattern</label><select id="exerciseBankPattern"></select></div>
+      <div class="compact-field"><label for="exerciseBankRegion">Body area</label><select id="exerciseBankRegion"></select></div>
+      <div class="compact-field"><label for="exerciseBankZone">Equipment</label><select id="exerciseBankZone"></select></div>
+      <div class="compact-field"><label for="exerciseBankExperience">Minimum experience</label><select id="exerciseBankExperience"><option value="1">New / beginner</option><option value="2">Intermediate</option><option value="3">Advanced</option></select></div>
+      <div class="compact-field"><label for="exerciseBankImpact">Impact / joint demand</label><select id="exerciseBankImpact"><option value="0">0 · Low</option><option value="1">1 · Moderate-low</option><option value="2">2 · Moderate-high</option><option value="3">3 · High</option></select></div>
+      <div class="compact-field"><label for="exerciseBankCardio">Cardio machine</label><select id="exerciseBankCardio"><option value="">Not a cardio machine</option></select></div>
+      <div class="compact-field"><label for="exerciseBankFinisherType">Finisher type</label><select id="exerciseBankFinisherType"><option value="pump">Muscle pump</option><option value="metcon">Metabolic</option><option value="core">Core</option></select></div>
+      <div class="compact-field"><label for="exerciseBankMuscles">Muscles trained</label><select id="exerciseBankMuscles" multiple></select></div>
+      <div class="compact-field"><label for="exerciseBankAvoid">Filter out for</label><select id="exerciseBankAvoid" multiple></select></div>
+      <div class="compact-field"><label for="exerciseBankPreps">Warm-up prepares</label><select id="exerciseBankPreps" multiple><option value="general">General temperature</option><option value="upper">Upper body</option><option value="lower">Lower body</option><option value="push">Push</option><option value="pull">Pull</option></select></div>
+      <div class="compact-field full"><label for="exerciseBankCue">Coaching cue / instructions</label><textarea id="exerciseBankCue" placeholder="One short, useful cue that will be shown in the workout"></textarea></div>
+      <div class="exercise-editor-checks full"><label><input id="exerciseBankUnilateral" type="checkbox"> Unilateral / added balance demand</label></div>
+    </div>
+    <div class="constraint-summary"><b>Generator check:</b> a movement needs a pattern, body area, equipment category, experience level, impact rating, and relevant muscles. Warm-ups also need at least one “prepares” tag. Finishers need a finisher type.</div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="saveExerciseBankEntry()">Save to exercise bank</button><button class="small-btn" onclick="closeExerciseEditor()">Cancel</button><button class="small-btn danger" id="exerciseBankDeleteBtn" onclick="deleteExerciseBankEntryFromEditor()">Delete exercise</button></div>
   </div>
 </div>
 
@@ -1543,7 +1587,7 @@
       <div class="compact-field"><label for="profileEditPrimary">Primary goal</label><select id="profileEditPrimary"></select></div>
       <div class="compact-field"><label for="profileEditSecondary">Secondary goal</label><select id="profileEditSecondary"></select></div>
       <div class="compact-field"><label for="profileEditStyle">Default training route</label><select id="profileEditStyle"><option value="auto">Best match for goal</option><option value="resistance">Resistance focused</option><option value="mixed">Weights + cardio</option><option value="cardio">Cardio focused</option><option value="performance">Speed + power</option><option value="recovery">Easy cardio + mobility</option><option value="mobility">Mobility only</option></select></div>
-      <div class="compact-field"><label for="profileEditCardio">Preferred cardio equipment · choose multiple</label><select id="profileEditCardio" multiple size="5"><option value="any">Any available machine</option><option value="treadmill">Treadmill</option><option value="stairs">Stair climber</option><option value="bike">Bike</option><option value="rower">Rower</option><option value="elliptical">Elliptical</option><option value="ski">Ski erg</option><option value="versaclimber">VersaClimber</option><option value="hiitmill">HIITMill</option><option value="jumprope">Jump rope</option></select><span class="storage-note">Hold Command on Mac or Control on Windows to select several here.</span></div>
+      <div class="compact-field"><label for="profileEditCardio">Cardio equipment available · choose multiple</label><select id="profileEditCardio" multiple size="5"><option value="any">Any available machine</option><option value="treadmill">Treadmill</option><option value="stairs">Stair climber</option><option value="bike">Bike</option><option value="rower">Rower</option><option value="elliptical">Elliptical</option><option value="ski">Ski erg</option><option value="versaclimber">VersaClimber</option><option value="hiitmill">HIITMill</option><option value="jumprope">Jump rope</option></select><span class="storage-note">This is a hard whole-workout filter, including warm-ups and cool-downs. Hold Command on Mac or Control on Windows to select several.</span></div>
       <div class="compact-field"><label for="profileEditExperience">Experience</label><select id="profileEditExperience"></select></div>
       <div class="compact-field"><label for="profileEditAge">Age</label><input id="profileEditAge" type="number" min="13" max="100"></div>
       <div class="compact-field"><label for="profileEditMinutes">Usual session length</label><select id="profileEditMinutes"></select></div>
@@ -2058,6 +2102,30 @@ const LIBRARY = [
   { name: "Plank to failure", zone: "bodyweight", pattern: "core", region: "core", exp: 1, impact: 0, unilateral: false, avoid: ["shoulder","wrist"], muscles: ["core"], finisher: true, ftype: "core", fmuscles: ["core"], cue: "One max hold, ribs down, glutes tight \u2014 until form breaks." },
 ];
 
+const EXERCISE_LIBRARY_EDITS_KEY = "fit4life_exercise_library_edits_v1";
+const BASE_LIBRARY = LIBRARY.map((exercise) => JSON.parse(JSON.stringify(exercise)));
+function exerciseBankId(exercise) { return String(exercise && (exercise.bankId || exercise.name) || "movement").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,""); }
+function loadExerciseLibraryEdits() { try { const value = JSON.parse(localStorage.getItem(EXERCISE_LIBRARY_EDITS_KEY) || "[]"); return Array.isArray(value) ? value : []; } catch (_) { return []; } }
+function writeExerciseLibraryEdits(items) {
+  const clean = (items || []).slice(0,1000);
+  if (typeof writeLocalArray === "function") return writeLocalArray(EXERCISE_LIBRARY_EDITS_KEY,clean,1000);
+  try { localStorage.setItem(EXERCISE_LIBRARY_EDITS_KEY,JSON.stringify(clean)); return true; } catch (_) { return false; }
+}
+function applyExerciseLibraryEdits() {
+  const next = BASE_LIBRARY.map((exercise) => ({ ...JSON.parse(JSON.stringify(exercise)), bankId:exerciseBankId(exercise), bankSource:"built-in" }));
+  loadExerciseLibraryEdits().forEach((edit) => {
+    if (!edit || !edit.id) return;
+    const index = next.findIndex((exercise) => exerciseBankId(exercise) === edit.id);
+    if (edit.action === "delete") { if (index >= 0) next.splice(index,1); return; }
+    if (!edit.exercise) return;
+    const exercise = { ...JSON.parse(JSON.stringify(edit.exercise)), bankId:edit.id, bankSource:index >= 0 ? "edited" : "custom" };
+    if (index >= 0) next[index] = exercise; else next.push(exercise);
+  });
+  LIBRARY.splice(0,LIBRARY.length,...next);
+  return LIBRARY;
+}
+applyExerciseLibraryEdits();
+
 
 
 /* ===== ENGINE ===== */
@@ -2230,9 +2298,12 @@ function auditWorkout(session) {
   const route = resolvedTrainingRoute(spec), resistance = !["cardio","recovery","mobility"].includes(route);
   const primary = blocks.find((block) => block.key === "strength" && block.items.length);
   const safety = [];
+  if (!exercises.length) safety.push("Workout is empty — add movements before coach approval.");
+  const safePrimaryAvailable = resistance && eligibleFor(spec).some((exercise) => isPrimaryAnchor(exercise));
+  if (safePrimaryAvailable && (!primary || !primary.items.some((exercise) => isPrimaryAnchor(exercise)))) safety.push("Resistance workout needs a categorized primary lift before coach approval.");
+  if (session.manual && !blocks.some((block) => block.key === "warmup" && block.items.length)) safety.push("From-scratch workout needs a warm-up before coach approval.");
   exercises.forEach((exercise) => {
-    if ((spec.injuries || []).some((tag) => (exercise.avoid || []).includes(tag))) safety.push(exercise.name + " conflicts with a reported limitation");
-    if (["discomfort","unavailable"].includes(exercisePreferenceFor(spec,exercise))) safety.push(exercise.name + " is marked " + exercisePreferenceFor(spec,exercise));
+    exerciseConstraintIssues(exercise,spec,spec.age).filter((issue) => issue.hard).forEach((issue) => safety.push(exercise.name + ": " + issue.label));
   });
   const powerIndex = blocks.findIndex((block) => ["power","plyo"].includes(block.key)), strengthIndex = blocks.findIndex((block) => block.key === "strength");
   const detail = [
@@ -2306,7 +2377,7 @@ const CARDIO_MODALITIES = {
   treadmill: { label: "Treadmill", words: ["treadmill","sprint intervals"] },
   stairs: { label: "Stair climber", words: ["stair climber"] },
   bike: { label: "Bike", words: ["bike"] },
-  rower: { label: "Rower", words: ["row intervals","rowing sprints","rower"] },
+  rower: { label: "Rower", words: ["row intervals","row sprint","rowing sprints","rower"] },
   elliptical: { label: "Elliptical", words: ["elliptical"] },
   ski: { label: "Ski erg", words: ["ski erg"] },
   versaclimber: { label: "VersaClimber", words: ["versaclimber"] },
@@ -2318,6 +2389,7 @@ function resolvedTrainingRoute(spec) {
   return requested && requested !== "auto" ? requested : (GOAL_AUTO_ROUTE[spec && spec.goal] || "resistance");
 }
 function cardioModalityFor(ex) {
+  if (ex && ex.cardioMode && CARDIO_MODALITIES[ex.cardioMode]) return ex.cardioMode;
   const name = String(ex && ex.name || "").toLowerCase();
   return Object.keys(CARDIO_MODALITIES).find((key) => key !== "any" && CARDIO_MODALITIES[key].words.some((word) => name.includes(word))) || "other";
 }
@@ -2555,6 +2627,8 @@ function stationLabel(a, b) {
 const INJURY_LABELS = {
   knee: "Knee", shoulder: "Shoulder", lowback: "Lower back", wrist: "Wrist",
   hip: "Hip", elbow: "Elbow", ankle: "Ankle", neck: "Neck",
+  pregnancy: "Pregnancy · coach review", postpartum: "Postpartum return",
+  balance: "Balance / fall risk", pelvicfloor: "Pelvic-floor symptoms",
 };
 
 /* How many working exercises fit in the time (excludes warm-up)?
@@ -2963,19 +3037,52 @@ function shuffle(arr, rng) {
   return a;
 }
 
+function gymAllowsExercise(exercise) {
+  const equipment = currentGymEquipment(), zones = Array.isArray(equipment.zones) ? equipment.zones : [];
+  if (zones.length && !zones.includes(exercise.zone)) return false;
+  const name = String(exercise && exercise.name || "").toLowerCase();
+  const blocked = Array.isArray(equipment.blockedKeywords) ? equipment.blockedKeywords : [];
+  if (blocked.some((keyword) => keyword && name.includes(String(keyword).toLowerCase()))) return false;
+  const modes = Array.isArray(equipment.cardioModes) ? equipment.cardioModes : [];
+  const modality = cardioModalityFor(exercise);
+  if (modes.length && modality !== "other" && !modes.includes(modality)) return false;
+  return true;
+}
+
+function pregnancyMovementRisk(exercise) {
+  const name = String(exercise && exercise.name || "").toLowerCase(), pattern = exercise && exercise.pattern;
+  if (["plyo","olympic"].includes(pattern) || Number(exercise && exercise.impact) >= 2) return "Pregnancy high-impact / ballistic filter";
+  if (/\b(swing|snatch|clean|high pull|jump|sprint|bound|burpee|box jump|depth jump)\b/.test(name)) return "Pregnancy ballistic-hinge / fall-risk filter";
+  if (/\b(flat|decline|floor)\b.*\b(bench|press)\b|\b(glute bridge|hip thrust|frog pump|dead bug|hollow hold|sit-up|leg raise|supine|prone|superman)\b/.test(name)) return "Pregnancy flat-back / prone-position filter";
+  if (exercise && exercise.finisher && exercise.ftype === "metcon") return "Pregnancy maximal-finisher filter";
+  return "";
+}
+function coachingLimitationIssues(exercise,spec) {
+  const limitations = spec && spec.injuries || [], issues = [], name = String(exercise && exercise.name || "").toLowerCase();
+  if (limitations.includes("pregnancy")) { const risk = pregnancyMovementRisk(exercise); if (risk) issues.push({ code:"pregnancy",label:risk,hard:true }); }
+  if (limitations.includes("postpartum") && (["plyo","olympic"].includes(exercise.pattern) || Number(exercise.impact) >= 2 || /\b(sprint|jump|bound|burpee)\b/.test(name))) issues.push({ code:"postpartum",label:"Postpartum impact / pressure-management filter",hard:true });
+  if (limitations.includes("balance") && (exercise.unilateral || ["plyo","olympic"].includes(exercise.pattern) || Number(exercise.impact) >= 2)) issues.push({ code:"balance",label:"Balance / fall-risk conflict",hard:true });
+  if (limitations.includes("pelvicfloor") && (["plyo","olympic"].includes(exercise.pattern) || Number(exercise.impact) >= 2 || (exercise.finisher && exercise.ftype === "metcon"))) issues.push({ code:"pelvicfloor",label:"Pelvic-floor impact / straining filter",hard:true });
+  return issues;
+}
+function exerciseConstraintIssues(exercise,spec,age) {
+  const issues = [], zones = spec && spec.zones && spec.zones.length ? spec.zones : null, limitations = spec && spec.injuries || [], prof = ageProfile(age == null ? spec && spec.age : age), avoid = exercise && Array.isArray(exercise.avoid) ? exercise.avoid : [];
+  if (!gymAllowsExercise(exercise)) issues.push({ code:"gym_equipment",label:"Not in this gym's equipment setup",hard:true });
+  if (zones && !zones.includes(exercise.zone)) issues.push({ code:"client_equipment",label:"Equipment unavailable for this client",hard:true });
+  const cardioPreferences = cardioPreferencesFor(spec || {}), modality = cardioModalityFor(exercise);
+  if (!cardioPreferences.includes("any") && modality !== "other" && !cardioPreferences.includes(modality)) issues.push({ code:"cardio_equipment",label:"Cardio machine not selected as available",hard:true });
+  limitations.filter((tag) => !["pregnancy","postpartum","balance","pelvicfloor"].includes(tag)).forEach((tag) => { if (avoid.includes(tag)) issues.push({ code:"limitation",label:(INJURY_LABELS[tag] || tag) + " conflict",hard:true }); });
+  issues.push(...coachingLimitationIssues(exercise,spec || {}));
+  if (Number(exercise.exp || 1) > Number(spec && spec.experience || 1)) issues.push({ code:"experience",label:"Above selected experience",hard:true });
+  if (Number(exercise.impact || 0) > prof.impactCap || (exercise.pattern === "plyo" && !prof.plyoOK)) issues.push({ code:"impact",label:"Age / impact caution",hard:true });
+  const preference = exercisePreferenceFor(spec || {},exercise); if (["discomfort","unavailable"].includes(preference)) issues.push({ code:"preference",label:preference === "discomfort" ? "Marked as causing discomfort" : "Marked unavailable",hard:true });
+  return issues;
+}
+
 /* ---- Eligibility: filter the library for this person ---- */
 function eligible(spec, age) {
-  const prof = ageProfile(age);
-  const zones = spec.zones && spec.zones.length ? spec.zones : null;
-  const injuries = spec.injuries || [];
   return LIBRARY.filter((ex) => {
-    if (ex.exp > spec.experience) return false;
-    if (zones && !zones.includes(ex.zone)) return false;
-    if (injuries.some((tag) => ex.avoid.includes(tag))) return false;
-    if (ex.impact > prof.impactCap) return false;
-    if (ex.pattern === "plyo" && !prof.plyoOK) return false;
-    if (["discomfort","unavailable"].includes(exercisePreferenceFor(spec,ex))) return false;
-    return true;
+    return !exerciseConstraintIssues(ex,spec,age).some((issue) => issue.hard);
   }).map((ex) => ({ ...ex, _preference:exercisePreferenceFor(spec,ex) }));
 }
 
@@ -3548,7 +3655,6 @@ function buildCardioSession(spec, seed, pool) {
   const cardioBase = pool.filter((ex) => ex.finisher !== true && ex.pattern === "conditioning" && (ex.zone === "cardio" || ex.region === "cardio"));
   let candidates = cardioBase.filter((ex) => matchesCardioPreference(ex,preference));
   const preferredUnavailable = !candidates.length && !preference.includes("any");
-  if (!candidates.length) candidates = cardioBase;
   if (!candidates.length) candidates = pool.filter((ex) => ex.finisher !== true && ex.pattern === "conditioning");
   const protocolNeutral = candidates.filter((ex) => / cardio$/i.test(ex.name));
   if (protocolNeutral.length) candidates = protocolNeutral;
@@ -3556,7 +3662,7 @@ function buildCardioSession(spec, seed, pool) {
   const offset = Math.floor(rng() * Math.max(1,sorted.length)), index = (offset + Math.abs(Number(spec.optionIndex || 0))) % Math.max(1,sorted.length);
   const chosen = sorted[index];
   const mainRx = cardioPrescriptionForSpec(spec,architecture);
-  const warmupPool = pool.filter((ex) => ex.finisher !== true && Array.isArray(ex.preps) && ex.preps.includes("general"));
+  const warmupPool = pool.filter((ex) => ex.finisher !== true && Array.isArray(ex.preps) && ex.preps.includes("general") && (cardioModalityFor(ex) === "other" || matchesCardioPreference(ex,preference)));
   const sameModeWarmup = warmupPool.find((ex) => chosen && cardioModalityFor(ex) === cardioModalityFor(chosen));
   const warmups = [];
   if (sameModeWarmup) warmups.push(sameModeWarmup);
@@ -3572,7 +3678,7 @@ function buildCardioSession(spec, seed, pool) {
     block.groups = block.items.map((ex) => ({ type:"straight", items:[ex] }));
   });
   const modality = chosen ? (CARDIO_MODALITIES[cardioModalityFor(chosen)] && CARDIO_MODALITIES[cardioModalityFor(chosen)].label || chosen.name) : "available conditioning mode";
-  const preferenceNote = preferredUnavailable ? " The preferred cardio mode was not available after equipment, experience, age, and injury filters, so the closest safe available mode was used." : "";
+  const preferenceNote = preferredUnavailable ? " None of the selected cardio machines remained after the equipment and limitation filters, so the workout uses only another filter-matching conditioning option or leaves the main cardio block empty for coach review." : "";
   const goalNotes = {
     conditioning:"Stamina is trained through a distinct aerobic-base, tempo, or interval prescription instead of a resistance circuit.",
     fatloss:"This cardio-focused route raises aerobic work while keeping the pace repeatable enough to accumulate useful weekly volume.",
@@ -3850,7 +3956,7 @@ const GOAL_INFO = {
 const EXP_OPTIONS = [[1, "New — learning technique"], [2, "Intermediate — trains consistently"], [3, "Advanced — highly experienced"]];
 const TIME_OPTIONS = [[30, "30 min"], [45, "45 min"], [60, "60 min"], [90, "90 min"]];
 const ALL_ZONES = ["cardio", "platform", "rack", "crossfit", "dumbbell", "machine", "cable", "bodyweight"];
-const ALL_INJURIES = ["knee", "shoulder", "lowback", "wrist", "hip", "elbow", "ankle", "neck"];
+const ALL_INJURIES = ["knee", "shoulder", "lowback", "wrist", "hip", "elbow", "ankle", "neck", "pregnancy", "postpartum", "balance", "pelvicfloor"];
 const MUSCLE_LIST = ["chest", "back", "shoulders", "quads", "hamstrings", "glutes", "arms", "calves", "core"];
 const QUICK_REGIONS = [["push", "Push"], ["pull", "Pull"], ["legs", "Legs"], ["core", "Core"], ["full", "Full body"]];
 
@@ -3863,6 +3969,10 @@ const CAUTION_TEXT = {
   elbow: "Elbow-stressing movements are filtered out. Keep pressing and curling pain-free and controlled.",
   ankle: "Ankle-loading and impact movements are filtered out. Favor supported, low-impact options.",
   neck: "Neck-stressing movements are filtered out. Keep the head neutral and avoid loaded overhead positions.",
+  pregnancy: "Conservative pregnancy filters remove high-impact, ballistic hinge, fall-risk, prolonged flat-back/prone, and maximal-finisher choices. A qualified prenatal clinician and the trainer must still individualize the plan.",
+  postpartum: "High-impact and ballistic choices are filtered while the client returns gradually. Clearance, symptoms, delivery recovery, and pelvic-floor tolerance should guide progression.",
+  balance: "Unilateral, high-impact, plyometric, and Olympic movements are filtered to reduce fall risk. Favor stable support and controlled changes of direction.",
+  pelvicfloor: "High-impact, ballistic, and maximal metabolic finishers are filtered. Use symptom-guided breathing and pressure management, and refer persistent symptoms to a qualified clinician.",
 };
 
 let state = {
@@ -3937,6 +4047,15 @@ function syncBuilderRoleCopy() {
     : "Choose the client and session details, compare three truly different workout approaches, then customize the best fit.";
 }
 function openBuilder() { renderForms(); syncBuilderRoleCopy(); show("builder"); }
+function openScratchWorkoutBuilder() {
+  if (!requireTrainerMutation("build a workout from scratch")) return false;
+  portalRole = "trainer";
+  state.mode = "solo";
+  openBuilder();
+  setMode("solo");
+  showToast("Choose or load a client, then use Build from scratch");
+  return true;
+}
 const ASSIGNED_WORKOUTS_KEY = "fit4life_assigned_workouts_v1";
 const SAVED_PROGRAMS_KEY = "fit4life_saved_programs_v1";
 const CLIENT_DAILY_KEY = "fit4life_client_daily_v1";
@@ -4306,12 +4425,78 @@ function renderCoachModule(destination) {
     const messages = loadLocalArray(CLIENT_MESSAGES_KEY);
     out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><h3>Client questions</h3><div class="advanced-list">' + (messages.map((message) => '<div class="advanced-list-item"><b>' + escapeHtml(message.client) + '</b><span>' + new Date(message.createdAt).toLocaleString() + '</span><p>' + escapeHtml(message.body) + '</p><div class="tool-actions"><button class="small-btn" onclick="replyToClientMessage(\'' + escapeHtml(message.profileId) + '\')">Reply</button></div></div>').join('') || '<div class="empty-state">No direct client messages.</div>') + '</div></section>';
   } else if (destination === 'library') {
-    out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><h3>' + LIBRARY.length + ' approved exercises</h3><p>Every movement is filtered by equipment, experience, impact, injury tags, movement pattern, and substitution purpose.</p><div class="compact-field" style="margin:12px 0"><label for="coachLibrarySearch">Search</label><input id="coachLibrarySearch" placeholder="Exercise, pattern, or equipment" oninput="renderCoachExerciseLibrary()"></div><div id="coachLibraryResults" class="advanced-list"></div></section>'; setTimeout(renderCoachExerciseLibrary,0);
+    out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap"><div><h3>Gym-approved exercise bank</h3><p>Add, edit, or remove movements without breaking generation. Every saved category controls when that exercise is eligible.</p></div><button class="small-btn primary" onclick="openExerciseEditor()">+ Add exercise</button></div><div class="library-toolbar"><div class="compact-field"><label for="coachLibrarySearch">Search</label><input id="coachLibrarySearch" placeholder="Exercise, cue, muscle, pattern, or equipment" oninput="renderCoachExerciseLibrary()"></div><div class="compact-field"><label for="coachLibraryPattern">Movement</label><select id="coachLibraryPattern" onchange="renderCoachExerciseLibrary()"><option value="">All movements</option></select></div><div class="compact-field"><label for="coachLibraryZone">Equipment</label><select id="coachLibraryZone" onchange="renderCoachExerciseLibrary()"><option value="">All equipment</option></select></div><div class="compact-field"><label for="coachLibraryRegion">Body part</label><select id="coachLibraryRegion" onchange="renderCoachExerciseLibrary()"><option value="">All body areas</option></select></div></div><div id="coachLibraryCount" class="library-count"></div><div id="coachLibraryResults" class="advanced-list"></div><div class="library-empty-tip"><b>How generator inclusion works:</b> equipment and cardio-machine categories are checked first, then client experience, age/impact, injuries and coaching limitations, muscle focus, movement role, and exercise preferences. A custom exercise is not usable until the required categories are complete.</div></section>'; setTimeout(initializeCoachLibraryFilters,0);
   } else {
     out.innerHTML = '<section class="coach-module-card"><h3>Data & backups</h3><p>Export or restore the full local coaching record before changing devices.</p><div class="tool-actions"><button class="small-btn" onclick="exportProgress()">Export backup</button><button class="small-btn" onclick="byId(\'progressImport\').click()">Restore backup</button></div></section><section class="coach-module-card"><h3>Security</h3><p>The trainer PIN protects this browser session. Live multi-device accounts require the hosted authentication and database connection.</p><div class="tool-actions"><button class="small-btn" onclick="lockTrainerHub()">Lock workspace</button></div></section><section class="coach-module-card"><h3>Gym branding</h3><p>Manage white-label colors and gym identity from the advanced coaching studio.</p><div class="tool-actions"><button class="small-btn" onclick="openAdvancedStudio()">Open branding</button></div></section><section class="coach-module-card"><h3>Connected services</h3><p>Wearables, calendar syncing, and cloud video require provider credentials and secure hosted storage.</p><div class="tool-actions"><button class="small-btn" onclick="openAdvancedStudio()">Open integrations</button></div></section>';
   }
 }
-function renderCoachExerciseLibrary() { const out = byId('coachLibraryResults'); if (!out) return; const query = String(byId('coachLibrarySearch') && byId('coachLibrarySearch').value || '').trim().toLowerCase(), items = LIBRARY.filter((item) => !query || item.name.toLowerCase().includes(query) || item.pattern.toLowerCase().includes(query) || item.zone.toLowerCase().includes(query)).slice(0,80); out.innerHTML = items.map((item) => '<div class="advanced-list-item"><b>' + escapeHtml(item.name) + '</b><span>' + escapeHtml(ZONE_LABELS[item.zone] || item.zone) + ' · ' + escapeHtml(item.pattern.replace('_',' ')) + ' · ' + EXP_LABEL(item.exp) + '</span><p>' + escapeHtml(item.cue || '') + '</p></div>').join('') || '<div class="empty-state">No matching exercise.</div>'; }
+const EXERCISE_PATTERNS = ["squat","hinge","lunge","h_push","v_push","h_pull","v_pull","carry","core","rotation","mobility","conditioning","plyo","olympic"];
+const EXERCISE_REGIONS = ["lower","push","pull","core","full","cardio","mobility"];
+const EXERCISE_PATTERN_LABELS = { squat:"Squat",hinge:"Hinge",lunge:"Lunge",h_push:"Horizontal push",v_push:"Vertical push",h_pull:"Horizontal pull",v_pull:"Vertical pull",carry:"Carry",core:"Core / anti-movement",rotation:"Rotation",mobility:"Mobility",conditioning:"Conditioning",plyo:"Plyometric",olympic:"Olympic / explosive" };
+const EXERCISE_REGION_LABELS = { lower:"Lower body",push:"Upper push",pull:"Upper pull",core:"Core",full:"Full body",cardio:"Cardio",mobility:"Mobility" };
+function fillSelectOptions(select,entries,selected) { if (!select) return; select.innerHTML = entries.map(([value,label]) => '<option value="' + escapeHtml(value) + '">' + escapeHtml(label) + '</option>').join(''); if (Array.isArray(selected)) Array.from(select.options).forEach((option) => { option.selected = selected.includes(option.value); }); else if (selected != null) select.value = selected; }
+function initializeCoachLibraryFilters() {
+  fillSelectOptions(byId('coachLibraryPattern'),[['','All movements'],...EXERCISE_PATTERNS.map((key) => [key,EXERCISE_PATTERN_LABELS[key]])]);
+  fillSelectOptions(byId('coachLibraryZone'),[['','All equipment'],...ALL_ZONES.map((key) => [key,ZONE_LABELS[key]])]);
+  fillSelectOptions(byId('coachLibraryRegion'),[['','All body areas'],...EXERCISE_REGIONS.map((key) => [key,EXERCISE_REGION_LABELS[key]])]);
+  renderCoachExerciseLibrary();
+}
+function renderCoachExerciseLibrary() {
+  const out = byId('coachLibraryResults'); if (!out) return;
+  const query = String(byId('coachLibrarySearch') && byId('coachLibrarySearch').value || '').trim().toLowerCase(), pattern = byId('coachLibraryPattern') && byId('coachLibraryPattern').value || '', zone = byId('coachLibraryZone') && byId('coachLibraryZone').value || '', region = byId('coachLibraryRegion') && byId('coachLibraryRegion').value || '';
+  const items = LIBRARY.filter((item) => {
+    const haystack = [item.name,item.pattern,item.zone,item.region,item.cue,...(item.muscles || [])].join(' ').toLowerCase();
+    return (!query || haystack.includes(query)) && (!pattern || item.pattern === pattern) && (!zone || item.zone === zone) && (!region || item.region === region);
+  }).sort((a,b) => a.name.localeCompare(b.name));
+  if (byId('coachLibraryCount')) byId('coachLibraryCount').textContent = items.length + ' shown · ' + LIBRARY.length + ' active · ' + loadExerciseLibraryEdits().length + ' gym edit' + (loadExerciseLibraryEdits().length === 1 ? '' : 's');
+  out.innerHTML = items.slice(0,250).map((item) => {
+    const source = item.bankSource === 'custom' ? 'Custom' : item.bankSource === 'edited' ? 'Gym edited' : 'Built in';
+    return '<div class="advanced-list-item library-item"><div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>' + escapeHtml(item.name) + '</b><span class="library-source-badge' + (item.bankSource === 'custom' || item.bankSource === 'edited' ? ' custom' : '') + '">' + source + '</span></div><div class="library-item-tags"><span>' + escapeHtml(EXERCISE_PATTERN_LABELS[item.pattern] || item.pattern) + '</span><span>' + escapeHtml(EXERCISE_REGION_LABELS[item.region] || item.region) + '</span><span>' + escapeHtml(ZONE_LABELS[item.zone] || item.zone) + '</span><span>' + EXP_LABEL(item.exp) + '</span><span>Impact ' + Number(item.impact || 0) + '</span>' + (item.primary ? '<span>Primary</span>' : '') + (item.preps && item.preps.length ? '<span>Warm-up</span>' : '') + (item.finisher ? '<span>Finisher</span>' : '') + '</div><p>' + escapeHtml(item.cue || 'No coaching cue entered') + '</p><span>Muscles: ' + escapeHtml((item.muscles || []).map((key) => MUSCLE_LABELS[key] || key).join(', ') || 'General / not assigned') + (item.avoid && item.avoid.length ? ' · Filters: ' + item.avoid.map((key) => INJURY_LABELS[key] || key).join(', ') : '') + '</span></div><div class="library-item-actions"><button class="small-btn" onclick="openExerciseEditor(\'' + escapeHtml(exerciseBankId(item)) + '\')">Edit</button><button class="small-btn danger" onclick="deleteExerciseBankEntry(\'' + escapeHtml(exerciseBankId(item)) + '\')">Delete</button></div></div>';
+  }).join('') || '<div class="empty-state">No exercise matches those filters.</div>';
+}
+function selectedOptionValues(id) { const select = byId(id); return select ? Array.from(select.options).filter((option) => option.selected).map((option) => option.value) : []; }
+function exerciseRoleFor(item) { return item && item.finisher ? 'finisher' : item && item.preps && item.preps.length ? 'warmup' : item && item.primary ? 'primary' : 'standard'; }
+function openExerciseEditor(id) {
+  if (!requireTrainerMutation('edit the exercise bank')) return false;
+  const item = id ? LIBRARY.find((exercise) => exerciseBankId(exercise) === id) : null;
+  byId('exerciseBankId').value = item ? exerciseBankId(item) : '';
+  byId('exerciseEditorTitle').textContent = item ? 'Edit ' + item.name : 'Add exercise';
+  byId('exerciseBankName').value = item && item.name || '';
+  fillSelectOptions(byId('exerciseBankPattern'),EXERCISE_PATTERNS.map((key) => [key,EXERCISE_PATTERN_LABELS[key]]),item && item.pattern || 'squat');
+  fillSelectOptions(byId('exerciseBankRegion'),EXERCISE_REGIONS.map((key) => [key,EXERCISE_REGION_LABELS[key]]),item && item.region || 'lower');
+  fillSelectOptions(byId('exerciseBankZone'),ALL_ZONES.map((key) => [key,ZONE_LABELS[key]]),item && item.zone || 'bodyweight');
+  fillSelectOptions(byId('exerciseBankMuscles'),MUSCLE_LIST.map((key) => [key,MUSCLE_LABELS[key]]),item && item.muscles || []);
+  fillSelectOptions(byId('exerciseBankAvoid'),ALL_INJURIES.map((key) => [key,INJURY_LABELS[key]]),item && item.avoid || []);
+  fillSelectOptions(byId('exerciseBankCardio'),[['','Not a cardio machine'],...Object.keys(CARDIO_MODALITIES).filter((key) => key !== 'any').map((key) => [key,CARDIO_MODALITIES[key].label])],item && item.cardioMode || '');
+  byId('exerciseBankRole').value = exerciseRoleFor(item); byId('exerciseBankExperience').value = String(item && item.exp || 1); byId('exerciseBankImpact').value = String(item && item.impact || 0); byId('exerciseBankFinisherType').value = item && item.ftype || 'pump'; byId('exerciseBankCue').value = item && item.cue || ''; byId('exerciseBankUnilateral').checked = Boolean(item && item.unilateral);
+  Array.from(byId('exerciseBankPreps').options).forEach((option) => { option.selected = Boolean(item && item.preps && item.preps.includes(option.value)); });
+  byId('exerciseBankDeleteBtn').style.display = item ? 'inline-flex' : 'none'; byId('exerciseEditorModal').classList.add('open'); return true;
+}
+function closeExerciseEditor() { const modal = byId('exerciseEditorModal'); if (modal) modal.classList.remove('open'); }
+function saveExerciseBankEntry() {
+  if (!requireTrainerMutation('edit the exercise bank')) return null;
+  const originalId = byId('exerciseBankId').value, name = byId('exerciseBankName').value.trim(), role = byId('exerciseBankRole').value, muscles = selectedOptionValues('exerciseBankMuscles'), preps = selectedOptionValues('exerciseBankPreps');
+  if (!name) { showToast('Add a unique exercise name'); return null; }
+  if (LIBRARY.some((exercise) => exerciseBankId(exercise) !== originalId && exercise.name.trim().toLowerCase() === name.toLowerCase())) { showToast('An exercise with that name already exists'); return null; }
+  if (!muscles.length && !['cardio','mobility'].includes(byId('exerciseBankRegion').value)) { showToast('Choose at least one muscle so the generator can place this exercise'); return null; }
+  if (role === 'warmup' && !preps.length) { showToast('Choose what this warm-up prepares'); return null; }
+  if (byId('exerciseBankZone').value === 'cardio' && !byId('exerciseBankCardio').value) { showToast('Choose the exact cardio machine so availability filters can protect every workout phase'); return null; }
+  const id = originalId || exerciseBankId({name}), exercise = { bankId:id,name,zone:byId('exerciseBankZone').value,pattern:byId('exerciseBankPattern').value,region:byId('exerciseBankRegion').value,exp:Number(byId('exerciseBankExperience').value),impact:Number(byId('exerciseBankImpact').value),unilateral:byId('exerciseBankUnilateral').checked,avoid:selectedOptionValues('exerciseBankAvoid'),muscles,cue:byId('exerciseBankCue').value.trim(),cardioMode:byId('exerciseBankCardio').value || undefined };
+  if (role === 'primary') exercise.primary = true;
+  if (role === 'warmup') exercise.preps = preps;
+  if (role === 'finisher') { exercise.finisher = true; exercise.ftype = byId('exerciseBankFinisherType').value; exercise.fmuscles = [...muscles]; }
+  const edits = loadExerciseLibraryEdits(), index = edits.findIndex((edit) => edit.id === id), record = { id,action:BASE_LIBRARY.some((base) => exerciseBankId(base) === id) ? 'update' : 'add',exercise,updatedAt:new Date().toISOString() };
+  if (index >= 0) edits[index] = record; else edits.push(record);
+  if (!writeExerciseLibraryEdits(edits)) { showToast('The exercise-bank change could not be saved'); return null; }
+  applyExerciseLibraryEdits(); closeExerciseEditor(); renderCoachModule('library'); showToast(name + ' is active in the generator and workout bank'); return exercise;
+}
+function deleteExerciseBankEntry(id) {
+  if (!requireTrainerMutation('delete exercises')) return false; const item = LIBRARY.find((exercise) => exerciseBankId(exercise) === id); if (!item) return false;
+  if (!window.confirm('Delete ' + item.name + ' from the active exercise bank? Existing assigned workouts keep their saved copy.')) return false;
+  const edits = loadExerciseLibraryEdits(), index = edits.findIndex((edit) => edit.id === id), record = { id,action:'delete',updatedAt:new Date().toISOString() }; if (index >= 0) edits[index] = record; else edits.push(record);
+  if (!writeExerciseLibraryEdits(edits)) return false; applyExerciseLibraryEdits(); closeExerciseEditor(); renderCoachModule('library'); showToast(item.name + ' removed from future generation'); return true;
+}
+function deleteExerciseBankEntryFromEditor() { const id = byId('exerciseBankId').value; if (id) deleteExerciseBankEntry(id); }
 function replyToClientMessage(profileId) { const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) return; const body = window.prompt('Reply to ' + profile.name + ':'); if (!body) return; const messages = loadLocalArray(CLIENT_MESSAGES_KEY); messages.unshift({id:'message-' + Date.now(),profileId:profile.id,client:profile.name,from:'coach',body:body.trim(),createdAt:new Date().toISOString()}); writeLocalArray(CLIENT_MESSAGES_KEY,messages,1000); renderCoachModule('messages'); showToast('Reply saved'); }
 const UNIVERSAL_TRAINER_PIN = "352804";
 const TRAINER_SESSION_KEY = "fit4life_trainer_unlocked";
@@ -4617,7 +4802,7 @@ function trainingRouteField(target) {
 function cardioPreferenceField(target) {
   target.cardioModes = normalizeCardioPreferences(target.cardioModes || target.cardioMode);
   const wrap = document.createElement("div"); wrap.className = "field cardio-preference";
-  const label = document.createElement("label"); label.textContent = "Preferred cardio equipment · choose any that you like"; wrap.appendChild(label);
+  const label = document.createElement("label"); label.textContent = "Cardio equipment available · choose every option this client can use"; wrap.appendChild(label);
   const chips = document.createElement("div"); chips.className = "chips";
   Object.keys(CARDIO_MODALITIES).forEach((key) => {
     const selected = target.cardioModes.includes(key), btn = document.createElement("button"); btn.type = "button"; btn.className = "chip" + (selected ? " on" : ""); btn.textContent = CARDIO_MODALITIES[key].label; btn.setAttribute("aria-pressed",String(selected));
@@ -4632,7 +4817,7 @@ function cardioPreferenceField(target) {
     }); chips.appendChild(btn);
   });
   wrap.appendChild(chips);
-  const note = document.createElement("div"); note.className = "zone-note"; note.innerHTML = "<strong>Select several machines for more workout variety.</strong> The goal and route still decide whether the session is steady aerobic work, tempo, intervals, mixed training, or recovery."; wrap.appendChild(note);
+  const note = document.createElement("div"); note.className = "zone-note"; note.innerHTML = "<strong>This filters the entire session.</strong> A machine that is not selected cannot appear in the warm-up, main work, finisher, or cool-down. Select several available machines for more variety."; wrap.appendChild(note);
   return wrap;
 }
 
@@ -4933,6 +5118,52 @@ function generate() {
   renderOutput();
   document.getElementById("output").scrollIntoView({ behavior: "smooth", block: "start" });
 }
+function manualWorkoutPrescription(spec) {
+  const base = RX_TABLE[spec.goal][spec.experience], aged = ageAdjustRx(base,spec.age,spec.goal), time = TIME_PROFILE[spec.minutes] || TIME_PROFILE[60];
+  const main = { ...aged, sets:Math.max(2,aged.sets + time.setDelta), rest:scaleRest(aged.rest,time.restScale) };
+  return { main, prescription:{ sets:String(main.sets), reps:main.reps, rest:main.rest, tempo:TEMPO_BY_GOAL[spec.goal], rpe:main.rpe }, time };
+}
+function startWorkoutFromScratch() {
+  if (!requireTrainerMutation("build a workout from scratch")) return false;
+  if (state.mode !== "solo") { setMode("solo"); showToast("From-scratch building starts with one client at a time"); return false; }
+  if (!personReady(state.solo)) { showToast("Load a client and choose the goal, experience, and session length first"); return false; }
+  const spec = cloneSpec(state.solo), setup = manualWorkoutPrescription(spec);
+  const definitions = [
+    ["warmup","Warm-up"],
+    ["primer","Movement prep / primer"],
+    ["strength","Primary lift"],
+    ["secondary","Secondary strength"],
+    ["accessory","Accessory work"],
+    ["core","Trunk support"],
+    ["conditioning","Conditioning"],
+    ["mobility","Cool-down / mobility"],
+  ];
+  const blocks = definitions.map(([key,title]) => {
+    const raw = blockRx(setup.main,key,spec.goal,spec.age);
+    return { key, title, items:[], groups:[], rx:{ ...raw, rest:scaleRest(raw.rest,setup.time.restScale) }, manual:true };
+  });
+  const session = finalizeGeneratedSession({
+    spec,
+    goalLabel:(spec.goals || [spec.goal]).map((goal) => GOALS[goal] ? GOALS[goal].label : goal).join(" + "),
+    prescription:setup.prescription,
+    rationale:"Coach-built session. Every phase begins empty so the trainer can deliberately choose preparation, primary work, supporting movements, conditioning, and cool-down. The same equipment, cardio, age, preference, and limitation filters still apply to every added movement.",
+    blocks,
+    poolCount:eligibleFor(spec).length,
+    optionArchitecture:{ id:"manual", title:"Coach-built from scratch", short:"Full phase-by-phase control", description:"The coach selects every movement while FIT4LIFE preserves whole-session filters and the approval audit." },
+    trainingRoute:resolvedTrainingRoute(spec),
+    manual:true,
+  });
+  session.manual = true;
+  state.sessionOptions = [];
+  state.session = { type:"solo", data:session, edits:{} };
+  assignSessionIds(state.session);
+  byId("reshuffleBtn").style.display = "none";
+  byId("disclaimer").style.display = "block";
+  renderOutput();
+  byId("output").scrollIntoView({ behavior:"smooth", block:"start" });
+  showToast("Blank workout created · add movements to each phase, then run the quality audit");
+  return true;
+}
 function sessionExerciseNames(sessionState) {
   if (!sessionState) return [];
   const from = (s) => s.blocks.filter((b) => b.key !== "warmup").flatMap((b) => b.items.map((e) => e.name));
@@ -5051,6 +5282,20 @@ function renderWorkoutOptionPicker(out) {
     const bottom = el("div","workout-choice-bottom"), choose = el("button","btn btn-primary","Choose option " + String.fromCharCode(65 + index)); choose.type = "button"; choose.onclick = () => chooseWorkoutOption(index);
     bottom.append(el("p","",direction[1]),choose); card.appendChild(bottom); grid.appendChild(card);
   });
+  if (portalRole === "trainer" && trainerIsUnlocked() && state.mode === "solo") {
+    const manual = el("article","workout-choice manual-workout-card"), top = el("div","workout-choice-top");
+    top.append(el("div","workout-choice-label","Option D · full control"),el("h4","","Build from scratch"));
+    const meta = el("div","workout-choice-meta");
+    [state.solo.minutes + " min","Whole-session filters stay active","Coach approval required"].forEach((value) => meta.appendChild(el("span","",value)));
+    top.appendChild(meta); manual.appendChild(top);
+    const difference = el("div","workout-choice-difference");
+    difference.append(el("b","","Start with an organized blank session"),el("span","","Warm-up · primer · primary lift · secondary strength · accessory · trunk · conditioning · cool-down"));
+    manual.appendChild(difference);
+    manual.appendChild(el("div","constraint-summary","Every exercise you add must match this client’s equipment, available cardio machines, experience, age, preferences, and reported limitations. A trainer can still use a clearly warned override from the workout bank."));
+    const bottom = el("div","workout-choice-bottom"), button = el("button","btn btn-primary","Build option D from scratch");
+    button.type = "button"; button.onclick = () => startWorkoutFromScratch();
+    bottom.append(el("p","","Use this when none of the three generated approaches matches the coach’s intent."),button); manual.appendChild(bottom); grid.appendChild(manual);
+  }
   shell.appendChild(grid);
   shell.appendChild(el("div","workout-choice-note","These are contrasting starting directions, not locked templates. After choosing one, you can move, replace, shuffle, add, or remove any movement while keeping its goal-specific structure and prescription."));
   out.appendChild(shell);
@@ -5210,8 +5455,11 @@ function renderBlock(session, block, bi, sessionRef, partnerKey) {
     }
   });
 
-  // add-exercise control (not for warmup)
-  if (block.key !== "warmup" && portalRole !== "client") {
+  if (session.manual && !block.items.length) wrap.appendChild(el("div","empty-state","No movement added to this phase yet."));
+
+  // Generated warm-ups stay curated. A from-scratch workout lets the coach
+  // deliberately fill every phase, including warm-up and cool-down.
+  if ((block.key !== "warmup" || session.manual) && portalRole !== "client") {
     const add = el("button", "add-ex", "+ Add exercise");
     add.onclick = () => addExercise(session, block, sessionRef, partnerKey, add);
     wrap.appendChild(add);
@@ -5507,22 +5755,30 @@ function shuffleExercise(session, block, ei, currentEx) {
    trainer overrides, with every safety/equipment exception labeled. */
 let activeSwap = null;
 let swapMode = "recommended";
-function allSwapCandidates(session, block, currentEx) {
+function similarSwapCandidates(session, block, currentEx) {
   const usedNames = new Set();
   session.blocks.forEach((b) => b.items.forEach((e) => usedNames.add(e.name)));
-  return LIBRARY.filter((e) => e.pattern === currentEx.pattern && e.name !== currentEx.name && !usedNames.has(e.name)
+  return eligibleFor(session.spec).filter((e) => e.name !== currentEx.name && !usedNames.has(e.name) && (e.pattern === currentEx.pattern || e.region === currentEx.region)
       && (block.key === "finisher" ? e.finisher === true : e.finisher !== true))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
-function swapWarnings(exercise, spec) {
-  const warnings = [];
-  const zones = spec.zones && spec.zones.length ? spec.zones : null;
-  const profile = ageProfile(spec.age);
-  if (zones && !zones.includes(exercise.zone)) warnings.push("Equipment override");
-  if (exercise.exp > spec.experience) warnings.push("Experience override");
-  if ((spec.injuries || []).some((tag) => exercise.avoid.includes(tag))) warnings.push("Injury conflict");
-  if (exercise.impact > profile.impactCap || (exercise.pattern === "plyo" && !profile.plyoOK)) warnings.push("Age / impact caution");
-  return warnings;
+/* Backward-compatible name retained for the runtime QA suite. The client UI
+   now calls this the Similar tab. */
+function allSwapCandidates(session, block, currentEx) { return workoutBankSwapCandidates(session,currentEx); }
+function workoutBankSwapCandidates(session,currentEx) {
+  const usedNames = new Set(); session.blocks.forEach((block) => block.items.forEach((exercise) => usedNames.add(exercise.name)));
+  return LIBRARY.filter((exercise) => exercise.name !== currentEx.name && !usedNames.has(exercise.name)).sort((a,b) => a.name.localeCompare(b.name));
+}
+function swapWarnings(exercise, spec, block, currentEx) {
+  const constraintIssues = exerciseConstraintIssues(exercise,spec,spec.age), warnings = constraintIssues.map((issue) => issue.label);
+  if (constraintIssues.some((issue) => ["gym_equipment","client_equipment"].includes(issue.code))) warnings.push("Equipment override");
+  if (constraintIssues.some((issue) => issue.code === "cardio_equipment")) warnings.push("Cardio-machine override");
+  if (constraintIssues.some((issue) => ["limitation","pregnancy","postpartum","balance","pelvicfloor"].includes(issue.code))) warnings.push("Limitation override");
+  if (block && currentEx && exercise.pattern !== currentEx.pattern) warnings.push("Different movement pattern");
+  if (block && block.key === "strength" && !isPrimaryAnchor(exercise)) warnings.push("Not categorized as a primary lift");
+  if (block && block.key === "finisher" && exercise.finisher !== true) warnings.push("Not categorized as a finisher");
+  if (block && block.key !== "finisher" && exercise.finisher === true) warnings.push("Finisher used outside the finisher phase");
+  return [...new Set(warnings)];
 }
 function openExerciseSwap(session, block, ei, currentEx) {
   if (portalRole === "client" && !["accessory","iso","finisher","core","circuit"].includes(block.key)) { showToast("Ask your trainer to change a primary compound movement"); return false; }
@@ -5532,8 +5788,12 @@ function openExerciseSwap(session, block, ei, currentEx) {
   byId("exerciseSwapCopy").textContent = "Choose the exact movement you want in " + block.title + ", or let FIT4LIFE shuffle one recommended alternative.";
   byId("exerciseSwapSearch").value = "";
   byId("clientSwapFields").style.display = portalRole === "client" ? "grid" : "none";
-  byId("swapAllBtn").style.display = portalRole === "client" ? "none" : "inline-flex";
+  byId("swapBankBtn").style.display = portalRole === "client" ? "none" : "inline-flex";
   byId("exerciseSwapReason").value = "preference"; byId("exerciseSwapScope").value = "today";
+  fillSelectOptions(byId('swapPatternFilter'),[['','All patterns'],...EXERCISE_PATTERNS.map((key) => [key,EXERCISE_PATTERN_LABELS[key]])]);
+  fillSelectOptions(byId('swapRegionFilter'),[['','All body areas'],...EXERCISE_REGIONS.map((key) => [key,EXERCISE_REGION_LABELS[key]])]);
+  fillSelectOptions(byId('swapZoneFilter'),[['','All equipment'],...ALL_ZONES.map((key) => [key,ZONE_LABELS[key]])]);
+  byId('swapSafetyFilter').value = 'safe';
   byId("exerciseSwapModal").classList.add("open");
   setSwapMode("recommended");
   setTimeout(() => byId("exerciseSwapSearch").focus(), 0);
@@ -5544,21 +5804,29 @@ function closeExerciseSwap() {
   activeSwap = null;
 }
 function setSwapMode(mode) {
-  swapMode = portalRole === "client" ? "recommended" : mode === "all" ? "all" : "recommended";
+  swapMode = portalRole === "client" && mode === "bank" ? "recommended" : ["recommended","similar","bank"].includes(mode) ? mode : "recommended";
   byId("swapRecommendedBtn").classList.toggle("on", swapMode === "recommended");
-  byId("swapAllBtn").classList.toggle("on", swapMode === "all");
+  byId("swapSimilarBtn").classList.toggle("on", swapMode === "similar");
+  byId("swapBankBtn").classList.toggle("on", swapMode === "bank");
+  byId("swapBankFilters").classList.toggle("show",swapMode === "bank");
+  const notes = { recommended:"Recommended choices match this workout phase, available equipment, experience, age, preferences, and every reported limitation.",similar:"Similar choices keep the same movement pattern or body area while still respecting all current filters.",bank:"The full bank can cross movement patterns and workout phases. Keep “Only filter-matching” on for safe browsing, or show deliberate overrides with visible cautions." };
+  byId("swapTabNote").textContent = notes[swapMode];
   renderSwapOptions();
 }
 function renderSwapOptions() {
   if (!activeSwap) return;
   const { session, block, currentEx } = activeSwap;
   const search = byId("exerciseSwapSearch").value.trim().toLowerCase();
-  let options = swapMode === "all" ? allSwapCandidates(session, block, currentEx) : candidatesFor(session, block, currentEx);
-  if (search) options = options.filter((e) => e.name.toLowerCase().includes(search) || String(ZONE_LABELS[e.zone] || e.zone).toLowerCase().includes(search));
+  let options = swapMode === "bank" ? workoutBankSwapCandidates(session,currentEx) : swapMode === "similar" ? similarSwapCandidates(session,block,currentEx) : candidatesFor(session, block, currentEx);
+  if (swapMode === "bank") {
+    const pattern = byId('swapPatternFilter').value, region = byId('swapRegionFilter').value, zone = byId('swapZoneFilter').value, safeOnly = byId('swapSafetyFilter').value === 'safe';
+    options = options.filter((exercise) => (!pattern || exercise.pattern === pattern) && (!region || exercise.region === region) && (!zone || exercise.zone === zone) && (!safeOnly || !exerciseConstraintIssues(exercise,session.spec,session.spec.age).some((issue) => issue.hard)));
+  }
+  if (search) options = options.filter((e) => [e.name,e.pattern,e.region,ZONE_LABELS[e.zone] || e.zone,...(e.muscles || [])].join(' ').toLowerCase().includes(search));
   const list = byId("exerciseSwapOptions");
   list.innerHTML = "";
   if (!options.length) {
-    list.appendChild(el("div", "swap-empty", search ? "No matching replacements. Try another search or view all compatible movements." : "No other recommended movements are available. View all compatible movements to make a trainer override."));
+    list.appendChild(el("div", "swap-empty", search ? "No matching replacements. Clear a filter or try another search." : swapMode === "bank" ? "No workout-bank movements match those filters." : "No other filter-matching movements are available for this tab."));
     return;
   }
   options.forEach((exercise) => {
@@ -5566,7 +5834,8 @@ function renderSwapOptions() {
     const name = el("span", "swap-option-name", exercise.name);
     const meta = el("span", "swap-option-meta");
     meta.appendChild(el("span", "swap-badge", ZONE_LABELS[exercise.zone] || exercise.zone));
-    const warnings = swapWarnings(exercise, session.spec);
+    const warnings = swapWarnings(exercise, session.spec, block, currentEx);
+    if (!warnings.length) meta.appendChild(el("span", "swap-badge safe", "Matches all filters"));
     warnings.forEach((warning) => meta.appendChild(el("span", "swap-badge caution", warning)));
     option.append(name, meta);
     option.onclick = () => applyExerciseSwap(exercise);
@@ -5576,9 +5845,8 @@ function renderSwapOptions() {
 function applyExerciseSwap(exercise) {
   if (!activeSwap || !exercise) return;
   const { session, block, ei, currentEx } = activeSwap;
-  const warnings = swapWarnings(exercise, session.spec);
-  const safetyWarnings = warnings.filter((warning) => warning !== "Equipment override");
-  if (safetyWarnings.length && !window.confirm(exercise.name + " has: " + safetyWarnings.join(", ") + ". Use this trainer override anyway?")) return;
+  const warnings = swapWarnings(exercise, session.spec, block, currentEx);
+  if (warnings.length && !window.confirm(exercise.name + " has: " + warnings.join(", ") + ". Use this trainer override anyway?")) return;
   if (!replaceExercise(block, ei, exercise)) return;
   const reason = portalRole === "client" ? byId("exerciseSwapReason").value : "coach_edit", scope = portalRole === "client" ? byId("exerciseSwapScope").value : "today";
   addProgressEntry({ type:"substitution", client:session.spec.client || "Client", sessionId:session.sessionId, label:"Exercise substitution", value:currentEx.name + " → " + exercise.name, note:"Reason: " + reason + " · scope: " + scope, data:{ from:currentEx.name,to:exercise.name,reason,scope,position:exercisePosition(block),coachNotice:reason === "discomfort" || block.key === "strength" } });
@@ -5603,7 +5871,8 @@ function shuffleExerciseFromModal() {
 function addExercise(session, block, sessionRef, partnerKey, anchorBtn) {
   // Only offer exercises that are legal for THIS block in THIS session:
   // right muscles, right push/pull family, right upper/lower, right character.
-  const avail = candidatesFor(session, block, null);
+  const usedNames = new Set((session.blocks || []).flatMap((candidateBlock) => candidateBlock.items || []).map((exercise) => exercise.name));
+  const avail = (session.manual ? eligibleFor(session.spec) : candidatesFor(session, block, null)).filter((exercise) => !usedNames.has(exercise.name));
   if (!avail.length) return;
 
   // build an inline select
@@ -7495,6 +7764,7 @@ function renderClientSummary() {
 const CHECKINS_KEY = "fit4life_checkins_v1";
 const ATHLETE_METRICS_KEY = "fit4life_athlete_metrics_v1";
 const GYM_BRAND_KEY = "fit4life_gym_brand_v1";
+const GYM_EQUIPMENT_KEY = "fit4life_gym_equipment_v1";
 const TEAMS_KEY = "fit4life_teams_v1";
 const MENTAL_PLANS_KEY = "fit4life_mental_plans_v1";
 const MARKET_PROGRAMS_KEY = "fit4life_market_programs_v1";
@@ -7597,11 +7867,41 @@ function renderWorkloadModule() {
   const profile = selectedAdvancedProfile(), snap = workloadSnapshot(profile), ratio = snap.ratio ? snap.ratio.toFixed(2) : "—";
   return '<div class="advanced-grid"><section class="advanced-card wide"><h3>Workload &amp; plateau detection</h3><p>Uses imported/entered session load and repeated lift performance. Flags are coaching prompts, not injury predictions or diagnoses.</p><div class="advanced-stat-grid"><div class="advanced-stat"><b>' + Math.round(snap.acute) + '</b><span>7-day load</span></div><div class="advanced-stat"><b>' + Math.round(snap.chronic) + '</b><span>28-day weekly avg.</span></div><div class="advanced-stat"><b>' + ratio + '</b><span>load trend ratio</span></div><div class="advanced-stat"><b>' + snap.plateaus.length + '</b><span>plateau flags</span></div></div><div class="advanced-output" style="margin-top:10px"><strong>' + escapeHtml(snap.risk) + '</strong>\n' + (snap.plateaus.length ? 'Repeated estimates are flat across three sessions for: ' + escapeHtml(snap.plateaus.join(", ")) + '. Review technique, exercise fit, recovery, rep range, and whether the client needs a true progression or a change in stimulus.' : 'No repeated three-session strength plateau is currently detectable.') + '</div></section><section class="advanced-card wide"><h3>Coach response</h3><p>Workload data should explain the question to ask—not decide the workout alone.</p><div class="tool-actions"><button class="small-btn" onclick="setAdvancedTab(\'assist\')">Open AI coach assist</button><button class="small-btn" onclick="setAdvancedTab(\'athlete\')">Add athlete monitoring data</button><button class="small-btn" onclick="setAdvancedTab(\'wearables\')">Import wearable data</button></div></section></div>';
 }
-function currentGymBrand() { return loadLocalObject(GYM_BRAND_KEY,{ name:"FIT4LIFE",sub:"BYU-Idaho Trainer Tools",primary:"#3E6BE0",accent:"#5AA6F0" }); }
-function applyGymBrand() { const brand = currentGymBrand(); if (!document.documentElement || !document.documentElement.style) return brand; document.documentElement.style.setProperty("--blue",brand.primary || "#3E6BE0"); document.documentElement.style.setProperty("--blue-bright",brand.accent || "#5AA6F0"); const name = document.querySelector && (document.querySelector(".brand-name .grad-text") || document.querySelector(".brand-name")), sub = document.querySelector && document.querySelector(".brand-sub"); if (name) name.textContent = brand.name || "FIT4LIFE"; if (sub) sub.textContent = brand.sub || "Trainer Tools"; return brand; }
-function renderBrandModule() { const brand = currentGymBrand(); return '<div class="advanced-grid"><section class="advanced-card wide"><h3>White-label gym account</h3><p>Configure this device’s gym identity, colors, and member-facing label.</p><div class="compact-grid"><div class="compact-field wide"><label for="brandName">Gym name</label><input id="brandName" value="' + escapeHtml(brand.name) + '"></div><div class="compact-field wide"><label for="brandSub">Portal subtitle</label><input id="brandSub" value="' + escapeHtml(brand.sub) + '"></div><div class="compact-field"><label for="brandPrimary">Primary color</label><input id="brandPrimary" type="color" value="' + escapeHtml(brand.primary) + '"></div><div class="compact-field"><label for="brandAccent">Accent color</label><input id="brandAccent" type="color" value="' + escapeHtml(brand.accent) + '"></div></div><div class="tool-actions"><button class="small-btn primary" onclick="saveGymBrand()">Apply gym brand</button><button class="small-btn" onclick="resetGymBrand()">Reset FIT4LIFE</button></div><div class="brand-preview" style="--brand-primary:' + escapeHtml(brand.primary) + '"><h4>' + escapeHtml(brand.name) + '</h4><p>' + escapeHtml(brand.sub) + '</p></div><div class="capability-note">True white-label accounts need hosted organizations, custom domains, role-based access, billing, and isolated server-side data. These settings are a functional local preview.</div></section></div>'; }
-function saveGymBrand() { if (!requireTrainerMutation("change gym branding")) return null; const brand = { name:byId("brandName").value.trim() || "FIT4LIFE",sub:byId("brandSub").value.trim() || "Trainer Tools",primary:byId("brandPrimary").value,accent:byId("brandAccent").value,updatedAt:new Date().toISOString() }; writeLocalObject(GYM_BRAND_KEY,brand); applyGymBrand(); renderAdvancedStudio(); showToast("Gym brand applied on this device"); return brand; }
-function resetGymBrand() { localStorage.removeItem(GYM_BRAND_KEY); applyGymBrand(); renderAdvancedStudio(); showToast("FIT4LIFE brand restored"); }
+function currentGymBrand() { return loadLocalObject(GYM_BRAND_KEY,{ name:"FIT 4 LIFE",sub:"BYU-Idaho Trainer Tools",primary:"#3E6BE0",accent:"#5AA6F0" }); }
+function currentGymEquipment() { const fallback = { zones:Object.keys(ZONE_LABELS),cardioModes:Object.keys(CARDIO_MODALITIES).filter((key) => key !== "any"),blockedKeywords:["sled","battle rope"] }, saved = loadLocalObject(GYM_EQUIPMENT_KEY,fallback); return { ...fallback,...saved,zones:Array.isArray(saved.zones) ? saved.zones : fallback.zones,cardioModes:Array.isArray(saved.cardioModes) ? saved.cardioModes : fallback.cardioModes,blockedKeywords:Array.isArray(saved.blockedKeywords) ? saved.blockedKeywords : fallback.blockedKeywords }; }
+function applyGymBrand() {
+  const brand = currentGymBrand(); if (!document.documentElement || !document.documentElement.style) return brand;
+  document.documentElement.style.setProperty("--blue",brand.primary || "#3E6BE0"); document.documentElement.style.setProperty("--blue-bright",brand.accent || "#5AA6F0");
+  const name = document.querySelector && (document.querySelector(".brand-name .grad-text") || document.querySelector(".brand-name")), sub = document.querySelector && document.querySelector(".brand-sub"), auth = document.querySelector && document.querySelector(".cloud-auth-brand"), lockup = document.querySelector && document.querySelector(".granite-logo-main"), lockupWrap = document.querySelector && document.querySelector(".granite-logo-lockup");
+  if (name) name.textContent = brand.name || "Training Portal"; if (sub) sub.textContent = brand.sub || "Trainer Tools"; if (auth) auth.textContent = brand.name || "Training Portal"; if (lockup) lockup.textContent = brand.name || "Training Portal"; if (lockupWrap) lockupWrap.setAttribute("aria-label",brand.name || "Training Portal");
+  document.title = (brand.name || "Training Portal") + " — Training Portal"; return brand;
+}
+function renderBrandModule() {
+  const brand = currentGymBrand(), equipment = currentGymEquipment(), cloudTenant = window.fit4lifeCloudOrganizationSlug || "fit-4-life", portalUrl = location.origin + "/?gym=" + encodeURIComponent(cloudTenant);
+  const zoneOptions = Object.keys(ZONE_LABELS).map((key) => '<label><input class="gym-equipment-zone" type="checkbox" value="' + key + '" ' + (equipment.zones.includes(key) ? 'checked' : '') + '> ' + escapeHtml(ZONE_LABELS[key]) + '</label>').join("");
+  const cardioOptions = Object.keys(CARDIO_MODALITIES).filter((key) => key !== "any").map((key) => '<label><input class="gym-cardio-mode" type="checkbox" value="' + key + '" ' + (equipment.cardioModes.includes(key) ? 'checked' : '') + '> ' + escapeHtml(CARDIO_MODALITIES[key].label) + '</label>').join("");
+  return '<div class="advanced-grid"><section class="advanced-card wide"><h3>Shared gym setup</h3><p>These settings define this gym’s white-label identity and the equipment the workout engine may use. The gym owner’s changes sync to every trainer and client device.</p><div class="compact-grid"><div class="compact-field wide"><label for="brandName">Gym name</label><input id="brandName" value="' + escapeHtml(brand.name) + '"></div><div class="compact-field wide"><label for="brandSub">Portal subtitle</label><input id="brandSub" value="' + escapeHtml(brand.sub) + '"></div><div class="compact-field"><label for="brandPrimary">Primary color</label><input id="brandPrimary" type="color" value="' + escapeHtml(brand.primary) + '"></div><div class="compact-field"><label for="brandAccent">Accent color</label><input id="brandAccent" type="color" value="' + escapeHtml(brand.accent) + '"></div><div class="compact-field wide"><label>Equipment zones available at this gym</label><div class="summary-checks">' + zoneOptions + '</div></div><div class="compact-field wide"><label>Cardio machines available</label><div class="summary-checks">' + cardioOptions + '</div></div><div class="compact-field wide"><label for="gymBlockedEquipment">Blocked equipment or movement keywords</label><textarea id="gymBlockedEquipment" placeholder="sled, battle rope">' + escapeHtml((equipment.blockedKeywords || []).join(", ")) + '</textarea><span class="storage-note">The generator excludes any exercise name containing one of these terms.</span></div></div><div class="tool-actions"><button class="small-btn primary" onclick="saveGymBrand()">Save gym setup</button><button class="small-btn" onclick="resetGymBrand()">Reset colors</button></div><div class="brand-preview" style="--brand-primary:' + escapeHtml(brand.primary) + '"><h4>' + escapeHtml(brand.name) + '</h4><p>' + escapeHtml(brand.sub) + '</p></div><div class="capability-note"><strong>Current tenant link:</strong> ' + escapeHtml(portalUrl) + '<br>Use a different gym slug—or later a verified custom domain—to load a different brand, equipment bank, staff, and client records. Only an owner can change shared gym setup.</div></section></div>';
+}
+function saveGymBrand() {
+  if (!requireTrainerMutation("change gym setup")) return null;
+  if (window.fit4lifeCloudOrganizationId && window.fit4lifeCloudRole !== "owner") { showToast("Only the gym owner can change shared branding and equipment"); return null; }
+  const currentEquipment = currentGymEquipment(), zoneInputs = [...document.querySelectorAll(".gym-equipment-zone")], cardioInputs = [...document.querySelectorAll(".gym-cardio-mode")];
+  const zones = zoneInputs.length ? zoneInputs.filter((item) => item.checked).map((item) => item.value) : currentEquipment.zones;
+  const cardioModes = cardioInputs.length ? cardioInputs.filter((item) => item.checked).map((item) => item.value) : currentEquipment.cardioModes;
+  if (!zones.length) { showToast("Choose at least one equipment zone"); return null; }
+  if (zones.includes("cardio") && !cardioModes.length) { showToast("Choose at least one cardio machine or turn off the Cardio zone"); return null; }
+  const brand = { name:byId("brandName").value.trim() || "Training Portal",sub:byId("brandSub").value.trim() || "Trainer Tools",primary:byId("brandPrimary").value,accent:byId("brandAccent").value,updatedAt:new Date().toISOString() };
+  const blockedField = document.getElementById("gymBlockedEquipment"), blockedValue = blockedField ? blockedField.value : currentEquipment.blockedKeywords.join(", ");
+  const equipment = { zones,cardioModes,blockedKeywords:blockedValue.split(/[,\n]/).map((item) => item.trim().toLowerCase()).filter(Boolean),updatedAt:new Date().toISOString() };
+  writeLocalObject(GYM_BRAND_KEY,brand); writeLocalObject(GYM_EQUIPMENT_KEY,equipment); applyGymBrand(); renderAdvancedStudio();
+  if (typeof window.fit4lifeCloudSaveOrganizationSettings === "function") window.fit4lifeCloudSaveOrganizationSettings(brand,equipment); else showToast("Gym setup saved on this device");
+  return { brand,equipment };
+}
+function resetGymBrand() {
+  const brand = { ...currentGymBrand(),primary:"#3E6BE0",accent:"#5AA6F0",updatedAt:new Date().toISOString() }, equipment = currentGymEquipment();
+  writeLocalObject(GYM_BRAND_KEY,brand); applyGymBrand(); renderAdvancedStudio();
+  if (typeof window.fit4lifeCloudSaveOrganizationSettings === "function") window.fit4lifeCloudSaveOrganizationSettings(brand,equipment); else showToast("Default colors restored on this device");
+}
 function renderTeamsModule() {
   const profiles = loadProfiles(), teams = loadTeams();
   const teamHtml = teams.map((team) => '<div class="advanced-list-item"><b>' + escapeHtml(team.name) + '</b><span>Coach: ' + escapeHtml(team.coach || 'Unassigned') + ' · ' + (team.profileIds || []).length + ' members · ' + escapeHtml(team.focus || 'General') + '</span><div class="tool-actions"><button class="small-btn danger" onclick="deleteTeam(\'' + escapeHtml(team.id) + '\')">Delete team</button></div></div>').join("");
@@ -7644,10 +7944,10 @@ function exportProgress() {
   const entries = loadProgress(), profiles = loadProfiles(), profileRequests = loadProfileRequests(), inBodyScans = loadInBodyScans(), summaryMeta = loadSummaryMeta(), bodyGoals = loadBodyGoals(), assignedWorkouts = loadAssignedWorkouts();
   const checkIns = loadCheckIns(), athleteMetrics = loadAthleteMetrics(), teams = loadTeams(), mentalPlans = loadMentalPlans(), marketPrograms = loadMarketPrograms(), automations = loadAutomations(), automationAlerts = loadAutomationAlerts();
   const savedPrograms = loadSavedPrograms(), clientMessages = loadLocalArray(CLIENT_MESSAGES_KEY), clientDaily = loadLocalObject(CLIENT_DAILY_KEY,{});
-  const gymBrand = localStorage.getItem(GYM_BRAND_KEY) ? currentGymBrand() : null, wearableConnections = loadWearableConnections();
-  const advancedCount = checkIns.length + athleteMetrics.length + teams.length + mentalPlans.length + marketPrograms.length + automations.length + automationAlerts.length + Object.keys(wearableConnections).length + (gymBrand ? 1 : 0);
-  if (!entries.length && !profiles.length && !profileRequests.length && !inBodyScans.length && !bodyGoals.length && !assignedWorkouts.length && !advancedCount) { showToast("There is no FIT4LIFE data to export"); return; }
-  const backup = { version: 9, exportedAt: new Date().toISOString(), entries, profiles, profileRequests, inBodyScans, summaryMeta, bodyGoals, assignedWorkouts, savedPrograms, clientMessages, clientDaily, checkIns, athleteMetrics, gymBrand, teams, mentalPlans, marketPrograms, wearableConnections, automations, automationAlerts };
+  const gymBrand = localStorage.getItem(GYM_BRAND_KEY) ? currentGymBrand() : null, gymEquipment = localStorage.getItem(GYM_EQUIPMENT_KEY) ? currentGymEquipment() : null, wearableConnections = loadWearableConnections(), exerciseLibraryEdits = loadExerciseLibraryEdits();
+  const advancedCount = checkIns.length + athleteMetrics.length + teams.length + mentalPlans.length + marketPrograms.length + automations.length + automationAlerts.length + exerciseLibraryEdits.length + Object.keys(wearableConnections).length + (gymBrand ? 1 : 0) + (gymEquipment ? 1 : 0);
+  if (!entries.length && !profiles.length && !profileRequests.length && !inBodyScans.length && !bodyGoals.length && !assignedWorkouts.length && !advancedCount) { showToast("There is no training data to export"); return; }
+  const backup = { version: 11, exportedAt: new Date().toISOString(), entries, profiles, profileRequests, inBodyScans, summaryMeta, bodyGoals, assignedWorkouts, savedPrograms, clientMessages, clientDaily, checkIns, athleteMetrics, gymBrand, gymEquipment, teams, mentalPlans, marketPrograms, wearableConnections, automations, automationAlerts, exerciseLibraryEdits };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob), a = document.createElement("a");
   a.href = url; a.download = "fit4life-progress-" + new Date().toISOString().slice(0, 10) + ".json"; a.click(); URL.revokeObjectURL(url);
@@ -7659,8 +7959,8 @@ function importProgressFile(input) {
   reader.onload = () => {
     try {
       const backup = JSON.parse(reader.result), importedEntries = Array.isArray(backup.entries) ? backup.entries : [], importedProfiles = Array.isArray(backup.profiles) ? backup.profiles : [], importedRequests = Array.isArray(backup.profileRequests) ? backup.profileRequests : [], importedScans = Array.isArray(backup.inBodyScans) ? backup.inBodyScans : [], importedGoals = Array.isArray(backup.bodyGoals) ? backup.bodyGoals : [], importedAssignments = Array.isArray(backup.assignedWorkouts) ? backup.assignedWorkouts : [], importedPrograms = Array.isArray(backup.savedPrograms) ? backup.savedPrograms : [], importedMessages = Array.isArray(backup.clientMessages) ? backup.clientMessages : [];
-      const importedCheckIns = Array.isArray(backup.checkIns) ? backup.checkIns : [], importedAthleteMetrics = Array.isArray(backup.athleteMetrics) ? backup.athleteMetrics : [], importedTeams = Array.isArray(backup.teams) ? backup.teams : [], importedMentalPlans = Array.isArray(backup.mentalPlans) ? backup.mentalPlans : [], importedMarketPrograms = Array.isArray(backup.marketPrograms) ? backup.marketPrograms : [], importedAutomations = Array.isArray(backup.automations) ? backup.automations : [], importedAlerts = Array.isArray(backup.automationAlerts) ? backup.automationAlerts : [];
-      const advancedCount = importedCheckIns.length + importedAthleteMetrics.length + importedTeams.length + importedMentalPlans.length + importedMarketPrograms.length + importedAutomations.length + importedAlerts.length + (backup.gymBrand ? 1 : 0) + (backup.wearableConnections && Object.keys(backup.wearableConnections).length ? 1 : 0);
+      const importedCheckIns = Array.isArray(backup.checkIns) ? backup.checkIns : [], importedAthleteMetrics = Array.isArray(backup.athleteMetrics) ? backup.athleteMetrics : [], importedTeams = Array.isArray(backup.teams) ? backup.teams : [], importedMentalPlans = Array.isArray(backup.mentalPlans) ? backup.mentalPlans : [], importedMarketPrograms = Array.isArray(backup.marketPrograms) ? backup.marketPrograms : [], importedAutomations = Array.isArray(backup.automations) ? backup.automations : [], importedAlerts = Array.isArray(backup.automationAlerts) ? backup.automationAlerts : [], importedExerciseLibraryEdits = Array.isArray(backup.exerciseLibraryEdits) ? backup.exerciseLibraryEdits : [];
+      const advancedCount = importedCheckIns.length + importedAthleteMetrics.length + importedTeams.length + importedMentalPlans.length + importedMarketPrograms.length + importedAutomations.length + importedAlerts.length + importedExerciseLibraryEdits.length + (backup.gymBrand ? 1 : 0) + (backup.gymEquipment ? 1 : 0) + (backup.wearableConnections && Object.keys(backup.wearableConnections).length ? 1 : 0);
       if (!importedEntries.length && !importedProfiles.length && !importedRequests.length && !importedScans.length && !importedGoals.length && !importedAssignments.length && !advancedCount) throw new Error("empty");
       const entries = loadProgress(), ids = new Set(entries.map((e) => e.id));
       importedEntries.forEach((entry) => { if (entry && entry.id && !ids.has(entry.id)) { entries.push(entry); ids.add(entry.id); } });
@@ -7682,11 +7982,11 @@ function importProgressFile(input) {
         if (!assignment || !assignment.session) return; const profile = profiles.find((item) => item.id === assignment.profileId) || profiles.find((item) => clientMatches(item.name,assignment.client)); if (!profile) return;
         const restored = { ...assignment, id:assignment.id || "assignment-" + Date.now() + "-" + Math.random().toString(16).slice(2), status:assignment.status || "assigned", profileId:profile.id, client:profile.name }, index = assignments.findIndex((item) => item.profileId === profile.id); if (index >= 0) assignments[index] = restored; else assignments.push(restored);
       }); writeAssignedWorkouts(assignments);
+      const mergeRecords = (current, imported) => { const merged = [...current], ids = new Set(merged.map((item) => item && item.id).filter(Boolean)); imported.forEach((item) => { if (item && item.id && !ids.has(item.id)) { merged.push(item); ids.add(item.id); } }); return merged; };
       writeSavedPrograms(mergeRecords(loadSavedPrograms(),importedPrograms));
       writeLocalArray(CLIENT_MESSAGES_KEY,mergeRecords(loadLocalArray(CLIENT_MESSAGES_KEY),importedMessages),1000);
       if (backup.clientDaily && typeof backup.clientDaily === "object" && !Array.isArray(backup.clientDaily)) writeLocalObject(CLIENT_DAILY_KEY,Object.assign(loadLocalObject(CLIENT_DAILY_KEY,{}),backup.clientDaily));
       if (backup.summaryMeta && typeof backup.summaryMeta === "object") writeSummaryMeta(Object.assign(loadSummaryMeta(), backup.summaryMeta));
-      const mergeRecords = (current, imported) => { const merged = [...current], ids = new Set(merged.map((item) => item && item.id).filter(Boolean)); imported.forEach((item) => { if (item && item.id && !ids.has(item.id)) { merged.push(item); ids.add(item.id); } }); return merged; };
       writeCheckIns(mergeRecords(loadCheckIns(),importedCheckIns));
       writeAthleteMetrics(mergeRecords(loadAthleteMetrics(),importedAthleteMetrics));
       writeLocalArray(TEAMS_KEY,mergeRecords(loadTeams(),importedTeams),200);
@@ -7694,7 +7994,10 @@ function importProgressFile(input) {
       writeLocalArray(MARKET_PROGRAMS_KEY,mergeRecords(loadMarketPrograms(),importedMarketPrograms),500);
       writeLocalArray(AUTOMATIONS_KEY,mergeRecords(loadAutomations(),importedAutomations),200);
       writeLocalArray(AUTOMATION_ALERTS_KEY,mergeRecords(loadAutomationAlerts(),importedAlerts),500);
+      writeExerciseLibraryEdits(mergeRecords(loadExerciseLibraryEdits(),importedExerciseLibraryEdits));
+      applyExerciseLibraryEdits();
       if (backup.gymBrand && typeof backup.gymBrand === "object") writeLocalObject(GYM_BRAND_KEY,backup.gymBrand);
+      if (backup.gymEquipment && typeof backup.gymEquipment === "object") writeLocalObject(GYM_EQUIPMENT_KEY,backup.gymEquipment);
       if (backup.wearableConnections && typeof backup.wearableConnections === "object") writeLocalObject(WEARABLE_CONNECTIONS_KEY,Object.assign(loadWearableConnections(),backup.wearableConnections));
       applyGymBrand(); refreshProfileSelects(); renderProgressHistory(); showToast("Backup restored: " + importedEntries.length + " history entries, " + restoredProfiles + " profiles, and " + advancedCount + " advanced coaching records" + (skippedProfiles ? ". " + skippedProfiles + " duplicate or near-duplicate profiles were skipped." : ""));
     } catch (_) { showToast("That file is not a valid FIT4LIFE backup"); }
@@ -7726,12 +8029,13 @@ if (document.getElementById) {
     byId("coachAdjustmentModal").addEventListener("click", (event) => { if (event.target === byId("coachAdjustmentModal")) closeCoachAdjustment(); });
     byId("trainerGateModal").addEventListener("click", (event) => { if (event.target === byId("trainerGateModal")) closeTrainerGate(); });
     byId("exerciseSwapModal").addEventListener("click", (event) => { if (event.target === byId("exerciseSwapModal")) closeExerciseSwap(); });
+    byId("exerciseEditorModal").addEventListener("click", (event) => { if (event.target === byId("exerciseEditorModal")) closeExerciseEditor(); });
     byId("summaryEntryModal").addEventListener("click", (event) => { if (event.target === byId("summaryEntryModal")) closeSummaryEntryEditor(); });
     byId("profileEditorModal").addEventListener("click", (event) => { if (event.target === byId("profileEditorModal")) closeProfileEditor(); });
     byId("completeDeleteModal").addEventListener("click", (event) => { if (event.target === byId("completeDeleteModal")) closeCompleteDeleteModal(); });
     byId("inBodyModal").addEventListener("click", (event) => { if (event.target === byId("inBodyModal")) closeInBodyModal(); });
     byId("bodyGoalModal").addEventListener("click", (event) => { if (event.target === byId("bodyGoalModal")) closeBodyGoalModal(); });
-    if (document.addEventListener) document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeWorkoutReview(); closeTrainerGate(); closeExerciseSwap(); closeSummaryEntryEditor(); closeProfileEditor(); closeCompleteDeleteModal(); closeInBodyModal(); closeBodyGoalModal(); } });
+    if (document.addEventListener) document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeWorkoutReview(); closeTrainerGate(); closeExerciseSwap(); closeExerciseEditor(); closeSummaryEntryEditor(); closeProfileEditor(); closeCompleteDeleteModal(); closeInBodyModal(); closeBodyGoalModal(); } });
   }
 }
 
