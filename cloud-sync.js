@@ -45,11 +45,15 @@
   let cloudPullTimer = null;
   let cloudPushTimer = null;
   let cloudChannel = null;
+  let cloudRegistrationChannel = null;
+  let cloudRegistrationRequests = [];
+  let authMode = "signin";
   const pendingScopes = new Set();
   const remoteProfilesByExternalId = new Map();
 
   window.fit4lifeCloudRole = "";
   window.fit4lifeCloudReady = false;
+  window.fit4lifeCloudRegistrationRequests = [];
 
   function readJson(key, fallback) {
     try {
@@ -133,6 +137,80 @@
     document.body.classList.toggle("cloud-auth-locked", Boolean(show));
   }
 
+  function setText(id, value) {
+    const target = document.getElementById(id);
+    if (target) target.textContent = value || "";
+  }
+
+  function showAuthMode(mode) {
+    authMode = mode || "signin";
+    const panels = {
+      signin: "cloudSignInPanel",
+      signup: "cloudSignUpPanel",
+      reset: "cloudResetPanel",
+      update: "cloudUpdatePasswordPanel",
+      pending: "cloudPendingPanel"
+    };
+    Object.keys(panels).forEach((key) => {
+      const panel = document.getElementById(panels[key]);
+      if (panel) panel.classList.toggle("open", key === authMode);
+    });
+    const tabs = document.getElementById("cloudAuthTabs");
+    if (tabs) {
+      tabs.style.display = ["signin", "signup"].includes(authMode) ? "grid" : "none";
+      tabs.querySelectorAll("button[data-auth-mode]").forEach((button) => button.classList.toggle("on", button.dataset.authMode === authMode));
+    }
+    const copy = {
+      signin: ["Sign in to your workspace", "Access your workouts and progress from any device."],
+      signup: ["Create your client account", "Choose your login details. A trainer will approve or connect your coaching profile."],
+      reset: ["Reset your password", "We will email you a secure link to choose a new password."],
+      update: ["Choose a new password", "Enter a new password for your FIT 4 LIFE account."],
+      pending: ["Account status", "Your secure login is active while your client access is reviewed."]
+    }[authMode] || ["FIT 4 LIFE account", "Secure shared training system."];
+    setText("cloudAuthTitle", copy[0]);
+    setText("cloudAuthIntro", copy[1]);
+    authMessage("", false);
+  }
+
+  window.fit4lifeCloudShowAuthMode = function fit4lifeCloudShowAuthMode(mode) {
+    showAuthMode(mode);
+    showAuthGate(true);
+  };
+
+  function requestMeta(request) {
+    const meta = document.getElementById("cloudPendingMeta");
+    if (!meta) return;
+    const rows = [];
+    if (request && request.full_name) rows.push(["Name", request.full_name]);
+    if (request && request.email) rows.push(["Email", request.email]);
+    if (request && request.username) rows.push(["Username", "@" + String(request.username).replace(/^@/, "")]);
+    if (request && request.status) rows.push(["Status", request.status.charAt(0).toUpperCase() + request.status.slice(1)]);
+    meta.innerHTML = rows.map((row) => "<div><span>" + row[0] + "</span><b>" + String(row[1]).replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '\"': "&quot;" }[character])) + "</b></div>").join("");
+  }
+
+  function showPendingRequest(request, needsVerification) {
+    showAuthMode("pending");
+    requestMeta(request || readJson("fit4life_pending_signup_v1", {}));
+    const status = request && request.status ? request.status : "pending";
+    if (status === "rejected") {
+      setText("cloudPendingIcon", "!");
+      setText("cloudPendingTitle", "Request needs attention");
+      setText("cloudPendingCopy", request.review_note || "A trainer could not approve this request. Contact FIT 4 LIFE for help.");
+      setText("cloudPendingCheck", "Check status again");
+    } else if (needsVerification) {
+      setText("cloudPendingIcon", "✉");
+      setText("cloudPendingTitle", "Check your email");
+      setText("cloudPendingCopy", "Open the verification email from FIT 4 LIFE. After verification, return here and sign in while a trainer reviews your request.");
+      setText("cloudPendingCheck", "I verified my email");
+    } else {
+      setText("cloudPendingIcon", "✓");
+      setText("cloudPendingTitle", "Waiting for trainer approval");
+      setText("cloudPendingCopy", "Your email is verified and your request is in the trainer queue. You will not need to create another profile.");
+      setText("cloudPendingCheck", "Check approval");
+    }
+    showAuthGate(true);
+  }
+
   function refreshVisibleApp() {
     try {
       if (typeof refreshProfileSelects === "function") refreshProfileSelects();
@@ -181,6 +259,54 @@
       .limit(1)
       .maybeSingle();
     return response.error ? null : response.data;
+  }
+
+  async function getMyRegistrationRequest() {
+    if (!cloudClient || !cloudUser) return null;
+    const response = await cloudClient
+      .from("registration_requests")
+      .select("id,organization_id,user_id,email,full_name,username,status,review_note,created_at,updated_at")
+      .eq("user_id", cloudUser.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (response.error) {
+      if (response.error.code === "42P01") return null;
+      console.error("Registration request lookup failed", response.error);
+      return null;
+    }
+    return response.data || null;
+  }
+
+  async function loadTrainerRegistrationRequests() {
+    if (!cloudClient || !cloudOrganizationId || !(cloudRole === "owner" || cloudRole === "trainer")) return [];
+    const response = await cloudClient
+      .from("registration_requests")
+      .select("id,organization_id,user_id,email,full_name,username,status,review_note,created_at,updated_at")
+      .eq("organization_id", cloudOrganizationId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+    if (response.error) {
+      if (response.error.code !== "42P01") console.error("Registration queue failed", response.error);
+      cloudRegistrationRequests = [];
+    } else {
+      cloudRegistrationRequests = response.data || [];
+    }
+    window.fit4lifeCloudRegistrationRequests = cloudRegistrationRequests.slice();
+    try { if (typeof renderProfileRequests === "function") renderProfileRequests(); } catch (_) {}
+    return cloudRegistrationRequests;
+  }
+
+  function subscribeToPendingRegistration() {
+    if (!cloudClient || !cloudUser) return;
+    if (cloudRegistrationChannel) cloudClient.removeChannel(cloudRegistrationChannel);
+    cloudRegistrationChannel = cloudClient
+      .channel("fit4life-registration-" + cloudUser.id)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "registration_requests", filter: "user_id=eq." + cloudUser.id }, async () => {
+        const sessionResponse = await cloudClient.auth.getSession();
+        if (sessionResponse.data && sessionResponse.data.session) await handleSession(sessionResponse.data.session);
+      })
+      .subscribe();
   }
 
   function tableProfile(profile) {
@@ -487,6 +613,7 @@
       if (isTrainer) {
         const orgRecord = (recordResponse.data || []).find((record) => record.client_id == null && record.record_type === "organization_snapshot");
         if (orgRecord) applyOrganizationBundle(orgRecord.payload);
+        await loadTrainerRegistrationRequests();
       }
       cloudApplying = false;
       refreshVisibleApp();
@@ -511,6 +638,7 @@
       .channel("fit4life-live-" + cloudUser.id)
       .on("postgres_changes", { event: "*", schema: "public", table: "sync_records" }, scheduleCloudPull)
       .on("postgres_changes", { event: "*", schema: "public", table: "client_profiles" }, scheduleCloudPull)
+      .on("postgres_changes", { event: "*", schema: "public", table: "registration_requests" }, () => loadTrainerRegistrationRequests())
       .subscribe();
   }
 
@@ -519,10 +647,10 @@
     if (!button) return;
     if (!cloudUser) {
       button.textContent = "Sign in";
-      button.onclick = () => showAuthGate(true);
+      button.onclick = () => { showAuthMode("signin"); showAuthGate(true); };
       return;
     }
-    button.textContent = (cloudRole === "owner" ? "Owner" : cloudRole === "trainer" ? "Trainer" : "Client") + " · Sign out";
+    button.textContent = (cloudRole === "owner" ? "Owner" : cloudRole === "trainer" ? "Trainer" : cloudRole === "client" ? "Client" : "Pending") + " · Sign out";
     button.onclick = window.fit4lifeCloudSignOut;
   }
 
@@ -533,7 +661,10 @@
       window.fit4lifeCloudReady = false;
       window.fit4lifeCloudRole = "";
       cloudRole = "";
+      if (cloudRegistrationChannel && cloudClient) cloudClient.removeChannel(cloudRegistrationChannel);
+      cloudRegistrationChannel = null;
       updateAccountUi();
+      if (authMode !== "signup" && authMode !== "reset" && authMode !== "update") showAuthMode("signin");
       showAuthGate(true);
       cloudStatus("Sign in to sync", "offline");
       return;
@@ -542,14 +673,34 @@
     authMessage("Confirming your FIT 4 LIFE access…", false);
     const membership = await getMembership();
     if (!membership) {
-      cloudUser = null;
-      authMessage("No trainer-created profile matches this account. Ask a trainer to add your email before signing in.", true);
-      showAuthGate(true);
+      cloudReady = false;
+      window.fit4lifeCloudReady = false;
+      window.fit4lifeCloudRole = "";
+      cloudRole = "";
+      const request = await getMyRegistrationRequest();
+      updateAccountUi();
+      if (request) {
+        showPendingRequest(request, false);
+        cloudStatus(request.status === "rejected" ? "Registration needs attention" : "Waiting for trainer approval", request.status === "rejected" ? "error" : "syncing");
+        subscribeToPendingRegistration();
+      } else {
+        showPendingRequest({ email: cloudUser.email || "", status: "pending" }, false);
+        setText("cloudPendingIcon", "!");
+        setText("cloudPendingTitle", "No client access assigned");
+        setText("cloudPendingCopy", "This login exists, but it is not connected to a client profile or registration request. Contact a FIT 4 LIFE trainer.");
+        cloudStatus("Access not assigned", "error");
+      }
       return;
     }
 
     cloudRole = membership.role;
     cloudOrganizationId = membership.organization_id;
+    if (cloudRole === "client") {
+      try { await cloudClient.rpc("complete_my_fit4life_registration"); } catch (_) {}
+    }
+    if (cloudRegistrationChannel) cloudClient.removeChannel(cloudRegistrationChannel);
+    cloudRegistrationChannel = null;
+    writeJson("fit4life_pending_signup_v1", null);
     window.fit4lifeCloudRole = cloudRole;
     if (cloudRole === "owner" || cloudRole === "trainer") {
       try { sessionStorage.setItem("fit4life_trainer_unlocked", "yes"); } catch (_) {}
@@ -594,8 +745,173 @@
     return true;
   };
 
+  window.fit4lifeCloudSignUp = async function fit4lifeCloudSignUp() {
+    if (!cloudClient) {
+      authMessage("The secure account service is still connecting. Try again in a moment.", true);
+      return false;
+    }
+    const fullName = String(document.getElementById("cloudSignUpName").value || "").trim().replace(/\s+/g, " ");
+    const username = String(document.getElementById("cloudSignUpUsername").value || "").trim().toLowerCase().replace(/^@/, "");
+    const email = normalizedEmail(document.getElementById("cloudSignUpEmail").value);
+    const password = document.getElementById("cloudSignUpPassword").value;
+    const confirmation = document.getElementById("cloudSignUpConfirm").value;
+    const consent = document.getElementById("cloudSignUpConsent").checked;
+    if (fullName.length < 2) {
+      authMessage("Enter your full name.", true);
+      return false;
+    }
+    if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(username)) {
+      authMessage("Choose a username with 3–40 letters, numbers, periods, underscores, or hyphens.", true);
+      return false;
+    }
+    if (!email || !email.includes("@")) {
+      authMessage("Enter a valid email address.", true);
+      return false;
+    }
+    if (password.length < 8) {
+      authMessage("Use a password with at least 8 characters.", true);
+      return false;
+    }
+    if (password !== confirmation) {
+      authMessage("The passwords do not match.", true);
+      return false;
+    }
+    if (!consent) {
+      authMessage("Confirm that you understand trainer approval is required.", true);
+      return false;
+    }
+    const button = document.getElementById("cloudSignUpSubmit");
+    button.disabled = true;
+    button.textContent = "Creating account…";
+    authMessage("Creating your secure client login…", false);
+    const response = await cloudClient.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: {
+          full_name: fullName,
+          username,
+          requested_role: "client",
+          registration_source: "fit4life_web"
+        }
+      }
+    });
+    button.disabled = false;
+    button.textContent = "Create client account";
+    if (response.error) {
+      const message = /already|registered|exists/i.test(response.error.message || "")
+        ? "If this email already has an account, sign in or use Forgot password. Otherwise, wait a minute and try again."
+        : response.error.message;
+      authMessage(message, true);
+      return false;
+    }
+    const pending = { full_name: fullName, username, email, status: "pending", created_at: new Date().toISOString() };
+    writeJson("fit4life_pending_signup_v1", pending);
+    document.getElementById("cloudSignUpPassword").value = "";
+    document.getElementById("cloudSignUpConfirm").value = "";
+    if (response.data && response.data.session) await handleSession(response.data.session);
+    else showPendingRequest(pending, true);
+    return true;
+  };
+
+  window.fit4lifeCloudRequestPasswordReset = async function fit4lifeCloudRequestPasswordReset() {
+    if (!cloudClient) {
+      authMessage("The secure account service is still connecting.", true);
+      return false;
+    }
+    const email = normalizedEmail(document.getElementById("cloudResetEmail").value || document.getElementById("cloudAuthEmail").value);
+    if (!email || !email.includes("@")) {
+      authMessage("Enter the email used for your FIT 4 LIFE account.", true);
+      return false;
+    }
+    const button = document.getElementById("cloudResetSubmit");
+    button.disabled = true;
+    button.textContent = "Sending…";
+    const response = await cloudClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    button.disabled = false;
+    button.textContent = "Send password reset";
+    if (response.error) {
+      authMessage(response.error.message, true);
+      return false;
+    }
+    authMessage("If an account matches that email, a password-reset link is on its way.", false);
+    return true;
+  };
+
+  window.fit4lifeCloudUpdatePassword = async function fit4lifeCloudUpdatePassword() {
+    if (!cloudClient) return false;
+    const password = document.getElementById("cloudNewPassword").value;
+    const confirmation = document.getElementById("cloudNewPasswordConfirm").value;
+    if (password.length < 8) {
+      authMessage("Use a password with at least 8 characters.", true);
+      return false;
+    }
+    if (password !== confirmation) {
+      authMessage("The passwords do not match.", true);
+      return false;
+    }
+    const button = document.getElementById("cloudUpdatePasswordSubmit");
+    button.disabled = true;
+    button.textContent = "Updating…";
+    const response = await cloudClient.auth.updateUser({ password });
+    button.disabled = false;
+    button.textContent = "Update password";
+    if (response.error) {
+      authMessage(response.error.message, true);
+      return false;
+    }
+    document.getElementById("cloudNewPassword").value = "";
+    document.getElementById("cloudNewPasswordConfirm").value = "";
+    showAuthMode("signin");
+    authMessage("Password updated. You can now sign in with the new password.", false);
+    return true;
+  };
+
+  window.fit4lifeCloudCheckApproval = async function fit4lifeCloudCheckApproval() {
+    if (!cloudClient) return false;
+    const sessionResponse = await cloudClient.auth.getSession();
+    if (sessionResponse.error || !sessionResponse.data.session) {
+      const pending = readJson("fit4life_pending_signup_v1", {});
+      showAuthMode("signin");
+      if (pending.email) document.getElementById("cloudAuthEmail").value = pending.email;
+      authMessage("After verifying your email, sign in to check trainer approval.", false);
+      return false;
+    }
+    await handleSession(sessionResponse.data.session);
+    return true;
+  };
+
+  window.fit4lifeCloudApproveRegistration = async function fit4lifeCloudApproveRegistration(requestId) {
+    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return false;
+    const response = await cloudClient.rpc("approve_fit4life_registration", { target_request: requestId });
+    if (response.error) {
+      if (typeof showToast === "function") showToast(response.error.message || "The account could not be approved");
+      return false;
+    }
+    if (typeof showToast === "function") showToast("Client account approved and connected");
+    await loadTrainerRegistrationRequests();
+    await pullCloudState(false);
+    return true;
+  };
+
+  window.fit4lifeCloudRejectRegistration = async function fit4lifeCloudRejectRegistration(requestId) {
+    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return false;
+    if (!window.confirm("Reject this client account request? The person will keep their login but will not receive client access.")) return false;
+    const response = await cloudClient.rpc("reject_fit4life_registration", { target_request: requestId, trainer_note: "Please contact FIT 4 LIFE so we can verify your account details." });
+    if (response.error) {
+      if (typeof showToast === "function") showToast(response.error.message || "The request could not be rejected");
+      return false;
+    }
+    if (typeof showToast === "function") showToast("Account request rejected");
+    await loadTrainerRegistrationRequests();
+    return true;
+  };
+
   window.fit4lifeCloudSignOut = async function fit4lifeCloudSignOut() {
     if (cloudClient) await cloudClient.auth.signOut();
+    if (cloudRegistrationChannel && cloudClient) cloudClient.removeChannel(cloudRegistrationChannel);
+    cloudRegistrationChannel = null;
     try { sessionStorage.removeItem("fit4life_trainer_unlocked"); } catch (_) {}
     cloudReady = false;
     cloudUser = null;
@@ -603,6 +919,7 @@
     window.fit4lifeCloudReady = false;
     window.fit4lifeCloudRole = "";
     updateAccountUi();
+    showAuthMode("signin");
     showAuthGate(true);
     cloudStatus("Signed out", "offline");
   };
@@ -676,9 +993,25 @@
       installWriterHooks();
       const sessionResponse = await cloudClient.auth.getSession();
       if (sessionResponse.error) throw sessionResponse.error;
-      await handleSession(sessionResponse.data.session);
+      const recoveryRedirect = /(?:[?#&])type=recovery(?:&|$)/.test(window.location.href);
+      if (recoveryRedirect && sessionResponse.data.session) {
+        cloudUser = sessionResponse.data.session.user;
+        updateAccountUi();
+        showAuthMode("update");
+        showAuthGate(true);
+        cloudStatus("Choose a new password", "syncing");
+      } else {
+        await handleSession(sessionResponse.data.session);
+      }
       cloudClient.auth.onAuthStateChange((event, session) => {
         if (event === "SIGNED_OUT") handleSession(null);
+        else if (event === "PASSWORD_RECOVERY") {
+          cloudUser = session && session.user ? session.user : cloudUser;
+          updateAccountUi();
+          showAuthMode("update");
+          showAuthGate(true);
+          cloudStatus("Choose a new password", "syncing");
+        }
         else if (event === "SIGNED_IN" && session && (!cloudUser || cloudUser.id !== session.user.id)) handleSession(session);
       });
     } catch (error) {
