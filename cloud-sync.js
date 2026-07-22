@@ -62,6 +62,8 @@
   window.fit4lifeCloudRegistrationRequests = [];
   window.fit4lifeCloudOrganizationId = "";
   window.fit4lifeCloudOrganizationSlug = "";
+  window.fit4lifeCloudIdentity = null;
+  window.fit4lifeCloudTrainers = [];
 
   function readJson(key, fallback) {
     try {
@@ -90,6 +92,21 @@
 
   function normalizedName(value) {
     return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+  }
+
+  function accountDisplayName(user) {
+    const metadata = user && user.user_metadata || {};
+    return String(metadata.display_name || metadata.full_name || metadata.name || (user && user.email ? user.email.split("@")[0] : "FIT 4 LIFE coach")).trim();
+  }
+
+  function authRedirectUrl() {
+    const configured = document.querySelector && document.querySelector('meta[name="fit4life-site-url"]');
+    const value = configured && configured.content ? configured.content.trim().replace(/\/$/, "") : "";
+    return value || window.location.origin;
+  }
+
+  function publishCloudIdentity() {
+    window.fit4lifeCloudIdentity = cloudUser ? { id:cloudUser.id,email:cloudUser.email || "",role:cloudRole || "",displayName:accountDisplayName(cloudUser) } : null;
   }
 
   function sameClientName(a, b) {
@@ -215,7 +232,7 @@
     }
     const copy = {
       signin: ["Sign in to your workspace", "Access your workouts and progress from any device."],
-      signup: ["Create your client account", "Choose your login details. A trainer will approve or connect your coaching profile."],
+      signup: ["Create your client account", "Verify the message sent to your email, then sign in to the client workspace."],
       reset: ["Reset your password", "We will email you a secure link to choose a new password."],
       update: ["Choose a new password", "Enter a new password for your training account."],
       pending: ["Account status", "Your secure login is active while your client access is reviewed."]
@@ -253,13 +270,13 @@
     } else if (needsVerification) {
       setText("cloudPendingIcon", "✉");
       setText("cloudPendingTitle", "Check your email");
-      setText("cloudPendingCopy", "Open the verification email for " + portalName() + ". After verification, return here and sign in while a trainer reviews your request.");
+      setText("cloudPendingCopy", "Open the verification email sent to your address. After verification, return here and sign in to activate your client workspace.");
       setText("cloudPendingCheck", "I verified my email");
     } else {
       setText("cloudPendingIcon", "✓");
-      setText("cloudPendingTitle", "Waiting for trainer approval");
-      setText("cloudPendingCopy", "Your email is verified and your request is in the trainer queue. You will not need to create another profile.");
-      setText("cloudPendingCheck", "Check approval");
+      setText("cloudPendingTitle", "Finish client activation");
+      setText("cloudPendingCopy", "Your email is verified. Sign in again if needed; the app will connect or create your protected client profile automatically.");
+      setText("cloudPendingCheck", "Open client workspace");
     }
     showAuthGate(true);
   }
@@ -307,7 +324,10 @@
     const claim = portalOrganizationId
       ? await cloudClient.rpc("claim_my_client_profile_for_org", { target_organization: portalOrganizationId })
       : await cloudClient.rpc("claim_my_client_profile");
-    if (claim.error) return null;
+    if (claim.error) {
+      const activation = await cloudClient.rpc("activate_my_fit4life_client_account");
+      if (activation.error) return null;
+    }
 
     response = await cloudClient
       .from("memberships")
@@ -778,6 +798,7 @@
       window.fit4lifeCloudReady = false;
       window.fit4lifeCloudRole = "";
       cloudRole = "";
+      publishCloudIdentity();
       if (cloudRegistrationChannel && cloudClient) cloudClient.removeChannel(cloudRegistrationChannel);
       cloudRegistrationChannel = null;
       updateAccountUi();
@@ -794,11 +815,12 @@
       window.fit4lifeCloudReady = false;
       window.fit4lifeCloudRole = "";
       cloudRole = "";
+      publishCloudIdentity();
       const request = await getMyRegistrationRequest();
       updateAccountUi();
       if (request) {
         showPendingRequest(request, false);
-        cloudStatus(request.status === "rejected" ? "Registration needs attention" : "Waiting for trainer approval", request.status === "rejected" ? "error" : "syncing");
+        cloudStatus(request.status === "rejected" ? "Registration needs attention" : "Finish client activation", request.status === "rejected" ? "error" : "syncing");
         subscribeToPendingRegistration();
       } else {
         showPendingRequest({ email: cloudUser.email || "", status: "pending" }, false);
@@ -820,11 +842,13 @@
     cloudRegistrationChannel = null;
     writeJson("fit4life_pending_signup_v1", null);
     window.fit4lifeCloudRole = cloudRole;
+    publishCloudIdentity();
     if (cloudRole === "owner" || cloudRole === "trainer") {
       try { sessionStorage.setItem("fit4life_trainer_unlocked", "yes"); } catch (_) {}
     }
     updateAccountUi();
     await pullCloudState(true);
+    if ((cloudRole === "owner" || cloudRole === "trainer") && window.fit4lifeCloudListTrainers) await window.fit4lifeCloudListTrainers();
     cloudReady = true;
     window.fit4lifeCloudReady = true;
     subscribeToChanges();
@@ -899,7 +923,7 @@
       return false;
     }
     if (!consent) {
-      authMessage("Confirm that you understand trainer approval is required.", true);
+      authMessage("Confirm that you will verify the email sent to your address.", true);
       return false;
     }
     const button = document.getElementById("cloudSignUpSubmit");
@@ -910,7 +934,7 @@
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: authRedirectUrl(),
         data: {
           full_name: fullName,
           username,
@@ -951,7 +975,7 @@
     const button = document.getElementById("cloudResetSubmit");
     button.disabled = true;
     button.textContent = "Sending…";
-    const response = await cloudClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    const response = await cloudClient.auth.resetPasswordForEmail(email, { redirectTo: authRedirectUrl() });
     button.disabled = false;
     button.textContent = "Send password reset";
     if (response.error) {
@@ -998,7 +1022,7 @@
       const pending = readJson("fit4life_pending_signup_v1", {});
       showAuthMode("signin");
       if (pending.email) document.getElementById("cloudAuthEmail").value = pending.email;
-      authMessage("After verifying your email, sign in to check trainer approval.", false);
+      authMessage("After verifying your email, sign in to activate the client workspace.", false);
       return false;
     }
     await handleSession(sessionResponse.data.session);
@@ -1031,6 +1055,40 @@
     return true;
   };
 
+  window.fit4lifeCloudListTrainers = async function fit4lifeCloudListTrainers() {
+    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return [];
+    const response = await cloudClient.rpc("list_fit4life_trainers");
+    if (response.error) { console.error("Trainer list failed", response.error); return null; }
+    window.fit4lifeCloudTrainers = Array.isArray(response.data) ? response.data : [];
+    const mine = window.fit4lifeCloudTrainers.find((trainer) => trainer.user_id === cloudUser.id);
+    if (mine && window.fit4lifeCloudIdentity) window.fit4lifeCloudIdentity.displayName = mine.display_name || window.fit4lifeCloudIdentity.displayName;
+    return window.fit4lifeCloudTrainers;
+  };
+
+  window.fit4lifeCloudApproveTrainer = async function fit4lifeCloudApproveTrainer(email, displayName) {
+    if (!cloudClient || cloudRole !== "owner") return { ok:false,message:"Only the owner can approve trainer accounts." };
+    const response = await cloudClient.rpc("approve_fit4life_trainer_account", { target_email:normalizedEmail(email),target_display_name:String(displayName || "").trim() });
+    if (response.error) return { ok:false,message:response.error.message || "Trainer approval failed." };
+    await window.fit4lifeCloudListTrainers();
+    return { ok:true,data:response.data };
+  };
+
+  window.fit4lifeCloudUpdateMyTrainerName = async function fit4lifeCloudUpdateMyTrainerName(displayName) {
+    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return { ok:false,message:"Trainer access is required." };
+    const response = await cloudClient.rpc("update_my_fit4life_staff_name", { target_display_name:String(displayName || "").trim() });
+    if (response.error) return { ok:false,message:response.error.message || "The display name could not be saved." };
+    await window.fit4lifeCloudListTrainers();
+    return { ok:true };
+  };
+
+  window.fit4lifeCloudDeactivateTrainer = async function fit4lifeCloudDeactivateTrainer(userId) {
+    if (!cloudClient || cloudRole !== "owner") return { ok:false,message:"Only the owner can deactivate trainer accounts." };
+    const response = await cloudClient.rpc("deactivate_fit4life_trainer_account", { target_user:userId });
+    if (response.error) return { ok:false,message:response.error.message || "Trainer deactivation failed." };
+    await window.fit4lifeCloudListTrainers();
+    return { ok:true };
+  };
+
   window.fit4lifeCloudSignOut = async function fit4lifeCloudSignOut() {
     if (cloudClient) await cloudClient.auth.signOut();
     if (cloudRegistrationChannel && cloudClient) cloudClient.removeChannel(cloudRegistrationChannel);
@@ -1041,6 +1099,8 @@
     cloudRole = "";
     window.fit4lifeCloudReady = false;
     window.fit4lifeCloudRole = "";
+    window.fit4lifeCloudIdentity = null;
+    window.fit4lifeCloudTrainers = [];
     updateAccountUi();
     showAuthMode("signin");
     showAuthGate(true);
