@@ -46,6 +46,7 @@
 
   body{
     background-color:#08090c;
+    min-height:100vh;
     color:var(--text);
     font-family:var(--body);
     line-height:1.5;
@@ -55,10 +56,11 @@
       linear-gradient(180deg,rgba(6,8,12,.62),rgba(6,8,12,.78)),
       radial-gradient(ellipse 980px 580px at 8% -6%,rgba(57,105,218,.25),transparent 62%),
       radial-gradient(ellipse 760px 520px at 102% 12%,rgba(90,166,240,.15),transparent 58%),
-      url("dark-rock-texture.png");
+      url("dark-rock-background-v2.jpg");
     background-attachment:fixed;
-    background-size:auto,auto,auto,660px 440px;
-    background-repeat:no-repeat,no-repeat,no-repeat,repeat;
+    background-position:center,center,center,center;
+    background-size:auto,auto,auto,cover;
+    background-repeat:no-repeat;
     background-blend-mode:normal,screen,screen,normal;
   }
   button{font-family:inherit;cursor:pointer;color:inherit}
@@ -92,7 +94,7 @@
   .cloud-account-btn{border:1px solid var(--line);background:var(--slate-2);color:var(--text-dim);border-radius:7px;padding:8px 10px;font:700 11px var(--display);letter-spacing:.06em;text-transform:uppercase}
   .cloud-account-btn:hover{border-color:var(--blue);color:var(--text)}
 
-  .cloud-auth-gate{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:22px;background-image:linear-gradient(180deg,rgba(7,8,11,.78),rgba(7,8,11,.92)),radial-gradient(circle at 50% 18%,rgba(61,108,225,.2),transparent 34%),url("dark-rock-texture.png");background-size:auto,auto,660px 440px;background-repeat:no-repeat,no-repeat,repeat;background-blend-mode:normal,screen,soft-light;overflow:auto}
+  .cloud-auth-gate{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:22px;background-image:linear-gradient(180deg,rgba(7,8,11,.78),rgba(7,8,11,.92)),radial-gradient(circle at 50% 18%,rgba(61,108,225,.2),transparent 34%),url("dark-rock-background-v2.jpg");background-position:center,center,center;background-size:auto,auto,cover;background-repeat:no-repeat;background-blend-mode:normal,screen,soft-light;overflow:auto}
   .cloud-auth-gate.open{display:flex}
   body.cloud-auth-locked{overflow:hidden}
   .cloud-auth-card{width:min(470px,100%);border:1px solid rgba(90,166,240,.22);border-radius:16px;background:linear-gradient(150deg,rgba(27,28,34,.97),rgba(11,12,16,.98));box-shadow:0 30px 90px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.04);padding:30px}
