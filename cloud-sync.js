@@ -217,6 +217,7 @@
     const panels = {
       signin: "cloudSignInPanel",
       signup: "cloudSignUpPanel",
+      trainer_signup: "cloudTrainerSignUpPanel",
       reset: "cloudResetPanel",
       update: "cloudUpdatePasswordPanel",
       pending: "cloudPendingPanel"
@@ -233,6 +234,7 @@
     const copy = {
       signin: ["Sign in to your workspace", "Access your workouts and progress from any device."],
       signup: ["Create your client account", "Verify the message sent to your email, then sign in to the client workspace."],
+      trainer_signup: ["Request trainer access", "Create a verified login, then wait for the gym owner to approve trainer permissions."],
       reset: ["Reset your password", "We will email you a secure link to choose a new password."],
       update: ["Choose a new password", "Enter a new password for your training account."],
       pending: ["Account status", "Your secure login is active while your client access is reviewed."]
@@ -254,6 +256,7 @@
     if (request && request.full_name) rows.push(["Name", request.full_name]);
     if (request && request.email) rows.push(["Email", request.email]);
     if (request && request.username) rows.push(["Username", "@" + String(request.username).replace(/^@/, "")]);
+    if (request && request.requested_role) rows.push(["Requested access", request.requested_role === "trainer" ? "Trainer" : "Client"]);
     if (request && request.status) rows.push(["Status", request.status.charAt(0).toUpperCase() + request.status.slice(1)]);
     meta.innerHTML = rows.map((row) => "<div><span>" + row[0] + "</span><b>" + String(row[1]).replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '\"': "&quot;" }[character])) + "</b></div>").join("");
   }
@@ -262,6 +265,7 @@
     showAuthMode("pending");
     requestMeta(request || readJson("fit4life_pending_signup_v1", {}));
     const status = request && request.status ? request.status : "pending";
+    const trainerRequest = request && request.requested_role === "trainer";
     if (status === "rejected") {
       setText("cloudPendingIcon", "!");
       setText("cloudPendingTitle", "Request needs attention");
@@ -270,8 +274,15 @@
     } else if (needsVerification) {
       setText("cloudPendingIcon", "✉");
       setText("cloudPendingTitle", "Check your email");
-      setText("cloudPendingCopy", "Open the verification email sent to your address. After verification, return here and sign in to activate your client workspace.");
+      setText("cloudPendingCopy", trainerRequest
+        ? "Open the verification email sent to your address. After verification, the gym owner can approve trainer access from the Trainer Access center."
+        : "Open the verification email sent to your address. After verification, return here and sign in to activate your client workspace.");
       setText("cloudPendingCheck", "I verified my email");
+    } else if (trainerRequest) {
+      setText("cloudPendingIcon", "⏳");
+      setText("cloudPendingTitle", "Trainer approval pending");
+      setText("cloudPendingCopy", "Your email is verified. The gym owner must approve this trainer request before any client records become available.");
+      setText("cloudPendingCheck", "Check trainer approval");
     } else {
       setText("cloudPendingIcon", "✓");
       setText("cloudPendingTitle", "Finish client activation");
@@ -344,7 +355,7 @@
     if (!cloudClient || !cloudUser) return null;
     const response = await cloudClient
       .from("registration_requests")
-      .select("id,organization_id,user_id,email,full_name,username,status,review_note,created_at,updated_at")
+      .select("*")
       .eq("user_id", cloudUser.id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -361,7 +372,7 @@
     if (!cloudClient || !cloudOrganizationId || !(cloudRole === "owner" || cloudRole === "trainer")) return [];
     const response = await cloudClient
       .from("registration_requests")
-      .select("id,organization_id,user_id,email,full_name,username,status,review_note,created_at,updated_at")
+      .select("*")
       .eq("organization_id", cloudOrganizationId)
       .eq("status", "pending")
       .order("created_at", { ascending: true });
@@ -375,6 +386,7 @@
     try { if (typeof renderProfileRequests === "function") renderProfileRequests(); } catch (_) {}
     return cloudRegistrationRequests;
   }
+  window.fit4lifeCloudRefreshRegistrationRequests = loadTrainerRegistrationRequests;
 
   async function loadOrganizationSettings() {
     if (!cloudClient || !cloudOrganizationId) return null;
@@ -802,7 +814,7 @@
       if (cloudRegistrationChannel && cloudClient) cloudClient.removeChannel(cloudRegistrationChannel);
       cloudRegistrationChannel = null;
       updateAccountUi();
-      if (authMode !== "signup" && authMode !== "reset" && authMode !== "update") showAuthMode("signin");
+      if (authMode !== "signup" && authMode !== "trainer_signup" && authMode !== "reset" && authMode !== "update") showAuthMode("signin");
       showAuthGate(true);
       cloudStatus("Sign in to sync", "offline");
       return;
@@ -820,7 +832,10 @@
       updateAccountUi();
       if (request) {
         showPendingRequest(request, false);
-        cloudStatus(request.status === "rejected" ? "Registration needs attention" : "Finish client activation", request.status === "rejected" ? "error" : "syncing");
+        cloudStatus(
+          request.status === "rejected" ? "Registration needs attention" : request.requested_role === "trainer" ? "Trainer approval pending" : "Finish client activation",
+          request.status === "rejected" ? "error" : "syncing"
+        );
         subscribeToPendingRegistration();
       } else {
         showPendingRequest({ email: cloudUser.email || "", status: "pending" }, false);
@@ -962,6 +977,77 @@
     return true;
   };
 
+  window.fit4lifeCloudTrainerSignUp = async function fit4lifeCloudTrainerSignUp() {
+    if (!cloudClient) {
+      authMessage("The secure account service is still connecting. Try again in a moment.", true);
+      return false;
+    }
+    const fullName = String(document.getElementById("cloudTrainerSignUpName").value || "").trim().replace(/\s+/g, " ");
+    const email = normalizedEmail(document.getElementById("cloudTrainerSignUpEmail").value);
+    const password = document.getElementById("cloudTrainerSignUpPassword").value;
+    const confirmation = document.getElementById("cloudTrainerSignUpConfirm").value;
+    const consent = document.getElementById("cloudTrainerSignUpConsent").checked;
+    if (fullName.length < 2) {
+      authMessage("Enter your full name.", true);
+      return false;
+    }
+    if (!email || !email.includes("@")) {
+      authMessage("Enter a valid work email address.", true);
+      return false;
+    }
+    if (password.length < 8) {
+      authMessage("Use a password with at least 8 characters.", true);
+      return false;
+    }
+    if (password !== confirmation) {
+      authMessage("The passwords do not match.", true);
+      return false;
+    }
+    if (!consent) {
+      authMessage("Confirm the email-verification and owner-approval requirements.", true);
+      return false;
+    }
+    const button = document.getElementById("cloudTrainerSignUpSubmit");
+    button.disabled = true;
+    button.textContent = "Submitting request…";
+    authMessage("Creating a restricted trainer-access request…", false);
+    const response = await cloudClient.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: authRedirectUrl(),
+        data: {
+          full_name: fullName,
+          requested_role: "trainer",
+          registration_source: "fit4life_trainer_request",
+          organization_slug: portalOrganizationSlug || "fit-4-life"
+        }
+      }
+    });
+    button.disabled = false;
+    button.textContent = "Submit trainer request";
+    if (response.error) {
+      const message = /already|registered|exists/i.test(response.error.message || "")
+        ? "If this email already has an account, sign in or use Forgot password. Trainer access can be granted to that verified login by the gym owner."
+        : response.error.message;
+      authMessage(message, true);
+      return false;
+    }
+    const pending = {
+      full_name: fullName,
+      email,
+      requested_role: "trainer",
+      status: "pending",
+      created_at: new Date().toISOString()
+    };
+    writeJson("fit4life_pending_signup_v1", pending);
+    document.getElementById("cloudTrainerSignUpPassword").value = "";
+    document.getElementById("cloudTrainerSignUpConfirm").value = "";
+    if (response.data && response.data.session) await handleSession(response.data.session);
+    else showPendingRequest(pending, true);
+    return true;
+  };
+
   window.fit4lifeCloudRequestPasswordReset = async function fit4lifeCloudRequestPasswordReset() {
     if (!cloudClient) {
       authMessage("The secure account service is still connecting.", true);
@@ -1022,7 +1108,9 @@
       const pending = readJson("fit4life_pending_signup_v1", {});
       showAuthMode("signin");
       if (pending.email) document.getElementById("cloudAuthEmail").value = pending.email;
-      authMessage("After verifying your email, sign in to activate the client workspace.", false);
+      authMessage(pending.requested_role === "trainer"
+        ? "After verifying your email, sign in to check whether the owner approved trainer access."
+        : "After verifying your email, sign in to activate the client workspace.", false);
       return false;
     }
     await handleSession(sessionResponse.data.session);
