@@ -501,6 +501,11 @@
   .program-ex b{font-family:var(--mono);font-size:10px;color:var(--blue-bright);white-space:nowrap}
   .program-block-label{font-family:var(--mono);font-size:8.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint);margin:11px 0 3px;padding-bottom:5px;border-bottom:1px solid var(--line)}
   .program-block-label:first-of-type{margin-top:0}
+  .program-superset-tools{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 6px;padding:7px 8px;border:1px dashed rgba(82,157,255,.3);border-radius:8px;background:rgba(55,118,222,.06)}
+  .program-superset-tools span{font:600 8px/1.35 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--blue-bright)}
+  .program-superset-tools button{min-height:30px;padding:5px 9px;font-size:9px}
+  .program-superset-pair{margin:5px 0 7px;padding:5px 7px;border-left:2px solid var(--blue);background:rgba(82,157,255,.06)}
+  .program-superset-pair-label{font:700 8px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--blue-bright)}
   .program-mode-note{grid-column:1/-1;border:1px solid rgba(63,143,255,.34);border-radius:9px;padding:11px 13px;background:linear-gradient(135deg,rgba(63,143,255,.12),rgba(42,82,200,.035));font-size:11px;color:var(--text-dim);line-height:1.5}
   .program-mode-note b{display:block;font:700 9px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--blue-bright);margin-bottom:4px}
   .starter-checkpoint{margin:12px 15px 0;border:1px solid rgba(121,239,187,.34);border-radius:9px;padding:11px 13px;background:rgba(121,239,187,.06);font-size:10.5px;color:var(--text-dim);line-height:1.45}
@@ -902,6 +907,10 @@
   .trainer-account-row.pending{border-color:rgba(245,185,66,.38);background:rgba(245,185,66,.05)}
   .prescription-dialog{width:min(640px,100%)}.prescription-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}.prescription-grid .wide{grid-column:1/-1}
   body.coach-shell-on main{margin-left:220px;max-width:none;padding-left:28px;padding-right:28px}.coach-module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.coach-module-card{border:1px solid var(--line);border-radius:14px;padding:18px;background:var(--slate-1)}.coach-module-card h3{font-size:15px;margin-bottom:7px}.coach-module-card p{font-size:11px;color:var(--text-faint);line-height:1.5}
+  .multi-choice-grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}.multi-choice-btn{min-height:40px;border:1px solid var(--line);border-radius:9px;background:var(--slate-0);color:var(--text-faint);padding:8px 11px;font:700 8px var(--mono);letter-spacing:.05em;text-transform:uppercase;cursor:pointer}.multi-choice-btn:hover{border-color:var(--blue);color:#fff}.multi-choice-btn.on{border-color:var(--blue-bright);background:var(--blue-glow);color:#fff;box-shadow:inset 3px 0 var(--blue-bright)}.weekday-choices .multi-choice-btn{min-width:76px}
+  .program-assignment-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}.program-assignment-state{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(121,239,187,.25);border-radius:999px;padding:5px 8px;background:rgba(121,239,187,.05);font:700 8px var(--mono);color:#79efbb;text-transform:uppercase}.program-day-assignment{margin-top:8px;font:700 8px var(--mono);color:var(--blue-bright);text-transform:uppercase}.program-day-assignment.done{color:#79efbb}
+  .block-superset-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-2px 0 10px 45px;padding:8px 10px;border:1px dashed rgba(90,166,240,.34);border-radius:9px;background:rgba(36,64,184,.07)}.block-superset-tools span{font:600 8px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint)}.superset-dialog{width:min(680px,100%)}.superset-pair-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:15px 0}.superset-warning{padding:10px 12px;border-left:3px solid var(--warn);background:var(--warn-bg);font-size:10px;color:var(--text-dim);line-height:1.5}
+  .attendance-calendar{grid-column:1/-1;border:1px solid var(--line);border-radius:15px;background:var(--slate-1);overflow:hidden}.attendance-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px;border-bottom:1px solid var(--line)}.attendance-head h3{margin-bottom:5px}.attendance-grid{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:1px;background:var(--line);overflow-x:auto}.attendance-day{min-height:250px;background:var(--slate-0);padding:12px}.attendance-day.today{background:linear-gradient(180deg,var(--blue-glow),var(--slate-0))}.attendance-day-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.attendance-day-head b{font:800 10px var(--mono);letter-spacing:.08em;text-transform:uppercase}.attendance-day-head span{font:600 8px var(--mono);color:var(--text-faint)}.attendance-client{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;margin-bottom:7px;padding:8px;border:1px solid var(--line);border-radius:9px;background:var(--slate-1)}.attendance-client>button:first-child{border:0;background:transparent;color:#fff;text-align:left;padding:0;font-size:10.5px;font-weight:700;cursor:pointer}.attendance-client>button:first-child span{display:block;margin-top:3px;font:600 7px var(--mono);color:var(--text-faint)}.attendance-client .tiny-btn{min-height:31px}.attendance-empty{font-size:9px;color:var(--text-faint);padding:8px 2px}.trainer-program-schedule{display:grid;gap:9px;margin-top:12px}.trainer-program-week{border:1px solid var(--line);border-radius:11px;overflow:hidden}.trainer-program-week>summary{padding:12px 14px;cursor:pointer;font-weight:700;background:var(--slate-0)}.trainer-program-days{display:grid;gap:1px;background:var(--line)}.trainer-program-day{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:11px 13px;background:var(--slate-1)}.trainer-program-day b,.trainer-program-day span{display:block}.trainer-program-day span{margin-top:3px;font:600 8px var(--mono);color:var(--text-faint)}.assignment-pill{border:1px solid var(--line);border-radius:999px;padding:5px 8px;font:700 7px var(--mono);text-transform:uppercase;color:var(--text-faint)}.assignment-pill.assigned,.assignment-pill.in_progress{border-color:rgba(90,166,240,.4);color:var(--blue-bright)}.assignment-pill.completed,.assignment-pill.reviewed{border-color:rgba(121,239,187,.36);color:#79efbb}
   .automation-flow{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}.automation-arrow{color:var(--blue-bright);font-size:20px}
   .network-status{display:none;position:sticky;top:68px;z-index:44;padding:8px 16px;text-align:center;background:#5a3a14;border-bottom:1px solid var(--warn);color:#ffe5b1;font:700 9px var(--mono);letter-spacing:.05em}.network-status.show{display:block}
   .toast{position:fixed;right:18px;bottom:18px;z-index:20;background:var(--slate-2);border:1px solid var(--blue);color:var(--text);border-radius:8px;padding:11px 14px;box-shadow:var(--shadow-lg);font-size:12.5px;opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s}
@@ -922,7 +931,7 @@
     .set-log-row .log-set-btn{grid-column:2/-1}
     .set-log-row.bodyweight,.set-log-row.cardio{grid-template-columns:52px 1fr 1fr}
     .set-log-row.bodyweight .log-set-btn,.set-log-row.cardio .log-set-btn{grid-column:2/-1}
-    body.coach-shell-on main{margin-left:74px;padding-left:18px;padding-right:18px}.coach-sidebar{width:74px;padding:12px 7px}.coach-sidebar h2{font-size:0;padding:5px 6px 12px}.coach-sidebar h2::after{content:"COACH";font-size:12px}.coach-sidebar button{font-size:0;text-align:center;padding:0}.coach-sidebar button::first-letter{font-size:14px}.coach-attention-badge{right:2px;top:5px;transform:none}.workout-preview{grid-template-columns:1fr}.simple-stat-grid{grid-template-columns:repeat(2,1fr)}.library-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}.library-toolbar>.compact-field:first-child{grid-column:1/-1}.exercise-editor-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.swap-bank-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.active-workout-shell{grid-template-columns:210px minmax(0,1fr)}.trainer-attention-panel{grid-template-columns:repeat(2,minmax(0,1fr))}
+    body.coach-shell-on main{margin-left:74px;padding-left:18px;padding-right:18px}.coach-sidebar{width:74px;padding:12px 7px}.coach-sidebar h2{font-size:0;padding:5px 6px 12px}.coach-sidebar h2::after{content:"COACH";font-size:12px}.coach-sidebar button{font-size:0;text-align:center;padding:0}.coach-sidebar button::first-letter{font-size:14px}.coach-attention-badge{right:2px;top:5px;transform:none}.workout-preview{grid-template-columns:1fr}.simple-stat-grid{grid-template-columns:repeat(2,1fr)}.library-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}.library-toolbar>.compact-field:first-child{grid-column:1/-1}.exercise-editor-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.swap-bank-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.active-workout-shell{grid-template-columns:210px minmax(0,1fr)}.trainer-attention-panel{grid-template-columns:repeat(2,minmax(0,1fr))}.attendance-grid{grid-template-columns:repeat(6,170px)}
   }
   @media (max-width:560px){
     .goal-grid,.training-route-grid{grid-template-columns:1fr}.library-toolbar,.exercise-editor-grid,.swap-bank-filters{grid-template-columns:1fr}.library-toolbar>.compact-field:first-child,.exercise-editor-grid .wide,.exercise-editor-grid .full{grid-column:auto}.library-item{grid-template-columns:1fr}.library-item-actions{justify-content:flex-start}
@@ -963,6 +972,7 @@
     .analysis-regions,.analysis-grid{grid-template-columns:1fr}
     .summary-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .summary-filtered-metrics,.strength-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .block-superset-tools{margin-left:0;align-items:flex-start;flex-direction:column}.superset-pair-grid{grid-template-columns:1fr}.trainer-program-day{grid-template-columns:1fr}.attendance-grid{grid-template-columns:repeat(6,160px)}
     .session-summary{grid-template-columns:1fr}
     .session-controls{justify-content:flex-start}
     .session-set{grid-template-columns:1fr}
@@ -1386,7 +1396,7 @@
         <div class="compact-field"><label for="programGoal">Primary goal</label><select id="programGoal"><option value="strength">Get stronger</option><option value="hypertrophy">Build muscle</option><option value="fatloss">Lose body fat</option><option value="general">Feel fitter</option><option value="athletic">Move faster / power</option><option value="conditioning">Improve stamina</option><option value="recovery">Move better / recover</option></select></div>
         <div class="compact-field"><label for="programSecondaryGoal">Secondary goal</label><select id="programSecondaryGoal"><option value="">No secondary goal</option><option value="strength">Get stronger</option><option value="hypertrophy">Build muscle</option><option value="fatloss">Lose body fat</option><option value="general">Feel fitter</option><option value="athletic">Move faster / power</option><option value="conditioning">Improve stamina</option><option value="recovery">Move better / recover</option></select></div>
         <div class="compact-field"><label for="programStyle">Training route</label><select id="programStyle"><option value="auto">Best match for goal</option><option value="resistance">Resistance focused</option><option value="mixed">Weights + cardio</option><option value="cardio">Cardio focused</option><option value="performance">Speed + power</option><option value="recovery">Easy cardio + mobility</option><option value="mobility">Mobility only</option></select></div>
-        <div class="compact-field"><label for="programCardio">Cardio preferences · choose multiple</label><select id="programCardio" multiple size="4"><option value="any">Any available machine</option><option value="treadmill">Treadmill</option><option value="stairs">Stair climber</option><option value="bike">Bike</option><option value="rower">Rower</option><option value="elliptical">Elliptical</option><option value="ski">Ski erg</option><option value="versaclimber">VersaClimber</option><option value="hiitmill">HIITMill</option><option value="jumprope">Jump rope</option></select></div>
+        <div class="compact-field"><label>Cardio preferences · choose multiple</label><div id="programCardioChips" class="multi-choice-grid" aria-label="Cardio preferences"></div><span class="storage-note">Tap every machine this client can use. “Any available” clears the specific choices.</span></div>
         <div class="compact-field"><label for="programExp">Experience</label><select id="programExp"><option value="1">New</option><option value="2" selected>Intermediate</option><option value="3">Advanced</option></select></div>
         <div class="compact-field"><label for="programAge">Age</label><input id="programAge" type="number" min="18" max="90" value="30"></div>
         <div class="compact-field"><label for="programMode">Program type</label><select id="programMode" onchange="syncProgramMode()"><option value="starter" selected>3-week starter rhythm</option><option value="progressive">Ongoing progressive program</option></select></div>
@@ -1405,7 +1415,7 @@
         <button type="button" class="chip" onclick="toggleProgramFilter('zones','cardio',this)">Cardio</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','platform',this)">Platforms</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','rack',this)">Racks</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','crossfit',this)">Functional</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','dumbbell',this)">Dumbbells</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','machine',this)">Machines</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','cable',this)">Cables</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','bodyweight',this)">Bodyweight</button>
       </div></div>
       <p class="storage-note">The exercise bank is automatically limited by the shared equipment setup for this gym. Client-level equipment choices can narrow it further for an individual session.</p>
-      <div class="tool-actions"><button class="small-btn primary" onclick="generateProgram()">Build program draft</button><button class="small-btn" id="programApproveBtn" onclick="approveCurrentProgram()" disabled>Coach approve program</button><button class="small-btn" id="programPrintBtn" onclick="printProgram()" disabled>Print take-home cards</button><button class="small-btn" id="programSaveBtn" onclick="saveCurrentProgram()" disabled>Save approved program</button></div>
+      <div class="tool-actions"><button class="small-btn primary" onclick="generateProgram()">Build program draft</button><button class="small-btn" id="programApproveBtn" onclick="approveCurrentProgram()" disabled>Coach approve program</button><button class="small-btn" id="programPrintBtn" onclick="printProgram()" disabled>Print take-home cards</button><button class="small-btn primary" id="programSaveBtn" onclick="saveAndAssignCurrentProgram('all')" disabled>Save &amp; assign full program</button><button class="small-btn" id="programSaveOnlyBtn" onclick="saveCurrentProgram()" disabled>Save without assigning</button></div>
     </div>
     <div id="programOutput" class="empty-state">Choose the client details and build a program.</div>
   </section>
@@ -1650,6 +1660,19 @@
   </div>
 </div>
 
+<div id="supersetEditorModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="supersetEditorTitle">
+  <div class="review-dialog superset-dialog">
+    <h2 id="supersetEditorTitle">Create a superset</h2>
+    <p>Pair two movements as A1 and A2. If A2 is currently in another section, it will move into this section so the client sees and performs the pair together.</p>
+    <div class="superset-pair-grid">
+      <div class="compact-field"><label for="supersetFirst">A1 · first movement</label><select id="supersetFirst" onchange="paintSupersetEditorWarning()"></select></div>
+      <div class="compact-field"><label for="supersetSecond">A2 · paired movement</label><select id="supersetSecond" onchange="paintSupersetEditorWarning()"></select></div>
+    </div>
+    <div id="supersetEditorWarning" class="superset-warning">Choose two different movements. The client can alternate them before taking the prescribed rest.</div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="saveSupersetEditor()">Create A1 + A2</button><button class="small-btn" onclick="closeSupersetEditor()">Cancel</button></div>
+  </div>
+</div>
+
 <div id="summaryEntryModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="summaryEntryTitle">
   <div class="review-dialog summary-meta-dialog">
     <h2 id="summaryEntryTitle">Organize record</h2>
@@ -1678,12 +1701,13 @@
       <div class="compact-field"><label for="profileEditPrimary">Primary goal</label><select id="profileEditPrimary"></select></div>
       <div class="compact-field"><label for="profileEditSecondary">Secondary goal</label><select id="profileEditSecondary"></select></div>
       <div class="compact-field"><label for="profileEditStyle">Default training route</label><select id="profileEditStyle"><option value="auto">Best match for goal</option><option value="resistance">Resistance focused</option><option value="mixed">Weights + cardio</option><option value="cardio">Cardio focused</option><option value="performance">Speed + power</option><option value="recovery">Easy cardio + mobility</option><option value="mobility">Mobility only</option></select></div>
-      <div class="compact-field"><label for="profileEditCardio">Cardio equipment available · choose multiple</label><select id="profileEditCardio" multiple size="5"><option value="any">Any available machine</option><option value="treadmill">Treadmill</option><option value="stairs">Stair climber</option><option value="bike">Bike</option><option value="rower">Rower</option><option value="elliptical">Elliptical</option><option value="ski">Ski erg</option><option value="versaclimber">VersaClimber</option><option value="hiitmill">HIITMill</option><option value="jumprope">Jump rope</option></select><span class="storage-note">This is a hard whole-workout filter, including warm-ups and cool-downs. Hold Command on Mac or Control on Windows to select several.</span></div>
+      <div class="compact-field"><label>Cardio equipment available · choose multiple</label><div id="profileEditCardioChips" class="multi-choice-grid" aria-label="Available cardio equipment"></div><span class="storage-note">Tap every available machine. This is a hard whole-workout filter, including warm-ups and cool-downs.</span></div>
       <div class="compact-field"><label for="profileEditExperience">Experience</label><select id="profileEditExperience"></select></div>
       <div class="compact-field"><label for="profileEditAge">Age</label><input id="profileEditAge" type="number" min="13" max="100"></div>
       <div class="compact-field"><label for="profileEditMinutes">Usual session length</label><select id="profileEditMinutes"></select></div>
       <div class="compact-field"><label for="profileEditPhase">Training phase</label><select id="profileEditPhase"><option value="general">General preparation</option><option value="strength">Strength</option><option value="muscle">Muscle building</option><option value="conditioning">Conditioning</option><option value="performance">Sport performance</option><option value="recovery">Recovery / return</option></select></div>
       <div class="compact-field"><label for="profileEditDays">Available days each week</label><select id="profileEditDays"><option value="2">2 days</option><option value="3">3 days</option><option value="4">4 days</option><option value="5">5 days</option></select></div>
+      <div class="compact-field wide"><label>Usual training days · Monday–Saturday</label><div id="profileEditTrainingDays" class="multi-choice-grid weekday-choices"></div><span class="storage-note">These days populate the trainer calendar and schedule program workouts. Choose at least one.</span></div>
       <div class="compact-field"><label for="profileEditSport">Sport or activity</label><input id="profileEditSport" type="text" placeholder="Optional"></div>
       <div class="compact-field"><label for="profileEditCompetition">Competition / event date</label><input id="profileEditCompetition" type="date"></div>
       <div class="compact-field wide"><label for="profileEditSchedule">Practice, game, or work constraints</label><input id="profileEditSchedule" type="text" placeholder="Optional — e.g. league game Thursday"></div>
@@ -2491,6 +2515,17 @@ function normalizeCardioPreferences(value) {
   if (!valid.length || valid.includes("any")) return ["any"];
   return valid;
 }
+function toggleMultiChoiceValue(list,value,allowAny) {
+  let next = Array.isArray(list) ? [...list] : [];
+  if (allowAny && value === "any") return ["any"];
+  next = next.filter((item) => item !== "any");
+  next = next.includes(value) ? next.filter((item) => item !== value) : [...next,value];
+  return next.length ? next : (allowAny ? ["any"] : []);
+}
+function multiChoiceButtonsHtml(options,selected,handler) {
+  return options.map(([value,label]) => '<button type="button" class="multi-choice-btn' + (selected.includes(value) ? ' on' : '') + '" aria-pressed="' + selected.includes(value) + '" onclick="' + handler + '(\'' + value + '\')">' + escapeHtml(label) + '</button>').join("");
+}
+function cardioChoiceEntries() { return Object.entries(CARDIO_MODALITIES).map(([value,item]) => [value,item.label]); }
 function cardioPreferencesFor(spec) { return normalizeCardioPreferences(spec && (spec.cardioModes || spec.cardioMode)); }
 function matchesCardioPreference(ex, preference) {
   const preferences = normalizeCardioPreferences(preference);
@@ -4229,8 +4264,17 @@ function assignmentSessionIds(assignment) {
   return workoutPlans(assignment.session).map((plan) => plan.session.sessionId).filter(Boolean);
 }
 function assignmentForSession(sessionId) { return loadAssignedWorkouts().find((item) => assignmentSessionIds(item).includes(sessionId)) || null; }
+function assignmentsForClient(clientOrProfileId) {
+  const rank = { in_progress:0, assigned:1, completed:2, reviewed:3 };
+  return loadAssignedWorkouts().filter((item) => item.profileId === clientOrProfileId || clientMatches(item.client,clientOrProfileId)).sort((a,b) => {
+    const statusDifference = (rank[assignmentStatus(a)] == null ? 9 : rank[assignmentStatus(a)]) - (rank[assignmentStatus(b)] == null ? 9 : rank[assignmentStatus(b)]);
+    if (statusDifference) return statusDifference;
+    if (["assigned","in_progress"].includes(assignmentStatus(a))) return String(a.scheduledDate || a.assignedAt || "").localeCompare(String(b.scheduledDate || b.assignedAt || ""));
+    return String(b.completedAt || b.assignedAt || "").localeCompare(String(a.completedAt || a.assignedAt || ""));
+  });
+}
 function assignmentForClient(clientOrProfileId) {
-  return loadAssignedWorkouts().find((item) => item.profileId === clientOrProfileId || clientMatches(item.client,clientOrProfileId)) || null;
+  return assignmentsForClient(clientOrProfileId)[0] || null;
 }
 function assignmentStatus(assignment) { return assignment && assignment.status || "assigned"; }
 function assignmentStatusIndex(assignment) { return { assigned:0, in_progress:1, completed:2, reviewed:3 }[assignmentStatus(assignment)] || 0; }
@@ -4260,9 +4304,9 @@ function refreshAssignmentProgress(sessionId) {
   return stats;
 }
 function startAssignedWorkout(profileId) {
-  const assignments = loadAssignedWorkouts(), index = assignments.findIndex((item) => item.profileId === profileId); if (index < 0) return null;
+  const assignments = loadAssignedWorkouts(), current = assignmentForClient(profileId), index = current ? assignments.findIndex((item) => item.id === current.id) : -1; if (index < 0) return null;
   if (assignmentStatus(assignments[index]) === "assigned") { assignments[index].status = "in_progress"; assignments[index].startedAt = new Date().toISOString(); writeAssignedWorkouts(assignments); }
-  openAssignedWorkout(profileId); showToast("Workout started — log each completed effort as you go"); return assignments[index];
+  openAssignedWorkout(profileId,assignments[index].id); showToast("Workout started — log each completed effort as you go"); return assignments[index];
 }
 function touchAssignmentFromSession(sessionId) {
   const assignments = loadAssignedWorkouts(), index = assignments.findIndex((item) => assignmentSessionIds(item).includes(sessionId)); if (index < 0) return null;
@@ -4294,15 +4338,15 @@ function renderClientWorkoutLookup() {
   }
   return profiles;
 }
-function openAssignedWorkout(profileId) {
-  const profile = loadProfiles().find((item) => item.id === profileId), assignment = loadAssignedWorkouts().find((item) => item.profileId === profileId), out = byId("clientAssignedWorkout");
+function openAssignedWorkout(profileId,assignmentId) {
+  const profile = loadProfiles().find((item) => item.id === profileId), assignment = assignmentId ? loadAssignedWorkouts().find((item) => item.id === assignmentId) : assignmentForClient(profileId), out = byId("clientAssignedWorkout");
   if (!profile) return null;
   byId("clientWorkoutLookup").value = profile.name; byId("clientWorkoutLookupResults").innerHTML = ""; out.innerHTML = ""; out.classList.remove("assignment-complete");
   if (!assignment || !assignment.session) { out.innerHTML = '<div class="empty-state">No workout is assigned to this profile yet. Ask your trainer to choose and assign a workout.</div>'; return null; }
   state.session = JSON.parse(JSON.stringify(assignment.session)); state.sessionOptions = [];
   const status = assignmentStatus(assignment), banner = el("div","assignment-banner"), identity = el("div"); identity.append(el("b","",profile.name + " · " + assignmentStatusLabel(assignment)),el("span","","Assigned " + new Date(assignment.assignedAt).toLocaleString()));
   const tools = el("div","session-actions"), print = el("button","mini-btn","Print"), ready = el("button","mini-btn","Check readiness"); print.onclick = () => window.print(); ready.onclick = () => openReadiness(); tools.appendChild(print);
-  if (status === "assigned") { const start = el("button","mini-btn primary","Start workout"); start.onclick = () => startAssignedWorkout(profile.id); tools.appendChild(start); }
+  if (status === "assigned") { const start = el("button","mini-btn primary","Start workout"); start.onclick = () => startActiveWorkout(profile.id,false,assignment.id); tools.appendChild(start); }
   else if (status === "in_progress") { const review = el("button","mini-btn primary","Finish & Review"); review.onclick = () => openWorkoutReview(); tools.appendChild(review); }
   else { const sent = el("button","mini-btn",status === "reviewed" ? "Coach reviewed" : "Review sent"); sent.disabled = true; tools.appendChild(sent); }
   if (["assigned","in_progress"].includes(status)) tools.appendChild(ready); banner.append(identity,tools); out.append(banner,assignmentLoopElement(assignment));
@@ -4343,7 +4387,8 @@ function starterReviewStatus(profile) {
   if (!program || !(program.starter || program.setup && program.setup.programMode === "starter") || !program.weeks || !program.weeks.length) return { active:false };
   const reviews = checkInsForProfile(profile.id), completed = reviews.find((item) => item.reviewType === "starter_week_1" && (!item.programId || item.programId === program.id));
   const start = new Date(program.savedAt || program.createdAt || Date.now()), dueAt = new Date(start.getTime() + 7 * 86400000), firstWeek = program.weeks[0];
-  const weekComplete = Boolean(firstWeek && firstWeek.days && firstWeek.days.length && firstWeek.days.every((day) => day.session && getSessionSets(day.session.sessionId).length));
+  const firstWeekAssignments = assignmentsForClient(profile.id).filter((item) => item.programId === program.id && Number(item.programWeek) === 1);
+  const weekComplete = Boolean(firstWeek && firstWeek.days && firstWeek.days.length && firstWeekAssignments.length >= firstWeek.days.length && firstWeekAssignments.every((item) => ["completed","reviewed"].includes(assignmentStatus(item))));
   return { active:true,program,programId:program.id || "",completed,dueAt,due:!completed && (weekComplete || Date.now() >= dueAt.getTime()) };
 }
 function renderClientAppView(view) {
@@ -4385,11 +4430,15 @@ function clientProgramSource(profile) {
   const assignment = assignmentForClient(profile.id), session = clientAssignedSession(assignment,profile); if (!session) return null;
   return { profileId:profile.id,setup:{client:profile.name,weeks:1,days:1,goals:session.spec.goals || [session.spec.goal],trainingPhase:profile.trainingPhase || 'Current phase'},weeks:[{number:1,phase:{name:profile.trainingPhase || 'Current phase',directive:clientPurpose(session)},days:[{name:session.goalLabel || 'Today',session}]}],synthetic:true };
 }
-function clientDayState(profile,session,isToday,index) {
-  const assignment = assignmentForClient(profile.id), sessionSets = session && getSessionSets(session.sessionId).length;
-  if (sessionSets) return 'completed'; if (assignment && ["completed","reviewed"].includes(assignmentStatus(assignment))) return 'completed';
-  if (isToday) return assignmentStatus(assignment) === 'in_progress' ? 'scheduled' : 'scheduled';
-  return index < new Date().getDay() - 1 ? 'missed' : 'scheduled';
+function assignmentForProgramDay(profileId,programId,weekNumber,dayNumber,sessionId) {
+  return assignmentsForClient(profileId).find((item) => (programId && item.programId === programId && Number(item.programWeek) === Number(weekNumber) && Number(item.programDay) === Number(dayNumber)) || (sessionId && assignmentSessionIds(item).includes(sessionId))) || null;
+}
+function clientDayState(profile,assignment,isToday,index) {
+  if (!assignment) return 'unscheduled';
+  if (["completed","reviewed"].includes(assignmentStatus(assignment))) return 'completed';
+  if (assignmentStatus(assignment) === "in_progress" || isToday) return 'scheduled';
+  const scheduled = assignment.scheduledDate ? new Date(assignment.scheduledDate + "T12:00:00") : null;
+  return scheduled && scheduled < new Date(new Date().toDateString()) ? 'missed' : index < new Date().getDay() - 1 ? 'missed' : 'scheduled';
 }
 function setClientProgramWeek(week) { clientProgramWeek = Number(week) || 1; const profile = activeClientProfile(); if (profile) renderClientProgram(profile); }
 function renderClientProgram(profile) {
@@ -4397,17 +4446,21 @@ function renderClientProgram(profile) {
   if (!program) { out.innerHTML = '<div class="empty-state-polished"><b>No program assigned yet</b><p>Your coach-approved workout or multi-week program will appear here when it is ready.</p></div>'; return; }
   clientProgramWeek = Math.max(1,Math.min(clientProgramWeek,program.weeks.length)); const week = program.weeks[clientProgramWeek - 1], assignment = assignmentForClient(profile.id), todayIndex = Math.max(0,new Date().getDay() - 1);
   const weekButtons = program.weeks.map((item) => '<button class="week-chip ' + (item.number === clientProgramWeek ? 'on' : '') + '" onclick="setClientProgramWeek(' + item.number + ')"><b>Week ' + item.number + '</b><span>' + escapeHtml(item.phase && item.phase.name || 'Training') + '</span></button>').join('');
-  const trainingDays = week.days || [], dayCards = Array.from({length:7},(_,index) => { const day = trainingDays[index] || null, stateName = day ? clientDayState(profile,day.session,index === todayIndex,index) : 'rest'; return '<button class="day-card ' + stateName + (index === todayIndex ? ' today' : '') + '" ' + (day ? 'onclick="selectClientProgramDay(' + index + ')"' : 'disabled') + '><b>' + ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][index] + '</b><span>' + (day ? escapeHtml(day.name) : 'Rest day') + '</span><span>' + stateName.replace('_',' ') + '</span></button>'; }).join('');
+  const trainingDays = week.days || [], scheduledByWeekday = {};
+  trainingDays.forEach((day,dayIndex) => { const dayAssignment = assignmentForProgramDay(profile.id,program.id,week.number,dayIndex + 1,day.session && day.session.sessionId), weekday = dayAssignment && Number(dayAssignment.scheduledWeekday) || inferredTrainingDays(profile,trainingDays.length)[dayIndex] || dayIndex + 1; scheduledByWeekday[weekday] = {day,dayIndex,assignment:dayAssignment}; });
+  const dayCards = Array.from({length:7},(_,index) => { const scheduled = scheduledByWeekday[index + 1], day = scheduled && scheduled.day, stateName = day ? clientDayState(profile,scheduled.assignment,index === todayIndex,index) : 'rest'; return '<button class="day-card ' + stateName + (index === todayIndex ? ' today' : '') + '" ' + (day ? 'onclick="selectClientProgramDay(' + scheduled.dayIndex + ')"' : 'disabled') + '><b>' + ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][index] + '</b><span>' + (day ? escapeHtml(day.name) : 'Rest day') + '</span><span>' + (stateName === 'unscheduled' ? 'not assigned' : stateName.replace('_',' ')) + '</span></button>'; }).join('');
   const selectedIndex = Math.min(Number(renderClientProgram.selectedDay || 0),Math.max(0,trainingDays.length - 1)), selected = trainingDays[selectedIndex] || trainingDays[0], session = selected && selected.session;
-  const preview = session ? renderClientWorkoutPreview(profile,session,assignment) : '<div class="empty-state-polished"><b>Rest day</b><p>Recovery is part of the program. Your next scheduled workout is shown above.</p></div>';
-  const completed = program.weeks.flatMap((item) => item.days || []).filter((day) => getSessionSets(day.session && day.session.sessionId).length).length, total = program.weeks.reduce((sum,item) => sum + (item.days || []).length,0);
+  const selectedAssignment = selected ? assignmentForProgramDay(profile.id,program.id,week.number,selectedIndex + 1,session && session.sessionId) : null;
+  const preview = session ? renderClientWorkoutPreview(profile,session,selectedAssignment) : '<div class="empty-state-polished"><b>Rest day</b><p>Recovery is part of the program. Your next scheduled workout is shown above.</p></div>';
+  const programAssignments = assignmentsForClient(profile.id).filter((item) => item.programId === program.id), completed = programAssignments.filter((item) => ["completed","reviewed"].includes(assignmentStatus(item))).length, total = program.weeks.reduce((sum,item) => sum + (item.days || []).length,0);
   out.innerHTML = '<section class="client-card wide"><div class="client-section-label">Current program</div><h3>' + escapeHtml((program.setup.goals || profile.goals || ['general']).map((goal) => GOALS[goal] ? GOALS[goal].label : goal).join(' + ')) + '</h3><p>' + escapeHtml(week.phase && week.phase.directive || 'Follow the scheduled days and keep the main movements consistent through the phase.') + '</p><div class="hero-meta"><span>' + escapeHtml(week.phase && week.phase.name || program.setup.trainingPhase || 'Current phase') + '</span><span>Week ' + clientProgramWeek + ' of ' + program.weeks.length + '</span><span>' + completed + ' of ' + total + ' workouts complete</span></div><div class="week-strip">' + weekButtons + '</div><div class="day-grid">' + dayCards + '</div></section>' + preview
     + '<div class="client-grid"><section class="client-card"><div class="client-section-label">Upcoming workout</div><h3>' + escapeHtml(trainingDays[selectedIndex + 1] ? trainingDays[selectedIndex + 1].name : 'Next week') + '</h3><p>' + (trainingDays[selectedIndex + 1] ? escapeHtml(clientPurpose(trainingDays[selectedIndex + 1].session)) : 'Your coach will publish the next session when this week is complete.') + '</p></section><section class="client-card"><div class="client-section-label">Program progress</div><h3>' + (total ? Math.round(completed / total * 100) : 0) + '% complete</h3><p>Completed sessions are counted from saved workout sets.</p></section></div>';
 }
 function selectClientProgramDay(index) { renderClientProgram.selectedDay = Number(index) || 0; const profile = activeClientProfile(); if (profile) renderClientProgram(profile); }
 function renderClientWorkoutPreview(profile,session,assignment) {
   const items = clientSessionExercises(session), equipment = clientSessionEquipment(session);
-  return '<section class="workout-preview"><article class="client-card"><div class="client-section-label">Workout preview</div><h3>' + escapeHtml(session.goalLabel || 'Coach-planned workout') + '</h3><div class="hero-meta"><span>' + (session.spec.minutes || 60) + ' min</span><span>' + escapeHtml(equipment.join(' · ') || 'Bodyweight') + '</span><span>' + items.length + ' exercises</span></div><p>' + escapeHtml(clientPurpose(session)) + '</p><div class="preview-list">' + items.map((item,index) => '<div class="preview-exercise"><i>' + (index + 1) + '</i><b>' + escapeHtml(item.exercise.name) + '<small style="display:block;color:var(--text-faint);margin-top:3px">' + escapeHtml(item.block.title) + '</small></b><span>' + escapeHtml((item.exercise.rx || item.block.rx).sets + ' × ' + (item.exercise.rx || item.block.rx).reps) + '</span></div>').join('') + '</div></article><aside class="client-card"><div class="client-section-label">Session options</div><div class="secondary-actions"><button class="small-btn primary" onclick="startActiveWorkout(\'' + escapeHtml(profile.id) + '\')">' + (assignmentStatus(assignment) === 'in_progress' ? 'Continue workout' : 'Start workout') + '</button><button class="small-btn" onclick="startActiveWorkout(\'' + escapeHtml(profile.id) + '\',true)">Use shortened workout</button><button class="small-btn" onclick="showToast(\'Start the workout, then use Replace exercise beside the movement that needs different equipment\')">Change equipment</button><button class="small-btn" onclick="openClientPainReport()">Report a limitation</button></div><p style="margin-top:12px">Isolation swaps stay inside approved groups. Major compound changes require coach permission.</p></aside></section>';
+  const assignmentId = assignment && assignment.id || "", ready = assignment && !["completed","reviewed"].includes(assignmentStatus(assignment));
+  return '<section class="workout-preview"><article class="client-card"><div class="client-section-label">Workout preview</div><h3>' + escapeHtml(session.goalLabel || 'Coach-planned workout') + '</h3><div class="hero-meta"><span>' + (session.spec.minutes || 60) + ' min</span><span>' + escapeHtml(equipment.join(' · ') || 'Bodyweight') + '</span><span>' + items.length + ' exercises</span></div><p>' + escapeHtml(clientPurpose(session)) + '</p><div class="preview-list">' + items.map((item,index) => '<div class="preview-exercise"><i>' + (index + 1) + '</i><b>' + escapeHtml(item.exercise.name) + '<small style="display:block;color:var(--text-faint);margin-top:3px">' + escapeHtml(item.block.title) + '</small></b><span>' + escapeHtml((item.exercise.rx || item.block.rx).sets + ' × ' + (item.exercise.rx || item.block.rx).reps) + '</span></div>').join('') + '</div></article><aside class="client-card"><div class="client-section-label">Session options</div>' + (!assignment ? '<div class="portal-note">This program day has not been assigned by the trainer yet.</div>' : '') + '<div class="secondary-actions"><button class="small-btn primary" ' + (ready ? '' : 'disabled') + ' onclick="startActiveWorkout(\'' + escapeHtml(profile.id) + '\',false,\'' + escapeHtml(assignmentId) + '\')">' + (assignmentStatus(assignment) === 'in_progress' ? 'Continue workout' : assignment && ["completed","reviewed"].includes(assignmentStatus(assignment)) ? 'Workout complete' : 'Start workout') + '</button><button class="small-btn" ' + (ready ? '' : 'disabled') + ' onclick="startActiveWorkout(\'' + escapeHtml(profile.id) + '\',true,\'' + escapeHtml(assignmentId) + '\')">Use shortened workout</button><button class="small-btn" onclick="showToast(\'Start the workout, then use Replace exercise beside the movement that needs different equipment\')">Change equipment</button><button class="small-btn" onclick="openClientPainReport()">Report a limitation</button></div><p style="margin-top:12px">Isolation swaps stay inside approved groups. Major compound changes require coach permission.</p></aside></section>';
 }
 function setClientProgressSection(section) { clientProgressSection = ["overview","performance","body","goals"].includes(section) ? section : "overview"; document.querySelectorAll('[data-client-progress]').forEach((button) => button.classList.toggle('on',button.dataset.clientProgress === clientProgressSection)); const profile = activeClientProfile(); if (profile) renderClientProgress(profile); }
 function renderClientProgress(profile) {
@@ -4517,8 +4570,9 @@ function activeWorkoutUnits(session,shortened) {
   });
   return units;
 }
-function startActiveWorkout(profileId,shortened) {
-  const profile = loadProfiles().find((item) => item.id === profileId), assignments = loadAssignedWorkouts(), assignmentIndex = assignments.findIndex((item) => item.profileId === profileId); if (!profile || assignmentIndex < 0) { showToast('No coach-approved workout is assigned yet'); return null; }
+function startActiveWorkout(profileId,shortened,assignmentId) {
+  const profile = loadProfiles().find((item) => item.id === profileId), assignments = loadAssignedWorkouts(), selected = assignmentId ? assignments.find((item) => item.id === assignmentId && item.profileId === profileId) : assignmentForClient(profileId), assignmentIndex = selected ? assignments.findIndex((item) => item.id === selected.id) : -1; if (!profile || assignmentIndex < 0) { showToast('No coach-approved workout is assigned yet'); return null; }
+  if (["completed","reviewed"].includes(assignmentStatus(assignments[assignmentIndex]))) { showToast('That workout is already complete. Choose the next scheduled workout.'); return null; }
   if (assignmentStatus(assignments[assignmentIndex]) === 'assigned') { assignments[assignmentIndex].status = 'in_progress'; assignments[assignmentIndex].startedAt = new Date().toISOString(); writeAssignedWorkouts(assignments); }
   const assignment = assignments[assignmentIndex], session = clientAssignedSession(assignment,profile), saved = loadActiveWorkoutState(); state.session = JSON.parse(JSON.stringify(assignment.session)); state.sessionOptions = [];
   activeWorkout = saved && saved.assignmentId === assignment.id ? saved : {assignmentId:assignment.id,profileId:profile.id,sessionId:session.sessionId,unitIndex:0,pairIndex:0,setByExercise:{},extraSets:{},warmups:{},skippedSets:{},skippedExercises:{},supersetMode:{},shortened:Boolean(shortened),startedAt:new Date().toISOString()};
@@ -4668,7 +4722,9 @@ function assignCurrentWorkout() {
     const spec = plan.session.spec || {}, profile = loadProfiles().find((item) => item.id === spec.profileId) || loadProfiles().find((item) => clientMatches(item.name,spec.client));
     if (!profile) return;
     const session = { type:"solo", data:JSON.parse(JSON.stringify(plan.session)), edits:JSON.parse(JSON.stringify(state.session.edits || {})) }, assignment = { id:"assignment-" + Date.now() + "-" + Math.random().toString(16).slice(2), profileId:profile.id, client:profile.name, assignedAt:new Date().toISOString(), status:"assigned", session };
-    const existing = assignments.findIndex((item) => item.profileId === profile.id); if (existing >= 0) assignments[existing] = assignment; else assignments.unshift(assignment); saved.push(assignment);
+    const existing = assignments.findIndex((item) => item.profileId === profile.id && !item.programId && assignmentStatus(item) === "assigned");
+    if (existing >= 0) assignments[existing] = assignment; else assignments.unshift(assignment);
+    saved.push(assignment);
   });
   if (!saved.length) { showToast("Choose a saved client profile before assigning this workout"); return null; }
   if (!writeAssignedWorkouts(assignments)) return null; showToast(saved.length === 1 ? "Workout assigned to " + saved[0].client : "Workouts assigned to both clients"); return saved;
@@ -4704,6 +4760,26 @@ function openCoachDestination(destination) {
   if (destination === 'business') { openAdvancedStudio(); return; }
   renderCoachModule(destination); show('coach-module');
 }
+function coachCalendarWeek() {
+  const today = new Date(), monday = new Date(today); monday.setHours(12,0,0,0); monday.setDate(today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
+  return TRAINING_WEEKDAYS.map(([weekday,label]) => { const date = new Date(monday); date.setDate(monday.getDate() + weekday - 1); return {weekday,label,date,dateKey:date.toISOString().slice(0,10)}; });
+}
+function openCalendarClient(profileId,tab) {
+  const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) return;
+  selectedTrainerClient = profile.name; selectedInBodyScanId = ""; trainerSummaryState = newTrainerSummaryState(); trainerSummaryState.tab = tab === "workout" ? "program" : "overview"; show("trainer"); renderTrainerHub(profile.name);
+}
+function attendanceCalendarHtml() {
+  const profiles = loadProfiles(), assignments = loadAssignedWorkouts(), todayKey = new Date().toISOString().slice(0,10);
+  const days = coachCalendarWeek().map((day) => {
+    const clients = profiles.filter((profile) => inferredTrainingDays(profile,profile.availableDays || 3).includes(day.weekday)).sort((a,b) => a.name.localeCompare(b.name));
+    const rows = clients.map((profile) => {
+      const assignment = assignments.find((item) => item.profileId === profile.id && item.scheduledDate === day.dateKey) || assignmentForClient(profile.id), status = assignment ? assignmentStatusLabel(assignment) : "Profile scheduled · workout not assigned";
+      return '<div class="attendance-client"><button type="button" onclick="openCalendarClient(\'' + escapeHtml(profile.id) + '\',\'profile\')">' + escapeHtml(profile.name) + '<span>' + escapeHtml(status) + '</span></button><button class="tiny-btn" type="button" onclick="openCalendarClient(\'' + escapeHtml(profile.id) + '\',\'workout\')">Workout</button></div>';
+    }).join("");
+    return '<section class="attendance-day' + (day.dateKey === todayKey ? ' today' : '') + '"><div class="attendance-day-head"><b>' + day.label + '</b><span>' + day.date.toLocaleDateString([],{month:"short",day:"numeric"}) + '</span></div>' + (rows || '<div class="attendance-empty">No clients scheduled.</div>') + '</section>';
+  }).join("");
+  return '<section class="attendance-calendar"><div class="attendance-head"><div><h3>Monday–Saturday client calendar</h3><p>Training days come from each client profile. Open a name for the full record or Workout for the assigned phase.</p></div><button class="small-btn" onclick="openCoachDestination(\'clients\')">Edit client days</button></div><div class="attendance-grid">' + days + '</div></section>';
+}
 function renderCoachModule(destination) {
   const title = byId('coachModuleTitle'), eyebrow = byId('coachModuleEyebrow'), copy = byId('coachModuleCopy'), out = byId('coachModuleContent'); if (!title || !out) return;
   const details = {
@@ -4712,7 +4788,7 @@ function renderCoachModule(destination) {
   if (destination === 'calendar') {
     const assignments = loadAssignedWorkouts().slice().sort((a,b) => String(b.assignedAt).localeCompare(String(a.assignedAt))), attention = trainerAttentionSnapshot();
     const followups = attention.assignmentReviews.map((item) => ({client:item.client,label:'Workout review ready'})).concat(attention.checkinReviews.map((item) => ({client:item.client,label:item.reviewType === 'starter_week_1' ? 'First-week review ready' : 'Weekly check-in ready'}))).concat(attention.formalReviews.map((profile) => ({client:profile.name,label:'Four-week program review due'}))).concat(attention.recognition.map((profile) => ({client:profile.name,label:'Positive recognition due'})));
-    out.innerHTML = '<section class="coach-module-card"><h3>Assigned sessions</h3><div class="advanced-list">' + (assignments.map((item) => '<div class="advanced-list-item"><b>' + escapeHtml(item.client) + '</b><span>' + new Date(item.assignedAt).toLocaleDateString() + ' · ' + escapeHtml(assignmentStatusLabel(item)) + '</span></div>').join('') || '<div class="empty-state">No sessions assigned.</div>') + '</div></section><section class="coach-module-card"><h3>Coaching follow-ups</h3><div class="advanced-list">' + (followups.map((item) => '<div class="advanced-list-item"><b>' + escapeHtml(item.client) + '</b><span>' + escapeHtml(item.label) + '</span></div>').join('') || '<div class="empty-state">No client is waiting on feedback.</div>') + '</div><div class="tool-actions"><button class="small-btn primary" onclick="openCoachDestination(\'clients\')">Review clients</button></div></section>';
+    out.innerHTML = attendanceCalendarHtml() + '<section class="coach-module-card"><h3>Assigned sessions</h3><div class="advanced-list">' + (assignments.slice(0,20).map((item) => '<div class="advanced-list-item"><b>' + escapeHtml(item.client) + (item.programWeek ? ' · Week ' + item.programWeek + ' Day ' + item.programDay : '') + '</b><span>' + escapeHtml(item.scheduledDate ? new Date(item.scheduledDate + 'T12:00:00').toLocaleDateString() : new Date(item.assignedAt).toLocaleDateString()) + ' · ' + escapeHtml(assignmentStatusLabel(item)) + '</span></div>').join('') || '<div class="empty-state">No sessions assigned.</div>') + '</div></section><section class="coach-module-card"><h3>Coaching follow-ups</h3><div class="advanced-list">' + (followups.map((item) => '<div class="advanced-list-item"><b>' + escapeHtml(item.client) + '</b><span>' + escapeHtml(item.label) + '</span></div>').join('') || '<div class="empty-state">No client is waiting on feedback.</div>') + '</div><div class="tool-actions"><button class="small-btn primary" onclick="openCoachDestination(\'clients\')">Review clients</button></div></section>';
   } else if (destination === 'messages') {
     const messages = loadLocalArray(CLIENT_MESSAGES_KEY);
     const profiles = loadProfiles(), threads = profiles.map((profile) => { const items = messages.filter((message) => message.profileId === profile.id).sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt))); return {profile,items,needsReply:items.length && messageSenderRole(items[0]) === 'client'}; }).filter((thread) => thread.items.length).sort((a,b) => Number(b.needsReply) - Number(a.needsReply) || String(b.items[0].createdAt).localeCompare(String(a.items[0].createdAt)));
@@ -5778,6 +5854,12 @@ function renderBlock(session, block, bi, sessionRef, partnerKey) {
     reorder.append(up,down); head.appendChild(reorder);
   }
   wrap.appendChild(head);
+  if (portalRole !== "client" && session.blocks.reduce((sum,item) => sum + (item.items || []).length,0) > 1) {
+    const tools = el("div","block-superset-tools"), copy = el("span","","Optional paired block for this section"), actions = el("div","tool-actions"), create = el("button","small-btn","Create a superset");
+    create.type = "button"; create.onclick = () => openSupersetEditor(session,block,bi,sessionRef,partnerKey); actions.appendChild(create);
+    if ((block.groups || []).some((group) => group.type === "superset")) { const clear = el("button","small-btn","Clear supersets"); clear.type = "button"; clear.onclick = () => clearBlockSupersets(session,block); actions.appendChild(clear); }
+    tools.append(copy,actions); wrap.appendChild(tools);
+  }
 
   // Render by superset groups when present, else a flat list. Each exercise
   // keeps its real index in block.items so swap/remove still target correctly.
@@ -5817,6 +5899,82 @@ function renderBlock(session, block, bi, sessionRef, partnerKey) {
   }
   return wrap;
 }
+
+let supersetEditorContext = null;
+function blockGroupPairs(block,excludedNames) {
+  const excluded = new Set(excludedNames || []);
+  return (block.groups || []).filter((group) => group.type === "superset" && (group.items || []).length === 2 && group.items.every((item) => (block.items || []).some((exercise) => exercise.name === item.name) && !excluded.has(item.name))).map((group) => group.items.map((item) => (block.items || []).find((exercise) => exercise.name === item.name)));
+}
+function rebuildBlockGroups(block,forcedPair,excludedNames) {
+  const pairs = blockGroupPairs(block,excludedNames);
+  if (forcedPair && forcedPair.length === 2) pairs.unshift(forcedPair);
+  const pairByName = new Map(), emitted = new Set();
+  pairs.forEach((pair) => pair.forEach((item) => pairByName.set(item.name,pair)));
+  block.groups = [];
+  (block.items || []).forEach((item) => {
+    const pair = pairByName.get(item.name);
+    if (pair) {
+      const key = pair.map((exercise) => exercise.name).join("::"); if (emitted.has(key)) return; emitted.add(key);
+      block.groups.push({type:"superset",items:pair,station:pair[0].zone === pair[1].zone ? ZONE_LABELS[pair[0].zone] || pair[0].zone : "coach-selected stations",manual:true});
+    } else block.groups.push({type:"straight",items:[item]});
+  });
+}
+function openSupersetEditor(session,block,bi,sessionRef,partnerKey,renderMode) {
+  if (!requireTrainerMutation("create supersets")) return false;
+  const first = byId("supersetFirst"), second = byId("supersetSecond"); if (!first || !second || !block.items.length) return false;
+  supersetEditorContext = {session,block,bi,sessionRef,partnerKey,renderMode:renderMode || "workout"};
+  first.innerHTML = block.items.map((exercise,index) => '<option value="' + index + '">' + escapeHtml(exercise.name) + '</option>').join("");
+  second.innerHTML = session.blocks.flatMap((candidateBlock,blockIndex) => (candidateBlock.items || []).map((exercise,exerciseIndex) => '<option value="' + blockIndex + '::' + exerciseIndex + '">' + escapeHtml(candidateBlock.title) + ' · ' + escapeHtml(exercise.name) + '</option>')).join("");
+  first.value = "0";
+  const defaultSecond = session.blocks.flatMap((candidateBlock,blockIndex) => (candidateBlock.items || []).map((exercise,exerciseIndex) => ({value:blockIndex + "::" + exerciseIndex,exercise}))).find((item) => item.exercise !== block.items[0]);
+  if (defaultSecond) second.value = defaultSecond.value;
+  paintSupersetEditorWarning(); byId("supersetEditorModal").classList.add("open"); return true;
+}
+function supersetEditorExercises() {
+  if (!supersetEditorContext) return {};
+  const firstIndex = Number(byId("supersetFirst").value), secondParts = String(byId("supersetSecond").value).split("::").map(Number), sourceBlock = supersetEditorContext.session.blocks[secondParts[0]];
+  return {firstIndex,first:supersetEditorContext.block.items[firstIndex],sourceBlock,sourceBlockIndex:secondParts[0],secondIndex:secondParts[1],second:sourceBlock && sourceBlock.items[secondParts[1]]};
+}
+function paintSupersetEditorWarning() {
+  const out = byId("supersetEditorWarning"), data = supersetEditorExercises(); if (!out || !data.first || !data.second) return;
+  if (data.first === data.second) out.textContent = "Choose two different movements.";
+  else if (data.first.primary && data.second.primary) out.textContent = "Two primary lifts should not be paired. Keep one fresh and choose a supporting movement.";
+  else if (data.first.zone !== data.second.zone && data.first.zone !== "bodyweight" && data.second.zone !== "bodyweight") out.textContent = "Coach caution: this pairing uses two equipment areas. Confirm the gym floor is quiet enough before assigning it.";
+  else if (data.sourceBlock !== supersetEditorContext.block) out.textContent = data.second.name + " will move from " + data.sourceBlock.title + " into " + supersetEditorContext.block.title + " as A2.";
+  else out.textContent = "A1 and A2 will stay together in this section. Clients may use the superset or complete straight sets.";
+}
+function saveSupersetEditor() {
+  const context = supersetEditorContext, data = supersetEditorExercises(); if (!context || !data.first || !data.second) return false;
+  if (data.first === data.second) { showToast("Choose two different movements"); return false; }
+  if (data.first.primary && data.second.primary) { showToast("Keep primary lifts separate and choose a supporting movement for A2"); return false; }
+  const target = context.block, source = data.sourceBlock, excluded = [data.first.name,data.second.name];
+  if (source !== target) {
+    source.items.splice(data.secondIndex,1); rebuildBlockGroups(source,null,[data.second.name]);
+    const firstPosition = target.items.indexOf(data.first); target.items.splice(firstPosition + 1,0,data.second);
+  } else {
+    target.items = target.items.filter((item) => item !== data.first && item !== data.second);
+    const insertAt = Math.min(data.firstIndex,target.items.length); target.items.splice(insertAt,0,data.first,data.second);
+  }
+  rebuildBlockGroups(target,[data.first,data.second],excluded);
+  markSessionDraft(context.session,"Superset pairing changed by coach");
+  if (context.renderMode === "program" && currentProgram) {
+    currentProgram.approval = {status:"draft",required:true,changedAt:new Date().toISOString(),changeReason:"Superset pairing changed by coach"};
+    byId("programSaveBtn").disabled = true; byId("programSaveOnlyBtn").disabled = true;
+  }
+  closeSupersetEditor();
+  if (context.renderMode === "program") renderProgram(); else renderOutput();
+  showToast(data.first.name + " + " + data.second.name + " paired as A1/A2"); return true;
+}
+function clearBlockSupersets(session,block,renderMode) {
+  if (!requireTrainerMutation("clear supersets")) return false;
+  block.groups = (block.items || []).map((item) => ({type:"straight",items:[item]})); markSessionDraft(session,"Supersets cleared by coach");
+  if (renderMode === "program" && currentProgram) {
+    currentProgram.approval = {status:"draft",required:true,changedAt:new Date().toISOString(),changeReason:"Supersets cleared by coach"};
+    byId("programSaveBtn").disabled = true; byId("programSaveOnlyBtn").disabled = true; renderProgram();
+  } else renderOutput();
+  showToast("Supersets cleared from " + block.title); return true;
+}
+function closeSupersetEditor() { const modal = byId("supersetEditorModal"); if (modal) modal.classList.remove("open"); supersetEditorContext = null; }
 
 function noteId(session, bi, ei, partnerKey) { return (partnerKey || "s") + ":" + bi + ":" + ei; }
 
@@ -6541,7 +6699,24 @@ function toggleIntervalTimer() {
 
 /* ---------- Wave 3: multi-week programs ---------- */
 let currentProgram = null;
+let programCardioModes = ["any"];
 const programFilters = { injuries: [], zones: [] };
+const TRAINING_WEEKDAYS = [[1,"Monday"],[2,"Tuesday"],[3,"Wednesday"],[4,"Thursday"],[5,"Friday"],[6,"Saturday"]];
+function inferredTrainingDays(profile,count) {
+  const wanted = Math.max(1,Math.min(6,Number(count || profile && profile.availableDays) || 3));
+  const saved = [...new Set((profile && profile.trainingDays || []).map(Number).filter((day) => day >= 1 && day <= 6))].sort((a,b) => a - b);
+  if (saved.length) return saved.slice(0,wanted);
+  const patterns = {1:[1],2:[1,4],3:[1,3,5],4:[1,2,4,5],5:[1,2,3,4,5],6:[1,2,3,4,5,6]};
+  return patterns[wanted] || patterns[3];
+}
+function renderProgramCardioChoices() {
+  const out = byId("programCardioChips"); if (!out) return;
+  out.innerHTML = multiChoiceButtonsHtml(cardioChoiceEntries(),programCardioModes,"toggleProgramCardioChoice");
+}
+function toggleProgramCardioChoice(value) {
+  programCardioModes = normalizeCardioPreferences(toggleMultiChoiceValue(programCardioModes,value,true));
+  renderProgramCardioChoices();
+}
 function toggleProgramFilter(kind, value, button) {
   const list = programFilters[kind]; const index = list.indexOf(value);
   if (index >= 0) list.splice(index, 1); else list.push(value);
@@ -6584,7 +6759,7 @@ function loadProgramProfile() {
   const existingProgram = savedProgramFor(profile), mode = existingProgram && existingProgram.setup && existingProgram.setup.programMode || (Number(profile.experience) === 1 ? "starter" : "progressive");
   byId("programClient").value = profile.name; byId("programGoal").value = profile.goals[0] || "general";
   byId("programSecondaryGoal").value = profile.goals[1] || ""; byId("programExp").value = profile.experience;
-  byId("programStyle").value = profile.trainingStyle || "auto"; setSelectValues("programCardio",profile.cardioModes || profile.cardioMode);
+  byId("programStyle").value = profile.trainingStyle || "auto"; programCardioModes = normalizeCardioPreferences(profile.cardioModes || profile.cardioMode); renderProgramCardioChoices();
   byId("programAge").value = profile.age; byId("programMinutes").value = profile.minutes || 60;
   byId("programMode").value = mode; byId("programDays").value = String(existingProgram && existingProgram.setup && existingProgram.setup.days || (mode === "starter" ? 2 : profile.availableDays || 3));
   if (mode === "progressive") byId("programWeeks").value = String(existingProgram && existingProgram.setup && existingProgram.setup.weeks || 8);
@@ -6723,7 +6898,7 @@ function programPhaseForSetup(setup, week) {
 }
 function generateProgram() {
   const selectedProfile = loadProfiles().find((profile) => profile.id === byId("programProfile").value);
-  const cardioModes = selectedValues("programCardio");
+  const cardioModes = normalizeCardioPreferences(programCardioModes);
   const programMode = syncProgramMode(true);
   const setup = {
     client: byId("programClient").value.trim() || "Client",
@@ -6755,8 +6930,29 @@ function generateProgram() {
   currentProgram = { setup, weeks, starter:setup.starter, starterReviewWeek:setup.starter ? 1 : null, createdAt: new Date().toISOString(), approval:{ status:"draft", required:true } };
   renderProgram();
   byId("programPrintBtn").disabled = false;
-  byId("programApproveBtn").disabled = false; byId("programSaveBtn").disabled = true;
+  byId("programApproveBtn").disabled = false; byId("programSaveBtn").disabled = true; byId("programSaveOnlyBtn").disabled = true;
   return currentProgram;
+}
+function programBlockExercisesHtml(block) {
+  const groups = block.groups && block.groups.length ? block.groups : (block.items || []).map((exercise) => ({type:"straight",items:[exercise]}));
+  return groups.map((group) => {
+    const rows = (group.items || []).map((exercise,index) => '<div class="program-ex"><span>' + (group.type === "superset" ? '<b style="color:var(--blue-bright)">A' + (index + 1) + '</b> · ' : '') + escapeHtml(exercise.name) + '</span><b>' + escapeHtml(exercise.rx.sets) + ' × ' + escapeHtml(exercise.rx.reps) + '</b></div>').join("");
+    return group.type === "superset" && group.items.length === 2 ? '<div class="program-superset-pair"><div class="program-superset-pair-label">Superset available · A1 + A2</div>' + rows + '</div>' : rows;
+  }).join("");
+}
+function programBlockHtml(block,weekIndex,dayIndex,blockIndex) {
+  const hasSuperset = (block.groups || []).some((group) => group.type === "superset");
+  return '<div class="program-block-label">' + escapeHtml(block.title) + '</div><div class="program-superset-tools"><span>Optional paired block</span><div class="tool-actions"><button class="small-btn" onclick="openProgramSupersetEditor(' + weekIndex + ',' + dayIndex + ',' + blockIndex + ')">' + (hasSuperset ? 'Edit' : 'Create') + ' a superset</button>' + (hasSuperset ? '<button class="small-btn" onclick="clearProgramSupersets(' + weekIndex + ',' + dayIndex + ',' + blockIndex + ')">Clear</button>' : '') + '</div></div>' + programBlockExercisesHtml(block);
+}
+function openProgramSupersetEditor(weekIndex,dayIndex,blockIndex) {
+  if (!currentProgram || !currentProgram.weeks[weekIndex] || !currentProgram.weeks[weekIndex].days[dayIndex]) return false;
+  const session = currentProgram.weeks[weekIndex].days[dayIndex].session, block = session.blocks[blockIndex]; if (!block) return false;
+  return openSupersetEditor(session,block,blockIndex,null,"","program");
+}
+function clearProgramSupersets(weekIndex,dayIndex,blockIndex) {
+  if (!currentProgram || !currentProgram.weeks[weekIndex] || !currentProgram.weeks[weekIndex].days[dayIndex]) return false;
+  const session = currentProgram.weeks[weekIndex].days[dayIndex].session, block = session.blocks[blockIndex]; if (!block) return false;
+  return clearBlockSupersets(session,block,"program");
 }
 function renderProgram() {
   const out = byId("programOutput");
@@ -6766,10 +6962,13 @@ function renderProgram() {
   const approved = p.approval && p.approval.status === "approved";
   const starter = p.setup.programMode === "starter" || p.starter;
   const continuityCopy = starter ? "The same day templates repeat for all three weeks; only the prescription progresses. Week 1 includes a client fit review." : "Compounds stay consistent through the four-week phase; accessories rotate every two weeks.";
+  const savedAssignments = p.id ? loadAssignedWorkouts().filter((item) => item.programId === p.id) : [];
+  const assignmentActions = approved ? '<div class="program-assignment-actions"><button class="small-btn primary" onclick="saveAndAssignCurrentProgram(\'all\')">Assign full program</button><button class="small-btn" onclick="saveAndAssignCurrentProgram(\'week1\')">Assign Week 1 only</button>' + (p.weeks.length > 1 ? '<button class="small-btn" onclick="saveAndAssignCurrentProgram(\'remaining\')">Assign Weeks 2–' + p.weeks.length + '</button>' : '') + (savedAssignments.length ? '<span class="program-assignment-state">' + savedAssignments.length + ' workout' + (savedAssignments.length === 1 ? '' : 's') + ' registered</span>' : '') + '</div>' : '';
   out.innerHTML = '<article class="utility-card"><div class="utility-head"><div><h3 class="utility-title">' + escapeHtml(p.setup.client) + ' · ' + escapeHtml(p.setup.goals.map((g) => GOALS[g].label).join(" + ")) + '</h3><div class="program-summary"><span><b>' + p.setup.weeks + '</b> weeks</span><span><b>' + p.setup.days + '</b> days/week</span><span><b>' + EXP_LABEL(p.setup.experience) + '</b> experience</span><span><b>' + escapeHtml(TRAINING_ROUTES[resolvedTrainingRoute(p.setup)].title) + '</b> route</span><span><b>' + p.setup.minutes + ' min</b> sessions</span></div><div class="draft-status ' + (approved ? 'approved' : 'draft') + '"><b>' + (approved ? 'Coach approved program' : 'Program draft · approval required') + '</b><span>' + escapeHtml(continuityCopy) + '</span></div></div><span class="wave-badge">Program</span></div></article>'
-    + p.weeks.map((week) => '<section class="program-week"><div class="program-week-head"><div><div class="result-label">Week ' + week.number + (week.reviewRequired ? ' · ' + (week.reviewType === 'starter_week_1' ? 'Client review' : week.reviewType === 'starter_completion' ? 'Transition review' : 'Formal review required') : '') + '</div><h3 class="program-week-title">' + (week.phase.reviewTitle || week.phase.name) + '</h3></div><p class="program-directive">' + week.phase.directive + '</p></div>' + (week.reviewRequired ? '<div class="' + (starter ? 'starter-checkpoint' : 'formal-review-box') + '"><b>' + escapeHtml(week.phase.reviewTitle || 'Coach review') + '</b><p>' + escapeHtml(week.phase.reviewPrompt || 'Review adherence, pain, readiness, performance, technique, preferences, and goals before starting the next block.') + '</p></div>' : '') + '<div class="program-days">'
+    + assignmentActions
+    + p.weeks.map((week, wi) => '<section class="program-week"><div class="program-week-head"><div><div class="result-label">Week ' + week.number + (week.reviewRequired ? ' · ' + (week.reviewType === 'starter_week_1' ? 'Client review' : week.reviewType === 'starter_completion' ? 'Transition review' : 'Formal review required') : '') + '</div><h3 class="program-week-title">' + (week.phase.reviewTitle || week.phase.name) + '</h3></div><div><p class="program-directive">' + week.phase.directive + '</p>' + (approved ? '<button class="small-btn" style="margin-top:9px" onclick="saveAndAssignCurrentProgram(' + week.number + ')">Assign this week</button>' : '') + '</div></div>' + (week.reviewRequired ? '<div class="' + (starter ? 'starter-checkpoint' : 'formal-review-box') + '"><b>' + escapeHtml(week.phase.reviewTitle || 'Coach review') + '</b><p>' + escapeHtml(week.phase.reviewPrompt || 'Review adherence, pain, readiness, performance, technique, preferences, and goals before starting the next block.') + '</p></div>' : '') + '<div class="program-days">'
       + week.days.map((day, di) => '<article class="program-day"><h4>Day ' + (di + 1) + ' · ' + day.name + '</h4>'
-        + day.session.blocks.map((block) => '<div class="program-block-label">' + escapeHtml(block.title) + '</div>' + block.items.map((ex) => '<div class="program-ex"><span>' + escapeHtml(ex.name) + '</span><b>' + escapeHtml(ex.rx.sets) + ' × ' + escapeHtml(ex.rx.reps) + '</b></div>').join("")).join("") + '</article>').join("")
+        + day.session.blocks.map((block, bi) => programBlockHtml(block,wi,di,bi)).join("") + (savedAssignments.some((item) => Number(item.programWeek) === week.number && Number(item.programDay) === di + 1) ? '<div class="program-day-assignment done">Registered to client</div>' : '<div class="program-day-assignment">Not assigned yet</div>') + '</article>').join("")
       + '</div></section>').join("");
 }
 function printProgram() { if (currentProgram) window.print(); }
@@ -6778,18 +6977,72 @@ function approveCurrentProgram() {
   const sessions = currentProgram.weeks.flatMap((week) => week.days.map((day) => day.session)); sessions.forEach((session) => { session.audit = auditWorkout(session); });
   const failed = sessions.filter((session) => !session.audit.pass); if (failed.length) { showToast("Program approval blocked: " + failed.length + " session audits need review"); renderProgram(); return false; }
   const approvedAt = new Date().toISOString(); sessions.forEach((session) => { session.approval = { ...(session.approval || {}),status:"approved",approvedAt,approvedBy:"trainer",auditScore:session.audit.score }; }); currentProgram.approval = { status:"approved",approvedAt,approvedBy:"trainer" };
-  byId("programSaveBtn").disabled = false; renderProgram(); showToast("Coach approved the program after all session audits passed"); return true;
+  byId("programSaveBtn").disabled = false; byId("programSaveOnlyBtn").disabled = false; renderProgram(); showToast("Coach approved the program after all session audits passed"); return true;
 }
-function saveCurrentProgram() {
+function saveCurrentProgram(silent) {
   if (!requireTrainerMutation("save programs to client records")) return null;
   if (!currentProgram) return;
   if (!currentProgram.approval || currentProgram.approval.status !== "approved") { showToast("Coach approval is required before saving this program"); return null; }
-  const p = currentProgram;
+  const p = currentProgram, wasNew = !p.id;
   const programs = loadSavedPrograms(), saved = JSON.parse(JSON.stringify(p)), profile = loadProfiles().find((item) => item.id === p.setup.profileId) || loadProfiles().find((item) => clientMatches(item.name,p.setup.client));
-  saved.id = saved.id || "program-" + Date.now(); saved.profileId = profile && profile.id || p.setup.profileId || ""; saved.savedAt = new Date().toISOString();
-  const existing = programs.findIndex((item) => item.profileId && item.profileId === saved.profileId || clientMatches(item.setup && item.setup.client,p.setup.client)); if (existing >= 0) programs[existing] = saved; else programs.unshift(saved); writeSavedPrograms(programs);
-  addProgressEntry({ type: "program", client: p.setup.client, label: p.setup.goals.map((g) => GOALS[g].label).join(" + ") + " program", value: p.setup.weeks + " weeks · " + p.setup.days + " days/week", note: "Multi-week plan created" });
-  showToast("Program saved to the client’s Workout tab");
+  saved.profileId = profile && profile.id || p.setup.profileId || "";
+  const existing = programs.findIndex((item) => item.profileId && item.profileId === saved.profileId || clientMatches(item.setup && item.setup.client,p.setup.client));
+  saved.id = saved.id || (existing >= 0 && programs[existing].id) || "program-" + Date.now(); saved.savedAt = new Date().toISOString();
+  if (existing >= 0) programs[existing] = saved; else programs.unshift(saved); writeSavedPrograms(programs);
+  currentProgram.id = saved.id; currentProgram.profileId = saved.profileId; currentProgram.savedAt = saved.savedAt;
+  if (wasNew) addProgressEntry({ type: "program", client: p.setup.client, profileId:saved.profileId, label: p.setup.goals.map((g) => GOALS[g].label).join(" + ") + " program", value: p.setup.weeks + " weeks · " + p.setup.days + " days/week", note: "Multi-week plan created" });
+  if (!silent) showToast("Program saved. Use the assignment controls to register its workout days.");
+  return saved;
+}
+function programScheduleBase(trainingDays) {
+  const today = new Date(), day = today.getDay(), monday = new Date(today); monday.setHours(12,0,0,0); monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
+  const latestFirstWeek = new Date(monday); latestFirstWeek.setDate(monday.getDate() + Math.max.apply(null,trainingDays) - 1);
+  if (latestFirstWeek < new Date(new Date().toDateString())) monday.setDate(monday.getDate() + 7);
+  return monday;
+}
+function scheduledDateForProgram(base,weekNumber,weekday) {
+  const date = new Date(base); date.setDate(base.getDate() + (Number(weekNumber) - 1) * 7 + Number(weekday) - 1); return date.toISOString().slice(0,10);
+}
+function assignProgramWeeks(program,weekNumbers) {
+  const profile = loadProfiles().find((item) => item.id === program.profileId || item.id === program.setup.profileId) || loadProfiles().find((item) => clientMatches(item.name,program.setup.client));
+  if (!profile) { showToast("Choose a saved client profile before assigning this program"); return []; }
+  const selectedWeeks = program.weeks.filter((week) => weekNumbers.includes(Number(week.number))); if (!selectedWeeks.length) return [];
+  const trainingDays = inferredTrainingDays(profile,program.setup.days), scheduleBase = program.scheduleStart ? new Date(program.scheduleStart + "T12:00:00") : programScheduleBase(trainingDays), assignments = loadAssignedWorkouts(), registered = [];
+  const validProgramDays = new Set(selectedWeeks.flatMap((week) => (week.days || []).map((day,index) => Number(week.number) + ":" + (index + 1))));
+  for (let index = assignments.length - 1; index >= 0; index--) {
+    const item = assignments[index], selectedWeek = weekNumbers.includes(Number(item.programWeek)), obsolete = item.profileId === profile.id && item.programId === program.id && selectedWeek && !validProgramDays.has(Number(item.programWeek) + ":" + Number(item.programDay));
+    if (obsolete && assignmentStatus(item) === "assigned") assignments.splice(index,1);
+  }
+  selectedWeeks.forEach((week) => (week.days || []).forEach((day,dayIndex) => {
+    const existingIndex = assignments.findIndex((item) => item.profileId === profile.id && item.programId === program.id && Number(item.programWeek) === Number(week.number) && Number(item.programDay) === dayIndex + 1);
+    if (existingIndex >= 0 && ["in_progress","completed","reviewed"].includes(assignmentStatus(assignments[existingIndex]))) { registered.push(assignments[existingIndex]); return; }
+    const workout = {type:"solo",data:JSON.parse(JSON.stringify(day.session)),edits:{}};
+    assignSessionIds(workout);
+    workout.data.spec = { ...(workout.data.spec || {}),client:profile.name,profileId:profile.id };
+    const weekday = trainingDays[dayIndex % trainingDays.length], scheduledDate = scheduledDateForProgram(scheduleBase,week.number,weekday);
+    const assignment = {id:existingIndex >= 0 ? assignments[existingIndex].id : "assignment-" + Date.now() + "-" + week.number + "-" + (dayIndex + 1) + "-" + Math.random().toString(16).slice(2),profileId:profile.id,client:profile.name,assignedAt:new Date().toISOString(),scheduledDate,scheduledWeekday:weekday,status:"assigned",programId:program.id,programWeek:week.number,programDay:dayIndex + 1,programDayName:day.name,phaseName:week.phase && week.phase.name || "",session:workout};
+    if (existingIndex >= 0) assignments[existingIndex] = assignment; else assignments.push(assignment);
+    registered.push(assignment);
+  }));
+  writeAssignedWorkouts(assignments);
+  return registered;
+}
+function saveAndAssignCurrentProgram(scope) {
+  if (!requireTrainerMutation("assign programs to clients") || !currentProgram) return null;
+  if (!currentProgram.approval || currentProgram.approval.status !== "approved") { showToast("Coach approval is required before assigning this program"); return null; }
+  if (!currentProgram.scheduleStart) {
+    const profile = loadProfiles().find((item) => item.id === currentProgram.profileId || item.id === currentProgram.setup.profileId) || loadProfiles().find((item) => clientMatches(item.name,currentProgram.setup.client));
+    const start = programScheduleBase(inferredTrainingDays(profile,currentProgram.setup.days)); currentProgram.scheduleStart = start.toISOString().slice(0,10);
+  }
+  const saved = saveCurrentProgram(true); if (!saved) return null;
+  let weeks = saved.weeks.map((week) => Number(week.number));
+  if (scope === "week1") weeks = [1];
+  else if (scope === "remaining") weeks = weeks.filter((week) => week > 1);
+  else if (Number.isFinite(Number(scope))) weeks = [Number(scope)];
+  const registered = assignProgramWeeks(saved,weeks);
+  currentProgram = JSON.parse(JSON.stringify(saved)); renderProgram();
+  showToast(registered.length + " workout" + (registered.length === 1 ? "" : "s") + " registered and assigned to " + saved.setup.client);
+  return registered;
 }
 
 /* ---------- Wave 4: readiness ---------- */
@@ -6889,7 +7142,7 @@ const PROGRESS_KEY = "fit4life_progress_v1";
 const PROFILES_KEY = "fit4life_profiles_v1";
 const PROFILE_REQUESTS_KEY = "fit4life_profile_requests_v1";
 let profileEditorTarget = null;
-let profileEditorDraft = { muscles: [], injuries: [], zones: [], preferences:{} };
+let profileEditorDraft = { muscles: [], injuries: [], zones: [], preferences:{}, cardioModes:["any"], trainingDays:[1,3,5] };
 function loadProgress() {
   try {
     const data = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "[]");
@@ -6982,7 +7235,7 @@ function profileRecordFromTarget(target, name, username) {
     trainingStyle: target.trainingStyle || "auto", cardioMode: cardioModes[0], cardioModes,
     experience: Number(target.experience) || 1, age: Number(target.age) || 30, minutes: Number(target.minutes) || 60,
     muscles: [...(target.muscles || [])], injuries: [...(target.injuries || [])], zones: [...(target.zones || [])],
-    trainingPhase:target.trainingPhase || "general", availableDays:Number(target.availableDays) || 3,
+    trainingPhase:target.trainingPhase || "general", availableDays:Number(target.availableDays) || 3, trainingDays:inferredTrainingDays(target,Number(target.availableDays) || 3),
     sport:String(target.sport || "").trim(), sportSchedule:String(target.sportSchedule || "").trim(), competitionDate:target.competitionDate || "",
     exercisePreferences:{ ...(target.exercisePreferences || {}) }, phaseCompoundAnchors:{ ...(target.phaseCompoundAnchors || {}) },
   };
@@ -7037,7 +7290,8 @@ function updateClientProfile(profileId, updates) {
   const goals = [...new Set((updates.goals || previous.goals || ["general"]).filter(Boolean))].slice(0,2);
   const phaseChanged = updates.trainingPhase && updates.trainingPhase !== previous.trainingPhase;
   const cardioModes = normalizeCardioPreferences(updates.cardioModes || updates.cardioMode || previous.cardioModes || previous.cardioMode);
-  const next = { ...previous, ...updates, name, username, goals: goals.length ? goals : ["general"], trainingStyle:updates.trainingStyle || previous.trainingStyle || "auto", cardioMode:cardioModes[0], cardioModes, experience: Number(updates.experience) || 1, age: Number(updates.age) || 30, minutes: Number(updates.minutes) || 60, muscles: [...(updates.muscles || previous.muscles || [])], injuries: [...(updates.injuries || previous.injuries || [])], zones: [...(updates.zones || previous.zones || [])], trainingPhase:updates.trainingPhase || previous.trainingPhase || "general", phaseStartedAt:phaseChanged ? new Date().toISOString() : previous.phaseStartedAt || previous.updatedAt || new Date().toISOString(), availableDays:Number(updates.availableDays || previous.availableDays) || 3, sport:String(updates.sport != null ? updates.sport : previous.sport || "").trim(), sportSchedule:String(updates.sportSchedule != null ? updates.sportSchedule : previous.sportSchedule || "").trim(), competitionDate:updates.competitionDate != null ? updates.competitionDate : previous.competitionDate || "", exercisePreferences:{ ...(updates.exercisePreferences || previous.exercisePreferences || {}) }, phaseCompoundAnchors:phaseChanged ? {} : { ...(updates.phaseCompoundAnchors || previous.phaseCompoundAnchors || {}) }, updatedAt: new Date().toISOString() };
+  const availableDays = Number(updates.availableDays || previous.availableDays) || 3, trainingDays = [...new Set((updates.trainingDays || previous.trainingDays || inferredTrainingDays(previous,availableDays)).map(Number).filter((day) => day >= 1 && day <= 6))].sort((a,b) => a - b);
+  const next = { ...previous, ...updates, name, username, goals: goals.length ? goals : ["general"], trainingStyle:updates.trainingStyle || previous.trainingStyle || "auto", cardioMode:cardioModes[0], cardioModes, experience: Number(updates.experience) || 1, age: Number(updates.age) || 30, minutes: Number(updates.minutes) || 60, muscles: [...(updates.muscles || previous.muscles || [])], injuries: [...(updates.injuries || previous.injuries || [])], zones: [...(updates.zones || previous.zones || [])], trainingPhase:updates.trainingPhase || previous.trainingPhase || "general", phaseStartedAt:phaseChanged ? new Date().toISOString() : previous.phaseStartedAt || previous.updatedAt || new Date().toISOString(), availableDays, trainingDays:trainingDays.length ? trainingDays : inferredTrainingDays(previous,availableDays), sport:String(updates.sport != null ? updates.sport : previous.sport || "").trim(), sportSchedule:String(updates.sportSchedule != null ? updates.sportSchedule : previous.sportSchedule || "").trim(), competitionDate:updates.competitionDate != null ? updates.competitionDate : previous.competitionDate || "", exercisePreferences:{ ...(updates.exercisePreferences || previous.exercisePreferences || {}) }, phaseCompoundAnchors:phaseChanged ? {} : { ...(updates.phaseCompoundAnchors || previous.phaseCompoundAnchors || {}) }, updatedAt: new Date().toISOString() };
   profiles[index] = next; if (!writeProfiles(profiles)) return null;
   if (!clientMatches(previous.name, next.name) || previous.name !== next.name) {
     const entries = loadProgress(); entries.forEach((entry) => { if (clientMatches(entry.client, previous.name)) entry.client = next.name; }); writeProgress(entries);
@@ -7056,9 +7310,19 @@ function updateClientProfile(profileId, updates) {
 function renderProfileEditorChoices() {
   const groups = [["profileEditMuscles","muscles",MUSCLE_LIST,MUSCLE_LABELS],["profileEditInjuries","injuries",ALL_INJURIES,INJURY_LABELS],["profileEditZones","zones",ALL_ZONES,ZONE_LABELS]];
   groups.forEach(([id,key,items,labels]) => { const container = byId(id); if (!container) return; container.innerHTML = items.map((value) => '<button type="button" class="profile-editor-choice' + (profileEditorDraft[key].includes(value) ? ' on' : '') + '" aria-pressed="' + profileEditorDraft[key].includes(value) + '" onclick="toggleProfileEditorChoice(\'' + key + '\',\'' + value + '\')">' + escapeHtml(labels[value] || value) + '</button>').join(""); });
+  const cardio = byId("profileEditCardioChips"); if (cardio) cardio.innerHTML = multiChoiceButtonsHtml(cardioChoiceEntries(),profileEditorDraft.cardioModes || ["any"],"toggleProfileEditorCardio");
+  const days = byId("profileEditTrainingDays"); if (days) days.innerHTML = multiChoiceButtonsHtml(TRAINING_WEEKDAYS.map(([value,label]) => [String(value),label]),(profileEditorDraft.trainingDays || []).map(String),"toggleProfileEditorTrainingDay");
 }
 function toggleProfileEditorChoice(key, value) {
   if (!profileEditorDraft[key]) return; const index = profileEditorDraft[key].indexOf(value); if (index >= 0) profileEditorDraft[key].splice(index,1); else profileEditorDraft[key].push(value); renderProfileEditorChoices();
+}
+function toggleProfileEditorCardio(value) {
+  profileEditorDraft.cardioModes = normalizeCardioPreferences(toggleMultiChoiceValue(profileEditorDraft.cardioModes,value,true)); renderProfileEditorChoices();
+}
+function toggleProfileEditorTrainingDay(value) {
+  const day = Number(value), selected = profileEditorDraft.trainingDays || [], next = selected.includes(day) ? selected.filter((item) => item !== day) : [...selected,day].sort((a,b) => a - b);
+  if (!next.length) { showToast("Choose at least one usual training day"); return; }
+  profileEditorDraft.trainingDays = next; const count = byId("profileEditDays"); if (count) count.value = String(Math.min(5,Math.max(2,next.length))); renderProfileEditorChoices();
 }
 function renderProfileExercisePreferences() {
   const list = byId("profilePreferenceList"); if (!list) return;
@@ -7094,9 +7358,9 @@ function setProfileEditorDeleteControls(visible) {
 }
 function openCreateProfileEditor() {
   if (!requireTrainerMutation("create client profiles")) return null;
-  profileEditorTarget = null; profileEditorDraft = { muscles:[],injuries:[],zones:[],preferences:{} };
+  profileEditorTarget = null; profileEditorDraft = { muscles:[],injuries:[],zones:[],preferences:{},cardioModes:["any"],trainingDays:[1,3,5] };
   prepareProfileEditorMenus(); byId("profileEditId").value = ""; byId("profileEditName").value = ""; byId("profileEditUsername").value = ""; byId("profileEditEmail").value = "";
-  byId("profileEditPrimary").value = "general"; byId("profileEditSecondary").value = ""; byId("profileEditStyle").value = "auto"; setSelectValues("profileEditCardio",["any"]);
+  byId("profileEditPrimary").value = "general"; byId("profileEditSecondary").value = ""; byId("profileEditStyle").value = "auto";
   byId("profileEditExperience").value = "1"; byId("profileEditAge").value = "30"; byId("profileEditMinutes").value = "60"; byId("profileEditPhase").value = "general"; byId("profileEditDays").value = "3";
   byId("profileEditSport").value = ""; byId("profileEditSchedule").value = ""; byId("profileEditCompetition").value = "";
   prepareProfileTrainerMenu('', '');
@@ -7105,11 +7369,11 @@ function openCreateProfileEditor() {
 function openProfileEditor(profileId, target) {
   if (!requireTrainerMutation("edit client profiles")) return null;
   const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) { showToast("Choose a saved profile to edit"); return; }
-  profileEditorTarget = target || null; profileEditorDraft = { muscles: [...(profile.muscles || [])], injuries: [...(profile.injuries || [])], zones: [...(profile.zones || [])], preferences:{ ...(profile.exercisePreferences || {}) } };
+  profileEditorTarget = target || null; profileEditorDraft = { muscles: [...(profile.muscles || [])], injuries: [...(profile.injuries || [])], zones: [...(profile.zones || [])], preferences:{ ...(profile.exercisePreferences || {}) },cardioModes:normalizeCardioPreferences(profile.cardioModes || profile.cardioMode),trainingDays:inferredTrainingDays(profile,profile.availableDays || 3) };
   byId("profileEditId").value = profile.id; byId("profileEditName").value = profile.name; byId("profileEditUsername").value = profileUsername(profile); byId("profileEditEmail").value = profile.email || "";
   prepareProfileEditorMenus();
   byId("profileEditPrimary").value = profile.goals && profile.goals[0] || "general"; byId("profileEditSecondary").value = profile.goals && profile.goals[1] || "";
-  byId("profileEditStyle").value = profile.trainingStyle || "auto"; setSelectValues("profileEditCardio",profile.cardioModes || profile.cardioMode);
+  byId("profileEditStyle").value = profile.trainingStyle || "auto";
   byId("profileEditExperience").value = String(profile.experience || 1); byId("profileEditAge").value = String(profile.age || 30); byId("profileEditMinutes").value = String(profile.minutes || 60);
   byId("profileEditPhase").value = profile.trainingPhase || "general"; byId("profileEditDays").value = String(profile.availableDays || 3); byId("profileEditSport").value = profile.sport || ""; byId("profileEditSchedule").value = profile.sportSchedule || ""; byId("profileEditCompetition").value = profile.competitionDate || "";
   prepareProfileTrainerMenu(profile.assignedTrainerId || '',profile.assignedTrainerName || '');
@@ -7119,9 +7383,9 @@ function closeProfileEditor() { byId("profileEditorModal").classList.remove("ope
 function saveProfileEditor() {
   if (!requireTrainerMutation("edit client profiles")) return null;
   const profileId = byId("profileEditId").value, goals = [byId("profileEditPrimary").value,byId("profileEditSecondary").value].filter(Boolean);
-  const cardioModes = selectedValues("profileEditCardio");
+  const cardioModes = normalizeCardioPreferences(profileEditorDraft.cardioModes);
   const trainerSelect = byId('profileEditTrainer'), trainerOption = trainerSelect && trainerSelect.selectedOptions[0];
-  const updates = { name: byId("profileEditName").value, username: byId("profileEditUsername").value, email:byId("profileEditEmail").value.trim().toLowerCase(), goals, trainingStyle:byId("profileEditStyle").value, cardioMode:cardioModes[0], cardioModes, experience: Number(byId("profileEditExperience").value), age: Number(byId("profileEditAge").value), minutes: Number(byId("profileEditMinutes").value), muscles: [...profileEditorDraft.muscles], injuries: [...profileEditorDraft.injuries], zones: [...profileEditorDraft.zones], trainingPhase:byId("profileEditPhase").value, availableDays:Number(byId("profileEditDays").value), sport:byId("profileEditSport").value, sportSchedule:byId("profileEditSchedule").value, competitionDate:byId("profileEditCompetition").value, exercisePreferences:{ ...profileEditorDraft.preferences }, assignedTrainerId:trainerSelect ? trainerSelect.value : '', assignedTrainerName:trainerOption && trainerSelect.value ? trainerOption.dataset.name || trainerOption.textContent.split(' · ')[0] : '', assignedTrainerEmail:trainerOption && trainerSelect.value ? trainerOption.dataset.email || '' : '' };
+  const updates = { name: byId("profileEditName").value, username: byId("profileEditUsername").value, email:byId("profileEditEmail").value.trim().toLowerCase(), goals, trainingStyle:byId("profileEditStyle").value, cardioMode:cardioModes[0], cardioModes, experience: Number(byId("profileEditExperience").value), age: Number(byId("profileEditAge").value), minutes: Number(byId("profileEditMinutes").value), muscles: [...profileEditorDraft.muscles], injuries: [...profileEditorDraft.injuries], zones: [...profileEditorDraft.zones], trainingPhase:byId("profileEditPhase").value, availableDays:Number(byId("profileEditDays").value), trainingDays:[...(profileEditorDraft.trainingDays || [])], sport:byId("profileEditSport").value, sportSchedule:byId("profileEditSchedule").value, competitionDate:byId("profileEditCompetition").value, exercisePreferences:{ ...profileEditorDraft.preferences }, assignedTrainerId:trainerSelect ? trainerSelect.value : '', assignedTrainerName:trainerOption && trainerSelect.value ? trainerOption.dataset.name || trainerOption.textContent.split(' · ')[0] : '', assignedTrainerEmail:trainerOption && trainerSelect.value ? trainerOption.dataset.email || '' : '' };
   const creating = !profileId, profile = creating ? createClientProfile(updates) : updateClientProfile(profileId,updates);
   if (!profile) return null;
   if (profileEditorTarget) loadProfileIntoTarget(profile,profileEditorTarget);
@@ -7329,10 +7593,14 @@ function formalReviewStatus(profile) {
   const since = new Date(profile.lastFormalReviewAt || profile.phaseStartedAt || profile.updatedAt || Date.now()).getTime(), workouts = loadProgress().filter((entry) => entry.type === "workout" && clientMatches(entry.client,profile.name) && new Date(entry.createdAt || entry.date || 0).getTime() >= since);
   const days = Math.max(0,Math.floor((Date.now() - since) / 86400000)); return { due:workouts.length >= PROGRAMMING_POLICY.formalReviewWeeks || days >= 28, count:workouts.length, days };
 }
-function closeCoachAdjustment() { byId("coachAdjustmentModal").classList.remove("open"); }
+let coachAdjustmentAssignmentId = "";
+function closeCoachAdjustment() { byId("coachAdjustmentModal").classList.remove("open"); coachAdjustmentAssignmentId = ""; }
 function openCoachAdjustment(profileId) {
   if (!requireTrainerMutation("review and adjust a client plan")) return null;
-  const profile = loadProfiles().find((item) => item.id === profileId), assignment = assignmentForClient(profileId); if (!profile || !assignment) { showToast("Assign a workout before reviewing the coaching loop"); return null; }
+  const profile = loadProfiles().find((item) => item.id === profileId), clientAssignments = assignmentsForClient(profileId);
+  const assignment = clientAssignments.find((item) => assignmentStatus(item) === "completed" && !item.coachReviewedAt) || clientAssignments.find((item) => assignmentStatus(item) === "completed") || clientAssignments[0];
+  if (!profile || !assignment) { showToast("Assign a workout before reviewing the coaching loop"); return null; }
+  coachAdjustmentAssignmentId = assignment.id;
   const review = assignment.clientReview || {}, sets = assignmentProgressStats(assignment);
   const formal = formalReviewStatus(profile);
   byId("coachAdjustmentProfileId").value = profile.id; byId("coachAdjustmentTitle").textContent = "Review " + profile.name;
@@ -7343,7 +7611,8 @@ function openCoachAdjustment(profileId) {
 }
 function saveCoachAdjustment(buildNext) {
   if (!requireTrainerMutation("save a coaching decision")) return null;
-  const profileId = byId("coachAdjustmentProfileId").value, action = byId("coachAdjustmentAction").value, note = byId("coachAdjustmentNote").value.trim(), assignments = loadAssignedWorkouts(), index = assignments.findIndex((item) => item.profileId === profileId); if (index < 0) return null;
+  const profileId = byId("coachAdjustmentProfileId").value, action = byId("coachAdjustmentAction").value, note = byId("coachAdjustmentNote").value.trim(), assignments = loadAssignedWorkouts();
+  const index = assignments.findIndex((item) => item.id === coachAdjustmentAssignmentId && item.profileId === profileId); if (index < 0) return null;
   const reviewedAt = new Date().toISOString(), assignment = assignments[index], review = assignment.clientReview || {};
   assignments[index] = { ...assignment, status:"reviewed", coachReviewedAt:reviewedAt, nextAction:action, coachNote:note };
   if (!writeAssignedWorkouts(assignments)) return null;
@@ -7820,9 +8089,17 @@ function trainerAssignmentLoopHtml(profile) {
   return '<section class="coach-loop-card"><div class="coach-loop-head"><div><h4>Assign → Complete → Review → Adjust</h4><p>Assigned ' + date + '</p></div><span class="loop-status' + tone + '">' + escapeHtml(assignmentStatusLabel(assignment)) + '</span></div>' + summary + '<p class="coach-loop-note">' + escapeHtml(note) + '</p><div class="coach-loop-actions">' + actions + '</div></section>';
 }
 function trainerProgramTab(profile) {
-  const program = profile && savedProgramFor(profile), assignment = profile && assignmentForClient(profile.id);
+  const program = profile && savedProgramFor(profile), assignment = profile && assignmentForClient(profile.id), allAssignments = profile ? assignmentsForClient(profile.id) : [];
   if (!program) return '<section class="analysis-panel"><h4 class="analysis-section-title">Program</h4><div class="empty-state">No saved multi-week program. The current assigned workout remains available below.</div><div class="tool-actions"><button class="small-btn primary" onclick="openSelectedClientProgram()">Build program</button></div></section>';
-  return '<section class="analysis-panel"><h4 class="analysis-section-title">Current program</h4><div class="analysis-history-item"><b>' + escapeHtml((program.setup.goals || []).map((goal) => GOALS[goal] ? GOALS[goal].label : goal).join(' + ')) + '</b><span>' + program.weeks.length + ' weeks · ' + program.setup.days + ' days/week · saved ' + new Date(program.savedAt || program.createdAt).toLocaleDateString() + '</span></div><div class="analysis-history-item"><b>Current assignment</b><span>' + escapeHtml(assignment ? assignmentStatusLabel(assignment) : 'No workout assigned') + '</span></div><div class="tool-actions"><button class="small-btn primary" onclick="openSelectedClientProgram()">Edit / rebuild program</button></div></section>';
+  const programAssignments = allAssignments.filter((item) => item.programId === program.id), schedule = (program.weeks || []).map((week) => {
+    const days = (week.days || []).map((day,index) => {
+      const item = programAssignments.find((candidate) => Number(candidate.programWeek) === Number(week.number) && Number(candidate.programDay) === index + 1), exercises = clientSessionExercises(day.session).map((entry) => entry.exercise.name);
+      return '<div class="trainer-program-day"><div><b>Day ' + (index + 1) + ' · ' + escapeHtml(day.name) + '</b><span>' + escapeHtml(exercises.slice(0,5).join(' · ')) + (exercises.length > 5 ? ' +' + (exercises.length - 5) + ' more' : '') + '</span></div><span class="assignment-pill ' + (item ? assignmentStatus(item) : '') + '">' + escapeHtml(item ? assignmentStatusLabel(item) : 'Not assigned') + '</span><span>' + escapeHtml(item && item.scheduledDate ? new Date(item.scheduledDate + 'T12:00:00').toLocaleDateString() : 'No date') + '</span></div>';
+    }).join("");
+    return '<details class="trainer-program-week" ' + (Number(week.number) === 1 ? 'open' : '') + '><summary>Week ' + week.number + ' · ' + escapeHtml(week.phase && week.phase.name || 'Training') + '</summary><div class="trainer-program-days">' + days + '</div></details>';
+  }).join("");
+  const recentSets = trainerEntriesFor(profile.name).filter((entry) => entry.type === "set").slice(0,12), loads = recentSets.map((entry) => '<div class="analysis-history-item"><b>' + escapeHtml(entry.label) + '</b><span>' + new Date(entry.date).toLocaleDateString() + ' · ' + escapeHtml(entry.value || 'Completed') + (entry.data && entry.data.rpe != null ? ' · RPE ' + escapeHtml(entry.data.rpe) : '') + '</span></div>').join("");
+  return '<section class="analysis-panel"><h4 class="analysis-section-title">Current assigned program</h4><div class="analysis-history-item"><b>' + escapeHtml((program.setup.goals || []).map((goal) => GOALS[goal] ? GOALS[goal].label : goal).join(' + ')) + '</b><span>' + program.weeks.length + ' weeks · ' + program.setup.days + ' days/week · saved ' + new Date(program.savedAt || program.createdAt).toLocaleDateString() + '</span></div><div class="analysis-history-item"><b>Next executable workout</b><span>' + escapeHtml(assignment ? assignmentStatusLabel(assignment) + (assignment.scheduledDate ? ' · ' + new Date(assignment.scheduledDate + 'T12:00:00').toLocaleDateString() : '') : 'No workout assigned') + '</span></div><div class="trainer-program-schedule">' + schedule + '</div><div class="tool-actions"><button class="small-btn primary" onclick="openSelectedClientProgram()">Edit / rebuild program</button><button class="small-btn" onclick="setTrainerSummaryTab(\'workouts\')">Open full workout history</button></div></section><section class="analysis-panel" style="margin-top:14px"><h4 class="analysis-section-title">Recent weights & reps</h4><p style="font-size:9px;color:var(--text-faint);margin:4px 0 10px">Latest logged working sets are visible here; open Workouts for every set grouped by day.</p><div class="analysis-history">' + (loads || '<div class="empty-state">No weights or reps logged yet.</div>') + '</div></section>';
 }
 function trainerCheckInsTab(profile) { const items = profile ? checkInsForProfile(profile.id) : []; return '<section class="analysis-panel"><h4 class="analysis-section-title">Weekly check-ins</h4><div class="analysis-history">' + (items.map((item) => '<div class="analysis-history-item"><b>' + new Date(item.createdAt || item.date).toLocaleDateString() + ' · ' + (item.reviewType === 'starter_week_1' ? 'Week 1 starter review' : item.adherence + '% adherence') + '</b><span>Energy ' + item.energy + '/5 · Sleep ' + item.sleep + '/5 · Stress ' + item.stress + '/5' + (item.reviewType === 'starter_week_1' ? ' · Difficulty ' + escapeHtml(String(item.workoutFit || 'not entered').replace(/_/g,' ')) + ' · Exercises ' + escapeHtml(String(item.exerciseClarity || 'not entered').replace(/_/g,' ')) + ' · Time ' + escapeHtml(String(item.sessionFit || 'not entered').replace(/_/g,' ')) : '') + (item.question ? ' · Question: ' + escapeHtml(item.question) : '') + '</span></div>').join('') || '<div class="empty-state">No weekly check-ins submitted.</div>') + '</div></section>'; }
 function trainerMessagesTab(profile) { const items = profile ? loadClientMessages(profile.id) : []; return '<section class="analysis-panel"><h4 class="analysis-section-title">Direct messages · ' + escapeHtml(profile && profile.assignedTrainerName || 'Coaching team') + '</h4>' + (profile ? messageThreadHtml(items,profile,'trainer') : '<div class="empty-state">Choose a client.</div>') + (profile ? '<div class="tool-actions"><button class="small-btn primary" onclick="replyToClientMessage(\'' + escapeHtml(profile.id) + '\')">Message ' + escapeHtml(profile.name) + '</button></div>' : '') + '</section>'; }
@@ -8470,7 +8747,9 @@ function importProgressFile(input) {
       const goals = loadBodyGoals(); importedGoals.forEach((goal) => { if (!goal || !goal.client) return; const index = goals.findIndex((item) => item.id === goal.id || clientMatches(item.client, goal.client)); if (index >= 0) goals[index] = goal; else goals.push(goal); }); writeBodyGoals(goals);
       const assignments = loadAssignedWorkouts(); importedAssignments.forEach((assignment) => {
         if (!assignment || !assignment.session) return; const profile = profiles.find((item) => item.id === assignment.profileId) || profiles.find((item) => clientMatches(item.name,assignment.client)); if (!profile) return;
-        const restored = { ...assignment, id:assignment.id || "assignment-" + Date.now() + "-" + Math.random().toString(16).slice(2), status:assignment.status || "assigned", profileId:profile.id, client:profile.name }, index = assignments.findIndex((item) => item.profileId === profile.id); if (index >= 0) assignments[index] = restored; else assignments.push(restored);
+        const restored = { ...assignment, id:assignment.id || "assignment-" + Date.now() + "-" + Math.random().toString(16).slice(2), status:assignment.status || "assigned", profileId:profile.id, client:profile.name };
+        const index = assignments.findIndex((item) => item.id === restored.id || (restored.programId && item.profileId === profile.id && item.programId === restored.programId && Number(item.programWeek) === Number(restored.programWeek) && Number(item.programDay) === Number(restored.programDay)));
+        if (index >= 0) assignments[index] = restored; else assignments.push(restored);
       }); writeAssignedWorkouts(assignments);
       const mergeRecords = (current, imported) => { const merged = [...current], ids = new Set(merged.map((item) => item && item.id).filter(Boolean)); imported.forEach((item) => { if (item && item.id && !ids.has(item.id)) { merged.push(item); ids.add(item.id); } }); return merged; };
       writeSavedPrograms(mergeRecords(loadSavedPrograms(),importedPrograms));
@@ -8510,6 +8789,7 @@ if (document.getElementById) {
   renderForms();
   setMode("solo");
   updateHint();
+  renderProgramCardioChoices();
   refreshProfileSelects();
   renderProgressHistory();
   applyGymBrand();
@@ -8521,12 +8801,13 @@ if (document.getElementById) {
     byId("exerciseSwapModal").addEventListener("click", (event) => { if (event.target === byId("exerciseSwapModal")) closeExerciseSwap(); });
     byId("exerciseEditorModal").addEventListener("click", (event) => { if (event.target === byId("exerciseEditorModal")) closeExerciseEditor(); });
     byId("prescriptionEditorModal").addEventListener("click", (event) => { if (event.target === byId("prescriptionEditorModal")) closePrescriptionEditor(); });
+    byId("supersetEditorModal").addEventListener("click", (event) => { if (event.target === byId("supersetEditorModal")) closeSupersetEditor(); });
     byId("summaryEntryModal").addEventListener("click", (event) => { if (event.target === byId("summaryEntryModal")) closeSummaryEntryEditor(); });
     byId("profileEditorModal").addEventListener("click", (event) => { if (event.target === byId("profileEditorModal")) closeProfileEditor(); });
     byId("completeDeleteModal").addEventListener("click", (event) => { if (event.target === byId("completeDeleteModal")) closeCompleteDeleteModal(); });
     byId("inBodyModal").addEventListener("click", (event) => { if (event.target === byId("inBodyModal")) closeInBodyModal(); });
     byId("bodyGoalModal").addEventListener("click", (event) => { if (event.target === byId("bodyGoalModal")) closeBodyGoalModal(); });
-    if (document.addEventListener) document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeWorkoutReview(); closeTrainerGate(); closeExerciseSwap(); closeExerciseEditor(); closeSummaryEntryEditor(); closeProfileEditor(); closeCompleteDeleteModal(); closeInBodyModal(); closeBodyGoalModal(); } });
+    if (document.addEventListener) document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeWorkoutReview(); closeTrainerGate(); closeExerciseSwap(); closeExerciseEditor(); closePrescriptionEditor(); closeSupersetEditor(); closeSummaryEntryEditor(); closeProfileEditor(); closeCompleteDeleteModal(); closeInBodyModal(); closeBodyGoalModal(); } });
   }
 }
 
