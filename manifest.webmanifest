@@ -1,0 +1,11 @@
+{
+  "name": "FIT4LIFE Training",
+  "short_name": "FIT4LIFE",
+  "description": "Trainer-led programs, workout execution, progress, and coaching feedback.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#08090c",
+  "theme_color": "#0c0c0f",
+  "orientation": "any"
+}

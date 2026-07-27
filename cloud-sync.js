@@ -2,6 +2,7 @@
   "use strict";
 
   const CONFIG_CACHE_KEY = "fit4life_public_cloud_config_v1";
+  const PENDING_SYNC_KEY = "fit4life_cloud_pending_scopes_v1";
   const CLOUD_KEYS = {
     profiles: "fit4life_profiles_v1",
     assignments: "fit4life_assigned_workouts_v1",
@@ -21,6 +22,7 @@
     wearableConnections: "fit4life_wearable_connections_v1",
     automations: "fit4life_automations_v1",
     automationAlerts: "fit4life_automation_alerts_v1",
+    attentionState: "fit4life_attention_state_v1",
     exerciseLibraryEdits: "fit4life_exercise_library_edits_v1",
     clientDaily: "fit4life_client_daily_v1",
     clientMessages: "fit4life_client_messages_v1",
@@ -64,6 +66,7 @@
   window.fit4lifeCloudOrganizationSlug = "";
   window.fit4lifeCloudIdentity = null;
   window.fit4lifeCloudTrainers = [];
+  window.fit4lifeCloudTrainerRequests = [];
 
   function readJson(key, fallback) {
     try {
@@ -85,6 +88,23 @@
       return false;
     }
   }
+
+  function restorePendingScopes() {
+    const stored = readJson(PENDING_SYNC_KEY, []);
+    (Array.isArray(stored) ? stored : []).forEach((scope) => {
+      if (typeof scope === "string" && scope) pendingScopes.add(scope);
+    });
+  }
+
+  function persistPendingScopes() {
+    writeJson(PENDING_SYNC_KEY, Array.from(pendingScopes));
+  }
+
+  function browserIsOffline() {
+    return typeof navigator !== "undefined" && navigator.onLine === false;
+  }
+
+  restorePendingScopes();
 
   function normalizedEmail(value) {
     return String(value || "").trim().toLowerCase();
@@ -234,7 +254,7 @@
     const copy = {
       signin: ["Sign in to your workspace", "Access your workouts and progress from any device."],
       signup: ["Create your client account", "Verify the message sent to your email, then sign in to the client workspace."],
-      trainer_signup: ["Request trainer access", "Create a verified login, then wait for the gym owner to approve trainer permissions."],
+      trainer_signup: ["Request trainer access", "Create a verified login, then wait for an approved gym trainer or owner to confirm trainer permissions."],
       reset: ["Reset your password", "We will email you a secure link to choose a new password."],
       update: ["Choose a new password", "Enter a new password for your training account."],
       pending: ["Account status", "Your secure login is active while your client access is reviewed."]
@@ -275,13 +295,13 @@
       setText("cloudPendingIcon", "✉");
       setText("cloudPendingTitle", "Check your email");
       setText("cloudPendingCopy", trainerRequest
-        ? "Open the verification email sent to your address. After verification, the gym owner can approve trainer access from the Trainer Access center."
+        ? "Open the verification email sent to your address. After verification, an approved gym trainer or owner can confirm access from the Trainer Access center."
         : "Open the verification email sent to your address. After verification, return here and sign in to activate your client workspace.");
       setText("cloudPendingCheck", "I verified my email");
     } else if (trainerRequest) {
       setText("cloudPendingIcon", "⏳");
       setText("cloudPendingTitle", "Trainer approval pending");
-      setText("cloudPendingCopy", "Your email is verified. The gym owner must approve this trainer request before any client records become available.");
+      setText("cloudPendingCopy", "Your email is verified. An approved gym trainer or owner must confirm this request before any client records become available.");
       setText("cloudPendingCheck", "Check trainer approval");
     } else {
       setText("cloudPendingIcon", "✓");
@@ -430,9 +450,7 @@
       return false;
     }
     applyPortalContext(saved);
-    pendingScopes.add("organization");
-    clearTimeout(cloudPushTimer);
-    cloudPushTimer = setTimeout(pushPending, 200);
+    queueCloudSync("organization");
     if (typeof showToast === "function") showToast("Gym setup saved for every device");
     return true;
   };
@@ -492,6 +510,17 @@
     if (response.error) throw response.error;
     response.data.forEach((row) => remoteProfilesByExternalId.set(row.external_id, row));
     return response.data;
+  }
+
+  async function hydrateRemoteProfileMap() {
+    const response = await cloudClient
+      .from("client_profiles")
+      .select("id,organization_id,external_id,auth_user_id,full_name,username,email,status,updated_at")
+      .eq("organization_id", cloudOrganizationId);
+    if (response.error) throw response.error;
+    remoteProfilesByExternalId.clear();
+    (response.data || []).forEach((row) => remoteProfilesByExternalId.set(String(row.external_id || row.id), row));
+    return response.data || [];
   }
 
   async function findSyncRecord(clientId, recordType, recordKey) {
@@ -559,6 +588,7 @@
     return {
       version: 1,
       profileId: profile.id,
+      clientIntake: profile.intake || {},
       progress: profileProgress(profile),
       checkIns: readJson(CLOUD_KEYS.checkins, []).filter((item) => itemBelongsToProfile(item, profile)),
       messages: readJson(CLOUD_KEYS.clientMessages, []).filter((item) => itemBelongsToProfile(item, profile)),
@@ -586,6 +616,7 @@
       marketPrograms: readJson(CLOUD_KEYS.marketPrograms, []),
       automations: readJson(CLOUD_KEYS.automations, []),
       automationAlerts: readJson(CLOUD_KEYS.automationAlerts, []),
+      attentionState: readJson(CLOUD_KEYS.attentionState, {}),
       exerciseLibraryEdits: readJson(CLOUD_KEYS.exerciseLibraryEdits, []),
       savedAt: new Date().toISOString()
     };
@@ -617,23 +648,29 @@
   }
 
   async function pushPending() {
-    if (!cloudReady || !cloudClient || !cloudUser || cloudApplying || cloudPushing) return;
-    if (!navigator.onLine) {
+    if (!cloudReady || !cloudClient || !cloudUser || cloudApplying || cloudPushing) return false;
+    if (browserIsOffline()) {
+      persistPendingScopes();
       cloudStatus("Offline · changes waiting", "offline");
-      return;
+      return false;
     }
     const scopes = new Set(pendingScopes.size ? pendingScopes : ["all"]);
     pendingScopes.clear();
+    persistPendingScopes();
     cloudPushing = true;
     cloudStatus("Saving…", "syncing");
     try {
       if (cloudRole === "owner" || cloudRole === "trainer") await pushTrainerState(scopes);
       else await pushClientState();
+      persistPendingScopes();
       cloudStatus("Saved across devices", "synced");
+      return true;
     } catch (error) {
       scopes.forEach((scope) => pendingScopes.add(scope));
+      persistPendingScopes();
       cloudStatus("Save waiting · tap account", "error");
       console.error("FIT 4 LIFE cloud save failed", error);
+      return false;
     } finally {
       cloudPushing = false;
     }
@@ -642,6 +679,7 @@
   function queueCloudSync(scope) {
     if (cloudApplying) return;
     pendingScopes.add(scope || "all");
+    persistPendingScopes();
     clearTimeout(cloudPushTimer);
     cloudPushTimer = setTimeout(pushPending, 650);
   }
@@ -655,6 +693,7 @@
     writeJson(CLOUD_KEYS.marketPrograms, payload.marketPrograms || []);
     writeJson(CLOUD_KEYS.automations, payload.automations || []);
     writeJson(CLOUD_KEYS.automationAlerts, payload.automationAlerts || []);
+    writeJson(CLOUD_KEYS.attentionState, payload.attentionState || {});
     writeJson(CLOUD_KEYS.exerciseLibraryEdits, payload.exerciseLibraryEdits || []);
     if (typeof window.applyExerciseLibraryEdits === "function") window.applyExerciseLibraryEdits();
   }
@@ -681,7 +720,14 @@
       remoteProfilesByExternalId.set(row.external_id, row);
       const plan = byClientAndType.get(row.id + "|client_plan") || {};
       const activity = byClientAndType.get(row.id + "|client_activity") || {};
-      const profile = { ...(plan.profile || cachedProfileFromRow(row)), id: row.external_id || row.id, name: row.full_name, username: row.username, email: row.email || (plan.profile && plan.profile.email) || "" };
+      const profile = {
+        ...(plan.profile || cachedProfileFromRow(row)),
+        id: row.external_id || row.id,
+        name: row.full_name,
+        username: row.username,
+        email: row.email || (plan.profile && plan.profile.email) || "",
+        intake: activity.clientIntake || (plan.profile && plan.profile.intake) || {}
+      };
       profiles.push(profile);
       if (plan.assignment) assignments.push(plan.assignment);
       programs = mergeRecords(programs, plan.programs);
@@ -862,10 +908,20 @@
       try { sessionStorage.setItem("fit4life_trainer_unlocked", "yes"); } catch (_) {}
     }
     updateAccountUi();
-    await pullCloudState(true);
-    if ((cloudRole === "owner" || cloudRole === "trainer") && window.fit4lifeCloudListTrainers) await window.fit4lifeCloudListTrainers();
     cloudReady = true;
     window.fit4lifeCloudReady = true;
+    let safeToPull = true;
+    try {
+      await hydrateRemoteProfileMap();
+      if (pendingScopes.size) safeToPull = await pushPending();
+    } catch (error) {
+      safeToPull = false;
+      cloudStatus(browserIsOffline() ? "Offline · changes waiting" : "Sync needs attention", browserIsOffline() ? "offline" : "error");
+      console.error("FIT 4 LIFE pending-save recovery failed", error);
+    }
+    if (safeToPull) await pullCloudState(true);
+    else authMessage("Your saved-on-this-device changes are still waiting to upload. They were not replaced by older cloud data.", true);
+    if ((cloudRole === "owner" || cloudRole === "trainer") && window.fit4lifeCloudListTrainers) await window.fit4lifeCloudListTrainers();
     subscribeToChanges();
     authMessage("", false);
     showAuthGate(false);
@@ -1004,7 +1060,7 @@
       return false;
     }
     if (!consent) {
-      authMessage("Confirm the email-verification and owner-approval requirements.", true);
+      authMessage("Confirm the email-verification and staff-confirmation requirements.", true);
       return false;
     }
     const button = document.getElementById("cloudTrainerSignUpSubmit");
@@ -1028,7 +1084,7 @@
     button.textContent = "Submit trainer request";
     if (response.error) {
       const message = /already|registered|exists/i.test(response.error.message || "")
-        ? "If this email already has an account, sign in or use Forgot password. Trainer access can be granted to that verified login by the gym owner."
+        ? "If this email already has an account, sign in or use Forgot password. An approved trainer or owner can confirm a pending request for that verified login."
         : response.error.message;
       authMessage(message, true);
       return false;
@@ -1109,7 +1165,7 @@
       showAuthMode("signin");
       if (pending.email) document.getElementById("cloudAuthEmail").value = pending.email;
       authMessage(pending.requested_role === "trainer"
-        ? "After verifying your email, sign in to check whether the owner approved trainer access."
+        ? "After verifying your email, sign in to check whether an approved gym trainer or owner confirmed trainer access."
         : "After verifying your email, sign in to activate the client workspace.", false);
       return false;
     }
@@ -1153,8 +1209,22 @@
     return window.fit4lifeCloudTrainers;
   };
 
+  window.fit4lifeCloudListTrainerRequests = async function fit4lifeCloudListTrainerRequests() {
+    if (!cloudClient || !cloudOrganizationId || !(cloudRole === "owner" || cloudRole === "trainer")) return [];
+    const response = await cloudClient
+      .from("registration_requests")
+      .select("id,user_id,email,full_name,requested_role,status,created_at,reviewed_by,reviewed_at,review_note")
+      .eq("organization_id", cloudOrganizationId)
+      .eq("requested_role", "trainer")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (response.error) { console.error("Trainer request history failed", response.error); return null; }
+    window.fit4lifeCloudTrainerRequests = Array.isArray(response.data) ? response.data : [];
+    return window.fit4lifeCloudTrainerRequests;
+  };
+
   window.fit4lifeCloudApproveTrainer = async function fit4lifeCloudApproveTrainer(email, displayName) {
-    if (!cloudClient || cloudRole !== "owner") return { ok:false,message:"Only the owner can approve trainer accounts." };
+    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return { ok:false,message:"An approved trainer account is required to review trainer requests." };
     const response = await cloudClient.rpc("approve_fit4life_trainer_account", { target_email:normalizedEmail(email),target_display_name:String(displayName || "").trim() });
     if (response.error) return { ok:false,message:response.error.message || "Trainer approval failed." };
     await window.fit4lifeCloudListTrainers();
@@ -1178,6 +1248,9 @@
   };
 
   window.fit4lifeCloudSignOut = async function fit4lifeCloudSignOut() {
+    if (pendingScopes.size && typeof window.confirm === "function" && !window.confirm("Some changes on this device have not reached the shared database yet. Sign out anyway and discard the pending upload?")) return;
+    pendingScopes.clear();
+    persistPendingScopes();
     if (cloudClient) await cloudClient.auth.signOut();
     if (cloudRegistrationChannel && cloudClient) cloudClient.removeChannel(cloudRegistrationChannel);
     cloudRegistrationChannel = null;
@@ -1203,7 +1276,7 @@
   function scopeForLocalKey(key) {
     if ([CLOUD_KEYS.progress, CLOUD_KEYS.checkins, CLOUD_KEYS.clientMessages, CLOUD_KEYS.clientDaily, CLOUD_KEYS.activeWorkout].includes(key)) return "activity";
     if ([CLOUD_KEYS.profiles, CLOUD_KEYS.assignments, CLOUD_KEYS.programs, CLOUD_KEYS.summaryMeta, CLOUD_KEYS.scans, CLOUD_KEYS.goals, CLOUD_KEYS.metrics, CLOUD_KEYS.mentalPlans, CLOUD_KEYS.wearableConnections].includes(key)) return cloudRole === "client" ? "activity" : "plan";
-    if ([CLOUD_KEYS.requests, CLOUD_KEYS.gymBrand, CLOUD_KEYS.gymEquipment, CLOUD_KEYS.teams, CLOUD_KEYS.marketPrograms, CLOUD_KEYS.automations, CLOUD_KEYS.automationAlerts, CLOUD_KEYS.exerciseLibraryEdits].includes(key)) return "organization";
+    if ([CLOUD_KEYS.requests, CLOUD_KEYS.gymBrand, CLOUD_KEYS.gymEquipment, CLOUD_KEYS.teams, CLOUD_KEYS.marketPrograms, CLOUD_KEYS.automations, CLOUD_KEYS.automationAlerts, CLOUD_KEYS.attentionState, CLOUD_KEYS.exerciseLibraryEdits].includes(key)) return "organization";
     return "all";
   }
 
@@ -1297,7 +1370,8 @@
     cloudStatus("Reconnecting…", "syncing");
     if (cloudReady) {
       pendingScopes.add("all");
-      pushPending().then(() => pullCloudState(false));
+      persistPendingScopes();
+      pushPending().then((saved) => { if (saved) pullCloudState(false); });
     } else initializeCloud();
   });
   window.addEventListener("offline", () => cloudStatus("Offline · changes cached", "offline"));
