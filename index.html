@@ -557,6 +557,12 @@
   .review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
   .review-grid .full{grid-column:1/-1}
   .review-safety[hidden]{display:none}
+  .pain-level-guide{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}
+  .pain-level-card{border:1px solid var(--line);border-left:4px solid var(--pain-color);border-radius:9px;background:rgba(9,11,16,.72);padding:10px;min-width:0}
+  .pain-level-card b{display:block;color:var(--text);font:800 11px var(--mono);letter-spacing:.06em;text-transform:uppercase}
+  .pain-level-card span{display:block;color:var(--text-muted);font-size:11px;line-height:1.42;margin-top:4px}
+  .pain-action-note{border:1px solid var(--line);border-left:4px solid var(--pain-color,var(--blue));border-radius:9px;background:rgba(12,15,22,.82);padding:11px 13px;color:var(--text-muted);font-size:12px;line-height:1.5}
+  .pain-action-note b{display:block;color:var(--text);margin-bottom:3px}
   .review-more{border:1px solid var(--line);border-radius:9px;background:var(--slate-0);margin-top:10px;padding:0 13px}
   .review-more summary{cursor:pointer;padding:13px 0;font:700 10px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--blue-bright)}
   .review-more .review-grid{padding:0 0 13px}
@@ -968,7 +974,7 @@
     .load-recommendation{grid-template-columns:1fr}.load-recommendation b{text-align:left}.load-recommendation small{grid-column:auto}
     .set-log-row,.set-log-row.bodyweight,.set-log-row.cardio{grid-template-columns:1fr 1fr;padding:10px}
     .set-number{grid-column:1/-1}.set-log-row .log-set-btn,.set-log-row.bodyweight .log-set-btn,.set-log-row.cardio .log-set-btn{grid-column:1/-1}.set-row-status{grid-column:1/-1}
-    .review-dialog{padding:17px}.review-grid{grid-template-columns:1fr}.review-grid .full{grid-column:auto}.review-section-head{display:block}.review-section-head p{margin-top:4px}
+    .review-dialog{padding:17px}.review-grid{grid-template-columns:1fr}.review-grid .full{grid-column:auto}.review-section-head{display:block}.review-section-head p{margin-top:4px}.pain-level-guide{grid-template-columns:1fr 1fr}
     .profile-save-bar{align-items:stretch}.profile-save-bar .small-btn{width:100%;justify-content:center}
     .trainer-kpis{grid-template-columns:repeat(2,1fr)}
     .coach-insights{grid-template-columns:1fr 1fr}
@@ -1477,7 +1483,10 @@
           <div class="compact-field"><label for="readyEnergy">Energy</label><select id="readyEnergy"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · High</option></select></div>
           <div class="compact-field"><label for="readySoreness">Soreness</label><select id="readySoreness"><option value="1">1 · None</option><option value="2">2 · Mild</option><option value="3" selected>3 · Moderate</option><option value="4">4 · High</option><option value="5">5 · Severe</option></select></div>
           <div class="compact-field"><label for="readyStress">Life stress</label><select id="readyStress"><option value="1">1 · Low</option><option value="2">2 · Light</option><option value="3" selected>3 · Moderate</option><option value="4">4 · High</option><option value="5">5 · Extreme</option></select></div>
-          <div class="compact-field"><label for="readyPain">Pain today</label><select id="readyPain"><option value="0" selected>0 · None</option><option value="1">1 · Mild / familiar</option><option value="2">2 · Changes movement</option><option value="3">3 · Sharp or worsening</option></select></div>
+          <div class="compact-field"><label for="readyPain">Pain today</label><select id="readyPain" onchange="updateReadinessPainFields()"><option value="0" selected>Green · No pain</option><option value="1">Yellow · Mild awareness; movement normal</option><option value="2">Orange · Changes technique, range, or balance</option><option value="3">Red · Severe, sharp, or worsening</option></select></div>
+          <div class="compact-field review-safety" id="readyPainAreaField" hidden><label for="readyPainArea">Where?</label><select id="readyPainArea"></select></div>
+          <div class="compact-field review-safety" id="readyPainMovementField" hidden><label for="readyPainMovement">Did it change movement?</label><select id="readyPainMovement" onchange="syncReadinessPainLevel()"><option value="no">No</option><option value="yes">Yes — technique, range, or balance changed</option></select></div>
+          <div class="compact-field review-safety" id="readyPainExerciseField" hidden><label for="readyPainExercise">Movement involved <span style="font-weight:400">(optional)</span></label><input id="readyPainExercise" placeholder="Example: squat, walking, reaching"></div>
           <div class="compact-field"><label for="readyMotivation">Motivation</label><select id="readyMotivation"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · High</option></select></div>
           <div class="compact-field"><label for="readyOverall">Overall readiness</label><select id="readyOverall"><option value="1">1 · Very poor</option><option value="2">2 · Poor</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · Excellent</option></select></div>
           <div class="compact-field"><label for="readyIllness">Illness symptoms</label><select id="readyIllness"><option value="none" selected>None</option><option value="mild">Mild / monitor</option><option value="significant">Significant / affecting normal activity</option></select></div>
@@ -1551,7 +1560,9 @@
           <div class="compact-field"><label for="checkInEnergy">Energy</label><select id="checkInEnergy"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · High</option></select></div>
           <div class="compact-field"><label for="checkInConfidence">Training confidence</label><select id="checkInConfidence"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Steady</option><option value="4">4 · Confident</option><option value="5">5 · Very confident</option></select></div>
           <div class="compact-field"><label for="checkInMotivation">Motivation</label><select id="checkInMotivation"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Average</option><option value="4">4 · Strong</option><option value="5">5 · Very strong</option></select></div>
-          <div class="compact-field"><label for="checkInPain">Pain this week</label><select id="checkInPain"><option value="0">0 · None</option><option value="1">1 · Mild / familiar</option><option value="2">2 · Changed training</option><option value="3">3 · Stopped training</option></select></div>
+          <div class="compact-field"><label for="checkInPain">Pain this week</label><select id="checkInPain" onchange="updateCheckInPainFields()"><option value="0">Green · No pain</option><option value="1">Yellow · Mild awareness; movement normal</option><option value="2">Orange · Changed technique, range, or training</option><option value="3">Red · Severe, sharp, worsening, or stopped training</option></select></div>
+          <div class="compact-field review-safety" id="checkInPainAreaField" hidden><label for="checkInPainArea">Where?</label><select id="checkInPainArea"></select></div>
+          <div class="compact-field review-safety" id="checkInPainMovementField" hidden><label for="checkInPainMovement">Did it change movement?</label><select id="checkInPainMovement" onchange="syncCheckInPainLevel()"><option value="no">No</option><option value="yes">Yes — technique, range, balance, or training changed</option></select></div>
           <div class="starter-review-fields compact-grid" id="checkInStarterFields">
             <p>This first-week review checks whether the starter plan is understandable, appropriately difficult, and realistic for your schedule before Week 2 repeats it.</p>
             <div class="compact-field"><label for="checkInWorkoutFit">Workout difficulty fit</label><select id="checkInWorkoutFit"><option value="too_easy">Too easy</option><option value="right" selected>About right</option><option value="too_hard">Too hard</option></select></div>
@@ -2020,6 +2031,30 @@
   </div>
 </div>
 
+<div id="clientPainModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="clientPainTitle">
+  <div class="review-dialog">
+    <h2 id="clientPainTitle">Report Pain or Discomfort</h2>
+    <p>Choose what the symptom did to your movement. This report alerts your trainer and stays attached to the workout.</p>
+    <div class="pain-level-guide" aria-label="Pain response guide">
+      <div class="pain-level-card" style="--pain-color:#55c98a"><b>Green</b><span>No pain. Continue as planned.</span></div>
+      <div class="pain-level-card" style="--pain-color:#e4c85b"><b>Yellow</b><span>Mild awareness; movement stays normal. Modify if needed and monitor.</span></div>
+      <div class="pain-level-card" style="--pain-color:#ed9448"><b>Orange</b><span>Technique, range, or balance changes. Stop that exercise and substitute.</span></div>
+      <div class="pain-level-card" style="--pain-color:#e86666"><b>Red</b><span>Severe, sharp, worsening, or concerning. End the workout and seek appropriate help.</span></div>
+    </div>
+    <div class="review-grid">
+      <div class="compact-field"><label for="clientPainLevel">Response level</label><select id="clientPainLevel" onchange="updateClientPainAction()"><option value="yellow">Yellow · Mild awareness; movement normal</option><option value="orange">Orange · Changed technique, range, or balance</option><option value="red">Red · Severe, sharp, or worsening</option></select></div>
+      <div class="compact-field"><label for="clientPainArea">Where?</label><select id="clientPainArea"></select></div>
+      <div class="compact-field"><label for="clientPainMovementChanged">Did it change movement?</label><select id="clientPainMovementChanged" onchange="syncClientPainLevel()"><option value="no">No</option><option value="yes">Yes — technique, range, or balance changed</option></select></div>
+      <div class="compact-field"><label for="clientPainScore">0–10 rating <span style="font-weight:400">(optional)</span></label><input id="clientPainScore" type="number" min="0" max="10" step="1" placeholder="Optional"></div>
+      <div class="compact-field full"><label for="clientPainExercise">Movement or exercise involved</label><input id="clientPainExercise" placeholder="Example: front squat, treadmill walking, overhead reach"></div>
+      <div class="compact-field full"><label for="clientPainDetails">Short note <span style="font-weight:400">(optional for yellow)</span></label><textarea id="clientPainDetails" placeholder="Where did you feel it, what changed, and did you stop?"></textarea></div>
+      <div class="pain-action-note full" id="clientPainAction"></div>
+    </div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="saveClientPainReport()">Send to my trainer</button><button class="small-btn" onclick="closeClientPainReport()">Cancel</button></div>
+    <p class="storage-note">This tool does not diagnose an injury. For emergency or serious symptoms, follow local emergency procedures.</p>
+  </div>
+</div>
+
 <div id="reviewModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
   <div class="review-dialog">
     <h2 id="reviewTitle">Finish &amp; Review</h2>
@@ -2029,9 +2064,13 @@
       <div class="review-grid">
         <div class="compact-field full"><label for="reviewClient">Client / workout</label><select id="reviewClient"></select></div>
         <div class="compact-field"><label for="reviewDifficulty">Overall difficulty</label><select id="reviewDifficulty"><option value="4">4 · Easy</option><option value="5">5 · Comfortable</option><option value="6">6 · Moderate</option><option value="7" selected>7 · Challenging</option><option value="8">8 · Hard</option><option value="9">9 · Very hard</option><option value="10">10 · Maximum</option></select></div>
-        <div class="compact-field"><label for="reviewPain">Pain or injury?</label><select id="reviewPain" onchange="updateReviewPainFields()"><option value="none">No pain</option><option value="mild">Mild / familiar discomfort</option><option value="changed">Pain changed the movement</option><option value="stopped">Pain stopped the workout</option></select></div>
+        <div class="compact-field"><label for="reviewPain">Pain or injury?</label><select id="reviewPain" onchange="updateReviewPainFields()"><option value="none">Green · No pain</option><option value="mild">Yellow · Mild awareness; movement normal</option><option value="changed">Orange · Changed technique, range, or balance</option><option value="stopped">Red · Severe, sharp, worsening, or stopped</option></select></div>
         <div class="compact-field review-safety" id="reviewInjuryAreaField" hidden><label for="reviewInjuryArea">Body area</label><select id="reviewInjuryArea"></select></div>
+        <div class="compact-field review-safety" id="reviewMovementChangedField" hidden><label for="reviewMovementChanged">Did it change movement?</label><select id="reviewMovementChanged" onchange="syncReviewPainLevel()"><option value="no">No</option><option value="yes">Yes — technique, range, or balance changed</option></select></div>
+        <div class="compact-field review-safety" id="reviewPainScoreField" hidden><label for="reviewPainScore">0–10 rating <span style="font-weight:400">(optional)</span></label><input id="reviewPainScore" type="number" min="0" max="10" step="1" placeholder="Optional"></div>
+        <div class="compact-field full review-safety" id="reviewPainExerciseField" hidden><label for="reviewPainExercise">Movement or exercise involved</label><input id="reviewPainExercise" placeholder="Example: squat, rower, overhead press"></div>
         <div class="compact-field full review-safety" id="reviewInjuryDetailsField" hidden><label for="reviewInjuryDetails">What happened?</label><textarea id="reviewInjuryDetails" placeholder="Which movement caused it, where was it felt, and did it change technique or range?"></textarea></div>
+        <div class="pain-action-note full review-safety" id="reviewPainActionField" hidden></div>
         <div class="compact-field full"><label for="reviewQuestions">Question for your coach <span style="font-weight:400">(optional)</span></label><textarea id="reviewQuestions" placeholder="Anything you want explained or changed before the next workout?"></textarea></div>
       </div>
     </section>
@@ -3054,7 +3093,30 @@ const INJURY_LABELS = {
 const BODY_AREA_LIMITATIONS = ["knee","shoulder","lowback","wrist","hip","elbow","ankle","neck","foot","handgrip","thoracic","abdominal"];
 const MOVEMENT_RESTRICTIONS = ["noimpact","noballistic","nooverhead","nodeepknee","nodeephip","nohinge","noaxialload","nospinalflexion","nospinalextension","norotation","nogrip","nosingleleg","nofloor","nosupine","noprone","nostraining","lowintensity"];
 const LIFE_STAGE_LIMITATIONS = ["pregnancy","postpartum","balance","pelvicfloor","medicalhold"];
-const COMMON_LIMITATIONS = ["knee","shoulder","lowback","wrist","hip","elbow","ankle","pregnancy","nohinge","nooverhead"];
+const COMMON_BODY_LIMITATIONS = ["knee","shoulder","lowback","wrist","hip","elbow","ankle","neck","handgrip"];
+const COMMON_SPECIAL_LIMITATIONS = ["pregnancy","balance","noimpact","medicalhold","nohinge","nooverhead"];
+const COMMON_LIMITATIONS = [...COMMON_BODY_LIMITATIONS,...COMMON_SPECIAL_LIMITATIONS];
+const PAIN_LEVELS = {
+  green:{rank:0,label:"Green · No pain",color:"#55c98a",legacy:"none",action:"Continue as planned. Keep normal technique and range."},
+  yellow:{rank:1,label:"Yellow · Mild awareness; movement normal",color:"#e4c85b",legacy:"mild",action:"Reduce load, range, speed, or complexity if helpful. Movement must stay normal. Monitor it and tell the trainer."},
+  orange:{rank:2,label:"Orange · Movement changed",color:"#ed9448",legacy:"changed",action:"Stop that exercise. Use a pain-free substitute only; the trainer must review the report before the next workout."},
+  red:{rank:3,label:"Red · Severe, sharp, or worsening",color:"#e86666",legacy:"stopped",action:"End the workout. Do not test the painful movement again today; seek appropriate qualified evaluation."},
+};
+const LEGACY_PAIN_LEVELS = {none:"green",mild:"yellow",changed:"orange",stopped:"red","0":"green","1":"yellow","2":"orange","3":"red"};
+function normalizePainLevel(value,movementChanged) {
+  let key = PAIN_LEVELS[value] ? value : LEGACY_PAIN_LEVELS[String(value)] || "green";
+  if (movementChanged === true || movementChanged === "yes") {
+    if (PAIN_LEVELS[key].rank < PAIN_LEVELS.orange.rank) key = "orange";
+  }
+  return key;
+}
+function painLevelInfo(value,movementChanged) { return PAIN_LEVELS[normalizePainLevel(value,movementChanged)]; }
+function painRequiresSafetyHold(value,movementChanged) { return painLevelInfo(value,movementChanged).rank >= PAIN_LEVELS.orange.rank; }
+function painNeedsCoachNotice(value) { return painLevelInfo(value).rank > PAIN_LEVELS.green.rank; }
+function legacyPainValue(value,movementChanged) { return painLevelInfo(value,movementChanged).legacy; }
+function painLocationOptions(includeBlank) {
+  return [...(includeBlank ? [["","Choose an area…"]] : []),...BODY_AREA_LIMITATIONS.map((key) => [key,INJURY_LABELS[key]])];
+}
 const LIMITATION_RULES = {
   knee:{demands:["deep_knee_flexion","impact","ballistic"]},
   shoulder:{demands:["overhead","hanging","shoulder_extension"]},
@@ -3549,18 +3611,31 @@ function exerciseConstraintIssues(exercise,spec,age) {
 }
 function safetySpecForProfile(session,profile) {
   const original = session && session.spec || {}, cardioModes = normalizeCardioPreferences(profile && (profile.cardioModes || profile.cardioMode) || original.cardioModes || original.cardioMode);
+  const painAreas = currentSafetyPainAreas(profile);
   return {
     ...original,
     profileId:profile && profile.id || original.profileId,
     client:profile && profile.name || original.client,
     age:Number(profile && profile.age || original.age || 30),
     experience:Number(profile && profile.experience || original.experience || 1),
-    injuries:[...(profile && profile.injuries || original.injuries || [])],
+    injuries:[...new Set([...(profile && profile.injuries || original.injuries || []),...painAreas])],
     zones:[...(profile && profile.zones || original.zones || [])],
     cardioMode:cardioModes[0],
     cardioModes,
     exercisePreferences:{ ...(original.exercisePreferences || {}),...(profile && profile.exercisePreferences || {}) },
   };
+}
+function currentSafetyPainAreas(profile) {
+  if (!profile) return [];
+  const reviewedTime = new Date(profile.coachAdjustment && profile.coachAdjustment.reviewedAt || 0).getTime();
+  const progressAreas = loadProgress().filter((entry) => progressEntryBelongsToClient(entry,profile) && new Date(entry.date || entry.createdAt || 0).getTime() > reviewedTime).map((entry) => {
+    if (entry.type === "pain" && painRequiresSafetyHold(entry.data && (entry.data.level || entry.data.pain || entry.value),entry.data && entry.data.movementChanged)) return entry.data && (entry.data.injuryArea || entry.data.area);
+    if (entry.type === "workout" && entry.data && painRequiresSafetyHold(entry.data.painLevel || entry.data.pain,entry.data.movementChanged)) return entry.data.injuryArea;
+    if (entry.type === "readiness" && entry.data && painRequiresSafetyHold(entry.data.painLevel || entry.data.pain,entry.data.movementChanged)) return entry.data.painArea;
+    return "";
+  });
+  const checkInAreas = checkInsForProfile(profile.id).filter((item) => new Date(item.createdAt || item.date || 0).getTime() > reviewedTime && painRequiresSafetyHold(item.painLevel || item.pain,item.movementChanged)).map((item) => item.painArea || "");
+  return [...new Set([...progressAreas,...checkInAreas].filter((area) => BODY_AREA_LIMITATIONS.includes(area)))];
 }
 function auditSessionForCurrentProfile(session,profile) {
   if (!session) return {pass:false,safety:["Workout is unavailable."],detail:[],score:0};
@@ -3576,11 +3651,14 @@ function sessionSafetyConflictsForProfile(session,profile) {
 }
 function unresolvedClientSafetyHold(profile) {
   if (!profile) return null;
-  const latest = loadProgress().filter((entry) => progressEntryBelongsToClient(entry,profile) && (
-    entry.type === "pain"
+  const progressHolds = loadProgress().filter((entry) => progressEntryBelongsToClient(entry,profile) && (
+    entry.type === "pain" && painRequiresSafetyHold(entry.data && (entry.data.level || entry.data.pain || entry.value),entry.data && entry.data.movementChanged)
     || entry.type === "substitution" && entry.data && entry.data.reason === "discomfort"
-    || entry.type === "workout" && entry.data && entry.data.pain && entry.data.pain !== "none"
-  )).sort((a,b) => String(b.date || b.createdAt || "").localeCompare(String(a.date || a.createdAt || "")))[0];
+    || entry.type === "workout" && entry.data && painRequiresSafetyHold(entry.data.painLevel || entry.data.pain,entry.data.movementChanged)
+    || entry.type === "readiness" && entry.data && painRequiresSafetyHold(entry.data.painLevel || entry.data.pain,entry.data.movementChanged)
+  ));
+  const checkInHolds = checkInsForProfile(profile.id).filter((item) => painRequiresSafetyHold(item.painLevel || item.pain,item.movementChanged)).map((item) => ({...item,type:"checkin",date:item.createdAt || item.date,data:item}));
+  const latest = [...progressHolds,...checkInHolds].sort((a,b) => String(b.date || b.createdAt || "").localeCompare(String(a.date || a.createdAt || "")))[0];
   if (!latest) return null;
   const reportTime = new Date(latest.date || latest.createdAt || 0).getTime(), reviewedTime = new Date(profile.coachAdjustment && profile.coachAdjustment.reviewedAt || 0).getTime();
   return reportTime > reviewedTime ? latest : null;
@@ -4914,9 +4992,13 @@ function trainerAttentionSnapshot() {
       entry.type === "pain"
       || entry.type === "substitution" && entry.data && entry.data.reason === "discomfort"
       || entry.type === "workout" && entry.data && entry.data.pain && entry.data.pain !== "none"
+      || entry.type === "readiness" && entry.data && painRequiresSafetyHold(entry.data.painLevel || entry.data.pain,entry.data.movementChanged)
     )).sort((a,b) => String(b.date).localeCompare(String(a.date)));
     const latestPain = painEntries[0], reviewedAt = profile.coachAdjustment && new Date(profile.coachAdjustment.reviewedAt || 0).getTime();
-    if (latestPain && new Date(latestPain.date || 0).getTime() > (reviewedAt || 0)) push({id:"pain:" + latestPain.id,profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"pain",urgency:"urgent",rank:0,createdAt:latestPain.date,label:"Pain or limitation report",detail:latestPain.note || latestPain.value || "Review the affected movement before the next session."});
+    if (latestPain && new Date(latestPain.date || 0).getTime() > (reviewedAt || 0)) {
+      const data = latestPain.data || {}, level = latestPain.type === "substitution" ? "orange" : normalizePainLevel(data.level || data.pain || (latestPain.type === "workout" ? data.painLevel : "yellow"),data.movementChanged), hold = painRequiresSafetyHold(level,data.movementChanged);
+      push({id:"pain:" + latestPain.id,profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"pain",urgency:hold ? "urgent" : "high",rank:hold ? 0 : 1,createdAt:latestPain.date,label:(PAIN_LEVELS[level] && PAIN_LEVELS[level].label || "Pain report") + (hold ? " · safety review" : " · monitor"),detail:latestPain.note || latestPain.value || "Review the affected movement before the next session."});
+    }
 
     const intakeStatus = intakeCompletion(profile);
     if (intakeStatus.safetyRequired && !intakeStatus.safetyReviewed) push({id:"intake-review:" + profile.id + ":" + intakeSafetySignature(profile.intake),profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"intake",urgency:"urgent",rank:0,createdAt:profile.intake && profile.intake.updatedAt || profile.updatedAt,label:"Intake safety review",detail:"A health-readiness answer or current limitation needs a documented trainer decision before difficult programming."});
@@ -4936,12 +5018,13 @@ function trainerAttentionSnapshot() {
   });
   assignmentReviews.forEach((assignment) => {
     const profile = profiles.find((item) => item.id === assignment.profileId) || profiles.find((item) => clientMatches(item.name,assignment.client));
-    const review = assignment.clientReview || {}, urgent = Boolean(review.questions || review.pain && review.pain !== "none");
-    push({id:"workout-review:" + assignment.id,profileId:profile && profile.id || assignment.profileId,client:assignment.client,trainer:profile && profile.assignedTrainerName || "Coaching team",kind:"workout",urgency:urgent ? "urgent" : "high",rank:urgent ? 0 : 1,createdAt:assignment.completedAt || assignment.assignedAt,label:review.questions ? "Client question after workout" : review.pain && review.pain !== "none" ? "Workout pain review" : "Workout review ready",detail:review.questions ? review.questions : review.pain && review.pain !== "none" ? (review.injuryDetails || "Review the reported " + (INJURY_LABELS[review.injuryArea] || review.injuryArea || "pain") + " before the next workout.") : "Review completion, logged sets, effort, and the client’s note before adjusting the plan."});
+    const review = assignment.clientReview || {}, painHold = painRequiresSafetyHold(review.painLevel || review.pain,review.movementChanged), urgent = Boolean(review.questions || painHold);
+    push({id:"workout-review:" + assignment.id,profileId:profile && profile.id || assignment.profileId,client:assignment.client,trainer:profile && profile.assignedTrainerName || "Coaching team",kind:"workout",urgency:urgent ? "urgent" : "high",rank:urgent ? 0 : 1,createdAt:assignment.completedAt || assignment.assignedAt,label:review.questions ? "Client question after workout" : review.pain && review.pain !== "none" ? (painHold ? "Workout pain safety review" : "Workout discomfort review") : "Workout review ready",detail:review.questions ? review.questions : review.pain && review.pain !== "none" ? (review.injuryDetails || "Review the reported " + (INJURY_LABELS[review.injuryArea] || review.injuryArea || "pain") + " before the next workout.") : "Review completion, logged sets, effort, and the client’s note before adjusting the plan."});
   });
   checkinReviews.forEach((checkin) => {
     const profile = profiles.find((item) => item.id === checkin.profileId) || profiles.find((item) => clientMatches(item.name,checkin.client));
-    push({id:"checkin:" + checkin.id,profileId:profile && profile.id || checkin.profileId,client:checkin.client,trainer:profile && profile.assignedTrainerName || "Coaching team",kind:"checkin",urgency:checkin.question || Number(checkin.pain) >= 2 ? "high" : "normal",rank:checkin.question || Number(checkin.pain) >= 2 ? 1 : 3,createdAt:checkin.createdAt || checkin.date,label:checkin.reviewType === "starter_week_1" ? "First-week review ready" : "Weekly check-in ready",detail:checkin.question ? "Client question: " + checkin.question : "Review adherence, recovery, wins, barriers, and next-week schedule."});
+    const painHold = painRequiresSafetyHold(checkin.painLevel || checkin.pain,checkin.movementChanged);
+    push({id:"checkin:" + checkin.id,profileId:profile && profile.id || checkin.profileId,client:checkin.client,trainer:profile && profile.assignedTrainerName || "Coaching team",kind:"checkin",urgency:painHold ? "urgent" : checkin.question || Number(checkin.pain) > 0 ? "high" : "normal",rank:painHold ? 0 : checkin.question || Number(checkin.pain) > 0 ? 1 : 3,createdAt:checkin.createdAt || checkin.date,label:checkin.reviewType === "starter_week_1" ? "First-week review ready" : "Weekly check-in ready",detail:checkin.question ? "Client question: " + checkin.question : painHold ? "Pain changed movement or stopped training. Review the affected area before the next workout." : Number(checkin.pain) > 0 ? "Mild discomfort reported with movement still normal. Monitor and reply before progression." : "Review adherence, recovery, wins, barriers, and next-week schedule."});
   });
   formalReviews.forEach((profile) => push({id:"formal:" + profile.id + ":" + String(formalReviewStatus(profile).dueAt || ""),profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"formal",urgency:"high",rank:2,createdAt:formalReviewStatus(profile).dueAt || profile.phaseStartedAt,label:"Four-week review due",detail:"Review progress, safety, adherence, and whether the phase should continue, change, or rebuild."}));
   recognition.forEach((profile) => {
@@ -5029,8 +5112,52 @@ function renderClientMore(profile) {
     + '<section class="client-card wide"><div class="client-section-label">Account & settings</div><div class="client-action-row"><span><b>' + escapeHtml(profile.name) + '</b><span>@' + escapeHtml(profileUsername(profile)) + ' · ' + EXP_LABEL(profile.experience) + '</span></span><button class="small-btn" onclick="clearActiveClient()">Use another profile</button></div><p style="margin-top:10px">Profile editing remains trainer-only. When the cloud status says “Saved across devices,” completed sets, messages, check-ins, intake updates, and program activity are synchronized to this account.</p></section></div>';
 }
 function openClientPainReport() {
-  const profile = activeClientProfile(); if (!profile) return; const area = window.prompt('Where are you feeling pain or discomfort?'); if (area == null) return; const details = window.prompt('What movement caused it, and did you stop or change the movement?') || '';
-  addProgressEntry({type:'pain',profileId:profile.id,client:profile.name,label:'Pain or limitation report',value:area.trim() || 'Area not specified',note:details,data:{area:area.trim(),details,coachNotice:true}}); showToast('Pain report saved for coach review'); if (currentView === 'client-coach') renderClientCoach(profile);
+  const profile = activeClientProfile(); if (!profile) return;
+  fillSelectOptions(byId("clientPainArea"),painLocationOptions(true),"");
+  byId("clientPainLevel").value = "yellow";
+  byId("clientPainMovementChanged").value = "no";
+  byId("clientPainScore").value = "";
+  byId("clientPainExercise").value = activeWorkout ? (() => {
+    const data = activeAssignmentAndSession(), unit = data.session && activeWorkoutUnits(data.session,activeWorkout.shortened)[activeWorkout.unitIndex];
+    return unit && (unit.items[activeWorkout.pairIndex] || unit.items[0]).name || "";
+  })() : "";
+  byId("clientPainDetails").value = "";
+  updateClientPainAction();
+  byId("clientPainModal").classList.add("open");
+}
+function closeClientPainReport() { byId("clientPainModal").classList.remove("open"); }
+function syncClientPainLevel() {
+  if (byId("clientPainMovementChanged").value === "yes" && painLevelInfo(byId("clientPainLevel").value).rank < PAIN_LEVELS.orange.rank) byId("clientPainLevel").value = "orange";
+  updateClientPainAction();
+}
+function updateClientPainAction() {
+  const info = painLevelInfo(byId("clientPainLevel") && byId("clientPainLevel").value,byId("clientPainMovementChanged") && byId("clientPainMovementChanged").value), out = byId("clientPainAction");
+  if (!out) return;
+  out.style.setProperty("--pain-color",info.color);
+  out.innerHTML = "<b>" + escapeHtml(info.label) + "</b>" + escapeHtml(info.action);
+}
+function saveClientPainReport() {
+  const profile = activeClientProfile(); if (!profile) return null;
+  const movementChanged = byId("clientPainMovementChanged").value === "yes", level = normalizePainLevel(byId("clientPainLevel").value,movementChanged), info = PAIN_LEVELS[level];
+  const area = byId("clientPainArea").value, exercise = byId("clientPainExercise").value.trim(), details = byId("clientPainDetails").value.trim(), rawScore = byId("clientPainScore").value;
+  if (!area) { showToast("Choose where you felt it"); byId("clientPainArea").focus(); return null; }
+  if (info.rank >= PAIN_LEVELS.orange.rank && !exercise) { showToast("Name the movement or exercise that changed"); byId("clientPainExercise").focus(); return null; }
+  if (info.rank >= PAIN_LEVELS.orange.rank && details.length < 5) { showToast("Briefly describe what changed and whether you stopped"); byId("clientPainDetails").focus(); return null; }
+  const data = {area,injuryArea:area,level,pain:info.legacy,movementChanged,exercise,details,painScore:rawScore === "" ? null : Math.max(0,Math.min(10,Number(rawScore))),coachNotice:true,safetyHold:info.rank >= PAIN_LEVELS.orange.rank};
+  const record = addProgressEntry({type:"pain",profileId:profile.id,client:profile.name,sessionId:activeWorkout && activeWorkout.sessionId || "",label:info.label,value:INJURY_LABELS[area] || area,note:(exercise ? exercise + " · " : "") + (details || info.action),data});
+  if (data.safetyHold && activeWorkout) {
+    const current = activeAssignmentAndSession(), unit = current.session && activeWorkoutUnits(current.session,activeWorkout.shortened)[activeWorkout.unitIndex], activeExercise = unit && (unit.items[activeWorkout.pairIndex] || unit.items[0]);
+    if (activeExercise) {
+      activeWorkout.skippedExercises[activeWorkout.unitIndex + "::" + activeExercise.name] = {at:new Date().toISOString(),reason:"pain",level};
+      saveActiveWorkoutState();
+    }
+  }
+  closeClientPainReport();
+  showToast(level === "yellow" ? "Yellow caution saved and sent to your trainer" : level === "orange" ? "Exercise stopped — report sent for trainer review" : "Workout stopped — report sent for trainer review");
+  if (level === "red" && activeWorkout) { saveActiveWorkoutState(); openClientTab("coach"); }
+  else if (currentView === "active-workout") renderActiveWorkout();
+  else if (currentView === "client-coach") renderClientCoach(profile);
+  return record;
 }
 
 /* Focused workout execution. The active location is stored after every move,
@@ -5613,7 +5740,7 @@ function chipMulti(labelText, key, options, labelMap, target, isInjury) {
       if (i >= 0) target[key].splice(i, 1); else target[key].push(opt);
       renderChips();
     });
-    if (isInjury) (COMMON_LIMITATIONS.slice(0,7).includes(opt) ? bodyChoiceRow : specialChoiceRow).appendChild(btn);
+    if (isInjury) (COMMON_BODY_LIMITATIONS.includes(opt) ? bodyChoiceRow : specialChoiceRow).appendChild(btn);
     else chips.appendChild(btn);
   });
 
@@ -7366,8 +7493,8 @@ function renderProgramSafetyChoices() {
   const group = (title,keys) => '<div class="safety-choice-group"><b>' + title + '</b><div class="safety-choice-row">' + keys.map(chip).join('') + '</div></div>';
   const noneOn = programFilters.injuries.length ? "" : " on";
   out.innerHTML = '<button type="button" class="chip none-chip' + noneOn + '" onclick="clearProgramLimitations()">No limitations</button>'
-    + group("Where is the limitation?",COMMON_LIMITATIONS.slice(0,7))
-    + group("Special considerations",COMMON_LIMITATIONS.slice(7));
+    + group("Where is the limitation?",COMMON_BODY_LIMITATIONS)
+    + group("Special considerations",COMMON_SPECIAL_LIMITATIONS);
 }
 function clearProgramLimitations() {
   programFilters.injuries = [];
@@ -7794,6 +7921,16 @@ function selectReadinessProfile(profileId) {
   const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) return null;
   byId("readyProfile").value = profile.id; byId("readyClient").value = profile.name + " · @" + profileUsername(profile); byId("readyProfileLookupResults").innerHTML = ""; return profile;
 }
+function updateReadinessPainFields() {
+  const hasPain = Number(byId("readyPain") && byId("readyPain").value || 0) > 0;
+  ["readyPainAreaField","readyPainMovementField","readyPainExerciseField"].forEach((id) => { const field = byId(id); if (field) field.hidden = !hasPain; });
+  if (hasPain && byId("readyPainArea") && !byId("readyPainArea").options.length) fillSelectOptions(byId("readyPainArea"),painLocationOptions(true),"");
+  if (!hasPain) { if (byId("readyPainArea")) byId("readyPainArea").value = ""; if (byId("readyPainMovement")) byId("readyPainMovement").value = "no"; if (byId("readyPainExercise")) byId("readyPainExercise").value = ""; }
+}
+function syncReadinessPainLevel() {
+  if (byId("readyPainMovement").value === "yes" && Number(byId("readyPain").value) < 2) byId("readyPain").value = "2";
+  updateReadinessPainFields();
+}
 function readinessProfile(score, pain) {
   if (pain >= 3 || score < 35) return { key: "recovery", title: "Recovery only", volume: 0.55, rpe: 5, color: "var(--danger)", message: "Skip hard training. Use gentle mobility or stop; sharp or worsening pain needs qualified evaluation." };
   if (pain >= 2 || score < 50) return { key: "reduce", title: "Reduce and simplify", volume: 0.7, rpe: 6, color: "var(--warn)", message: "Remove power work and finishers, reduce working sets, and keep every movement pain-free." };
@@ -7803,10 +7940,13 @@ function readinessProfile(score, pain) {
 }
 function calculateReadiness() {
   const selectedProfile = loadProfiles().find((profile) => profile.id === byId("readyProfile").value);
+  const movementChanged = byId("readyPainMovement") && byId("readyPainMovement").value === "yes";
+  if (movementChanged && Number(byId("readyPain").value) < 2) byId("readyPain").value = "2";
   const values = {
     sleepHours:numberFrom("readySleepHours",7.5) || 7.5, sleep: numberFrom("readySleep", 3), energy: numberFrom("readyEnergy", 3),
-    soreness: numberFrom("readySoreness", 3), stress: numberFrom("readyStress", 3), pain: numberFrom("readyPain", 0), motivation:numberFrom("readyMotivation",3) || 3, overall:numberFrom("readyOverall",3) || 3, illness:byId("readyIllness").value || "none",
+    soreness: numberFrom("readySoreness", 3), stress: numberFrom("readyStress", 3), pain: numberFrom("readyPain", 0), painLevel:normalizePainLevel(byId("readyPain").value,movementChanged), painArea:byId("readyPainArea") && byId("readyPainArea").value || "", painExercise:byId("readyPainExercise") && byId("readyPainExercise").value.trim() || "", movementChanged, motivation:numberFrom("readyMotivation",3) || 3, overall:numberFrom("readyOverall",3) || 3, illness:byId("readyIllness").value || "none",
   };
+  if (values.pain > 0 && !values.painArea) { values.painArea = "unspecified"; showToast("Add the body area when possible so your trainer can choose a safer alternative"); }
   const sleepDurationPenalty = values.sleepHours >= 7 && values.sleepHours <= 9 ? 0 : values.sleepHours >= 6 && values.sleepHours < 10 ? 5 : values.sleepHours >= 5 ? 10 : 16;
   let score = Math.round(values.sleep * 5 + values.energy * 5 + (6 - values.soreness) * 4 + (6 - values.stress) * 4 + ((3 - values.pain) / 3) * 10 - sleepDurationPenalty + (values.motivation - 3) * 2.5 + (values.overall - 3) * 3);
   if (values.pain >= 2) score = Math.min(score, 49);
@@ -7820,7 +7960,7 @@ function calculateReadiness() {
   out.innerHTML = '<div class="score-ring" style="--score:' + r.score + ';--score-color:' + r.color + '"><strong>' + r.score + '</strong></div><div><div class="result-label">Readiness score</div><div class="readiness-status">' + r.title + '</div><p class="readiness-copy">' + r.message + '</p>' + (portalRole === "client" ? '<div class="tool-actions"><button class="small-btn primary" onclick="openClientTab(\'home\')">Return to client home</button><button class="small-btn" onclick="openClientTab(\'progress\')">View my history</button></div>' : '') + '</div>';
   if (portalRole !== "client" && byId("tuneSessionBtn")) byId("tuneSessionBtn").textContent = "Build tuned session";
   if (selectedProfile) byId("logClient").value = selectedProfile.name;
-  addProgressEntry({ type: "readiness", client: r.client, label: r.title, value: r.score + "/100", note: "Sleep " + r.sleepHours + "h / " + r.sleep + " · energy " + r.energy + " · soreness " + r.soreness + " · stress " + r.stress + " · pain " + r.pain + " · motivation " + r.motivation + " · illness " + r.illness });
+  addProgressEntry({ type: "readiness", profileId:r.profileId, client: r.client, label: r.title, value: r.score + "/100", note: "Sleep " + r.sleepHours + "h / " + r.sleep + " · energy " + r.energy + " · soreness " + r.soreness + " · stress " + r.stress + " · pain " + painLevelInfo(r.painLevel).label + (r.painArea ? " at " + (INJURY_LABELS[r.painArea] || r.painArea) : "") + " · motivation " + r.motivation + " · illness " + r.illness, data:{...r,coachNotice:r.pain > 0,safetyHold:r.pain >= 2} });
   renderProgressHistory();
   return r;
 }
@@ -8424,8 +8564,21 @@ function reviewSessions() {
 }
 function updateReviewPainFields() {
   const hasPain = byId("reviewPain") && byId("reviewPain").value !== "none";
-  ["reviewInjuryAreaField","reviewInjuryDetailsField"].forEach((id) => { const field = byId(id); if (field) field.hidden = !hasPain; });
-  if (!hasPain) { if (byId("reviewInjuryArea")) byId("reviewInjuryArea").value = ""; if (byId("reviewInjuryDetails")) byId("reviewInjuryDetails").value = ""; }
+  ["reviewInjuryAreaField","reviewMovementChangedField","reviewPainScoreField","reviewPainExerciseField","reviewInjuryDetailsField","reviewPainActionField"].forEach((id) => { const field = byId(id); if (field) field.hidden = !hasPain; });
+  if (!hasPain) {
+    if (byId("reviewInjuryArea")) byId("reviewInjuryArea").value = "";
+    if (byId("reviewMovementChanged")) byId("reviewMovementChanged").value = "no";
+    if (byId("reviewPainScore")) byId("reviewPainScore").value = "";
+    if (byId("reviewPainExercise")) byId("reviewPainExercise").value = "";
+    if (byId("reviewInjuryDetails")) byId("reviewInjuryDetails").value = "";
+  } else {
+    const info = painLevelInfo(byId("reviewPain").value,byId("reviewMovementChanged") && byId("reviewMovementChanged").value);
+    const out = byId("reviewPainActionField"); if (out) { out.style.setProperty("--pain-color",info.color); out.innerHTML = "<b>" + escapeHtml(info.label) + "</b>" + escapeHtml(info.action); }
+  }
+}
+function syncReviewPainLevel() {
+  if (byId("reviewMovementChanged").value === "yes" && painLevelInfo(byId("reviewPain").value).rank < PAIN_LEVELS.orange.rank) byId("reviewPain").value = "changed";
+  updateReviewPainFields();
 }
 function openWorkoutReview() {
   const sessions = reviewSessions();
@@ -8435,8 +8588,8 @@ function openWorkoutReview() {
   byId("reviewDifficulty").value = "7"; byId("reviewCompletion").value = "all"; byId("reviewEnergy").value = "3";
   byId("reviewRir").value = "2"; byId("reviewForm").value = "strong"; byId("reviewRange").value = "full"; byId("reviewTimeFit").value = "yes";
   byId("reviewPain").value = "none";
-  fillSelectOptions(byId("reviewInjuryArea"),[["","Choose a body area…"],...BODY_AREA_LIMITATIONS.map((key) => [key,INJURY_LABELS[key]])],"");
-  byId("reviewInjuryDetails").value = ""; byId("reviewNotes").value = "";
+  fillSelectOptions(byId("reviewInjuryArea"),painLocationOptions(true),"");
+  byId("reviewMovementChanged").value = "no"; byId("reviewPainScore").value = ""; byId("reviewPainExercise").value = ""; byId("reviewInjuryDetails").value = ""; byId("reviewNotes").value = "";
   byId("reviewLiked").value = ""; byId("reviewDisliked").value = ""; byId("reviewQuestions").value = "";
   const optional = byId("reviewModal").querySelector(".review-more"); if (optional) optional.open = false;
   byId("reviewSaveAnalysisBtn").style.display = portalRole === "trainer" && trainerIsUnlocked() ? "inline-flex" : "none";
@@ -8452,7 +8605,7 @@ function updateProfileFromReview(session, review) {
   const profile = profiles.find((p) => p.id === session.spec.profileId) || profiles.find((p) => clientMatches(p.name, name));
   if (!profile) return null;
   profile.lastReview = review; profile.updatedAt = new Date().toISOString();
-  if (review.pain !== "none" && review.injuryArea && !profile.injuries.includes(review.injuryArea)) profile.injuries.push(review.injuryArea);
+  if (painRequiresSafetyHold(review.painLevel || review.pain,review.movementChanged) && review.injuryArea && !profile.injuries.includes(review.injuryArea)) profile.injuries.push(review.injuryArea);
   writeProfiles(profiles); refreshProfileSelects(); return profile;
 }
 function completeAssignmentFromReview(session, review) {
@@ -8514,12 +8667,15 @@ function saveWorkoutReview(openAnalysis) {
   const session = chosen.session, sets = getSessionSets(session.sessionId);
   const existingReview = loadProgress().find((entry) => entry.type === "workout" && entry.sessionId === session.sessionId && entry.data);
   if (portalRole === "client" && existingReview) { closeWorkoutReview(); showToast("This workout review was already sent to your trainer"); return existingReview.data; }
-  const painValue = byId("reviewPain").value, injuryArea = byId("reviewInjuryArea").value, injuryDetails = byId("reviewInjuryDetails").value.trim();
+  const movementChanged = byId("reviewMovementChanged").value === "yes";
+  let painValue = byId("reviewPain").value;
+  if (movementChanged && painLevelInfo(painValue).rank < PAIN_LEVELS.orange.rank) { painValue = "changed"; byId("reviewPain").value = painValue; }
+  const painLevel = normalizePainLevel(painValue,movementChanged), injuryArea = byId("reviewInjuryArea").value, injuryDetails = byId("reviewInjuryDetails").value.trim(), painExercise = byId("reviewPainExercise").value.trim() || (painRequiresSafetyHold(painLevel,movementChanged) ? injuryDetails : ""), rawPainScore = byId("reviewPainScore").value;
   if (painValue !== "none" && !injuryArea) { showToast("Choose the body area so the safety filter and trainer know what to review"); byId("reviewInjuryArea").focus(); return null; }
-  if (["changed","stopped"].includes(painValue) && injuryDetails.length < 5) { showToast("Briefly describe which movement caused the pain and what changed"); byId("reviewInjuryDetails").focus(); return null; }
+  if (painRequiresSafetyHold(painLevel,movementChanged) && injuryDetails.length < 5) { showToast("Briefly describe which movement caused the pain and what changed"); byId("reviewInjuryDetails").focus(); return null; }
   const review = {
     difficulty: Number(byId("reviewDifficulty").value), completion: byId("reviewCompletion").value,
-    energy: Number(byId("reviewEnergy").value), pain: painValue,
+    energy: Number(byId("reviewEnergy").value), pain: legacyPainValue(painLevel,movementChanged), painLevel, movementChanged, painScore:rawPainScore === "" ? null : Math.max(0,Math.min(10,Number(rawPainScore))), painExercise,
     rir:Number(byId("reviewRir").value), formQuality:byId("reviewForm").value, rangeOfMotion:byId("reviewRange").value, timeFit:byId("reviewTimeFit").value,
     injuryArea, injuryDetails, notes: byId("reviewNotes").value.trim(), liked:byId("reviewLiked").value.trim(), disliked:byId("reviewDisliked").value.trim(), questions:byId("reviewQuestions").value.trim(),
     goals: [...(session.spec.goals || [session.spec.goal]).filter(Boolean)], duration: session.spec.minutes,
@@ -9484,7 +9640,19 @@ let selectedCheckInProfileId = "";
 let selectedCheckInReviewType = "weekly";
 function openClientCheckIn(reviewType) {
   selectedCheckInReviewType = reviewType === "starter_week_1" ? reviewType : "weekly";
-  portalRole = "client"; show("checkin"); selectedCheckInProfileId = ""; byId("checkInLookup").value = ""; byId("checkInProfileId").value = ""; byId("checkInLookupResults").innerHTML = ""; byId("checkInForm").classList.remove("show"); byId("checkInConfirmation").style.display = "none"; setTimeout(() => byId("checkInLookup").focus(),20);
+  portalRole = "client"; show("checkin"); selectedCheckInProfileId = ""; byId("checkInLookup").value = ""; byId("checkInProfileId").value = ""; byId("checkInLookupResults").innerHTML = ""; byId("checkInForm").classList.remove("show"); byId("checkInConfirmation").style.display = "none";
+  byId("checkInPain").value = "0"; fillSelectOptions(byId("checkInPainArea"),painLocationOptions(true),""); byId("checkInPainMovement").value = "no"; updateCheckInPainFields();
+  setTimeout(() => byId("checkInLookup").focus(),20);
+}
+function updateCheckInPainFields() {
+  const hasPain = Number(byId("checkInPain") && byId("checkInPain").value || 0) > 0;
+  ["checkInPainAreaField","checkInPainMovementField"].forEach((id) => { const field = byId(id); if (field) field.hidden = !hasPain; });
+  if (hasPain && byId("checkInPainArea") && !byId("checkInPainArea").options.length) fillSelectOptions(byId("checkInPainArea"),painLocationOptions(true),"");
+  if (!hasPain) { if (byId("checkInPainArea")) byId("checkInPainArea").value = ""; if (byId("checkInPainMovement")) byId("checkInPainMovement").value = "no"; }
+}
+function syncCheckInPainLevel() {
+  if (byId("checkInPainMovement").value === "yes" && Number(byId("checkInPain").value) < 2) byId("checkInPain").value = "2";
+  updateCheckInPainFields();
 }
 function renderCheckInLookup() {
   const query = byId("checkInLookup").value.trim(), out = byId("checkInLookupResults"); out.innerHTML = ""; if (query.length < 2) return [];
@@ -9503,7 +9671,11 @@ function selectCheckInProfile(profileId) {
 function saveClientCheckIn() {
   const profile = loadProfiles().find((item) => item.id === byId("checkInProfileId").value); if (!profile) { showToast("Find your saved profile first"); return null; }
   const starter = selectedCheckInReviewType === "starter_week_1", program = starter ? savedProgramFor(profile) : null;
-  const record = { id:"checkin-" + Date.now() + "-" + Math.random().toString(16).slice(2), profileId:profile.id, client:profile.name, date:new Date().toISOString().slice(0,10), createdAt:new Date().toISOString(), reviewType:selectedCheckInReviewType, programId:program && program.id || "", programWeek:starter ? 1 : null, adherence:Number(byId("checkInAdherence").value), sleep:Number(byId("checkInSleep").value), stress:Number(byId("checkInStress").value), soreness:Number(byId("checkInSoreness").value), energy:Number(byId("checkInEnergy").value), confidence:Number(byId("checkInConfidence").value), motivation:Number(byId("checkInMotivation").value), pain:Number(byId("checkInPain").value), workoutFit:starter ? byId("checkInWorkoutFit").value : "", exerciseClarity:starter ? byId("checkInExerciseClarity").value : "", sessionFit:starter ? byId("checkInSessionFit").value : "", win:byId("checkInWin").value.trim(), challenge:byId("checkInChallenge").value.trim(), schedule:byId("checkInSchedule").value.trim(), question:byId("checkInQuestion").value.trim(), reviewedAt:"", trainerReply:"" };
+  const movementChanged = byId("checkInPainMovement") && byId("checkInPainMovement").value === "yes";
+  if (movementChanged && Number(byId("checkInPain").value) < 2) byId("checkInPain").value = "2";
+  const pain = Number(byId("checkInPain").value), painArea = byId("checkInPainArea") && byId("checkInPainArea").value || "";
+  if (pain > 0 && !painArea) { showToast("Choose where you felt the pain or discomfort"); byId("checkInPainArea").focus(); return null; }
+  const record = { id:"checkin-" + Date.now() + "-" + Math.random().toString(16).slice(2), profileId:profile.id, client:profile.name, date:new Date().toISOString().slice(0,10), createdAt:new Date().toISOString(), reviewType:selectedCheckInReviewType, programId:program && program.id || "", programWeek:starter ? 1 : null, adherence:Number(byId("checkInAdherence").value), sleep:Number(byId("checkInSleep").value), stress:Number(byId("checkInStress").value), soreness:Number(byId("checkInSoreness").value), energy:Number(byId("checkInEnergy").value), confidence:Number(byId("checkInConfidence").value), motivation:Number(byId("checkInMotivation").value), pain, painLevel:normalizePainLevel(pain,movementChanged), painArea, movementChanged, workoutFit:starter ? byId("checkInWorkoutFit").value : "", exerciseClarity:starter ? byId("checkInExerciseClarity").value : "", sessionFit:starter ? byId("checkInSessionFit").value : "", win:byId("checkInWin").value.trim(), challenge:byId("checkInChallenge").value.trim(), schedule:byId("checkInSchedule").value.trim(), question:byId("checkInQuestion").value.trim(), reviewedAt:"", trainerReply:"" };
   const items = loadCheckIns(); items.unshift(record); if (!writeCheckIns(items)) return null; runAutomations(false);
   const confirmation = byId("checkInConfirmation"); confirmation.style.display = "block"; confirmation.textContent = starter ? "Week 1 review sent. Your trainer can now compare workout fit, exercise clarity, session length, recovery, pain, and confidence before Week 2." : "Check-in sent. Your trainer will see your adherence, recovery, confidence, motivation, pain report, and questions in the coaching studio."; showToast(starter ? "Week 1 review sent to the trainer" : "Weekly check-in sent to the trainer"); return record;
 }
