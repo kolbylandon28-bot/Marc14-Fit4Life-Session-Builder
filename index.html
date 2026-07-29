@@ -213,6 +213,12 @@
   .age-val{font-family:var(--mono);font-weight:600;font-size:14px;color:var(--text);min-width:58px;text-align:right}
 
   .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .safety-selector{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:10px;padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(8,10,15,.48)}
+  .safety-selector>.none-chip{grid-column:1/-1;justify-self:start}
+  .safety-choice-group{display:grid;align-content:start;gap:7px;padding:10px;border:1px solid rgba(119,132,162,.18);border-radius:10px;background:rgba(15,17,23,.58)}
+  .safety-choice-group>b{font:700 9px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint)}
+  .safety-choice-row{display:flex;flex-wrap:wrap;gap:7px}
+  .safety-choice-row .chip{margin:0}
   .chip{border:1px solid var(--line);background:var(--slate-0);color:var(--text-faint);font-family:var(--body);font-weight:500;font-size:13px;padding:8px 13px;border-radius:18px;transition:all .14s;user-select:none}
   .chip:hover{border-color:var(--slate-4);color:var(--text-dim)}
   .chip.on{background:var(--slate-3);border-color:var(--blue);color:var(--text)}
@@ -943,7 +949,7 @@
   }
   @media (max-width:560px){
     .goal-grid,.training-route-grid{grid-template-columns:1fr}.library-toolbar,.exercise-editor-grid,.swap-bank-filters{grid-template-columns:1fr}.library-toolbar>.compact-field:first-child,.exercise-editor-grid .wide,.exercise-editor-grid .full{grid-column:auto}.library-item{grid-template-columns:1fr}.library-item-actions{justify-content:flex-start}
-    .workout-choice-head{align-items:flex-start;flex-direction:column}.workout-choice-grid{grid-template-columns:1fr}.program-profile-grid,.program-goal-grid,.program-schedule-grid,.program-cardio-grid,.program-safety-body,.market-catalog-grid{grid-template-columns:1fr}.program-cardio-grid .multi-choice-btn:first-child{grid-column:auto}.program-cardio-help,.market-preview-hero{display:block}.market-preview-meta{margin-top:9px}.program-setup-section{padding:13px}
+    .workout-choice-head{align-items:flex-start;flex-direction:column}.workout-choice-grid{grid-template-columns:1fr}.program-profile-grid,.program-goal-grid,.program-schedule-grid,.program-cardio-grid,.program-safety-body,.market-catalog-grid,.safety-selector{grid-template-columns:1fr}.program-cardio-grid .multi-choice-btn:first-child{grid-column:auto}.program-cardio-help,.market-preview-hero{display:block}.market-preview-meta{margin-top:9px}.program-setup-section{padding:13px}
     .audit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.preference-editor{grid-template-columns:1fr}
     .hero h1{font-size:42px}
     .builder-head h2{font-size:28px}
@@ -1442,8 +1448,9 @@
           <summary><span class="program-safety-copy"><span class="program-setup-step">5</span><span><b>Review safety and equipment</b><span>Open only when limitations or a reduced equipment list need to be adjusted.</span></span></span></summary>
           <div class="program-safety-body">
             <div class="compact-field"><label>Injury and life-stage limitations</label><div class="filter-chips" id="programInjuryChips">
-              <button type="button" class="chip" onclick="toggleProgramFilter('injuries','knee',this)">Knee</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','shoulder',this)">Shoulder</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','lowback',this)">Low back</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','wrist',this)">Wrist</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','hip',this)">Hip</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','elbow',this)">Elbow</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','ankle',this)">Ankle</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','neck',this)">Neck</button>
-              <button type="button" class="chip" onclick="toggleProgramFilter('injuries','pregnancy',this)">Pregnancy</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','postpartum',this)">Postpartum return</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','balance',this)">Balance / fall risk</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','pelvicfloor',this)">Pelvic floor symptoms</button>
+              <button type="button" class="chip none-chip on" onclick="clearProgramLimitations()">No limitations</button>
+              <button type="button" class="chip" onclick="toggleProgramFilter('injuries','knee',this)">Knee</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','shoulder',this)">Shoulder</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','lowback',this)">Lower back</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','wrist',this)">Wrist</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','hip',this)">Hip</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','elbow',this)">Elbow</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','ankle',this)">Ankle</button>
+              <button type="button" class="chip" onclick="toggleProgramFilter('injuries','pregnancy',this)">Pregnancy / postpartum</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','nohinge',this)">Avoid hip hinging</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','nooverhead',this)">Avoid overhead work</button>
             </div></div>
             <div class="compact-field"><label>Equipment available (leave blank for full gym)</label><div class="filter-chips" id="programZoneChips">
               <button type="button" class="chip" onclick="toggleProgramFilter('zones','cardio',this)">Cardio</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','platform',this)">Platforms</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','rack',this)">Racks</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','crossfit',this)">Functional</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','dumbbell',this)">Dumbbells</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','machine',this)">Machines</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','cable',this)">Cables</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','bodyweight',this)">Bodyweight</button>
@@ -3033,7 +3040,7 @@ const INJURY_LABELS = {
   knee: "Knee", shoulder: "Shoulder", lowback: "Lower back", wrist: "Wrist",
   hip: "Hip", elbow: "Elbow", ankle: "Ankle", neck: "Neck",
   foot: "Foot / toes", handgrip: "Hand / grip", thoracic: "Upper back / ribs", abdominal: "Abdominal wall",
-  pregnancy: "Pregnancy · coach review", postpartum: "Postpartum return",
+  pregnancy: "Pregnancy / postpartum", postpartum: "Postpartum return",
   balance: "Balance / fall risk", pelvicfloor: "Pelvic-floor symptoms", medicalhold:"Medical / clinician hold",
   noimpact: "Avoid impact", noballistic: "Avoid explosive / ballistic work", nooverhead: "Avoid overhead work",
   nodeepknee: "Limit deep knee bend", nodeephip: "Limit deep hip bend", nohinge: "Avoid hip hinging",
@@ -3047,6 +3054,7 @@ const INJURY_LABELS = {
 const BODY_AREA_LIMITATIONS = ["knee","shoulder","lowback","wrist","hip","elbow","ankle","neck","foot","handgrip","thoracic","abdominal"];
 const MOVEMENT_RESTRICTIONS = ["noimpact","noballistic","nooverhead","nodeepknee","nodeephip","nohinge","noaxialload","nospinalflexion","nospinalextension","norotation","nogrip","nosingleleg","nofloor","nosupine","noprone","nostraining","lowintensity"];
 const LIFE_STAGE_LIMITATIONS = ["pregnancy","postpartum","balance","pelvicfloor","medicalhold"];
+const COMMON_LIMITATIONS = ["knee","shoulder","lowback","wrist","hip","elbow","ankle","pregnancy","nohinge","nooverhead"];
 const LIMITATION_RULES = {
   knee:{demands:["deep_knee_flexion","impact","ballistic"]},
   shoulder:{demands:["overhead","hanging","shoulder_extension"]},
@@ -3058,7 +3066,7 @@ const LIMITATION_RULES = {
   handgrip:{demands:["loaded_grip","hanging","loaded_carry"]},
   thoracic:{demands:["axial_load","unsupported_torso","spinal_rotation"]},
   abdominal:{demands:["high_abdominal_pressure","spinal_flexion"]},
-  pregnancy:{demands:["impact","ballistic","supine","prone"],maxImpact:1},
+  pregnancy:{demands:["impact","ballistic","supine","prone","high_abdominal_pressure"],maxImpact:1},
   postpartum:{demands:["impact","ballistic","high_abdominal_pressure"],maxImpact:1},
   balance:{demands:["balance_challenge","single_leg","ballistic","impact"]},
   pelvicfloor:{demands:["impact","ballistic","high_abdominal_pressure"]},
@@ -5394,7 +5402,7 @@ function openExerciseEditor(id) {
   fillSelectOptions(byId('exerciseBankRegion'),EXERCISE_REGIONS.map((key) => [key,EXERCISE_REGION_LABELS[key]]),item && item.region || 'lower');
   fillSelectOptions(byId('exerciseBankZone'),ALL_ZONES.map((key) => [key,ZONE_LABELS[key]]),item && item.zone || 'bodyweight');
   fillSelectOptions(byId('exerciseBankMuscles'),MUSCLE_LIST.map((key) => [key,MUSCLE_LABELS[key]]),item && item.muscles || []);
-  fillSelectOptions(byId('exerciseBankAvoid'),ALL_INJURIES.map((key) => [key,INJURY_LABELS[key]]),item && item.avoid || []);
+  fillSelectOptions(byId('exerciseBankAvoid'),COMMON_LIMITATIONS.map((key) => [key,INJURY_LABELS[key]]),item && item.avoid || []);
   fillSelectOptions(byId('exerciseBankDemands'),MOVEMENT_DEMAND_KEYS.map((key) => [key,MOVEMENT_DEMAND_LABELS[key]]),item && inferExerciseDemands(item) || []);
   fillSelectOptions(byId('exerciseBankCardio'),[['','Not a cardio machine'],...Object.keys(CARDIO_MODALITIES).filter((key) => key !== 'any').map((key) => [key,CARDIO_MODALITIES[key].label])],item && item.cardioMode || '');
   byId('exerciseBankRole').value = exerciseRoleFor(item); byId('exerciseBankExperience').value = String(item && item.exp || 1); byId('exerciseBankImpact').value = String(item && item.impact || 0); byId('exerciseBankFinisherType').value = item && item.ftype || 'pump'; byId('exerciseBankCue').value = item && item.cue || ''; byId('exerciseBankInstructions').value = item && item.instructions || ''; byId('exerciseBankVideo').value = item && item.video || ''; byId('exerciseBankRegression').value = item && item.regression || ''; byId('exerciseBankProgression').value = item && item.progression || ''; byId('exerciseBankUnilateral').checked = Boolean(item && item.unilateral); byId('exerciseBankSafetyReviewed').checked = Boolean(item);
@@ -5571,7 +5579,8 @@ function chipMulti(labelText, key, options, labelMap, target, isInjury) {
   const label = document.createElement("label");
   label.textContent = labelText;
   const chips = document.createElement("div");
-  chips.className = "chips";
+  chips.className = "chips" + (isInjury ? " safety-selector" : "");
+  let bodyChoiceRow = null, specialChoiceRow = null;
 
   if (isInjury) {
     const none = document.createElement("button");
@@ -5583,6 +5592,14 @@ function chipMulti(labelText, key, options, labelMap, target, isInjury) {
       renderChips();
     });
     chips.appendChild(none);
+    const makeGroup = (title) => {
+      const group = document.createElement("div"); group.className = "safety-choice-group";
+      const heading = document.createElement("b"); heading.textContent = title;
+      const row = document.createElement("div"); row.className = "safety-choice-row";
+      group.append(heading,row); chips.appendChild(group); return row;
+    };
+    bodyChoiceRow = makeGroup("Where is the limitation?");
+    specialChoiceRow = makeGroup("Special considerations");
   }
 
   options.forEach((opt) => {
@@ -5596,7 +5613,8 @@ function chipMulti(labelText, key, options, labelMap, target, isInjury) {
       if (i >= 0) target[key].splice(i, 1); else target[key].push(opt);
       renderChips();
     });
-    chips.appendChild(btn);
+    if (isInjury) (COMMON_LIMITATIONS.slice(0,7).includes(opt) ? bodyChoiceRow : specialChoiceRow).appendChild(btn);
+    else chips.appendChild(btn);
   });
 
   function renderChips() {
@@ -5875,7 +5893,7 @@ function buildPersonFields(target, container) {
   grid.appendChild(ageField(target));
   grid.appendChild(selectField("Session length", "minutes", TIME_OPTIONS, target, target.minutes));
   grid.appendChild(muscleField(target));
-  grid.appendChild(chipMulti("Injury limitations", "injuries", ALL_INJURIES, INJURY_LABELS, target, true));
+  grid.appendChild(chipMulti("Injury limitations", "injuries", COMMON_LIMITATIONS, INJURY_LABELS, target, true));
   grid.appendChild(chipMulti("Equipment available", "zones", ALL_ZONES, ZONE_LABELS, target, false));
   const saveProfile = profileSaveField(target); if (saveProfile) grid.appendChild(saveProfile);
   container.appendChild(grid);
@@ -7344,8 +7362,16 @@ function renderProgramCardioChoices() {
 }
 function renderProgramSafetyChoices() {
   const out = byId("programInjuryChips"); if (!out) return;
-  const group = (title,keys) => '<div class="full" style="flex-basis:100%;font:700 10px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint);margin-top:5px">' + title + '</div>' + keys.map((key) => '<button type="button" class="chip' + (programFilters.injuries.includes(key) ? ' on' : '') + '" onclick="toggleProgramFilter(\'injuries\',\'' + key + '\',this)">' + escapeHtml(INJURY_LABELS[key] || key) + '</button>').join('');
-  out.innerHTML = group("Reported body areas",BODY_AREA_LIMITATIONS) + group("Life stage and coaching cautions",LIFE_STAGE_LIMITATIONS) + group("Specific movement restrictions",MOVEMENT_RESTRICTIONS);
+  const chip = (key) => '<button type="button" class="chip' + (programFilters.injuries.includes(key) ? ' on' : '') + '" onclick="toggleProgramFilter(\'injuries\',\'' + key + '\',this)">' + escapeHtml(INJURY_LABELS[key] || key) + '</button>';
+  const group = (title,keys) => '<div class="safety-choice-group"><b>' + title + '</b><div class="safety-choice-row">' + keys.map(chip).join('') + '</div></div>';
+  const noneOn = programFilters.injuries.length ? "" : " on";
+  out.innerHTML = '<button type="button" class="chip none-chip' + noneOn + '" onclick="clearProgramLimitations()">No limitations</button>'
+    + group("Where is the limitation?",COMMON_LIMITATIONS.slice(0,7))
+    + group("Special considerations",COMMON_LIMITATIONS.slice(7));
+}
+function clearProgramLimitations() {
+  programFilters.injuries = [];
+  renderProgramSafetyChoices();
 }
 function toggleProgramCardioChoice(value) {
   programCardioModes = normalizeCardioPreferences(toggleMultiChoiceValue(programCardioModes,value,true));
@@ -7357,7 +7383,11 @@ function toggleProgramFilter(kind, value, button) {
   if (button) button.classList.toggle("on", list.includes(value));
 }
 function paintProgramFilters() {
-  document.querySelectorAll("#programInjuryChips .chip").forEach((b) => b.classList.toggle("on", programFilters.injuries.includes(b.getAttribute("onclick").match(/'([^']+)'\s*,this/)[1])));
+  document.querySelectorAll("#programInjuryChips .chip").forEach((b) => {
+    if (b.classList.contains("none-chip")) { b.classList.toggle("on", programFilters.injuries.length === 0); return; }
+    const match = (b.getAttribute("onclick") || "").match(/'([^']+)'\s*,this/);
+    if (match) b.classList.toggle("on", programFilters.injuries.includes(match[1]));
+  });
   document.querySelectorAll("#programZoneChips .chip").forEach((b) => b.classList.toggle("on", programFilters.zones.includes(b.getAttribute("onclick").match(/'([^']+)'\s*,this/)[1])));
 }
 function renderProgramProfileLookup() {
@@ -8153,7 +8183,7 @@ function updateClientProfile(profileId, updates) {
   return next;
 }
 function renderProfileEditorChoices() {
-  const groups = [["profileEditMuscles","muscles",MUSCLE_LIST,MUSCLE_LABELS],["profileEditInjuries","injuries",ALL_INJURIES,INJURY_LABELS],["profileEditZones","zones",ALL_ZONES,ZONE_LABELS]];
+  const groups = [["profileEditMuscles","muscles",MUSCLE_LIST,MUSCLE_LABELS],["profileEditInjuries","injuries",COMMON_LIMITATIONS,INJURY_LABELS],["profileEditZones","zones",ALL_ZONES,ZONE_LABELS]];
   groups.forEach(([id,key,items,labels]) => { const container = byId(id); if (!container) return; container.innerHTML = items.map((value) => '<button type="button" class="profile-editor-choice' + (profileEditorDraft[key].includes(value) ? ' on' : '') + '" aria-pressed="' + profileEditorDraft[key].includes(value) + '" onclick="toggleProfileEditorChoice(\'' + key + '\',\'' + value + '\')">' + escapeHtml(labels[value] || value) + '</button>').join(""); });
   const cardio = byId("profileEditCardioChips"); if (cardio) cardio.innerHTML = multiChoiceButtonsHtml(cardioChoiceEntries(),profileEditorDraft.cardioModes || ["any"],"toggleProfileEditorCardio");
   const days = byId("profileEditTrainingDays"); if (days) days.innerHTML = multiChoiceButtonsHtml(TRAINING_WEEKDAYS.map(([value,label]) => [String(value),label]),(profileEditorDraft.trainingDays || []).map(String),"toggleProfileEditorTrainingDay");
