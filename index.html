@@ -840,6 +840,11 @@
   .template-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.template-tags span{border:1px solid var(--line);border-radius:99px;padding:3px 6px;font:600 7.5px var(--mono);color:var(--text-faint)}
   .risk-low{color:#79efbb!important}.risk-mid{color:var(--warn)!important}.risk-high{color:var(--danger)!important}
   .checkin-panel{max-width:780px;margin:0 auto}.checkin-identity{margin-bottom:12px}.checkin-form{display:none}.checkin-form.show{display:block}
+  .checkin-field-hidden{display:none!important}.recovery-pulse-fields{display:none;grid-column:1/-1}.recovery-pulse-fields.show{display:grid}
+  .recovery-pulse-intro{grid-column:1/-1;border-left:3px solid var(--blue);border-radius:0 8px 8px 0;background:var(--blue-glow);padding:10px 12px;color:var(--text-dim);font-size:10.5px;line-height:1.5}
+  .recovery-reminder{border-color:rgba(90,166,240,.55);background:radial-gradient(circle at 100% 0,rgba(63,143,255,.2),transparent 42%),linear-gradient(150deg,var(--slate-1),var(--slate-0))}
+  .recovery-reminder.overdue{border-color:var(--warn-line);background:radial-gradient(circle at 100% 0,rgba(255,190,92,.14),transparent 42%),linear-gradient(150deg,var(--slate-1),var(--slate-0))}
+  .client-bottom-nav button{position:relative}.client-nav-badge{display:none;position:absolute;right:13px;top:7px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:#ef5c62;color:#fff;place-items:center;font:800 8px var(--mono);box-shadow:0 0 0 3px rgba(239,92,98,.13)}.client-nav-badge.show{display:grid}
   .starter-review-fields{display:none;grid-column:1/-1;padding:12px;border:1px solid rgba(63,143,255,.34);border-radius:10px;background:var(--blue-glow)}
   .starter-review-fields.show{display:grid}.starter-review-fields>p{grid-column:1/-1;margin:0 0 10px;font-size:11px;color:var(--text-dim);line-height:1.5}
   .brand-preview{border:1px solid var(--line);border-radius:9px;padding:15px;background:linear-gradient(145deg,var(--brand-primary,var(--blue)),var(--slate-0));margin-top:10px}.brand-preview h4{font-family:var(--display);font-style:italic;font-size:28px;text-transform:uppercase}.brand-preview p{font-size:10px;color:rgba(255,255,255,.75)}
@@ -1544,7 +1549,7 @@
 
   <!-- CLIENT WEEKLY CHECK-IN -->
   <section class="view" id="view-checkin">
-    <div class="builder-head"><span class="portal-question">How is training going?</span><h2>Weekly Check-in</h2><p>Share the information your trainer needs to adjust the plan. Your answers stay connected only to the profile you look up on this device.</p></div>
+    <div class="builder-head"><span class="portal-question" id="checkInPageQuestion">How is training going?</span><h2 id="checkInPageTitle">Weekly Check-in</h2><p id="checkInPageCopy">Share the information your trainer needs to adjust the plan. Your answers stay connected only to the profile you look up on this device.</p></div>
     <div class="checkin-panel">
       <div class="panel checkin-identity">
         <div class="compact-field profile-lookup"><label for="checkInLookup">Name or username</label><input id="checkInLookup" type="search" autocomplete="off" placeholder="Find your profile" oninput="renderCheckInLookup()"><input id="checkInProfileId" type="hidden"><div id="checkInLookupResults" class="profile-results"></div></div>
@@ -1553,28 +1558,36 @@
       <div class="panel checkin-form" id="checkInForm">
         <div class="utility-head"><div><h3 class="utility-title" id="checkInClientTitle">Weekly check-in</h3><p class="utility-sub" id="checkInFormIntro">Use the last seven days. There are no perfect answers—accuracy helps the trainer.</p></div><span class="wave-badge">Client</span></div>
         <div class="compact-grid">
-          <div class="compact-field"><label for="checkInAdherence">Planned workouts completed</label><select id="checkInAdherence"><option value="100">All</option><option value="75">Most</option><option value="50">About half</option><option value="25">One or very few</option><option value="0">None</option></select></div>
-          <div class="compact-field"><label for="checkInSleep">Sleep quality</label><select id="checkInSleep"><option value="1">1 · Very poor</option><option value="2">2 · Poor</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · Excellent</option></select></div>
-          <div class="compact-field"><label for="checkInStress">Life stress</label><select id="checkInStress"><option value="1">1 · Low</option><option value="2">2 · Light</option><option value="3" selected>3 · Moderate</option><option value="4">4 · High</option><option value="5">5 · Extreme</option></select></div>
-          <div class="compact-field"><label for="checkInSoreness">Soreness</label><select id="checkInSoreness"><option value="1">1 · None</option><option value="2">2 · Mild</option><option value="3" selected>3 · Moderate</option><option value="4">4 · High</option><option value="5">5 · Severe</option></select></div>
-          <div class="compact-field"><label for="checkInEnergy">Energy</label><select id="checkInEnergy"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · High</option></select></div>
-          <div class="compact-field"><label for="checkInConfidence">Training confidence</label><select id="checkInConfidence"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Steady</option><option value="4">4 · Confident</option><option value="5">5 · Very confident</option></select></div>
-          <div class="compact-field"><label for="checkInMotivation">Motivation</label><select id="checkInMotivation"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Average</option><option value="4">4 · Strong</option><option value="5">5 · Very strong</option></select></div>
-          <div class="compact-field"><label for="checkInPain">Pain this week</label><select id="checkInPain" onchange="updateCheckInPainFields()"><option value="0">Green · No pain</option><option value="1">Yellow · Mild awareness; movement normal</option><option value="2">Orange · Changed technique, range, or training</option><option value="3">Red · Severe, sharp, worsening, or stopped training</option></select></div>
+          <div class="recovery-pulse-fields compact-grid" id="checkInRecoveryFields">
+            <p class="recovery-pulse-intro">Four quick taps about how your body responded after the workout. This is separate from your weekly check-in.</p>
+            <div class="compact-field"><label for="checkInRecovery">How recovered do you feel?</label><select id="checkInRecovery"><option value="5">Ready and recovered</option><option value="4" selected>Mostly recovered</option><option value="3">Some fatigue remains</option><option value="2">Poorly recovered</option><option value="1">Not recovered</option></select></div>
+            <div class="compact-field"><label for="checkInRecoverySoreness">Muscle soreness today</label><select id="checkInRecoverySoreness"><option value="1">None</option><option value="2" selected>Light · normal activity is easy</option><option value="3">Moderate · noticeable but manageable</option><option value="4">High · changes normal activity</option><option value="5">Severe · normal activity is difficult</option></select></div>
+            <div class="compact-field"><label for="checkInNextReadiness">Ready for the next planned session?</label><select id="checkInNextReadiness"><option value="yes" selected>Yes</option><option value="adjust">Yes, with a small adjustment</option><option value="unsure">Not sure</option><option value="no">No</option></select></div>
+            <div class="compact-field"><label for="checkInPainTrend">If you reported discomfort after training</label><select id="checkInPainTrend"><option value="none" selected>No discomfort was reported</option><option value="resolved">It resolved</option><option value="improving">It is improving</option><option value="same">It is about the same</option><option value="worse">It is worse</option></select></div>
+            <div class="compact-field wide"><label for="checkInRecoveryNote">Anything your trainer should know? <span style="text-transform:none;letter-spacing:0">(optional)</span></label><textarea id="checkInRecoveryNote" placeholder="A short note or question is enough."></textarea></div>
+          </div>
+          <div class="compact-field weekly-checkin-field"><label for="checkInAdherence">Planned workouts completed</label><select id="checkInAdherence"><option value="100">All</option><option value="75">Most</option><option value="50">About half</option><option value="25">One or very few</option><option value="0">None</option></select></div>
+          <div class="compact-field weekly-checkin-field"><label for="checkInSleep">Sleep quality</label><select id="checkInSleep"><option value="1">1 · Very poor</option><option value="2">2 · Poor</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · Excellent</option></select></div>
+          <div class="compact-field weekly-checkin-field"><label for="checkInStress">Life stress</label><select id="checkInStress"><option value="1">1 · Low</option><option value="2">2 · Light</option><option value="3" selected>3 · Moderate</option><option value="4">4 · High</option><option value="5">5 · Extreme</option></select></div>
+          <div class="compact-field weekly-checkin-field"><label for="checkInSoreness">Soreness</label><select id="checkInSoreness"><option value="1">1 · None</option><option value="2">2 · Mild</option><option value="3" selected>3 · Moderate</option><option value="4">4 · High</option><option value="5">5 · Severe</option></select></div>
+          <div class="compact-field weekly-checkin-field"><label for="checkInEnergy">Energy</label><select id="checkInEnergy"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · High</option></select></div>
+          <div class="compact-field weekly-checkin-field"><label for="checkInConfidence">Training confidence</label><select id="checkInConfidence"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Steady</option><option value="4">4 · Confident</option><option value="5">5 · Very confident</option></select></div>
+          <div class="compact-field weekly-checkin-field"><label for="checkInMotivation">Motivation</label><select id="checkInMotivation"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Average</option><option value="4">4 · Strong</option><option value="5">5 · Very strong</option></select></div>
+          <div class="compact-field"><label for="checkInPain" id="checkInPainLabel">Pain this week</label><select id="checkInPain" onchange="updateCheckInPainFields()"><option value="0">Green · No pain</option><option value="1">Yellow · Mild awareness; movement normal</option><option value="2">Orange · Changed technique, range, or training</option><option value="3">Red · Severe, sharp, worsening, or stopped training</option></select></div>
           <div class="compact-field review-safety" id="checkInPainAreaField" hidden><label for="checkInPainArea">Where?</label><select id="checkInPainArea"></select></div>
           <div class="compact-field review-safety" id="checkInPainMovementField" hidden><label for="checkInPainMovement">Did it change movement?</label><select id="checkInPainMovement" onchange="syncCheckInPainLevel()"><option value="no">No</option><option value="yes">Yes — technique, range, balance, or training changed</option></select></div>
-          <div class="starter-review-fields compact-grid" id="checkInStarterFields">
+          <div class="starter-review-fields compact-grid weekly-checkin-field" id="checkInStarterFields">
             <p>This first-week review checks whether the starter plan is understandable, appropriately difficult, and realistic for your schedule before Week 2 repeats it.</p>
             <div class="compact-field"><label for="checkInWorkoutFit">Workout difficulty fit</label><select id="checkInWorkoutFit"><option value="too_easy">Too easy</option><option value="right" selected>About right</option><option value="too_hard">Too hard</option></select></div>
             <div class="compact-field"><label for="checkInExerciseClarity">Exercise clarity</label><select id="checkInExerciseClarity"><option value="clear" selected>Clear and comfortable</option><option value="mostly_clear">Mostly clear</option><option value="need_help">I need coaching help</option></select></div>
             <div class="compact-field"><label for="checkInSessionFit">Session length fit</label><select id="checkInSessionFit"><option value="too_short">Too short</option><option value="right" selected>Fit my schedule</option><option value="too_long">Too long</option></select></div>
           </div>
-          <div class="compact-field wide"><label for="checkInWin">Biggest win</label><textarea id="checkInWin" placeholder="What went well?"></textarea></div>
-          <div class="compact-field wide"><label for="checkInChallenge">Biggest barrier or challenge</label><textarea id="checkInChallenge" placeholder="What made the plan harder to follow?"></textarea></div>
-          <div class="compact-field wide"><label for="checkInSchedule">Schedule changes next week</label><textarea id="checkInSchedule" placeholder="Travel, exams, work shifts, games, or limited gym access…"></textarea></div>
-          <div class="compact-field wide"><label for="checkInQuestion">Question for your trainer</label><textarea id="checkInQuestion" placeholder="What do you need help with?"></textarea></div>
+          <div class="compact-field wide weekly-checkin-field"><label for="checkInWin">Biggest win</label><textarea id="checkInWin" placeholder="What went well?"></textarea></div>
+          <div class="compact-field wide weekly-checkin-field"><label for="checkInChallenge">Biggest barrier or challenge</label><textarea id="checkInChallenge" placeholder="What made the plan harder to follow?"></textarea></div>
+          <div class="compact-field wide weekly-checkin-field"><label for="checkInSchedule">Schedule changes next week</label><textarea id="checkInSchedule" placeholder="Travel, exams, work shifts, games, or limited gym access…"></textarea></div>
+          <div class="compact-field wide weekly-checkin-field"><label for="checkInQuestion">Question for your trainer</label><textarea id="checkInQuestion" placeholder="What do you need help with?"></textarea></div>
         </div>
-        <div class="tool-actions"><button class="small-btn primary" onclick="saveClientCheckIn()">Send weekly check-in</button></div>
+        <div class="tool-actions"><button class="small-btn primary" id="checkInSubmitBtn" onclick="saveClientCheckIn()">Send weekly check-in</button></div>
         <div id="checkInConfirmation" class="advanced-output" style="display:none"></div>
       </div>
     </div>
@@ -1597,7 +1610,7 @@
 </main>
 
 <nav class="client-bottom-nav" id="clientBottomNav" aria-label="Client navigation">
-  <button data-client-tab="home" onclick="openClientTab('home')"><span class="nav-icon">⌂</span>Home</button>
+  <button data-client-tab="home" onclick="openClientTab('home')"><span class="nav-icon">⌂</span>Home<span class="client-nav-badge" data-client-recovery-badge>1</span></button>
   <button data-client-tab="program" onclick="openClientTab('program')"><span class="nav-icon">▶</span>Workout</button>
   <button data-client-tab="progress" onclick="openClientTab('progress')"><span class="nav-icon">↗</span>Progress</button>
   <button data-client-tab="coach" onclick="openClientTab('coach')"><span class="nav-icon">●</span>Coach</button>
@@ -4841,6 +4854,50 @@ function starterReviewStatus(profile) {
   const weekComplete = Boolean(firstWeek && firstWeek.days && firstWeek.days.length && firstWeekAssignments.length >= firstWeek.days.length && firstWeekAssignments.every((item) => ["completed","reviewed"].includes(assignmentStatus(item))));
   return { active:true,program,programId:program.id || "",completed,dueAt,due:!completed && (weekComplete || Date.now() >= dueAt.getTime()) };
 }
+function recoveryFollowUpsForProfile(profileId) {
+  return checkInsForProfile(profileId).filter((item) => item.reviewType === "recovery_24_48");
+}
+function weeklyCheckInsForProfile(profileId) {
+  return checkInsForProfile(profileId).filter((item) => item.reviewType !== "recovery_24_48");
+}
+function recoveryFollowUpRequired(profile,assignment,completedAssignments) {
+  if (!profile || !assignment || !assignment.completedAt) return false;
+  const review = assignment.clientReview || {}, completedTime = new Date(assignment.completedAt).getTime();
+  const earlier = (completedAssignments || []).filter((item) => new Date(item.completedAt || 0).getTime() < completedTime);
+  if (earlier.length < 3) return true;
+  if (painLevelInfo(review.painLevel || review.pain,review.movementChanged).rank > PAIN_LEVELS.green.rank) return true;
+  if (Number(review.difficulty) >= 9 || Number(review.energy) <= 2 || review.completion === "stopped") return true;
+  const completedDate = new Date(completedTime), day = completedDate.getDay() || 7, weekStart = new Date(completedDate); weekStart.setHours(0,0,0,0); weekStart.setDate(weekStart.getDate() - day + 1);
+  const weekEnd = new Date(weekStart.getTime() + 7 * 86400000);
+  return !earlier.some((item) => { const time = new Date(item.completedAt || 0).getTime(); return time >= weekStart.getTime() && time < weekEnd.getTime(); });
+}
+function recoveryFollowUpStatus(profile) {
+  if (!profile) return {active:false};
+  const completed = assignmentsForClient(profile.id).filter((item) => ["completed","reviewed"].includes(assignmentStatus(item)) && item.completedAt).sort((a,b) => String(b.completedAt).localeCompare(String(a.completedAt)));
+  const submitted = recoveryFollowUpsForProfile(profile.id), now = Date.now(), candidates = [];
+  for (const assignment of completed) {
+    if (submitted.some((item) => item.assignmentId === assignment.id)) continue;
+    if (!recoveryFollowUpRequired(profile,assignment,completed)) continue;
+    const completedAt = new Date(assignment.completedAt), age = now - completedAt.getTime();
+    if (!Number.isFinite(age) || age < 0 || age > 7 * 86400000) continue;
+    const dueAt = new Date(completedAt.getTime() + 24 * 60 * 60 * 1000), targetEnd = new Date(completedAt.getTime() + 48 * 60 * 60 * 1000);
+    candidates.push({active:true,assignment,completedAt,dueAt,targetEnd,due:now >= dueAt.getTime(),overdue:now > targetEnd.getTime()});
+  }
+  return candidates.sort((a,b) => Number(b.overdue) - Number(a.overdue) || Number(b.due) - Number(a.due) || b.completedAt - a.completedAt)[0] || {active:false,latest:submitted[0] || null};
+}
+function updateClientRecoveryReminder(profile) {
+  const status = recoveryFollowUpStatus(profile);
+  document.querySelectorAll("[data-client-recovery-badge]").forEach((badge) => badge.classList.toggle("show",Boolean(status.active && status.due)));
+  if (currentView !== "client-home" || !status.active || !status.due) return status;
+  const reminderKey = "fit4life-recovery-reminder:" + status.assignment.id + ":" + new Date().toISOString().slice(0,10);
+  try {
+    if (!sessionStorage.getItem(reminderKey)) {
+      sessionStorage.setItem(reminderKey,"shown");
+      setTimeout(() => showToast(status.overdue ? "Your quick recovery pulse is overdue — it takes less than a minute" : "Your 24–48 hour recovery pulse is ready"),40);
+    }
+  } catch (_) {}
+  return status;
+}
 function renderClientAppView(view) {
   const profile = activeClientProfile(); if (!profile) { openClientWorkout(); return; }
   document.querySelectorAll(".client-avatar-shared").forEach((avatar) => avatar.textContent = clientInitials(profile));
@@ -4849,6 +4906,7 @@ function renderClientAppView(view) {
   else if (view === "client-progress") renderClientProgress(profile);
   else if (view === "client-coach") renderClientCoach(profile);
   else if (view === "client-more") renderClientMore(profile);
+  updateClientRecoveryReminder(profile);
 }
 function renderClientHome(profile) {
   const out = byId("clientHomeContent"); if (!out) return;
@@ -4857,7 +4915,10 @@ function renderClientHome(profile) {
     ? '<section class="client-card wide"><div class="client-section-label">Getting started · ' + intakeStatus.percent + '% complete</div><div class="client-action-row"><span><b>' + (intakeStatus.programmingBlocked ? 'Trainer safety review needed' : intakeStatus.status === 'trainer_review' ? 'Submitted · waiting for trainer review' : 'Finish your coaching intake') + '</b><span>' + (intakeStatus.programmingBlocked ? 'Your answers are saved. Your trainer must review the health or limitation response before difficult programming.' : intakeStatus.status === 'trainer_review' ? 'All client sections are saved. Your trainer will confirm the baseline plan and any modifications.' : 'Complete identity, goals, schedule, equipment, health, recovery, coaching fit, emergency contact, and consent. Save and return at any time.') + '</span></span><button class="small-btn primary" onclick="openClientOnboarding()">' + (intakeStatus.percent ? 'Continue intake' : 'Start intake') + '</button></div></section>'
     : '<section class="client-card wide"><div class="client-section-label">Onboarding</div><div class="client-action-row"><span><b>Coaching intake complete</b><span>Your goals, schedule, training context, and safety information are saved. Update them whenever something changes.</span></span><button class="small-btn" onclick="openClientOnboarding()">Review intake</button></div></section>';
   const daily = clientDailyState(profile).value, completedHabits = [daily.movement,daily.hydration,daily.nutrition].filter(Boolean).length;
-  const checkins = checkInsForProfile(profile.id), lastCheckIn = checkins[0], nextCheck = lastCheckIn ? new Date(new Date(lastCheckIn.createdAt || lastCheckIn.date).getTime() + 7 * 86400000) : new Date();
+  const checkins = weeklyCheckInsForProfile(profile.id), lastCheckIn = checkins[0], nextCheck = lastCheckIn ? new Date(new Date(lastCheckIn.createdAt || lastCheckIn.date).getTime() + 7 * 86400000) : new Date();
+  const recoveryStatus = recoveryFollowUpStatus(profile), recoveryCard = recoveryStatus.active && recoveryStatus.due
+    ? '<section class="client-card wide recovery-reminder ' + (recoveryStatus.overdue ? 'overdue' : '') + '"><div class="client-section-label">' + (recoveryStatus.overdue ? 'Recovery pulse · overdue' : '24–48 hour recovery pulse') + '</div><div class="client-action-row"><span><b>How did your body respond?</b><span>Four quick taps. Your answer goes directly to ' + escapeHtml(profile.assignedTrainerName || 'your coaching team') + ' for review.</span></span><button class="small-btn primary" onclick="openClientRecoveryFollowUp(\'' + escapeHtml(recoveryStatus.assignment.id) + '\')">Check in now</button></div></section>'
+    : '';
   const starterReview = starterReviewStatus(profile);
   const checkInCard = starterReview.active && !starterReview.completed
     ? '<section class="client-card wide"><div class="client-section-label">Starter program · Week 1 review</div><div class="client-action-row"><span><b>' + (starterReview.due ? 'Your first-week review is ready' : 'First-week review · ' + starterReview.dueAt.toLocaleDateString()) + '</b><span>' + (starterReview.due ? 'Tell your coach whether the workouts, exercise instructions, difficulty, and session length fit before Week 2.' : 'Keep learning the two repeatable workouts. This review will help your coach tune Week 2 without changing everything at once.') + '</span></span><button class="small-btn primary" ' + (starterReview.due ? '' : 'disabled') + ' onclick="openClientCheckInForActive(\'starter_week_1\')">Open Week 1 review</button></div></section>'
@@ -4871,13 +4932,14 @@ function renderClientHome(profile) {
     + '<section class="client-card"><div class="client-section-label">Coach message</div><h3>' + (assignment && assignment.coachNote ? 'Update from your coach' : 'No new message') + '</h3><p>' + escapeHtml(assignment && assignment.coachNote || 'Important program changes and workout feedback will appear here instead of getting buried in chat.') + '</p><div class="tool-actions"><button class="small-btn" onclick="openClientTab(\'coach\')">Open coach</button></div></section>'
     + '<section class="client-card"><div class="client-section-label">Today’s habits · ' + completedHabits + '/3</div>' + [["movement","Daily movement",daily.movement],["hydration","Hydration target",daily.hydration],["nutrition","Nutrition plan",daily.nutrition]].map((habit) => '<label class="client-action-row"><span><b>' + habit[1] + '</b><span>Tap when complete</span></span><input class="habit-check" type="checkbox" ' + (habit[2] ? 'checked' : '') + ' onchange="toggleClientHabit(\'' + habit[0] + '\',this.checked)"></label>').join('') + '</section>'
     + '<section class="client-card"><div class="client-section-label">Nutrition summary</div><h3>' + (daily.nutrition ? 'Plan completed today' : 'No nutrition check yet') + '</h3><p>Nutrition remains optional. Your coach can add a simple target without crowding the workout screen.</p><div class="tool-actions"><button class="small-btn" onclick="openClientMoreSection(\'nutrition\')">View nutrition</button></div></section>'
-    + intakeCard + completionSummary + checkInCard + competition;
+    + recoveryCard + intakeCard + completionSummary + checkInCard + competition;
 }
 function openClientReadiness() {
   const profile = activeClientProfile(); openReadiness(); if (!profile) return;
   const lookup = byId("readyClient"), hidden = byId("readyProfile"); if (lookup) lookup.value = profile.name + " · @" + profileUsername(profile); if (hidden) hidden.value = profile.id;
 }
 function openClientCheckInForActive(reviewType) { const profile = activeClientProfile(); openClientCheckIn(reviewType); if (profile) selectCheckInProfile(profile.id); }
+function openClientRecoveryFollowUp(assignmentId) { const profile = activeClientProfile(); openClientCheckIn("recovery_24_48",assignmentId); if (profile) selectCheckInProfile(profile.id); }
 function clientProgramSource(profile) {
   const saved = savedProgramFor(profile); if (saved && saved.weeks && saved.weeks.length) return saved;
   const assignment = assignmentForClient(profile.id), session = clientAssignedSession(assignment,profile); if (!session) return null;
@@ -4972,6 +5034,7 @@ function trainerAttentionSnapshot() {
   });
   const assignmentReviews = assignments.filter((assignment) => assignmentStatus(assignment) === "completed");
   const checkinReviews = checkins.filter((checkin) => !checkin.reviewedAt);
+  const recoveryOverdue = profiles.map((profile) => ({profile,status:recoveryFollowUpStatus(profile)})).filter((item) => item.status.active && item.status.overdue);
   const formalReviews = profiles.filter((profile) => formalReviewStatus(profile).due);
   const recognition = profiles.filter((profile) => {
     const recent = progress.filter((entry) => progressEntryBelongsToClient(entry,profile) && ["set","workout"].includes(entry.type) && now - new Date(entry.date || 0).getTime() <= 7 * 86400000).sort((a,b) => String(b.date).localeCompare(String(a.date)))[0];
@@ -5009,6 +5072,9 @@ function trainerAttentionSnapshot() {
     const readinessScore = latestReady ? parseInt(latestReady.value,10) : null;
     if (Number.isFinite(readinessScore) && readinessScore < 50 && now - new Date(latestReady.date).getTime() <= 7 * 86400000) push({id:"readiness:" + latestReady.id,profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"readiness",urgency:"high",rank:1,createdAt:latestReady.date,label:"Low readiness",detail:"Readiness " + readinessScore + "/100 · review volume, exercise complexity, and pain before training."});
 
+    const recoveryDue = recoveryFollowUpStatus(profile);
+    if (recoveryDue.active && recoveryDue.overdue) push({id:"recovery-overdue:" + recoveryDue.assignment.id,profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"recovery_due",urgency:"high",rank:2,createdAt:recoveryDue.targetEnd.toISOString(),label:"Recovery pulse overdue",detail:"The short 24–48 hour follow-up has not been completed. Send a reminder if this workout needs closer recovery or pain follow-up."});
+
     const activity = progress.filter((entry) => progressEntryBelongsToClient(entry,profile)).sort((a,b) => String(b.date).localeCompare(String(a.date)))[0];
     const profileAge = now - new Date(profile.updatedAt || profile.createdAt || now).getTime();
     if ((activity && now - new Date(activity.date).getTime() > 21 * 86400000) || (!activity && profileAge > 21 * 86400000)) push({id:"inactive:" + profile.id + ":" + String(activity && activity.id || "none"),profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"inactive",rank:6,createdAt:activity && activity.date || profile.updatedAt,label:"Follow-up due",detail:activity ? "No recorded activity for more than 21 days." : "No workout activity has been recorded for this client."});
@@ -5023,8 +5089,12 @@ function trainerAttentionSnapshot() {
   });
   checkinReviews.forEach((checkin) => {
     const profile = profiles.find((item) => item.id === checkin.profileId) || profiles.find((item) => clientMatches(item.name,checkin.client));
-    const painHold = painRequiresSafetyHold(checkin.painLevel || checkin.pain,checkin.movementChanged);
-    push({id:"checkin:" + checkin.id,profileId:profile && profile.id || checkin.profileId,client:checkin.client,trainer:profile && profile.assignedTrainerName || "Coaching team",kind:"checkin",urgency:painHold ? "urgent" : checkin.question || Number(checkin.pain) > 0 ? "high" : "normal",rank:painHold ? 0 : checkin.question || Number(checkin.pain) > 0 ? 1 : 3,createdAt:checkin.createdAt || checkin.date,label:checkin.reviewType === "starter_week_1" ? "First-week review ready" : "Weekly check-in ready",detail:checkin.question ? "Client question: " + checkin.question : painHold ? "Pain changed movement or stopped training. Review the affected area before the next workout." : Number(checkin.pain) > 0 ? "Mild discomfort reported with movement still normal. Monitor and reply before progression." : "Review adherence, recovery, wins, barriers, and next-week schedule."});
+    const painHold = painRequiresSafetyHold(checkin.painLevel || checkin.pain,checkin.movementChanged), recovery = checkin.reviewType === "recovery_24_48";
+    const recoveryConcern = recovery && (Number(checkin.recovery) <= 2 || Number(checkin.soreness) >= 4 || ["unsure","no"].includes(checkin.nextSessionReadiness) || ["same","worse"].includes(checkin.painTrend));
+    const urgent = painHold || recovery && (checkin.painTrend === "worse" || checkin.nextSessionReadiness === "no");
+    const high = Boolean(checkin.question || Number(checkin.pain) > 0 || recoveryConcern);
+    const recoveryDetail = painHold ? "Pain changed movement or stopped training. Review the affected area before the next workout." : checkin.painTrend === "worse" ? "Discomfort is worse after the workout. Review before the next similar movement." : checkin.nextSessionReadiness === "no" ? "Client does not feel ready for the next planned session." : Number(checkin.soreness) >= 4 ? "Soreness is affecting normal activity; review volume and recovery before the next similar session." : Number(checkin.recovery) <= 2 ? "Client reports poor recovery after the workout." : checkin.note ? "Client note: " + checkin.note : "Recovery looks on track. Review and acknowledge the client’s follow-through.";
+    push({id:"checkin:" + checkin.id,profileId:profile && profile.id || checkin.profileId,client:checkin.client,trainer:profile && profile.assignedTrainerName || "Coaching team",kind:recovery ? "recovery" : "checkin",urgency:urgent ? "urgent" : high ? "high" : "normal",rank:urgent ? 0 : high ? 1 : 3,createdAt:checkin.createdAt || checkin.date,label:recovery ? "24–48h recovery pulse ready" : checkin.reviewType === "starter_week_1" ? "First-week review ready" : "Weekly check-in ready",detail:recovery ? recoveryDetail : checkin.question ? "Client question: " + checkin.question : painHold ? "Pain changed movement or stopped training. Review the affected area before the next workout." : Number(checkin.pain) > 0 ? "Mild discomfort reported with movement still normal. Monitor and reply before progression." : "Review adherence, recovery, wins, barriers, and next-week schedule."});
   });
   formalReviews.forEach((profile) => push({id:"formal:" + profile.id + ":" + String(formalReviewStatus(profile).dueAt || ""),profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"formal",urgency:"high",rank:2,createdAt:formalReviewStatus(profile).dueAt || profile.phaseStartedAt,label:"Four-week review due",detail:"Review progress, safety, adherence, and whether the phase should continue, change, or rebuild."}));
   recognition.forEach((profile) => {
@@ -5038,7 +5108,7 @@ function trainerAttentionSnapshot() {
   });
   trainerRequests.forEach((request) => push({id:"trainer-request:" + request.id,profileId:"",client:request.full_name || request.email || "Trainer request",trainer:"Staff confirmation",kind:"trainer_request",urgency:"normal",rank:3,createdAt:request.created_at,label:"Trainer access request",detail:"Confirm only a verified request from a person who should access this gym’s client records. The approver is recorded."}));
   const attentionState = loadAttentionState(), visibleItems = items.filter((item) => attentionItemIsVisible(item,attentionState)).sort((a,b) => Number(a.rank || 9) - Number(b.rank || 9) || new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
-  return {unanswered,assignmentReviews,checkinReviews,formalReviews,recognition,trainerRequests,automationAlerts,reviews:assignmentReviews.length + checkinReviews.length + formalReviews.length,items:visibleItems};
+  return {unanswered,assignmentReviews,checkinReviews,recoveryOverdue,formalReviews,recognition,trainerRequests,automationAlerts,reviews:assignmentReviews.length + checkinReviews.length + formalReviews.length,items:visibleItems};
 }
 function openCoachAttentionItem(profileId,kind) {
   if (kind === "trainer_request") { openCoachDestination("access"); return; }
@@ -5047,8 +5117,8 @@ function openCoachAttentionItem(profileId,kind) {
   selectedTrainerClient = profile.name;
   selectedInBodyScanId = "";
   trainerSummaryState = newTrainerSummaryState();
-  trainerSummaryState.tab = kind === "message" || kind === "recognition" || kind === "inactive" ? "messages"
-    : kind === "checkin" ? "checkins"
+  trainerSummaryState.tab = kind === "message" || kind === "recognition" || kind === "inactive" || kind === "recovery_due" ? "messages"
+    : ["checkin","recovery"].includes(kind) ? "checkins"
       : kind === "automation" ? "coaching"
       : kind === "program" || kind === "formal" ? "program"
         : kind === "pain" || kind === "readiness" || kind === "intake" ? "assessments" : "overview";
@@ -5077,7 +5147,7 @@ function renderTrainerAttention() {
   if (!panel) return attention;
   panel.innerHTML =
     '<button class="attention-card ' + (attention.unanswered.length ? 'urgent' : '') + '" onclick="openCoachDestination(\'messages\')"><span>Unanswered messages</span><b>' + attention.unanswered.length + '</b><p>' + (attention.unanswered.length ? 'Clients are waiting for a trainer reply.' : 'No client is waiting on a reply.') + '</p></button>' +
-    '<button class="attention-card ' + (attention.reviews ? 'urgent' : '') + '" onclick="openCoachDestination(\'calendar\')"><span>Reviews waiting</span><b>' + attention.reviews + '</b><p>' + attention.assignmentReviews.length + ' workout · ' + attention.checkinReviews.length + ' check-in · ' + attention.formalReviews.length + ' program</p></button>' +
+    '<button class="attention-card ' + (attention.reviews ? 'urgent' : '') + '" onclick="openCoachDestination(\'calendar\')"><span>Reviews waiting</span><b>' + attention.reviews + '</b><p>' + attention.assignmentReviews.length + ' workout · ' + attention.checkinReviews.length + ' check-in · ' + attention.formalReviews.length + ' program' + (attention.recoveryOverdue.length ? ' · ' + attention.recoveryOverdue.length + ' recovery overdue' : '') + '</p></button>' +
     '<button class="attention-card positive" onclick="openCoachDestination(\'messages\')"><span>Recognition due</span><b>' + attention.recognition.length + '</b><p>Recent effort with no coach acknowledgement yet.</p></button>' +
     '<button class="attention-card" onclick="openCoachDestination(\'access\')"><span>Trainer requests</span><b>' + attention.trainerRequests.length + '</b><p>Approved trainers can confirm verified pending requests; owners control manual grants and removal.</p></button>' +
     '<section class="attention-command"><div class="attention-command-head"><div><h3>Who needs me next?</h3><p>Safety and unanswered communication come first, then required reviews, expiring plans, recognition, and inactive-client follow-up.</p></div><span class="attention-command-count">' + attention.items.length + '</span></div><div class="attention-queue">' +
@@ -5092,8 +5162,9 @@ function sendClientMessage() {
   writeLocalArray(CLIENT_MESSAGES_KEY,messages,1000); input.value = ''; renderClientCoach(profile); renderTrainerAttention(); showToast('Message sent to ' + (profile.assignedTrainerName || 'your coaching team'));
 }
 function renderClientCoach(profile) {
-  const out = byId('clientCoachContent'); if (!out) return; const assignment = assignmentForClient(profile.id), messages = loadClientMessages(profile.id), checkins = checkInsForProfile(profile.id), pain = loadProgress().filter((entry) => (entry.profileId === profile.id || clientMatches(entry.client,profile.name)) && (entry.type === 'pain' || entry.type === 'substitution' && entry.data && entry.data.reason === 'discomfort'));
+  const out = byId('clientCoachContent'); if (!out) return; const assignment = assignmentForClient(profile.id), messages = loadClientMessages(profile.id), checkins = weeklyCheckInsForProfile(profile.id), recoveryFollowUps = recoveryFollowUpsForProfile(profile.id), recoveryStatus = recoveryFollowUpStatus(profile), pain = loadProgress().filter((entry) => (entry.profileId === profile.id || clientMatches(entry.client,profile.name)) && (entry.type === 'pain' || entry.type === 'substitution' && entry.data && entry.data.reason === 'discomfort'));
   out.innerHTML = '<div class="client-grid"><section class="client-card wide"><div class="client-section-label">Direct messages · ' + escapeHtml(profile.assignedTrainerName || 'Coaching team') + '</div>' + messageThreadHtml(messages,profile,'client') + '<div class="message-compose"><div class="compact-field"><label for="clientMessageInput">Message ' + escapeHtml(profile.assignedTrainerName || 'your coaching team') + '</label><input id="clientMessageInput" placeholder="Ask one clear question" onkeydown="if(event.key===\'Enter\')sendClientMessage()"></div><button class="small-btn primary" onclick="sendClientMessage()">Send message</button></div></section>'
+    + '<section class="client-card ' + (recoveryStatus.active && recoveryStatus.due ? 'recovery-reminder' : '') + '"><div class="client-section-label">24–48h recovery</div><h3>' + (recoveryStatus.active && recoveryStatus.due ? 'Quick pulse ready' : recoveryFollowUps.length ? 'Latest pulse sent' : 'No pulse due') + '</h3><p>' + (recoveryStatus.active && recoveryStatus.due ? 'Tell your trainer how you recovered in less than a minute.' : recoveryFollowUps.length ? 'Your trainer received the latest recovery update.' : 'A recovery pulse appears after early sessions and when a workout needs closer follow-up.') + '</p>' + (recoveryStatus.active && recoveryStatus.due ? '<div class="tool-actions"><button class="small-btn primary" onclick="openClientRecoveryFollowUp(\'' + escapeHtml(recoveryStatus.assignment.id) + '\')">Open recovery pulse</button></div>' : '') + '</section>'
     + '<section class="client-card"><div class="client-section-label">Weekly check-ins</div><h3>' + checkins.length + ' submitted</h3><p>Recovery, adherence, wins, barriers, and next-week schedule.</p><div class="tool-actions"><button class="small-btn" onclick="openClientCheckInForActive()">Open check-in</button></div></section>'
     + '<section class="client-card"><div class="client-section-label">Coach feedback</div><h3>' + (assignment && assignment.coachNote ? 'New feedback' : 'No new feedback') + '</h3><p>' + escapeHtml(assignment && assignment.coachNote || 'Post-workout coaching decisions will appear here.') + '</p></section>'
     + '<section class="client-card"><div class="client-section-label">Program updates</div><h3>' + escapeHtml(clientWorkoutStatusLabel(assignment)) + '</h3><p>Important assignment and phase changes stay separate from direct messages.</p></section>'
@@ -5428,7 +5499,7 @@ function renderCoachModule(destination) {
   }[destination] || ['Coach workspace','Open the coaching capability you need.']; title.textContent = details[0]; eyebrow.textContent = 'Coach workspace'; copy.textContent = details[1];
   if (destination === 'calendar') {
     const assignments = loadAssignedWorkouts().slice().sort((a,b) => String(b.assignedAt).localeCompare(String(a.assignedAt))), attention = trainerAttentionSnapshot();
-    const followups = attention.assignmentReviews.map((item) => ({client:item.client,label:'Workout review ready'})).concat(attention.checkinReviews.map((item) => ({client:item.client,label:item.reviewType === 'starter_week_1' ? 'First-week review ready' : 'Weekly check-in ready'}))).concat(attention.formalReviews.map((profile) => ({client:profile.name,label:'Four-week program review due'}))).concat(attention.recognition.map((profile) => ({client:profile.name,label:'Positive recognition due'})));
+    const followups = attention.assignmentReviews.map((item) => ({client:item.client,label:'Workout review ready'})).concat(attention.checkinReviews.map((item) => ({client:item.client,label:item.reviewType === 'recovery_24_48' ? '24–48h recovery pulse ready' : item.reviewType === 'starter_week_1' ? 'First-week review ready' : 'Weekly check-in ready'}))).concat(attention.recoveryOverdue.map((item) => ({client:item.profile.name,label:'Recovery pulse overdue'}))).concat(attention.formalReviews.map((profile) => ({client:profile.name,label:'Four-week program review due'}))).concat(attention.recognition.map((profile) => ({client:profile.name,label:'Positive recognition due'})));
     out.innerHTML = attendanceCalendarHtml() + '<section class="coach-module-card"><h3>Assigned sessions</h3><div class="advanced-list">' + (assignments.slice(0,20).map((item) => '<div class="advanced-list-item"><b>' + escapeHtml(item.client) + (item.programWeek ? ' · Week ' + item.programWeek + ' Day ' + item.programDay : '') + '</b><span>' + escapeHtml(item.scheduledDate ? new Date(item.scheduledDate + 'T12:00:00').toLocaleDateString() : new Date(item.assignedAt).toLocaleDateString()) + ' · ' + escapeHtml(assignmentStatusLabel(item)) + '</span></div>').join('') || '<div class="empty-state">No sessions assigned.</div>') + '</div></section><section class="coach-module-card"><h3>Coaching follow-ups</h3><div class="advanced-list">' + (followups.map((item) => '<div class="advanced-list-item"><b>' + escapeHtml(item.client) + '</b><span>' + escapeHtml(item.label) + '</span></div>').join('') || '<div class="empty-state">No client is waiting on feedback.</div>') + '</div><div class="tool-actions"><button class="small-btn primary" onclick="openCoachDestination(\'clients\')">Review clients</button></div></section>';
   } else if (destination === 'messages') {
     const messages = loadLocalArray(CLIENT_MESSAGES_KEY);
@@ -9169,7 +9240,42 @@ function trainerProgramTab(profile) {
   const versionHistory = '<details class="formal-review-box" style="margin-top:14px"><summary>Program version history · current version ' + Number(program.versionNumber || 1) + '</summary><p>Restoring never changes a client’s live assignment immediately. It opens the older plan as a new draft that must pass review, approval, and publishing again.</p><div class="analysis-history">' + (versionRows || '<div class="empty-state">No earlier versions yet. The first prior version appears after a coach saves a real program change.</div>') + '</div></details>';
   return '<section class="analysis-panel"><h4 class="analysis-section-title">Current assigned program</h4><div class="analysis-history-item"><b>' + escapeHtml((program.setup.goals || []).map((goal) => GOALS[goal] ? GOALS[goal].label : goal).join(' + ')) + '</b><span>' + program.weeks.length + ' weeks · ' + program.setup.days + ' days/week · version ' + Number(program.versionNumber || 1) + ' · ' + escapeHtml(program.lifecycle || 'approved') + ' · saved ' + new Date(program.savedAt || program.createdAt).toLocaleDateString() + '</span></div><div class="analysis-history-item"><b>Next executable workout</b><span>' + escapeHtml(assignment ? assignmentStatusLabel(assignment) + (assignment.scheduledDate ? ' · ' + new Date(assignment.scheduledDate + 'T12:00:00').toLocaleDateString() : '') : 'No workout assigned') + '</span></div><div class="trainer-program-schedule">' + schedule + '</div><div class="tool-actions"><button class="small-btn primary" onclick="openSelectedClientProgram()">Edit current program</button><button class="small-btn" onclick="setTrainerSummaryTab(\'workouts\')">Open full workout history</button><button class="small-btn" onclick="openAdvancedForClient(\'' + escapeHtml(profile.id) + '\',\'templates\')">Open template library</button></div>' + versionHistory + '</section><section class="analysis-panel" style="margin-top:14px"><h4 class="analysis-section-title">Recent weights & reps</h4><p style="font-size:9px;color:var(--text-faint);margin:4px 0 10px">Latest logged working sets are visible here; open Workouts for every set grouped by day.</p><div class="analysis-history">' + (loads || '<div class="empty-state">No weights or reps logged yet.</div>') + '</div></section>';
 }
-function trainerCheckInsTab(profile) { const items = profile ? checkInsForProfile(profile.id) : []; return '<section class="analysis-panel"><h4 class="analysis-section-title">Weekly check-ins</h4><div class="analysis-history">' + (items.map((item) => '<div class="analysis-history-item"><b>' + new Date(item.createdAt || item.date).toLocaleDateString() + ' · ' + (item.reviewType === 'starter_week_1' ? 'Week 1 starter review' : item.adherence + '% adherence') + '</b><span>Energy ' + item.energy + '/5 · Sleep ' + item.sleep + '/5 · Stress ' + item.stress + '/5' + (item.reviewType === 'starter_week_1' ? ' · Difficulty ' + escapeHtml(String(item.workoutFit || 'not entered').replace(/_/g,' ')) + ' · Exercises ' + escapeHtml(String(item.exerciseClarity || 'not entered').replace(/_/g,' ')) + ' · Time ' + escapeHtml(String(item.sessionFit || 'not entered').replace(/_/g,' ')) : '') + (item.question ? ' · Question: ' + escapeHtml(item.question) : '') + '</span></div>').join('') || '<div class="empty-state">No weekly check-ins submitted.</div>') + '</div></section>'; }
+function clientCheckInTypeLabel(item) {
+  return item.reviewType === "recovery_24_48" ? "24–48h recovery pulse" : item.reviewType === "starter_week_1" ? "Week 1 starter review" : "Weekly check-in";
+}
+function clientCheckInSummary(item) {
+  if (item.reviewType === "recovery_24_48") {
+    return "Recovery " + (item.recovery == null ? "—" : item.recovery + "/5") + " · soreness " + (item.soreness == null ? "—" : item.soreness + "/5") + " · next session " + String(item.nextSessionReadiness || "not entered").replace(/_/g," ") + " · pain " + (PAIN_LEVELS[normalizePainLevel(item.painLevel || item.pain,item.movementChanged)] || PAIN_LEVELS.green).label + (item.painTrend && item.painTrend !== "none" ? " · trend " + item.painTrend : "") + (item.note ? " · note: " + item.note : "");
+  }
+  return "Energy " + item.energy + "/5 · sleep " + item.sleep + "/5 · stress " + item.stress + "/5" + (item.reviewType === "starter_week_1" ? " · difficulty " + String(item.workoutFit || "not entered").replace(/_/g," ") + " · exercises " + String(item.exerciseClarity || "not entered").replace(/_/g," ") + " · time " + String(item.sessionFit || "not entered").replace(/_/g," ") : "") + (item.question ? " · question: " + item.question : "");
+}
+function markClientCheckInReviewed(checkInId,trainerReply) {
+  if (!requireTrainerMutation("review a client check-in")) return null;
+  const items = loadCheckIns(), index = items.findIndex((item) => item.id === checkInId); if (index < 0) return null;
+  const identity = currentAccountIdentity(), reviewedAt = new Date().toISOString();
+  items[index] = {...items[index],reviewedAt,reviewedBy:identity.displayName,reviewedByUserId:identity.id || "",trainerReply:trainerReply || items[index].trainerReply || ""};
+  if (!writeCheckIns(items)) return null;
+  renderTrainerAnalysis(selectedTrainerClient); renderTrainerAttention(); return items[index];
+}
+function replyToClientCheckIn(checkInId) {
+  if (!requireTrainerMutation("reply to a client recovery update")) return null;
+  const item = loadCheckIns().find((checkin) => checkin.id === checkInId), profile = item && loadProfiles().find((candidate) => candidate.id === item.profileId); if (!item || !profile) return null;
+  const painHold = painRequiresSafetyHold(item.painLevel || item.pain,item.movementChanged), concern = Number(item.recovery) <= 2 || Number(item.soreness) >= 4 || ["unsure","no"].includes(item.nextSessionReadiness) || ["same","worse"].includes(item.painTrend);
+  const suggested = painHold || item.painTrend === "worse"
+    ? "Thanks for telling me. Do not repeat the movement that caused pain yet. I’m reviewing your next session and will follow up with a safe adjustment."
+    : concern ? "Thanks for checking in. I’m reviewing your recovery and will adjust the next session if needed. Keep the next movement easy and pain-free until you hear from me."
+      : "Thanks for checking in—your recovery looks on track. Nice job following through. Keep the next session controlled and let me know if anything changes.";
+  const identity = currentAccountIdentity(), body = window.prompt("Reply to " + profile.name + " as " + identity.displayName + ":",suggested); if (!body || !body.trim()) return null;
+  const messages = loadLocalArray(CLIENT_MESSAGES_KEY);
+  messages.unshift({id:"message-" + Date.now(),profileId:profile.id,client:profile.name,from:"coach",senderRole:identity.role === "owner" ? "owner" : "trainer",senderUserId:identity.id || "",senderName:identity.displayName,recipientRole:"client",recipientUserId:"",recipientName:profile.name,body:body.trim(),createdAt:new Date().toISOString(),sourceCheckInId:item.id});
+  if (!writeLocalArray(CLIENT_MESSAGES_KEY,messages,1000)) return null;
+  const reviewed = markClientCheckInReviewed(item.id,body.trim()); if (!reviewed) return null;
+  showToast("Reply sent and recovery pulse marked reviewed"); return reviewed;
+}
+function trainerCheckInsTab(profile) {
+  const items = profile ? checkInsForProfile(profile.id) : [];
+  return '<section class="analysis-panel"><h4 class="analysis-section-title">Check-ins &amp; recovery</h4><p style="font-size:9px;color:var(--text-faint);margin:4px 0 12px">Recovery pulses are short post-workout signals. Weekly check-ins remain the broader coaching review.</p><div class="analysis-history">' + (items.map((item) => '<div class="analysis-history-item"><div><b>' + new Date(item.createdAt || item.date).toLocaleDateString() + ' · ' + escapeHtml(clientCheckInTypeLabel(item)) + (item.reviewedAt ? ' · reviewed' : ' · needs review') + '</b><span>' + escapeHtml(clientCheckInSummary(item)) + '</span>' + (item.reviewedAt ? '<span>Reviewed by ' + escapeHtml(item.reviewedBy || "trainer") + (item.trainerReply ? ' · reply sent' : '') + '</span>' : '') + '</div>' + (!item.reviewedAt ? '<div class="tool-actions"><button class="small-btn primary" onclick="replyToClientCheckIn(\'' + escapeHtml(item.id) + '\')">Reply &amp; review</button><button class="small-btn" onclick="markClientCheckInReviewed(\'' + escapeHtml(item.id) + '\');showToast(\'Check-in marked reviewed\')">Mark reviewed</button></div>' : '') + '</div>').join('') || '<div class="empty-state">No check-ins or recovery pulses submitted.</div>') + '</div></section>';
+}
 function trainerMessagesTab(profile) { const items = profile ? loadClientMessages(profile.id) : []; return '<section class="analysis-panel"><h4 class="analysis-section-title">Direct messages · ' + escapeHtml(profile && profile.assignedTrainerName || 'Coaching team') + '</h4>' + (profile ? messageThreadHtml(items,profile,'trainer') : '<div class="empty-state">Choose a client.</div>') + (profile ? '<div class="tool-actions"><button class="small-btn primary" onclick="replyToClientMessage(\'' + escapeHtml(profile.id) + '\')">Message ' + escapeHtml(profile.name) + '</button></div>' : '') + '</section>'; }
 function trainerNutritionTab(profile) { return '<section class="analysis-panel"><h4 class="analysis-section-title">Nutrition</h4><div class="empty-state">No nutrition target has been assigned. Keep this optional and use qualified nutrition or medical support when the client’s needs exceed general coaching scope.</div></section>'; }
 function trainerNotesTab(analysis) { const notes = analysis.entries.filter((entry) => entry.type === 'note' || summaryMetaFor(entry).note); return '<section class="analysis-panel"><h4 class="analysis-section-title">Coach & workout notes</h4><div class="analysis-history">' + (notes.map((entry) => '<div class="analysis-history-item"><b>' + escapeHtml(entry.label || 'Note') + ' · ' + new Date(entry.date).toLocaleDateString() + '</b><span>' + escapeHtml(entry.note || summaryMetaFor(entry).note || entry.value || '') + '</span></div>').join('') || '<div class="empty-state">No saved notes.</div>') + '</div></section>'; }
@@ -9638,10 +9744,28 @@ function loadAutomationAlerts() { return loadLocalArray(AUTOMATION_ALERTS_KEY); 
 
 let selectedCheckInProfileId = "";
 let selectedCheckInReviewType = "weekly";
-function openClientCheckIn(reviewType) {
-  selectedCheckInReviewType = reviewType === "starter_week_1" ? reviewType : "weekly";
+let selectedRecoveryAssignmentId = "";
+function setClientCheckInMode() {
+  const recovery = selectedCheckInReviewType === "recovery_24_48";
+  document.querySelectorAll(".weekly-checkin-field").forEach((field) => field.classList.toggle("checkin-field-hidden",recovery));
+  const recoveryFields = byId("checkInRecoveryFields"); if (recoveryFields) recoveryFields.classList.toggle("show",recovery);
+  if (byId("checkInPageQuestion")) byId("checkInPageQuestion").textContent = recovery ? "How did your body respond?" : "How is training going?";
+  if (byId("checkInPageTitle")) byId("checkInPageTitle").textContent = recovery ? "24–48h Recovery Pulse" : "Weekly Check-in";
+  if (byId("checkInPageCopy")) byId("checkInPageCopy").textContent = recovery ? "A quick follow-up after training—not another assessment. Four taps help your trainer catch recovery or pain concerns early." : "Share the information your trainer needs to adjust the plan. Your answers stay connected to your secure profile.";
+  if (byId("checkInPainLabel")) byId("checkInPainLabel").textContent = recovery ? "Pain or discomfort since the workout" : "Pain this week";
+  if (byId("checkInSubmitBtn")) byId("checkInSubmitBtn").textContent = recovery ? "Send recovery pulse" : "Send weekly check-in";
+}
+function openClientCheckIn(reviewType,assignmentId) {
+  selectedCheckInReviewType = ["starter_week_1","recovery_24_48"].includes(reviewType) ? reviewType : "weekly";
+  selectedRecoveryAssignmentId = selectedCheckInReviewType === "recovery_24_48" ? String(assignmentId || "") : "";
   portalRole = "client"; show("checkin"); selectedCheckInProfileId = ""; byId("checkInLookup").value = ""; byId("checkInProfileId").value = ""; byId("checkInLookupResults").innerHTML = ""; byId("checkInForm").classList.remove("show"); byId("checkInConfirmation").style.display = "none";
+  setClientCheckInMode();
   byId("checkInPain").value = "0"; fillSelectOptions(byId("checkInPainArea"),painLocationOptions(true),""); byId("checkInPainMovement").value = "no"; updateCheckInPainFields();
+  if (byId("checkInRecovery")) byId("checkInRecovery").value = "4";
+  if (byId("checkInRecoverySoreness")) byId("checkInRecoverySoreness").value = "2";
+  if (byId("checkInNextReadiness")) byId("checkInNextReadiness").value = "yes";
+  if (byId("checkInPainTrend")) byId("checkInPainTrend").value = "none";
+  if (byId("checkInRecoveryNote")) byId("checkInRecoveryNote").value = "";
   setTimeout(() => byId("checkInLookup").focus(),20);
 }
 function updateCheckInPainFields() {
@@ -9661,23 +9785,35 @@ function renderCheckInLookup() {
 }
 function selectCheckInProfile(profileId) {
   const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) return null;
-  const starter = selectedCheckInReviewType === "starter_week_1", starterFields = byId("checkInStarterFields");
+  const starter = selectedCheckInReviewType === "starter_week_1", recovery = selectedCheckInReviewType === "recovery_24_48", starterFields = byId("checkInStarterFields");
+  if (recovery && !selectedRecoveryAssignmentId) {
+    const status = recoveryFollowUpStatus(profile);
+    if (status.active) selectedRecoveryAssignmentId = status.assignment.id;
+  }
   selectedCheckInProfileId = profile.id; byId("checkInProfileId").value = profile.id; byId("checkInLookup").value = profile.name; byId("checkInLookupResults").innerHTML = "";
-  byId("checkInClientTitle").textContent = profile.name + (starter ? " · Week 1 starter review" : " · Weekly check-in");
-  byId("checkInFormIntro").textContent = starter ? "Look back at your first week. Your answers help the coach make small, useful adjustments while keeping the routine familiar." : "Use the last seven days. There are no perfect answers—accuracy helps the trainer.";
+  byId("checkInClientTitle").textContent = profile.name + (recovery ? " · Recovery pulse" : starter ? " · Week 1 starter review" : " · Weekly check-in");
+  byId("checkInFormIntro").textContent = recovery ? "This should take less than one minute. Your trainer will receive it in the review queue." : starter ? "Look back at your first week. Your answers help the coach make small, useful adjustments while keeping the routine familiar." : "Use the last seven days. There are no perfect answers—accuracy helps the trainer.";
   if (starterFields) starterFields.classList.toggle("show",starter);
   byId("checkInForm").classList.add("show"); byId("checkInConfirmation").style.display = "none"; return profile;
 }
 function saveClientCheckIn() {
   const profile = loadProfiles().find((item) => item.id === byId("checkInProfileId").value); if (!profile) { showToast("Find your saved profile first"); return null; }
-  const starter = selectedCheckInReviewType === "starter_week_1", program = starter ? savedProgramFor(profile) : null;
+  const starter = selectedCheckInReviewType === "starter_week_1", recovery = selectedCheckInReviewType === "recovery_24_48", program = starter ? savedProgramFor(profile) : null;
+  const recoveryAssignment = recovery ? assignmentsForClient(profile.id).find((item) => item.id === selectedRecoveryAssignmentId) : null;
+  if (recovery && !recoveryAssignment) { showToast("This recovery follow-up is no longer connected to a completed workout"); return null; }
+  if (recovery && recoveryFollowUpsForProfile(profile.id).some((item) => item.assignmentId === recoveryAssignment.id)) { showToast("This recovery pulse was already sent"); openClientTab("home"); return null; }
   const movementChanged = byId("checkInPainMovement") && byId("checkInPainMovement").value === "yes";
   if (movementChanged && Number(byId("checkInPain").value) < 2) byId("checkInPain").value = "2";
   const pain = Number(byId("checkInPain").value), painArea = byId("checkInPainArea") && byId("checkInPainArea").value || "";
   if (pain > 0 && !painArea) { showToast("Choose where you felt the pain or discomfort"); byId("checkInPainArea").focus(); return null; }
-  const record = { id:"checkin-" + Date.now() + "-" + Math.random().toString(16).slice(2), profileId:profile.id, client:profile.name, date:new Date().toISOString().slice(0,10), createdAt:new Date().toISOString(), reviewType:selectedCheckInReviewType, programId:program && program.id || "", programWeek:starter ? 1 : null, adherence:Number(byId("checkInAdherence").value), sleep:Number(byId("checkInSleep").value), stress:Number(byId("checkInStress").value), soreness:Number(byId("checkInSoreness").value), energy:Number(byId("checkInEnergy").value), confidence:Number(byId("checkInConfidence").value), motivation:Number(byId("checkInMotivation").value), pain, painLevel:normalizePainLevel(pain,movementChanged), painArea, movementChanged, workoutFit:starter ? byId("checkInWorkoutFit").value : "", exerciseClarity:starter ? byId("checkInExerciseClarity").value : "", sessionFit:starter ? byId("checkInSessionFit").value : "", win:byId("checkInWin").value.trim(), challenge:byId("checkInChallenge").value.trim(), schedule:byId("checkInSchedule").value.trim(), question:byId("checkInQuestion").value.trim(), reviewedAt:"", trainerReply:"" };
+  const recoveryNote = recovery ? byId("checkInRecoveryNote").value.trim() : "";
+  const record = { id:"checkin-" + Date.now() + "-" + Math.random().toString(16).slice(2), profileId:profile.id, client:profile.name, date:new Date().toISOString().slice(0,10), createdAt:new Date().toISOString(), reviewType:selectedCheckInReviewType, assignmentId:recoveryAssignment && recoveryAssignment.id || "", sessionId:recoveryAssignment && assignmentSessionIds(recoveryAssignment)[0] || "", completedAt:recoveryAssignment && recoveryAssignment.completedAt || "", programId:program && program.id || recoveryAssignment && recoveryAssignment.programId || "", programWeek:starter ? 1 : recoveryAssignment && recoveryAssignment.programWeek || null, adherence:recovery ? null : Number(byId("checkInAdherence").value), sleep:recovery ? null : Number(byId("checkInSleep").value), stress:recovery ? null : Number(byId("checkInStress").value), soreness:recovery ? Number(byId("checkInRecoverySoreness").value) : Number(byId("checkInSoreness").value), energy:recovery ? Number(byId("checkInRecovery").value) : Number(byId("checkInEnergy").value), recovery:recovery ? Number(byId("checkInRecovery").value) : null, nextSessionReadiness:recovery ? byId("checkInNextReadiness").value : "", painTrend:recovery ? byId("checkInPainTrend").value : "", confidence:recovery ? null : Number(byId("checkInConfidence").value), motivation:recovery ? null : Number(byId("checkInMotivation").value), pain, painLevel:normalizePainLevel(pain,movementChanged), painArea, movementChanged, workoutFit:starter ? byId("checkInWorkoutFit").value : "", exerciseClarity:starter ? byId("checkInExerciseClarity").value : "", sessionFit:starter ? byId("checkInSessionFit").value : "", win:recovery ? "" : byId("checkInWin").value.trim(), challenge:recovery ? recoveryNote : byId("checkInChallenge").value.trim(), schedule:recovery ? "" : byId("checkInSchedule").value.trim(), note:recoveryNote, question:recovery ? "" : byId("checkInQuestion").value.trim(), reviewedAt:"", reviewedBy:"", trainerReply:"" };
   const items = loadCheckIns(); items.unshift(record); if (!writeCheckIns(items)) return null; runAutomations(false);
-  const confirmation = byId("checkInConfirmation"); confirmation.style.display = "block"; confirmation.textContent = starter ? "Week 1 review sent. Your trainer can now compare workout fit, exercise clarity, session length, recovery, pain, and confidence before Week 2." : "Check-in sent. Your trainer will see your adherence, recovery, confidence, motivation, pain report, and questions in the coaching studio."; showToast(starter ? "Week 1 review sent to the trainer" : "Weekly check-in sent to the trainer"); return record;
+  const confirmation = byId("checkInConfirmation"); confirmation.style.display = "block"; confirmation.textContent = recovery ? "Recovery pulse sent to " + (profile.assignedTrainerName || "your coaching team") + " for review. You can return home now." : starter ? "Week 1 review sent. Your trainer can now compare workout fit, exercise clarity, session length, recovery, pain, and confidence before Week 2." : "Check-in sent. Your trainer will see your adherence, recovery, confidence, motivation, pain report, and questions in the coaching studio.";
+  renderTrainerAttention();
+  showToast(recovery ? "Recovery pulse sent to your trainer" : starter ? "Week 1 review sent to the trainer" : "Weekly check-in sent to the trainer");
+  if (recovery) setTimeout(() => openClientTab("home"),650);
+  return record;
 }
 
 const ADVANCED_TABS = [
@@ -9719,7 +9855,7 @@ function renderAdvancedStudio() {
 }
 function numberAverage(items,key) { const values = items.map((item) => Number(item[key])).filter(Number.isFinite); return values.length ? values.reduce((a,b) => a+b,0) / values.length : null; }
 function checkInCoachSummary(profile) {
-  const items = profile ? checkInsForProfile(profile.id).slice(0,4) : []; if (!items.length) return { headline:"No weekly check-in yet", copy:"Ask the client to complete the weekly check-in so recovery, adherence, motivation, and barriers can inform the next plan.", action:"repeat", risk:"mid" };
+  const items = profile ? weeklyCheckInsForProfile(profile.id).slice(0,4) : []; if (!items.length) return { headline:"No weekly check-in yet", copy:"Ask the client to complete the weekly check-in so recovery, adherence, motivation, and barriers can inform the next plan.", action:"repeat", risk:"mid" };
   const latest = items[0], adherence = numberAverage(items,"adherence"), stress = numberAverage(items,"stress"), energy = numberAverage(items,"energy"), confidence = numberAverage(items,"confidence"), pain = Math.max(...items.map((item) => Number(item.pain) || 0));
   let headline = "Training is broadly on track", action = "repeat", risk = "low";
   if (pain >= 2) { headline = "Pain changed training"; action = "pain_swap"; risk = "high"; }
@@ -9967,7 +10103,7 @@ function saveAutomationRule() { if (!requireTrainerMutation("create automations"
 function deleteAutomationRule(id) { if (!requireTrainerMutation("delete automations")) return false; writeLocalArray(AUTOMATIONS_KEY,loadAutomations().filter((item) => item.id !== id),200); renderAdvancedStudio(); return true; }
 function toggleAutomationRule(id) { if (!requireTrainerMutation("change automations")) return false; const rules = loadAutomations(), rule = rules.find((item) => item.id === id); if (!rule) return false; rule.enabled = rule.enabled === false; writeLocalArray(AUTOMATIONS_KEY,rules,200); renderAdvancedStudio(); return true; }
 function dismissAutomationAlert(id) { if (!requireTrainerMutation("handle automation alerts")) return false; writeLocalArray(AUTOMATION_ALERTS_KEY,loadAutomationAlerts().filter((item) => item.id !== id),500); renderAdvancedStudio(); renderCoachInsights(); showToast("Automation alert marked handled"); return true; }
-function automationMatch(rule,profile) { const checkin = checkInsForProfile(profile.id)[0], assignment = assignmentForClient(profile.id), readiness = trainerEntriesFor(profile.name).find((entry) => entry.type === "readiness"), workload = workloadSnapshot(profile), threshold = Number(rule.threshold); if (rule.trigger === "checkin_stress") return checkin && Number(checkin.stress) >= threshold; if (rule.trigger === "checkin_adherence") return checkin && Number(checkin.adherence) <= threshold; if (rule.trigger === "pain") return (checkin && Number(checkin.pain) >= 2) || (assignment && assignment.clientReview && ["changed","stopped"].includes(assignment.clientReview.pain)); if (rule.trigger === "review_waiting") return assignment && assignmentStatus(assignment) === "completed"; if (rule.trigger === "low_readiness") return readiness && parseInt(readiness.value,10) <= threshold; if (rule.trigger === "plateau") return workload.plateaus.length >= Math.max(1,threshold || 1); return false; }
+function automationMatch(rule,profile) { const checkin = weeklyCheckInsForProfile(profile.id)[0], allCheckIns = checkInsForProfile(profile.id), assignment = assignmentForClient(profile.id), readiness = trainerEntriesFor(profile.name).find((entry) => entry.type === "readiness"), workload = workloadSnapshot(profile), threshold = Number(rule.threshold); if (rule.trigger === "checkin_stress") return checkin && Number(checkin.stress) >= threshold; if (rule.trigger === "checkin_adherence") return checkin && Number(checkin.adherence) <= threshold; if (rule.trigger === "pain") return (allCheckIns[0] && Number(allCheckIns[0].pain) >= 2) || (assignment && assignment.clientReview && ["changed","stopped"].includes(assignment.clientReview.pain)); if (rule.trigger === "review_waiting") return assignment && assignmentStatus(assignment) === "completed"; if (rule.trigger === "low_readiness") return readiness && parseInt(readiness.value,10) <= threshold; if (rule.trigger === "plateau") return workload.plateaus.length >= Math.max(1,threshold || 1); return false; }
 function runAutomations(showResult) { const rules = loadAutomations().filter((rule) => rule.enabled !== false), profiles = loadProfiles(), existing = loadAutomationAlerts(), today = new Date().toISOString().slice(0,10); let fired = 0; rules.forEach((rule) => profiles.forEach((profile) => { if (!automationMatch(rule,profile) || existing.some((alert) => alert.ruleId === rule.id && alert.profileId === profile.id && String(alert.createdAt).slice(0,10) === today)) return; const alert = { id:"alert-" + Date.now() + "-" + Math.random().toString(16).slice(2),ruleId:rule.id,profileId:profile.id,client:profile.name,title:rule.name,action:rule.action,actionLabel:AUTOMATION_ACTION_LABELS[rule.action],copy:"Triggered by: " + AUTOMATION_TRIGGER_LABELS[rule.trigger] + " " + rule.threshold + ". Trainer review required before changing the plan.",createdAt:new Date().toISOString() }; existing.unshift(alert); fired++; })); writeLocalArray(AUTOMATION_ALERTS_KEY,existing,500); if (normalizedAdvancedTab(advancedState.tab) === "alerts" && byId("advancedContent")) renderAdvancedStudio(); renderTrainerAttention(); if (showResult) showToast(fired ? fired + " trainer alerts created" : "No new alert conditions matched"); return fired; }
 
 function exportProgress() {

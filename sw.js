@@ -1,4 +1,4 @@
-const CACHE_NAME = "fit4life-shell-2026-07-29-pain-levels-v1";
+const CACHE_NAME = "fit4life-shell-2026-07-29-recovery-pulse-v1";
 const SHELL = [
   "/",
   "/index.html",
