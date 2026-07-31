@@ -26,6 +26,8 @@
     exerciseLibraryEdits: "fit4life_exercise_library_edits_v1",
     clientDaily: "fit4life_client_daily_v1",
     clientMessages: "fit4life_client_messages_v1",
+    progressReceipts: "fit4life_progress_receipts_v1",
+    progressReceiptResponses: "fit4life_progress_receipt_responses_v1",
     activeWorkout: "fit4life_active_workout_v1",
     activeClient: "fit4life_active_client_v1"
   };
@@ -36,7 +38,8 @@
     CLOUD_KEYS.goals, CLOUD_KEYS.checkins, CLOUD_KEYS.metrics,
     CLOUD_KEYS.teams, CLOUD_KEYS.mentalPlans, CLOUD_KEYS.marketPrograms,
     CLOUD_KEYS.automations, CLOUD_KEYS.automationAlerts,
-    CLOUD_KEYS.clientMessages, CLOUD_KEYS.exerciseLibraryEdits
+    CLOUD_KEYS.clientMessages, CLOUD_KEYS.progressReceipts,
+    CLOUD_KEYS.progressReceiptResponses, CLOUD_KEYS.exerciseLibraryEdits
   ]);
 
   let cloudClient = null;
@@ -576,6 +579,7 @@
       athleteMetrics: readJson(CLOUD_KEYS.metrics, []).filter((item) => itemBelongsToProfile(item, profile)),
       mentalPlans: readJson(CLOUD_KEYS.mentalPlans, []).filter((item) => itemBelongsToProfile(item, profile)),
       wearableConnections: wearableForProfile,
+      progressReceipts: readJson(CLOUD_KEYS.progressReceipts, []).filter((item) => itemBelongsToProfile(item, profile) && item.status === "published"),
       savedAt: new Date().toISOString()
     };
   }
@@ -592,6 +596,7 @@
       progress: profileProgress(profile),
       checkIns: readJson(CLOUD_KEYS.checkins, []).filter((item) => itemBelongsToProfile(item, profile)),
       messages: readJson(CLOUD_KEYS.clientMessages, []).filter((item) => itemBelongsToProfile(item, profile)),
+      progressReceiptResponses: readJson(CLOUD_KEYS.progressReceiptResponses, []).filter((item) => itemBelongsToProfile(item, profile)),
       daily: daily && daily[profile.id] ? { [profile.id]: daily[profile.id] } : {},
       activeWorkout: activeWorkout && activeWorkout.profileId === profile.id ? activeWorkout : null,
       assignmentState: assignment ? {
@@ -711,6 +716,10 @@
     let metrics = [];
     let mentalPlans = [];
     let messages = [];
+    let progressReceipts = (cloudRole === "owner" || cloudRole === "trainer")
+      ? readJson(CLOUD_KEYS.progressReceipts, []).filter((item) => item && item.status === "draft")
+      : [];
+    let progressReceiptResponses = [];
     let summaryMeta = {};
     let clientDaily = {};
     let wearableConnections = {};
@@ -735,11 +744,13 @@
       goals = mergeRecords(goals, plan.bodyGoals);
       metrics = mergeRecords(metrics, plan.athleteMetrics);
       mentalPlans = mergeRecords(mentalPlans, plan.mentalPlans);
+      progressReceipts = mergeRecords(progressReceipts, plan.progressReceipts);
       summaryMeta = Object.assign(summaryMeta, plan.summaryMeta || {});
       wearableConnections = Object.assign(wearableConnections, plan.wearableConnections || {});
       progress = mergeRecords(progress, activity.progress);
       checkins = mergeRecords(checkins, activity.checkIns);
       messages = mergeRecords(messages, activity.messages);
+      progressReceiptResponses = mergeRecords(progressReceiptResponses, activity.progressReceiptResponses);
       clientDaily = Object.assign(clientDaily, activity.daily || {});
       if (activity.activeWorkout && (!clientActiveWorkout || profile.auth_user_id === cloudUser.id)) clientActiveWorkout = activity.activeWorkout;
 
@@ -760,6 +771,8 @@
     writeJson(CLOUD_KEYS.metrics, metrics);
     writeJson(CLOUD_KEYS.mentalPlans, mentalPlans);
     writeJson(CLOUD_KEYS.clientMessages, messages);
+    writeJson(CLOUD_KEYS.progressReceipts, progressReceipts);
+    writeJson(CLOUD_KEYS.progressReceiptResponses, progressReceiptResponses);
     writeJson(CLOUD_KEYS.clientDaily, clientDaily);
     writeJson(CLOUD_KEYS.wearableConnections, wearableConnections);
     writeJson(CLOUD_KEYS.activeWorkout, clientActiveWorkout);
@@ -1274,8 +1287,8 @@
   };
 
   function scopeForLocalKey(key) {
-    if ([CLOUD_KEYS.progress, CLOUD_KEYS.checkins, CLOUD_KEYS.clientMessages, CLOUD_KEYS.clientDaily, CLOUD_KEYS.activeWorkout].includes(key)) return "activity";
-    if ([CLOUD_KEYS.profiles, CLOUD_KEYS.assignments, CLOUD_KEYS.programs, CLOUD_KEYS.summaryMeta, CLOUD_KEYS.scans, CLOUD_KEYS.goals, CLOUD_KEYS.metrics, CLOUD_KEYS.mentalPlans, CLOUD_KEYS.wearableConnections].includes(key)) return cloudRole === "client" ? "activity" : "plan";
+    if ([CLOUD_KEYS.progress, CLOUD_KEYS.checkins, CLOUD_KEYS.clientMessages, CLOUD_KEYS.progressReceiptResponses, CLOUD_KEYS.clientDaily, CLOUD_KEYS.activeWorkout].includes(key)) return "activity";
+    if ([CLOUD_KEYS.profiles, CLOUD_KEYS.assignments, CLOUD_KEYS.programs, CLOUD_KEYS.summaryMeta, CLOUD_KEYS.scans, CLOUD_KEYS.goals, CLOUD_KEYS.metrics, CLOUD_KEYS.mentalPlans, CLOUD_KEYS.wearableConnections, CLOUD_KEYS.progressReceipts].includes(key)) return cloudRole === "client" ? "activity" : "plan";
     if ([CLOUD_KEYS.requests, CLOUD_KEYS.gymBrand, CLOUD_KEYS.gymEquipment, CLOUD_KEYS.teams, CLOUD_KEYS.marketPrograms, CLOUD_KEYS.automations, CLOUD_KEYS.automationAlerts, CLOUD_KEYS.attentionState, CLOUD_KEYS.exerciseLibraryEdits].includes(key)) return "organization";
     return "all";
   }

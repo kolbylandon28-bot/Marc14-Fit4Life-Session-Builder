@@ -1,4 +1,4 @@
-const CACHE_NAME = "fit4life-shell-2026-07-30-goal-contract-v1";
+const CACHE_NAME = "fit4life-shell-2026-07-30-progress-receipts-v1";
 const SHELL = [
   "/",
   "/index.html",

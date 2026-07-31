@@ -884,6 +884,12 @@
   .client-card.wide{grid-column:1/-1}.client-card h3{font-size:16px;margin:7px 0}.client-card p{font-size:11.5px;color:var(--text-faint);line-height:1.5}
   .goal-contract-card{position:relative;overflow:hidden;border-color:rgba(91,160,255,.42);background:radial-gradient(circle at 100% 0,rgba(63,143,255,.17),transparent 38%),linear-gradient(150deg,var(--slate-1),var(--slate-0))}
   .goal-contract-card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--grad)}
+  .progress-receipt-card{position:relative;overflow:hidden;border-color:rgba(121,239,187,.34);background:radial-gradient(circle at 100% 0,rgba(121,239,187,.1),transparent 36%),linear-gradient(150deg,var(--slate-1),var(--slate-0))}
+  .progress-receipt-card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(#79efbb,var(--blue-bright))}
+  .receipt-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.receipt-head h3{font-size:17px;margin-bottom:4px}.receipt-head p{font-size:10px;color:var(--text-faint);line-height:1.5}.receipt-status{flex:0 0 auto;border:1px solid rgba(121,239,187,.3);border-radius:999px;padding:5px 8px;background:rgba(121,239,187,.06);font:700 7px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:#79efbb}
+  .receipt-why{margin:13px 0;padding:11px 12px;border-left:3px solid var(--blue-bright);background:var(--blue-glow);font-size:10.5px;line-height:1.55;color:var(--text-dim)}.receipt-why b{display:block;margin-bottom:3px;color:var(--blue-bright);font:700 8px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+  .receipt-sections{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px}.receipt-section{border:1px solid var(--line);border-radius:10px;background:rgba(7,9,14,.58);padding:11px}.receipt-section.improved{border-color:rgba(121,239,187,.25)}.receipt-section.next{border-color:rgba(90,166,240,.3)}.receipt-section h4{font:800 9px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px}.receipt-section.improved h4{color:#79efbb}.receipt-section.next h4{color:var(--blue-bright)}.receipt-section ul{display:grid;gap:7px;padding-left:16px}.receipt-section li{font-size:10px;line-height:1.5;color:var(--text-dim)}
+  .receipt-evidence{margin-top:11px;font:600 8px var(--mono);line-height:1.5;color:var(--text-faint)}.receipt-history{display:grid;gap:10px;margin-top:12px}.receipt-history details{border:1px solid var(--line);border-radius:11px;background:var(--slate-0);overflow:hidden}.receipt-history summary{cursor:pointer;padding:12px 14px;font-size:11px;font-weight:700}.receipt-history-body{padding:0 14px 14px}.receipt-editor-dialog{width:min(820px,calc(100vw - 28px));max-height:92vh;overflow:auto}.receipt-editor-evidence{margin:12px 0;padding:12px;border:1px solid rgba(90,166,240,.26);border-radius:10px;background:var(--blue-glow);font-size:10px;line-height:1.55;color:var(--text-dim)}.receipt-editor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.receipt-editor-grid .wide{grid-column:1/-1}.receipt-editor-grid textarea{min-height:112px}.receipt-due-note{padding:11px 12px;border-left:3px solid var(--warn);background:var(--warn-bg);font-size:10px;line-height:1.5;color:var(--text-dim);margin:10px 0}
   .goal-contract-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
   .goal-contract-head h3{font-family:var(--display);font-style:italic;font-size:clamp(22px,4vw,34px);text-transform:uppercase;line-height:1.02}
   .goal-contract-why{margin:14px 0;padding:13px 14px;border-left:3px solid var(--blue-bright);border-radius:0 9px 9px 0;background:rgba(63,143,255,.08);color:#edf4ff!important;font-size:13px!important;line-height:1.55!important}
@@ -1000,7 +1006,7 @@
     body.coach-shell-on main{margin-left:74px;padding-left:18px;padding-right:18px}.coach-sidebar{width:74px;padding:12px 7px}.coach-sidebar h2{font-size:0;padding:5px 6px 12px}.coach-sidebar h2::after{content:"COACH";font-size:12px}.coach-sidebar button{font-size:0;text-align:center;padding:0}.coach-sidebar button::first-letter{font-size:14px}.coach-attention-badge{right:2px;top:5px;transform:none}.workout-preview{grid-template-columns:1fr}.simple-stat-grid{grid-template-columns:repeat(2,1fr)}.library-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}.library-toolbar>.compact-field:first-child{grid-column:1/-1}.exercise-editor-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.swap-bank-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.active-workout-shell{grid-template-columns:210px minmax(0,1fr)}.trainer-attention-panel{grid-template-columns:repeat(2,minmax(0,1fr))}.attendance-grid{grid-template-columns:repeat(6,170px)}.program-goal-grid,.program-schedule-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.program-cardio-grid{grid-template-columns:repeat(3,minmax(110px,1fr))}.program-safety-body,.market-preview-layout{grid-template-columns:1fr}
   }
   @media (max-width:560px){
-    .goal-grid,.training-route-grid{grid-template-columns:1fr}.library-toolbar,.exercise-editor-grid,.swap-bank-filters{grid-template-columns:1fr}.library-toolbar>.compact-field:first-child,.exercise-editor-grid .wide,.exercise-editor-grid .full{grid-column:auto}.library-item{grid-template-columns:1fr}.library-item-actions{justify-content:flex-start}
+    .goal-grid,.training-route-grid,.receipt-sections,.receipt-editor-grid{grid-template-columns:1fr}.receipt-editor-grid .wide{grid-column:auto}.library-toolbar,.exercise-editor-grid,.swap-bank-filters{grid-template-columns:1fr}.library-toolbar>.compact-field:first-child,.exercise-editor-grid .wide,.exercise-editor-grid .full{grid-column:auto}.library-item{grid-template-columns:1fr}.library-item-actions{justify-content:flex-start}
     .workout-choice-head{align-items:flex-start;flex-direction:column}.workout-choice-grid{grid-template-columns:1fr}.program-profile-grid,.program-goal-grid,.program-schedule-grid,.program-cardio-grid,.program-safety-body,.market-catalog-grid,.safety-selector{grid-template-columns:1fr}.program-cardio-grid .multi-choice-btn:first-child{grid-column:auto}.program-cardio-help,.market-preview-hero{display:block}.market-preview-meta{margin-top:9px}.program-setup-section{padding:13px}
     .audit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.preference-editor{grid-template-columns:1fr}
     .hero h1{font-size:42px}
@@ -2186,6 +2192,25 @@
     <details class="formal-review-box" id="formalReviewBox"><summary id="formalReviewSummary">Four-week formal review</summary><div class="compact-grid" style="margin-top:12px"><div class="compact-field"><label><input id="coachFormalReviewComplete" type="checkbox"> Complete formal block review now</label></div><div class="compact-field"><label for="coachFormalDecision">Block decision</label><select id="coachFormalDecision"><option value="continue">Continue the phase</option><option value="deload">Extend / add deload</option><option value="change">Change emphasis</option><option value="rebuild">Rebuild the program</option></select></div><div class="compact-field wide"><label for="coachFormalNote">Formal review note</label><textarea id="coachFormalNote" placeholder="Adherence, performance, pain, readiness, technique, preferences, and the next four-week decision…"></textarea></div></div></details>
     <div class="tool-actions"><button class="small-btn primary" onclick="saveCoachAdjustment(true)">Save &amp; build next workout</button><button class="small-btn" onclick="saveCoachAdjustment(false)">Save decision</button><button class="small-btn" onclick="closeCoachAdjustment()">Cancel</button></div>
     <p class="storage-note">This choice is coach-approved. It becomes visible in the next workout builder and can adjust the generated session’s volume and safety emphasis.</p>
+  </div>
+</div>
+
+<div id="progressReceiptModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="progressReceiptTitle">
+  <div class="review-dialog receipt-editor-dialog">
+    <div class="receipt-head"><div><div class="client-section-label" id="progressReceiptCadence">Weekly progress receipt</div><h2 id="progressReceiptTitle">Review progress receipt</h2><p>Confirm the evidence, simplify the message, and publish only what this client can act on.</p></div><span class="receipt-status" id="progressReceiptStatus">Draft</span></div>
+    <input id="progressReceiptId" type="hidden">
+    <input id="progressReceiptProfileId" type="hidden">
+    <input id="progressReceiptType" type="hidden">
+    <div id="progressReceiptDueNote" class="receipt-due-note"></div>
+    <div id="progressReceiptEvidence" class="receipt-editor-evidence"></div>
+    <div class="receipt-editor-grid">
+      <div class="compact-field wide"><label for="progressReceiptImproved">What improved <span style="font-weight:400">(one clear point per line)</span></label><textarea id="progressReceiptImproved" placeholder="Completed three planned sessions with no pain reported.&#10;Back squat estimated strength improved 4% across comparable sessions."></textarea></div>
+      <div class="compact-field"><label for="progressReceiptNeedsWork">What needs work <span style="font-weight:400">(maximum two priorities)</span></label><textarea id="progressReceiptNeedsWork" placeholder="Keep the main lifts consistent long enough to build a reliable baseline."></textarea></div>
+      <div class="compact-field"><label for="progressReceiptNext">What changes next <span style="font-weight:400">(specific actions)</span></label><textarea id="progressReceiptNext" placeholder="Repeat the main lifts and add one rep only when all sets stay controlled."></textarea></div>
+      <div class="compact-field wide"><label for="progressReceiptCoachMessage">Coach message <span style="font-weight:400">(lead with honest recognition)</span></label><textarea id="progressReceiptCoachMessage" placeholder="You are building consistency. The next block keeps the lifts familiar and progresses only one variable at a time."></textarea></div>
+    </div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="saveProgressReceipt(true)">Publish to client</button><button class="small-btn" onclick="saveProgressReceipt(false)">Save draft</button><button class="small-btn danger" onclick="deleteProgressReceiptDraft()">Delete draft</button><button class="small-btn" onclick="closeProgressReceiptEditor()">Cancel</button></div>
+    <p class="storage-note">Publishing sends this receipt to the client Home and Progress pages. Drafts remain trainer-only. A formal receipt also closes the current four-week receipt request.</p>
   </div>
 </div>
 
@@ -4750,6 +4775,182 @@ const CLIENT_DAILY_KEY = "fit4life_client_daily_v1";
 const CLIENT_MESSAGES_KEY = "fit4life_client_messages_v1";
 const ACTIVE_WORKOUT_KEY = "fit4life_active_workout_v1";
 const ATTENTION_STATE_KEY = "fit4life_attention_state_v1";
+const PROGRESS_RECEIPTS_KEY = "fit4life_progress_receipts_v1";
+const PROGRESS_RECEIPT_RESPONSES_KEY = "fit4life_progress_receipt_responses_v1";
+function loadProgressReceipts() { return loadLocalArray(PROGRESS_RECEIPTS_KEY); }
+function writeProgressReceipts(items) { return writeLocalArray(PROGRESS_RECEIPTS_KEY,items,1000); }
+function progressReceiptsForProfile(profileId,publishedOnly) {
+  return loadProgressReceipts().filter((item) => item.profileId === profileId && (!publishedOnly || item.status === "published")).sort((a,b) => String(b.publishedAt || b.updatedAt || b.createdAt).localeCompare(String(a.publishedAt || a.updatedAt || a.createdAt)));
+}
+function progressReceiptResponsesForProfile(profileId) {
+  return loadLocalArray(PROGRESS_RECEIPT_RESPONSES_KEY).filter((item) => item.profileId === profileId);
+}
+function receiptResponseFor(receipt) { return progressReceiptResponsesForProfile(receipt.profileId).find((item) => item.receiptId === receipt.id) || null; }
+function receiptDate(value) { const time = new Date(value || 0).getTime(); return Number.isFinite(time) ? time : 0; }
+function receiptPeriodStart(profile,type) {
+  const published = progressReceiptsForProfile(profile.id,true).filter((item) => type === "formal" ? item.type === "formal" : true).sort((a,b) => receiptDate(b.publishedAt) - receiptDate(a.publishedAt))[0];
+  return published && published.publishedAt || (type === "formal" ? profile.lastFormalReceiptAt : "") || profile.phaseStartedAt || profile.createdAt || profile.updatedAt || new Date().toISOString();
+}
+function reviewedAssignmentsSince(profile,startAt) {
+  const start = receiptDate(startAt);
+  return assignmentsForClient(profile.id).filter((assignment) => ["completed","reviewed"].includes(assignmentStatus(assignment)) && receiptDate(assignment.completedAt || assignment.coachReviewedAt || assignment.assignedAt) >= start).sort((a,b) => receiptDate(a.completedAt) - receiptDate(b.completedAt));
+}
+function progressReceiptDueStatus(profile,type) {
+  if (!profile) return {due:false,type:type || "weekly",count:0,days:0};
+  const cadence = type === "formal" ? "formal" : "weekly", receipts = progressReceiptsForProfile(profile.id,false), draft = receipts.find((item) => item.type === cadence && item.status === "draft");
+  const startAt = draft && draft.periodStart || receiptPeriodStart(profile,cadence), assignments = reviewedAssignmentsSince(profile,startAt), startTime = receiptDate(startAt) || Date.now();
+  const days = Math.max(0,Math.floor((Date.now() - startTime) / 86400000));
+  const due = Boolean(draft) || (cadence === "formal" ? assignments.length >= 4 || days >= 28 : assignments.length >= 2 && (days >= 7 || assignments.length >= 3));
+  const dueAt = new Date(startTime + (cadence === "formal" ? 28 : 7) * 86400000).toISOString();
+  return {due,type:cadence,draft,count:assignments.length,days,startAt,dueAt,assignments,reason:draft ? "A trainer draft is waiting to be published." : cadence === "formal" ? assignments.length >= 4 ? assignments.length + " reviewed workouts are ready for the four-week decision." : "The four-week review date has arrived." : assignments.length >= 3 ? assignments.length + " reviewed workouts are ready for a client update." : "The weekly coaching update is due."};
+}
+function nextProgressReceiptRequest(profile) {
+  const formal = progressReceiptDueStatus(profile,"formal"); if (formal.due) return formal;
+  return progressReceiptDueStatus(profile,"weekly");
+}
+function receiptLines(value,limit) {
+  return String(value || "").split(/\n+/).map((line) => line.replace(/^[\s•*-]+/,"").trim()).filter(Boolean).slice(0,limit || 3);
+}
+function receiptEvidenceFor(profile,type,periodStart,seed) {
+  const analysis = trainerAnalysisData(profile.name), goal = goalContractProgress(profile), assignments = reviewedAssignmentsSince(profile,periodStart), reviews = assignments.map((item) => item.clientReview).filter(Boolean);
+  const completionMap = {all:100,most:80,some:50,stopped:20}, averageCompletion = reviews.length ? Math.round(reviews.reduce((sum,item) => sum + (completionMap[item.completion] || 0),0) / reviews.length) : null;
+  const improved = [], needsWork = [], nextChanges = [];
+  if (assignments.length) improved.push("Completed " + assignments.length + " reviewed workout" + (assignments.length === 1 ? "" : "s") + (averageCompletion == null ? "." : " with " + averageCompletion + "% average planned completion."));
+  const positiveTrend = analysis.exercises.filter((item) => Number.isFinite(item.trend) && item.trend > 0).sort((a,b) => b.trend - a.trend)[0];
+  if (positiveTrend) improved.push(positiveTrend.label + " estimated strength improved " + positiveTrend.trend.toFixed(1) + "% across comparable sessions.");
+  const prs = [...new Set(assignments.flatMap((item) => item.clientReview && item.clientReview.personalRecords || []))];
+  if (prs.length) improved.push("Personal best recorded: " + prs.slice(0,2).join(" · ") + ".");
+  if (goal.percent != null && goal.current != null) improved.push("The current goal measure is " + goalValueLabel(goal.current,goal.contract.unit) + " — " + goal.percent + "% of the measured path from baseline to target.");
+  if (!improved.length) improved.push("Building your baseline: the completed work is being saved, but another comparable session is needed before claiming a performance change.");
+  const safetyReview = reviews.find((item) => item && item.pain && item.pain !== "none");
+  if (safetyReview) needsWork.push("Keep " + String(safetyReview.injuryArea && INJURY_LABELS[safetyReview.injuryArea] || "the reported discomfort").toLowerCase() + " inside a pain-free range; do not progress the aggravating movement yet.");
+  if (averageCompletion != null && averageCompletion < 75) needsWork.push("Session completion averaged " + averageCompletion + "%. The plan needs to fit the client’s available time before adding more work.");
+  if (!analysis.comparableExercises) needsWork.push("Repeat the key movements across separate sessions so load and rep changes can be compared honestly.");
+  if (!goalContractIsComplete(goal.contract)) needsWork.push("Finish the goal contract so progress can be judged against one measurable target and the client’s real reason.");
+  if (!needsWork.length) needsWork.push("Keep technique, pain-free range, and recovery consistent while the next block adds only one progression variable at a time.");
+  const adjustment = profile.coachAdjustment || {}, actionCopy = {
+    repeat:"Repeat the successful movement structure and working loads before changing the exercise menu.",
+    progress:"Progress one variable on controlled exercises: one rep or the smallest available load, not both.",
+    reduce:"Reduce working volume or load until completion, technique, and recovery return to target.",
+    pain_swap:"Replace the painful pattern with an approved pain-free option and reassess before loading it."
+  };
+  if (seed && seed.formalDecision) {
+    const formalCopy = {continue:"Continue the current phase and preserve its compound anchors.",deload:"Add or extend a deload before the next loading block.",change:"Change the next phase emphasis while preserving useful benchmarks.",rebuild:"Rebuild the next phase around the updated goal, safety, and schedule evidence."};
+    nextChanges.push(formalCopy[seed.formalDecision] || formalCopy.continue);
+  }
+  nextChanges.push(actionCopy[adjustment.action] || analysis.priority);
+  if (adjustment.note) nextChanges.push(adjustment.note);
+  if (type === "formal" && nextChanges.length < 2) nextChanges.push("Set the next four-week benchmarks and keep accessories flexible around the client’s response.");
+  const evidenceIds = [...new Set(assignments.map((item) => item.id).concat(analysis.recentWorkouts.map((item) => item.id),analysis.recentSets.map((item) => item.id)).filter(Boolean))];
+  const evidenceSummary = analysis.evidenceDetail + " · receipt period includes " + assignments.length + " completed/reviewed workout" + (assignments.length === 1 ? "" : "s") + ".";
+  const name = String(profile.name || "Client").split(/\s+/)[0], recognition = assignments.length ? name + ", your consistency is creating useful evidence. " : name + ", the first win is establishing an honest baseline. ";
+  const goalMessage = goal.contract.deeperReason ? "This keeps the plan connected to why this matters to you." : "We will keep the next steps simple and measurable.";
+  return {analysis,goal,assignments,evidenceIds,evidenceSummary,improved:improved.slice(0,3),needsWork:needsWork.slice(0,2),nextChanges:[...new Set(nextChanges.filter(Boolean))].slice(0,3),coachMessage:recognition + goalMessage};
+}
+function buildProgressReceiptDraft(profile,type,seed) {
+  const cadence = type === "formal" ? "formal" : "weekly", existing = progressReceiptsForProfile(profile.id,false).find((item) => item.type === cadence && item.status === "draft");
+  if (existing) return existing;
+  const due = progressReceiptDueStatus(profile,cadence), periodStart = due.startAt || receiptPeriodStart(profile,cadence), evidence = receiptEvidenceFor(profile,cadence,periodStart,seed || {});
+  return {
+    id:"receipt-" + Date.now() + "-" + Math.random().toString(16).slice(2),profileId:profile.id,client:profile.name,type:cadence,status:"draft",
+    periodStart,periodEnd:new Date().toISOString(),goalSnapshot:{statedGoal:evidence.goal.contract.statedGoal,deeperReason:evidence.goal.contract.deeperReason,metricLabel:evidence.goal.contract.metricLabel,currentValue:evidence.goal.current,targetValue:evidence.goal.target,unit:evidence.goal.contract.unit,targetDate:evidence.goal.contract.targetDate},
+    evidenceIds:evidence.evidenceIds,evidenceSummary:evidence.evidenceSummary,improved:evidence.improved,needsWork:evidence.needsWork,nextChanges:evidence.nextChanges,coachMessage:(seed && seed.formalNote ? seed.formalNote + " " : "") + evidence.coachMessage,
+    formalDecision:seed && seed.formalDecision || "",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),createdBy:currentAccountIdentity().displayName
+  };
+}
+function upsertProgressReceipt(receipt) {
+  const receipts = loadProgressReceipts(), index = receipts.findIndex((item) => item.id === receipt.id);
+  if (index >= 0) receipts[index] = receipt; else receipts.unshift(receipt);
+  return writeProgressReceipts(receipts) ? receipt : null;
+}
+function progressReceiptListHtml(items) {
+  return '<ul>' + (items || []).map((item) => '<li>' + escapeHtml(item) + '</li>').join("") + '</ul>';
+}
+function progressReceiptCardHtml(profile,receipt,compact) {
+  if (!receipt) return "";
+  const response = receiptResponseFor(receipt), published = new Date(receipt.publishedAt || receipt.updatedAt).toLocaleDateString(), reason = receipt.goalSnapshot && receipt.goalSnapshot.deeperReason;
+  return '<section class="client-card wide progress-receipt-card"><div class="receipt-head"><div><div class="client-section-label">' + (receipt.type === "formal" ? "Four-week progress receipt" : "Weekly progress receipt") + '</div><h3>' + escapeHtml(receipt.type === "formal" ? "Your plan review" : "Your coaching update") + '</h3><p>Published ' + published + ' by ' + escapeHtml(receipt.publishedBy || "your coach") + '</p></div><span class="receipt-status">' + (response && response.acknowledgedAt ? "Read" : "New") + '</span></div>'
+    + (reason ? '<div class="receipt-why"><b>Why you started</b>' + escapeHtml(reason) + '</div>' : '')
+    + '<div class="receipt-sections"><div class="receipt-section improved"><h4>What improved</h4>' + progressReceiptListHtml(compact ? (receipt.improved || []).slice(0,1) : receipt.improved) + '</div><div class="receipt-section"><h4>What needs work</h4>' + progressReceiptListHtml(compact ? (receipt.needsWork || []).slice(0,1) : receipt.needsWork) + '</div><div class="receipt-section next"><h4>What changes next</h4>' + progressReceiptListHtml(compact ? (receipt.nextChanges || []).slice(0,1) : receipt.nextChanges) + '</div></div>'
+    + (receipt.coachMessage ? '<div class="receipt-why"><b>Message from your coach</b>' + escapeHtml(receipt.coachMessage) + '</div>' : '')
+    + (!compact ? '<div class="receipt-evidence">Evidence used: ' + escapeHtml(receipt.evidenceSummary || "Workout and coaching records from this receipt period.") + '</div>' : '')
+    + '<div class="tool-actions">' + (response && response.acknowledgedAt ? '<button class="small-btn" disabled>Receipt read</button>' : '<button class="small-btn primary" onclick="acknowledgeProgressReceipt(\'' + escapeHtml(receipt.id) + '\')">I read this</button>') + '<button class="small-btn" onclick="askAboutProgressReceipt(\'' + escapeHtml(receipt.id) + '\')">Ask my coach</button>' + (compact ? '<button class="small-btn" onclick="setClientProgressSection(\'overview\')">View full receipt</button>' : '') + '</div></section>';
+}
+function latestPublishedProgressReceipt(profile) { return progressReceiptsForProfile(profile.id,true)[0] || null; }
+function clientProgressReceiptsHtml(profile) {
+  const receipts = progressReceiptsForProfile(profile.id,true);
+  if (!receipts.length) return '<section class="client-card wide"><div class="client-section-label">Progress receipts</div><h3>Building your first update</h3><p>Your trainer will publish a simple, evidence-based receipt after enough comparable workouts are complete. Drafts are never shown here.</p></section>';
+  return '<section class="client-card wide"><div class="client-section-label">Progress receipt history</div><h3>What improved, what needs work, and what changes next</h3><div class="receipt-history">' + receipts.map((receipt,index) => '<details ' + (index === 0 ? 'open' : '') + '><summary>' + (receipt.type === "formal" ? "Four-week review" : "Weekly update") + ' · ' + new Date(receipt.publishedAt || receipt.updatedAt).toLocaleDateString() + '</summary><div class="receipt-history-body">' + progressReceiptCardHtml(profile,receipt,false) + '</div></details>').join("") + '</div></section>';
+}
+function acknowledgeProgressReceipt(receiptId) {
+  const profile = activeClientProfile(), receipt = loadProgressReceipts().find((item) => item.id === receiptId && item.status === "published"); if (!profile || !receipt || receipt.profileId !== profile.id) return false;
+  const items = loadLocalArray(PROGRESS_RECEIPT_RESPONSES_KEY), existing = items.find((item) => item.receiptId === receipt.id), now = new Date().toISOString();
+  if (existing) existing.acknowledgedAt = now; else items.unshift({id:"receipt-response-" + Date.now(),receiptId:receipt.id,profileId:profile.id,acknowledgedAt:now});
+  writeLocalArray(PROGRESS_RECEIPT_RESPONSES_KEY,items,1000); renderClientAppView(currentView); showToast("Receipt marked read"); return true;
+}
+function askAboutProgressReceipt(receiptId) {
+  const profile = activeClientProfile(), receipt = loadProgressReceipts().find((item) => item.id === receiptId && item.status === "published"); if (!profile || !receipt) return false;
+  openClientTab("coach");
+  setTimeout(() => { const input = byId("clientMessageInput"); if (input) { input.value = "Question about my " + (receipt.type === "formal" ? "four-week" : "weekly") + " progress receipt: "; input.focus(); } },30);
+  return true;
+}
+function trainerProgressReceiptsHtml(profile) {
+  if (!profile) return "";
+  const receipts = progressReceiptsForProfile(profile.id,false), due = nextProgressReceiptRequest(profile), draft = receipts.find((item) => item.status === "draft");
+  return '<section class="analysis-panel" style="margin-top:14px"><div class="analysis-panel-head"><div><h4 class="analysis-section-title">Progress receipts</h4><p style="font-size:9px;color:var(--text-faint);margin-top:4px">Client-facing coaching updates remain drafts until a trainer confirms and publishes them.</p></div><button class="small-btn primary" onclick="openProgressReceiptEditor(\'' + escapeHtml(profile.id) + '\',\'' + escapeHtml(due.due ? due.type : "weekly") + '\')">' + (draft ? "Review draft" : due.due ? "Create due receipt" : "Create update") + '</button></div>'
+    + (due.due ? '<div class="receipt-due-note"><b>' + (due.type === "formal" ? "Formal receipt requested." : "Progress receipt requested.") + '</b> ' + escapeHtml(due.reason) + '</div>' : '<div class="priority-card">Next weekly receipt opens after at least two reviewed workouts and seven days (or three reviewed workouts). The formal receipt opens after four reviewed workouts or 28 days.</div>')
+    + '<div class="analysis-history">' + (receipts.slice(0,8).map((receipt) => '<div class="analysis-history-item"><div><b>' + (receipt.type === "formal" ? "Four-week" : "Weekly") + ' receipt · ' + escapeHtml(receipt.status) + '</b><span>' + new Date(receipt.publishedAt || receipt.updatedAt || receipt.createdAt).toLocaleDateString() + ' · ' + escapeHtml(receipt.evidenceSummary || "Evidence draft") + '</span></div><button class="small-btn" onclick="openProgressReceiptEditor(\'' + escapeHtml(profile.id) + '\',\'' + escapeHtml(receipt.type) + '\',\'' + escapeHtml(receipt.id) + '\')">' + (receipt.status === "published" ? "View / revise" : "Review draft") + '</button></div>').join("") || '<div class="empty-state">No progress receipt has been created yet.</div>') + '</div></section>';
+}
+function closeProgressReceiptEditor() { const modal = byId("progressReceiptModal"); if (modal) modal.classList.remove("open"); }
+function openProgressReceiptEditor(profileId,type,receiptId,seed) {
+  if (!requireTrainerMutation("review and publish progress receipts")) return null;
+  const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) return null;
+  let receipt = receiptId ? loadProgressReceipts().find((item) => item.id === receiptId) : progressReceiptsForProfile(profile.id,false).find((item) => item.type === (type === "formal" ? "formal" : "weekly") && item.status === "draft");
+  if (receipt && receipt.status === "published") {
+    const original = receipt;
+    receipt = {...original,id:"receipt-" + Date.now() + "-" + Math.random().toString(16).slice(2),status:"draft",supersedesId:original.id,publishedAt:"",publishedBy:"",publishedByUserId:"",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),createdBy:currentAccountIdentity().displayName};
+    upsertProgressReceipt(receipt);
+    showToast("A new draft was created so the published receipt remains in the coaching record");
+  }
+  if (!receipt) { receipt = buildProgressReceiptDraft(profile,type,seed); upsertProgressReceipt(receipt); }
+  const due = progressReceiptDueStatus(profile,receipt.type);
+  byId("progressReceiptId").value = receipt.id; byId("progressReceiptProfileId").value = profile.id; byId("progressReceiptType").value = receipt.type;
+  byId("progressReceiptTitle").textContent = "Progress receipt · " + profile.name; byId("progressReceiptCadence").textContent = receipt.type === "formal" ? "Four-week formal receipt" : "Weekly progress receipt"; byId("progressReceiptStatus").textContent = receipt.status === "published" ? "Published" : "Draft";
+  byId("progressReceiptDueNote").innerHTML = '<b>' + (due.due ? "Requested now." : "Optional update.") + '</b> ' + escapeHtml(due.due ? due.reason : "This can be saved as a trainer draft without notifying the client.");
+  byId("progressReceiptEvidence").textContent = receipt.evidenceSummary || "No evidence summary available.";
+  byId("progressReceiptImproved").value = (receipt.improved || []).join("\n"); byId("progressReceiptNeedsWork").value = (receipt.needsWork || []).join("\n"); byId("progressReceiptNext").value = (receipt.nextChanges || []).join("\n"); byId("progressReceiptCoachMessage").value = receipt.coachMessage || "";
+  byId("progressReceiptModal").classList.add("open"); return receipt;
+}
+function saveProgressReceipt(publish) {
+  if (!requireTrainerMutation(publish ? "publish progress receipts" : "save progress receipt drafts")) return null;
+  const id = byId("progressReceiptId").value, receipts = loadProgressReceipts(), index = receipts.findIndex((item) => item.id === id); if (index < 0) return null;
+  const improved = receiptLines(byId("progressReceiptImproved").value,3), needsWork = receiptLines(byId("progressReceiptNeedsWork").value,2), nextChanges = receiptLines(byId("progressReceiptNext").value,3), coachMessage = byId("progressReceiptCoachMessage").value.trim();
+  if (!improved.length || !needsWork.length || !nextChanges.length) { showToast("Keep one clear item in each receipt section"); return null; }
+  const now = new Date().toISOString(), identity = currentAccountIdentity(), receipt = {...receipts[index],improved,needsWork,nextChanges,coachMessage,updatedAt:now,updatedBy:identity.displayName};
+  if (publish) { receipt.status = "published"; receipt.publishedAt = now; receipt.publishedBy = identity.displayName; receipt.publishedByUserId = identity.id || ""; }
+  receipts[index] = receipt; if (!writeProgressReceipts(receipts)) return null;
+  if (publish) {
+    const profiles = loadProfiles(), profileIndex = profiles.findIndex((item) => item.id === receipt.profileId);
+    if (profileIndex >= 0) {
+      const profile = profiles[profileIndex], contract = goalContractFor(profile); contract.lastReviewedAt = now;
+      const intake = {...(profile.intake || {}),goalContract:contract,updatedAt:now};
+      profiles[profileIndex] = {...profile,intake,lastProgressReceiptAt:now,...(receipt.type === "formal" ? {lastFormalReceiptAt:now,lastFormalReviewAt:now} : {}),updatedAt:now};
+      writeProfiles(profiles); selectedTrainerClient = profiles[profileIndex].name;
+      const messages = loadLocalArray(CLIENT_MESSAGES_KEY);
+      if (!messages.some((item) => item.receiptId === receipt.id)) {
+        messages.unshift({id:"message-receipt-" + receipt.id,profileId:receipt.profileId,client:profile.name,senderRole:"trainer",senderName:identity.displayName,body:"Your " + (receipt.type === "formal" ? "four-week progress receipt" : "weekly progress receipt") + " is ready. Open Progress to review what improved, what needs work, and what changes next.",kind:"progress_receipt",receiptId:receipt.id,createdAt:now});
+        writeLocalArray(CLIENT_MESSAGES_KEY,messages,1000);
+      }
+    }
+  }
+  closeProgressReceiptEditor(); renderTrainerAttention(); if (selectedTrainerClient) renderTrainerAnalysis(selectedTrainerClient);
+  showToast(publish ? "Progress receipt published to the client" : "Progress receipt draft saved"); return receipt;
+}
+function deleteProgressReceiptDraft() {
+  if (!requireTrainerMutation("delete progress receipt drafts")) return false;
+  const id = byId("progressReceiptId").value, receipt = loadProgressReceipts().find((item) => item.id === id); if (!receipt || receipt.status === "published") { showToast("Published receipts stay in the coaching record"); return false; }
+  writeProgressReceipts(loadProgressReceipts().filter((item) => item.id !== id)); closeProgressReceiptEditor(); renderTrainerAttention(); if (selectedTrainerClient) renderTrainerAnalysis(selectedTrainerClient); showToast("Draft deleted"); return true;
+}
 function loadSavedPrograms() { return loadLocalArray(SAVED_PROGRAMS_KEY); }
 function writeSavedPrograms(items) { return writeLocalArray(SAVED_PROGRAMS_KEY,items,100); }
 function savedProgramFor(profile) { return loadSavedPrograms().find((item) => item.profileId === profile.id || clientMatches(item.setup && item.setup.client,profile.name)) || null; }
@@ -4993,6 +5194,7 @@ function renderClientHome(profile) {
     : '<section class="client-card wide"><div class="client-section-label">Upcoming check-in</div><div class="client-action-row"><span><b>' + (lastCheckIn ? 'Next weekly review · ' + nextCheck.toLocaleDateString() : 'Weekly check-in available') + '</b><span>' + (lastCheckIn ? 'Your last check-in was sent ' + new Date(lastCheckIn.createdAt || lastCheckIn.date).toLocaleDateString() : 'Send the first update when you are ready.') + '</span></span><button class="small-btn primary" onclick="openClientCheckInForActive()">Open check-in</button></div></section>';
   const competition = profile.competitionDate ? '<div class="client-card wide"><div class="client-section-label">Competition</div><h3>' + escapeHtml(profile.sport || 'Athlete event') + '</h3><p>' + new Date(profile.competitionDate + 'T12:00:00').toLocaleDateString() + (profile.sportSchedule ? ' · ' + escapeHtml(profile.sportSchedule) : '') + '</p></div>' : '';
   const review = assignment && assignment.clientReview, completionSummary = review ? '<section class="client-card wide"><div class="client-section-label">Latest workout summary</div><div class="simple-stat-grid"><div class="simple-stat"><b>' + (review.actualDuration || review.duration || '—') + '</b><span>Minutes</span></div><div class="simple-stat"><b>' + (review.loggedSets || 0) + '</b><span>Working sets</span></div><div class="simple-stat"><b>' + review.difficulty + '/10</b><span>Difficulty</span></div><div class="simple-stat"><b>' + ((review.personalRecords || []).length) + '</b><span>Personal records</span></div></div><p style="margin-top:12px">' + (review.pain === 'none' ? 'No pain reported.' : 'Pain or discomfort reported: ' + escapeHtml(review.injuryArea || review.pain) + '.') + ((review.personalRecords || []).length ? ' PRs: ' + escapeHtml(review.personalRecords.join(', ')) + '.' : '') + '</p></section>' : '';
+  const latestReceipt = latestPublishedProgressReceipt(profile), receiptCard = latestReceipt ? progressReceiptCardHtml(profile,latestReceipt,true) : '';
   const disabled = !assignment || ["completed","reviewed"].includes(assignmentStatus(assignment)) || intakeStatus.programmingBlocked;
   byId("clientHomeGreeting").textContent = "Hi, " + String(profile.name).split(/\s+/)[0]; byId("clientHomeSubhead").textContent = clientWorkoutStatusLabel(assignment); byId("clientHomeAvatar").textContent = clientInitials(profile);
   out.innerHTML = '<section class="client-hero"><div class="hero-kicker">Today’s workout</div><h2>' + escapeHtml(session ? session.goalLabel || 'Coach-planned session' : 'Your next plan is coming') + '</h2><div class="hero-meta"><span>' + escapeHtml(session ? (session.spec.minutes || 60) + ' min' : 'Not scheduled') + '</span><span>' + escapeHtml(session ? clientSessionEquipment(session).slice(0,3).join(' · ') || 'Bodyweight' : 'Coach assignment needed') + '</span><span>' + escapeHtml(clientWorkoutStatusLabel(assignment)) + '</span></div><p class="hero-purpose">' + escapeHtml(intakeStatus.programmingBlocked ? 'Workout start is paused until your trainer documents a safety decision from your intake. Your saved workout is not lost.' : clientPurpose(session)) + '</p><button class="start-workout-btn" ' + (disabled ? 'disabled' : '') + ' onclick="startActiveWorkout(\'' + escapeHtml(profile.id) + '\')">' + (intakeStatus.programmingBlocked ? 'Trainer review needed' : assignmentStatus(assignment) === 'in_progress' ? 'Continue workout' : 'Start workout') + '</button></section>'
@@ -5000,7 +5202,7 @@ function renderClientHome(profile) {
     + '<section class="client-card"><div class="client-section-label">Coach message</div><h3>' + (assignment && assignment.coachNote ? 'Update from your coach' : 'No new message') + '</h3><p>' + escapeHtml(assignment && assignment.coachNote || 'Important program changes and workout feedback will appear here instead of getting buried in chat.') + '</p><div class="tool-actions"><button class="small-btn" onclick="openClientTab(\'coach\')">Open coach</button></div></section>'
     + '<section class="client-card"><div class="client-section-label">Today’s habits · ' + completedHabits + '/3</div>' + [["movement","Daily movement",daily.movement],["hydration","Hydration target",daily.hydration],["nutrition","Nutrition plan",daily.nutrition]].map((habit) => '<label class="client-action-row"><span><b>' + habit[1] + '</b><span>Tap when complete</span></span><input class="habit-check" type="checkbox" ' + (habit[2] ? 'checked' : '') + ' onchange="toggleClientHabit(\'' + habit[0] + '\',this.checked)"></label>').join('') + '</section>'
     + '<section class="client-card"><div class="client-section-label">Nutrition summary</div><h3>' + (daily.nutrition ? 'Plan completed today' : 'No nutrition check yet') + '</h3><p>Nutrition remains optional. Your coach can add a simple target without crowding the workout screen.</p><div class="tool-actions"><button class="small-btn" onclick="openClientMoreSection(\'nutrition\')">View nutrition</button></div></section>'
-    + recoveryCard + intakeCard + completionSummary + checkInCard + competition;
+    + receiptCard + recoveryCard + intakeCard + completionSummary + checkInCard + competition;
 }
 function openClientReadiness() {
   pendingReadinessStart = null;
@@ -5049,7 +5251,7 @@ function renderClientWorkoutPreview(profile,session,assignment) {
 function setClientProgressSection(section) { clientProgressSection = ["overview","performance","body","goals"].includes(section) ? section : "overview"; document.querySelectorAll('[data-client-progress]').forEach((button) => button.classList.toggle('on',button.dataset.clientProgress === clientProgressSection)); const profile = activeClientProfile(); if (profile) renderClientProgress(profile); }
 function renderClientProgress(profile) {
   const out = byId("clientProgressContent"); if (!out) return; const analysis = trainerAnalysisData(profile.name), scans = inBodyScansFor(profile.name), goal = bodyGoalFor(profile.name), entries = trainerEntriesFor(profile.name);
-  if (clientProgressSection === 'overview') out.innerHTML = '<div class="simple-stat-grid"><div class="simple-stat"><b>' + escapeHtml(analysis.evidenceLevel) + '</b><span>Data confidence</span></div><div class="simple-stat"><b>' + (analysis.recentWorkouts.length ? analysis.completion + '%' : '—') + '</b><span>Workout completion</span></div><div class="simple-stat"><b>' + (analysis.averageTrend == null ? 'Baseline' : (analysis.averageTrend >= 0 ? '+' : '') + analysis.averageTrend.toFixed(1) + '%') + '</b><span>Comparable-lift trend</span></div><div class="simple-stat"><b>' + (analysis.readiness || '—') + '</b><span>Latest readiness</span></div></div><section class="client-card wide" style="margin-top:14px"><div class="client-section-label">What this is based on</div><h3>' + escapeHtml(analysis.evidenceDetail) + '</h3><p>Progress is shown only from completed workout reviews and comparable logged exercises—never as a percentile or unexplained composite score.</p></section><section class="client-card wide" style="margin-top:14px"><div class="client-section-label">What matters next</div><h3>Coach priority</h3><p>' + escapeHtml(analysis.priority) + '</p></section>';
+  if (clientProgressSection === 'overview') out.innerHTML = clientProgressReceiptsHtml(profile) + '<div class="simple-stat-grid" style="margin-top:14px"><div class="simple-stat"><b>' + escapeHtml(analysis.evidenceLevel) + '</b><span>Data confidence</span></div><div class="simple-stat"><b>' + (analysis.recentWorkouts.length ? analysis.completion + '%' : '—') + '</b><span>Workout completion</span></div><div class="simple-stat"><b>' + (analysis.averageTrend == null ? 'Baseline' : (analysis.averageTrend >= 0 ? '+' : '') + analysis.averageTrend.toFixed(1) + '%') + '</b><span>Comparable-lift trend</span></div><div class="simple-stat"><b>' + (analysis.readiness || '—') + '</b><span>Latest readiness</span></div></div><section class="client-card wide" style="margin-top:14px"><div class="client-section-label">What this is based on</div><h3>' + escapeHtml(analysis.evidenceDetail) + '</h3><p>Progress is shown only from completed workout reviews and comparable logged exercises—never as a percentile or unexplained composite score.</p></section><section class="client-card wide" style="margin-top:14px"><div class="client-section-label">What matters next</div><h3>Coach priority</h3><p>' + escapeHtml(analysis.priority) + '</p></section>';
   else if (clientProgressSection === 'performance') out.innerHTML = '<section class="client-card wide"><div class="client-section-label">Performance</div><h3>Recent exercise progress</h3><div class="preview-list">' + (analysis.exercises.slice(0,10).map((item,index) => '<div class="preview-exercise"><i>' + (index + 1) + '</i><b>' + escapeHtml(item.label) + '</b><span>' + (item.trend == null ? 'Baseline' : (item.trend >= 0 ? '+' : '') + item.trend.toFixed(1) + '%') + '</span></div>').join('') || '<div class="empty-state-polished"><b>No performance trend yet</b><p>Repeat key exercises across workouts to build a useful comparison.</p></div>') + '</div></section>';
   else if (clientProgressSection === 'body') out.innerHTML = '<section class="client-card wide"><div class="client-section-label">Body</div><h3>' + (scans.length ? scans.length + ' body-composition scan' + (scans.length === 1 ? '' : 's') : 'No body data added') + '</h3><p>' + (scans.length ? 'Latest scan: ' + new Date(scans[0].date + 'T12:00:00').toLocaleDateString() + (scans[0].weight != null ? ' · ' + scans[0].weight + ' ' + scans[0].unit : '') + (scans[0].pbf != null ? ' · ' + scans[0].pbf + '% body fat' : '') : 'Body-composition tracking is optional and stays secondary to training quality and health.') + '</p></section>';
   else out.innerHTML = goalContractClientHtml(profile,"progress") + '<section class="client-card wide" style="margin-top:14px"><div class="client-section-label">Supporting evidence</div><h3>' + escapeHtml((profile.goals || []).map((item) => GOALS[item] ? GOALS[item].label : item).join(' + ') || 'General fitness') + '</h3><p>' + (goal && goal.enabled !== false ? 'Optional body-composition goal is active' + (goal.targetWeight ? ' · target ' + goal.targetWeight + ' ' + goal.unit : '') + (goal.targetPbf ? ' · target ' + goal.targetPbf + '% body fat' : '') + '.' : 'Body-composition goals are optional and separate from the main goal contract.') + '</p><div class="hero-meta"><span>' + entries.filter((entry) => entry.type === 'workout').length + ' reviewed workouts</span><span>' + entries.filter((entry) => entry.type === 'set').length + ' sets logged</span><span>' + entries.filter((entry) => entry.type === 'goal_milestone').length + ' milestones recorded</span></div></section>';
@@ -5105,6 +5307,7 @@ function trainerAttentionSnapshot() {
   const checkinReviews = checkins.filter((checkin) => !checkin.reviewedAt);
   const recoveryOverdue = profiles.map((profile) => ({profile,status:recoveryFollowUpStatus(profile)})).filter((item) => item.status.active && item.status.overdue);
   const formalReviews = profiles.filter((profile) => formalReviewStatus(profile).due);
+  const receiptRequests = profiles.map((profile) => ({profile,status:nextProgressReceiptRequest(profile)})).filter((item) => item.status.due);
   const recognition = profiles.filter((profile) => {
     const recent = progress.filter((entry) => progressEntryBelongsToClient(entry,profile) && ["set","workout"].includes(entry.type) && now - new Date(entry.date || 0).getTime() <= 7 * 86400000).sort((a,b) => String(b.date).localeCompare(String(a.date)))[0];
     if (!recent) return false;
@@ -5169,7 +5372,7 @@ function trainerAttentionSnapshot() {
     const recoveryDetail = painHold ? "Pain changed movement or stopped training. Review the affected area before the next workout." : checkin.painTrend === "worse" ? "Discomfort is worse after the workout. Review before the next similar movement." : checkin.nextSessionReadiness === "no" ? "Client does not feel ready for the next planned session." : Number(checkin.soreness) >= 4 ? "Soreness is affecting normal activity; review volume and recovery before the next similar session." : Number(checkin.recovery) <= 2 ? "Client reports poor recovery after the workout." : checkin.note ? "Client note: " + checkin.note : "Recovery looks on track. Review and acknowledge the client’s follow-through.";
     push({id:"checkin:" + checkin.id,profileId:profile && profile.id || checkin.profileId,client:checkin.client,trainer:profile && profile.assignedTrainerName || "Coaching team",kind:recovery ? "recovery" : "checkin",urgency:urgent ? "urgent" : high ? "high" : "normal",rank:urgent ? 0 : high ? 1 : 3,createdAt:checkin.createdAt || checkin.date,label:recovery ? "24–48h recovery pulse ready" : checkin.reviewType === "starter_week_1" ? "First-week review ready" : "Weekly check-in ready",detail:recovery ? recoveryDetail : checkin.question ? "Client question: " + checkin.question : painHold ? "Pain changed movement or stopped training. Review the affected area before the next workout." : Number(checkin.pain) > 0 ? "Mild discomfort reported with movement still normal. Monitor and reply before progression." : "Review adherence, recovery, wins, barriers, and next-week schedule."});
   });
-  formalReviews.forEach((profile) => push({id:"formal:" + profile.id + ":" + String(formalReviewStatus(profile).dueAt || ""),profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"formal",urgency:"high",rank:2,createdAt:formalReviewStatus(profile).dueAt || profile.phaseStartedAt,label:"Four-week review due",detail:"Review progress, safety, adherence, and whether the phase should continue, change, or rebuild."}));
+  receiptRequests.forEach(({profile,status}) => push({id:"progress-receipt:" + status.type + ":" + profile.id + ":" + String(status.startAt || ""),profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:status.type === "formal" ? "receipt_formal" : "receipt_weekly",urgency:status.type === "formal" ? "high" : "normal",rank:status.type === "formal" ? 2 : 3,createdAt:status.draft && status.draft.updatedAt || status.dueAt || status.startAt,label:status.type === "formal" ? "Formal progress receipt requested" : "Weekly progress receipt requested",detail:status.reason + " Review the evidence, make the next change specific, and publish it to the client."}));
   recognition.forEach((profile) => {
     const recent = progress.filter((entry) => progressEntryBelongsToClient(entry,profile) && ["set","workout"].includes(entry.type)).sort((a,b) => String(b.date).localeCompare(String(a.date)))[0];
     if (recent) push({id:"recognition:" + recent.id,profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"recognition",urgency:"positive",rank:4,createdAt:recent.date,label:"Positive recognition due",detail:"Acknowledge consistency or progress before giving the next correction."});
@@ -5181,7 +5384,7 @@ function trainerAttentionSnapshot() {
   });
   trainerRequests.forEach((request) => push({id:"trainer-request:" + request.id,profileId:"",client:request.full_name || request.email || "Trainer request",trainer:"Staff confirmation",kind:"trainer_request",urgency:"normal",rank:3,createdAt:request.created_at,label:"Trainer access request",detail:"Confirm only a verified request from a person who should access this gym’s client records. The approver is recorded."}));
   const attentionState = loadAttentionState(), visibleItems = items.filter((item) => attentionItemIsVisible(item,attentionState)).sort((a,b) => Number(a.rank || 9) - Number(b.rank || 9) || new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
-  return {unanswered,assignmentReviews,checkinReviews,recoveryOverdue,formalReviews,recognition,trainerRequests,automationAlerts,reviews:assignmentReviews.length + checkinReviews.length + formalReviews.length,items:visibleItems};
+  return {unanswered,assignmentReviews,checkinReviews,recoveryOverdue,formalReviews,receiptRequests,recognition,trainerRequests,automationAlerts,reviews:assignmentReviews.length + checkinReviews.length + receiptRequests.length,items:visibleItems};
 }
 function openCoachAttentionItem(profileId,kind) {
   if (kind === "trainer_request") { openCoachDestination("access"); return; }
@@ -5194,9 +5397,11 @@ function openCoachAttentionItem(profileId,kind) {
     : ["checkin","recovery"].includes(kind) ? "checkins"
       : kind === "automation" ? "coaching"
       : kind === "program" || kind === "formal" ? "program"
+        : ["receipt_weekly","receipt_formal"].includes(kind) ? "progress"
         : kind === "pain" || kind === "readiness" || kind === "intake" ? "assessments" : "overview";
   show("trainer");
   renderTrainerHub(profile.name);
+  if (["receipt_weekly","receipt_formal"].includes(kind)) setTimeout(() => openProgressReceiptEditor(profile.id,kind === "receipt_formal" ? "formal" : "weekly"),30);
 }
 function updateCoachAttentionItem(id,status) {
   const state = loadAttentionState();
@@ -5220,7 +5425,7 @@ function renderTrainerAttention() {
   if (!panel) return attention;
   panel.innerHTML =
     '<button class="attention-card ' + (attention.unanswered.length ? 'urgent' : '') + '" onclick="openCoachDestination(\'messages\')"><span>Unanswered messages</span><b>' + attention.unanswered.length + '</b><p>' + (attention.unanswered.length ? 'Clients are waiting for a trainer reply.' : 'No client is waiting on a reply.') + '</p></button>' +
-    '<button class="attention-card ' + (attention.reviews ? 'urgent' : '') + '" onclick="openCoachDestination(\'calendar\')"><span>Reviews waiting</span><b>' + attention.reviews + '</b><p>' + attention.assignmentReviews.length + ' workout · ' + attention.checkinReviews.length + ' check-in · ' + attention.formalReviews.length + ' program' + (attention.recoveryOverdue.length ? ' · ' + attention.recoveryOverdue.length + ' recovery overdue' : '') + '</p></button>' +
+    '<button class="attention-card ' + (attention.reviews ? 'urgent' : '') + '" onclick="openCoachDestination(\'calendar\')"><span>Reviews waiting</span><b>' + attention.reviews + '</b><p>' + attention.assignmentReviews.length + ' workout · ' + attention.checkinReviews.length + ' check-in · ' + attention.receiptRequests.length + ' receipt' + (attention.recoveryOverdue.length ? ' · ' + attention.recoveryOverdue.length + ' recovery overdue' : '') + '</p></button>' +
     '<button class="attention-card positive" onclick="openCoachDestination(\'messages\')"><span>Recognition due</span><b>' + attention.recognition.length + '</b><p>Recent effort with no coach acknowledgement yet.</p></button>' +
     '<button class="attention-card" onclick="openCoachDestination(\'access\')"><span>Trainer requests</span><b>' + attention.trainerRequests.length + '</b><p>Approved trainers can confirm verified pending requests; owners control manual grants and removal.</p></button>' +
     '<section class="attention-command"><div class="attention-command-head"><div><h3>Who needs me next?</h3><p>Safety and unanswered communication come first, then required reviews, expiring plans, recognition, and inactive-client follow-up.</p></div><span class="attention-command-count">' + attention.items.length + '</span></div><div class="attention-queue">' +
@@ -5712,7 +5917,7 @@ function renderCoachModule(destination) {
   }[destination] || ['Coach workspace','Open the coaching capability you need.']; title.textContent = details[0]; eyebrow.textContent = 'Coach workspace'; copy.textContent = details[1];
   if (destination === 'calendar') {
     const assignments = loadAssignedWorkouts().slice().sort((a,b) => String(b.assignedAt).localeCompare(String(a.assignedAt))), attention = trainerAttentionSnapshot();
-    const followups = attention.assignmentReviews.map((item) => ({client:item.client,label:'Workout review ready'})).concat(attention.checkinReviews.map((item) => ({client:item.client,label:item.reviewType === 'recovery_24_48' ? '24–48h recovery pulse ready' : item.reviewType === 'starter_week_1' ? 'First-week review ready' : 'Weekly check-in ready'}))).concat(attention.recoveryOverdue.map((item) => ({client:item.profile.name,label:'Recovery pulse overdue'}))).concat(attention.formalReviews.map((profile) => ({client:profile.name,label:'Four-week program review due'}))).concat(attention.recognition.map((profile) => ({client:profile.name,label:'Positive recognition due'})));
+    const followups = attention.assignmentReviews.map((item) => ({client:item.client,label:'Workout review ready'})).concat(attention.checkinReviews.map((item) => ({client:item.client,label:item.reviewType === 'recovery_24_48' ? '24–48h recovery pulse ready' : item.reviewType === 'starter_week_1' ? 'First-week review ready' : 'Weekly check-in ready'}))).concat(attention.recoveryOverdue.map((item) => ({client:item.profile.name,label:'Recovery pulse overdue'}))).concat(attention.receiptRequests.map((item) => ({client:item.profile.name,label:item.status.type === 'formal' ? 'Formal progress receipt requested' : 'Weekly progress receipt requested'}))).concat(attention.recognition.map((profile) => ({client:profile.name,label:'Positive recognition due'})));
     out.innerHTML = attendanceCalendarHtml() + '<section class="coach-module-card"><h3>Assigned sessions</h3><div class="advanced-list">' + (assignments.slice(0,20).map((item) => '<div class="advanced-list-item"><b>' + escapeHtml(item.client) + (item.programWeek ? ' · Week ' + item.programWeek + ' Day ' + item.programDay : '') + '</b><span>' + escapeHtml(item.scheduledDate ? new Date(item.scheduledDate + 'T12:00:00').toLocaleDateString() : new Date(item.assignedAt).toLocaleDateString()) + ' · ' + escapeHtml(assignmentStatusLabel(item)) + '</span></div>').join('') || '<div class="empty-state">No sessions assigned.</div>') + '</div></section><section class="coach-module-card"><h3>Coaching follow-ups</h3><div class="advanced-list">' + (followups.map((item) => '<div class="advanced-list-item"><b>' + escapeHtml(item.client) + '</b><span>' + escapeHtml(item.label) + '</span></div>').join('') || '<div class="empty-state">No client is waiting on feedback.</div>') + '</div><div class="tool-actions"><button class="small-btn primary" onclick="openCoachDestination(\'clients\')">Review clients</button></div></section>';
   } else if (destination === 'messages') {
     const messages = loadLocalArray(CLIENT_MESSAGES_KEY);
@@ -8994,8 +9199,9 @@ function clientDeletionCounts(client) {
   const athleteMetrics = loadAthleteMetrics().filter((item) => profileIds.has(item.profileId) || clientMatches(item.client,client)).length;
   const mentalPlans = loadMentalPlans().filter((item) => profileIds.has(item.profileId) || clientMatches(item.client,client)).length;
   const alerts = loadAutomationAlerts().filter((item) => profileIds.has(item.profileId) || clientMatches(item.client,client)).length;
+  const receipts = loadProgressReceipts().filter((item) => profileIds.has(item.profileId) || clientMatches(item.client,client)).length;
   const teamMemberships = loadTeams().filter((team) => (team.profileIds || []).some((id) => profileIds.has(id))).length;
-  return { profiles: matchingProfiles.length, entries: entries.length, scans: scans.length, goals: goals.length, notes, requests, assignments, checkins, athleteMetrics, mentalPlans, alerts, teamMemberships };
+  return { profiles: matchingProfiles.length, entries: entries.length, scans: scans.length, goals: goals.length, notes, requests, assignments, checkins, athleteMetrics, mentalPlans, alerts, receipts, teamMemberships };
 }
 function openCompleteDeleteClient(clientOrProfileId) {
   if (!requireTrainerMutation("permanently delete client data")) return null;
@@ -9003,7 +9209,7 @@ function openCompleteDeleteClient(clientOrProfileId) {
   if (!client) { showToast("Choose a client to permanently delete"); return; }
   const counts = clientDeletionCounts(client); byId("completeDeleteClient").value = client; byId("completeDeleteConfirm").value = ""; byId("completeDeleteButton").disabled = true;
   byId("completeDeleteTitle").textContent = "Permanently delete " + client;
-  byId("completeDeleteSummary").textContent = "This will remove " + counts.profiles + " profile, " + counts.assignments + " assigned workout, " + counts.entries + " workout/history records, " + counts.notes + " trainer records, " + counts.scans + " InBody scans, " + counts.goals + " body-goal records, " + counts.checkins + " check-ins, " + counts.athleteMetrics + " athlete-monitoring records, " + counts.mentalPlans + " mental-performance plan, " + counts.alerts + " automation alerts, " + counts.teamMemberships + " team membership, and " + counts.requests + " pending requests from this device.";
+  byId("completeDeleteSummary").textContent = "This will remove " + counts.profiles + " profile, " + counts.assignments + " assigned workout, " + counts.entries + " workout/history records, " + counts.notes + " trainer records, " + counts.scans + " InBody scans, " + counts.goals + " body-goal records, " + counts.checkins + " check-ins, " + counts.receipts + " progress receipts, " + counts.athleteMetrics + " athlete-monitoring records, " + counts.mentalPlans + " mental-performance plan, " + counts.alerts + " automation alerts, " + counts.teamMemberships + " team membership, and " + counts.requests + " pending requests from this device.";
   byId("profileEditorModal").classList.remove("open"); byId("completeDeleteModal").classList.add("open"); setTimeout(() => byId("completeDeleteConfirm").focus(), 0);
 }
 function openCompleteDeleteFromEditor() {
@@ -9032,6 +9238,8 @@ function purgeClientData(client) {
   if (!writeAssignedWorkouts(loadAssignedWorkouts().filter((assignment) => !clientMatches(assignment.client,client)))) return null;
   if (!writeSavedPrograms(loadSavedPrograms().filter((program) => !profileIds.has(program.profileId) && !clientMatches(program.setup && program.setup.client,client)))) return null;
   if (!writeLocalArray(CLIENT_MESSAGES_KEY,loadLocalArray(CLIENT_MESSAGES_KEY).filter((item) => !matchesAdvancedClient(item)),1000)) return null;
+  if (!writeProgressReceipts(loadProgressReceipts().filter((item) => !matchesAdvancedClient(item)))) return null;
+  if (!writeLocalArray(PROGRESS_RECEIPT_RESPONSES_KEY,loadLocalArray(PROGRESS_RECEIPT_RESPONSES_KEY).filter((item) => !matchesAdvancedClient(item)),1000)) return null;
   if (!writeCheckIns(loadCheckIns().filter((item) => !matchesAdvancedClient(item)))) return null;
   if (!writeAthleteMetrics(loadAthleteMetrics().filter((item) => !matchesAdvancedClient(item)))) return null;
   if (!writeLocalArray(MENTAL_PLANS_KEY,loadMentalPlans().filter((item) => !matchesAdvancedClient(item)),500)) return null;
@@ -9210,15 +9418,24 @@ function saveCoachAdjustment(buildNext) {
   const profileId = byId("coachAdjustmentProfileId").value, action = byId("coachAdjustmentAction").value, note = byId("coachAdjustmentNote").value.trim(), assignments = loadAssignedWorkouts();
   const index = assignments.findIndex((item) => item.id === coachAdjustmentAssignmentId && item.profileId === profileId); if (index < 0) return null;
   const reviewedAt = new Date().toISOString(), assignment = assignments[index], review = assignment.clientReview || {};
+  let formalReceiptSeed = null;
   assignments[index] = { ...assignment, status:"reviewed", coachReviewedAt:reviewedAt, nextAction:action, coachNote:note };
   if (!writeAssignedWorkouts(assignments)) return null;
   const profiles = loadProfiles(), profileIndex = profiles.findIndex((item) => item.id === profileId); if (profileIndex >= 0) {
     const profile = profiles[profileIndex], injuries = [...(profile.injuries || [])];
     if (["changed","stopped"].includes(review.pain) && review.injuryArea && !injuries.includes(review.injuryArea)) injuries.push(review.injuryArea);
     const completesFormal = byId("coachFormalReviewComplete").checked, formalDecision = byId("coachFormalDecision").value, formalNote = byId("coachFormalNote").value.trim();
+    if (completesFormal) formalReceiptSeed = {profileId:profile.id,formalDecision,formalNote};
     profiles[profileIndex] = { ...profile, injuries, coachAdjustment:{ action,note,reviewedAt,sourceSessionId:assignmentSessionIds(assignment)[0] || "" }, ...(completesFormal ? { lastFormalReviewAt:reviewedAt, formalReview:{ decision:formalDecision,note:formalNote,reviewedAt }, phaseCompoundAnchors:["change","rebuild"].includes(formalDecision) ? {} : { ...(profile.phaseCompoundAnchors || {}) } } : {}), updatedAt:reviewedAt }; writeProfiles(profiles); selectedTrainerClient = profile.name;
   }
-  closeCoachAdjustment(); refreshProfileSelects(); renderTrainerHub(selectedTrainerClient); showToast("Coaching decision saved for the next workout");
+  closeCoachAdjustment(); refreshProfileSelects(); renderTrainerHub(selectedTrainerClient);
+  if (formalReceiptSeed) {
+    const formalProfile = loadProfiles().find((item) => item.id === formalReceiptSeed.profileId), draft = formalProfile && buildProgressReceiptDraft(formalProfile,"formal",formalReceiptSeed);
+    if (draft) upsertProgressReceipt(draft);
+    renderTrainerAttention();
+    if (!buildNext && draft) { openProgressReceiptEditor(formalProfile.id,"formal",draft.id); showToast("Formal decision saved. Review the client-facing receipt before publishing."); return assignments[index]; }
+    showToast("Coaching decision saved. A formal receipt draft is waiting for publication.");
+  } else showToast("Coaching decision saved for the next workout");
   if (buildNext) openSelectedClientSession(); return assignments[index];
 }
 function sessionPersonalRecords(sessionId) {
@@ -9712,7 +9929,7 @@ function trainerCoachingTab(profile) {
   const latest = summary.latest, evidence = workload.volumeEntries || metrics.length
     ? Math.round(workload.acute) + ' seven-day entered load · ' + Math.round(workload.chronic) + ' recent weekly baseline · ' + workload.plateaus.length + ' plateau flag' + (workload.plateaus.length === 1 ? '' : 's')
     : 'No comparable workload evidence yet. Normal programming can continue from workout logs, symptoms, technique, and client feedback.';
-  return '<section class="analysis-panel"><div class="analysis-panel-head"><div><h4 class="analysis-section-title">Coaching review</h4><p style="font-size:9px;color:var(--text-faint);margin-top:4px">Check-in, workout, monitoring, and alert evidence gathered in one client-specific view.</p></div><button class="small-btn primary" onclick="openAdvancedForClient(\'' + escapeHtml(profile.id) + '\',\'review\')">Open decision workspace</button></div>'
+  return trainerProgressReceiptsHtml(profile) + '<section class="analysis-panel" style="margin-top:14px"><div class="analysis-panel-head"><div><h4 class="analysis-section-title">Coaching review</h4><p style="font-size:9px;color:var(--text-faint);margin-top:4px">Check-in, workout, monitoring, and alert evidence gathered in one client-specific view.</p></div><button class="small-btn primary" onclick="openAdvancedForClient(\'' + escapeHtml(profile.id) + '\',\'review\')">Open decision workspace</button></div>'
     + '<div class="simple-stat-grid"><div class="simple-stat"><b class="risk-' + summary.risk + '">' + escapeHtml(summary.headline) + '</b><span>Current coaching signal</span></div><div class="simple-stat"><b>' + (latest ? latest.adherence + '%' : '—') + '</b><span>Latest adherence</span></div><div class="simple-stat"><b>' + workload.plateaus.length + '</b><span>Plateau flags</span></div><div class="simple-stat"><b>' + alerts.length + '</b><span>Open rule alerts</span></div></div>'
     + '<div class="analysis-grid" style="margin-top:12px"><div class="analysis-history"><div class="analysis-history-item"><b>Client voice</b><span>' + escapeHtml(latest ? [latest.win && 'Win: ' + latest.win,latest.challenge && 'Barrier: ' + latest.challenge,latest.question && 'Question: ' + latest.question].filter(Boolean).join(' · ') || 'Check-in submitted without notes.' : 'No weekly check-in yet.') + '</span></div><div class="analysis-history-item"><b>Training evidence</b><span>' + escapeHtml(workload.risk + ' · ' + evidence) + '</span></div></div><div class="analysis-history"><div class="analysis-history-item"><b>Optional monitoring</b><span>' + metrics.length + ' record' + (metrics.length === 1 ? '' : 's') + (metrics[0] ? ' · latest ' + new Date(metrics[0].date + 'T12:00:00').toLocaleDateString() : '') + '</span></div><div class="analysis-history-item"><b>Performance routine</b><span>' + escapeHtml(plan ? [plan.cue,plan.breathing].filter(Boolean).join(' · ') || 'Saved without a cue' : 'Not used for this client') + '</span></div></div></div>'
     + '<div class="tool-actions"><button class="small-btn" onclick="openAdvancedForClient(\'' + escapeHtml(profile.id) + '\',\'monitoring\')">Monitoring &amp; imports</button><button class="small-btn" onclick="setTrainerSummaryTab(\'checkins\')">Open check-ins</button><button class="small-btn" onclick="setTrainerSummaryTab(\'messages\')">Open messages</button><button class="small-btn" onclick="openSelectedClientSession()">Build next workout</button></div>'
@@ -9782,7 +9999,7 @@ function renderTrainerAnalysis(client) {
   if (trainerSummaryState.tab === "coaching") content = trainerCoachingTab(profile);
   else if (trainerSummaryState.tab === "program") content = trainerProgramTab(profile);
   else if (["workouts","history"].includes(trainerSummaryState.tab)) content = summaryHistoryContent(filtered);
-  else if (["progress","strength"].includes(trainerSummaryState.tab)) content = summaryStrengthContent(filtered) + (trainerSummaryState.tab === "progress" ? '<details class="formal-review-box"><summary>Body composition & InBody progress</summary>' + renderInBodyContent(analysis) + '</details>' : '');
+  else if (["progress","strength"].includes(trainerSummaryState.tab)) content = (trainerSummaryState.tab === "progress" ? trainerProgressReceiptsHtml(profile) : "") + summaryStrengthContent(filtered) + (trainerSummaryState.tab === "progress" ? '<details class="formal-review-box"><summary>Body composition & InBody progress</summary>' + renderInBodyContent(analysis) + '</details>' : '');
   else if (trainerSummaryState.tab === "checkins") content = trainerCheckInsTab(profile);
   else if (trainerSummaryState.tab === "messages") content = trainerMessagesTab(profile);
   else if (["assessments","safety"].includes(trainerSummaryState.tab)) content = summarySafetyContent(filtered) + trainerIntakeSummaryHtml(profile);
@@ -10603,11 +10820,12 @@ function exportProgress() {
   const entries = loadProgress(), profiles = loadProfiles(), profileRequests = loadProfileRequests(), inBodyScans = loadInBodyScans(), summaryMeta = loadSummaryMeta(), bodyGoals = loadBodyGoals(), assignedWorkouts = loadAssignedWorkouts();
   const checkIns = loadCheckIns(), athleteMetrics = loadAthleteMetrics(), teams = loadTeams(), mentalPlans = loadMentalPlans(), marketPrograms = loadMarketPrograms(), automations = loadAutomations(), automationAlerts = loadAutomationAlerts();
   const savedPrograms = loadSavedPrograms(), clientMessages = loadLocalArray(CLIENT_MESSAGES_KEY), clientDaily = loadLocalObject(CLIENT_DAILY_KEY,{});
+  const progressReceipts = loadProgressReceipts(), progressReceiptResponses = loadLocalArray(PROGRESS_RECEIPT_RESPONSES_KEY);
   const activeWorkoutState = loadActiveWorkoutState(), attentionState = loadAttentionState();
   const gymBrand = localStorage.getItem(GYM_BRAND_KEY) ? currentGymBrand() : null, gymEquipment = localStorage.getItem(GYM_EQUIPMENT_KEY) ? currentGymEquipment() : null, wearableConnections = loadWearableConnections(), exerciseLibraryEdits = loadExerciseLibraryEdits();
-  const advancedCount = checkIns.length + athleteMetrics.length + teams.length + mentalPlans.length + marketPrograms.length + automations.length + automationAlerts.length + exerciseLibraryEdits.length + Object.keys(wearableConnections).length + (gymBrand ? 1 : 0) + (gymEquipment ? 1 : 0);
+  const advancedCount = checkIns.length + athleteMetrics.length + teams.length + mentalPlans.length + marketPrograms.length + automations.length + automationAlerts.length + exerciseLibraryEdits.length + progressReceipts.length + progressReceiptResponses.length + Object.keys(wearableConnections).length + (gymBrand ? 1 : 0) + (gymEquipment ? 1 : 0);
   if (!entries.length && !profiles.length && !profileRequests.length && !inBodyScans.length && !bodyGoals.length && !assignedWorkouts.length && !activeWorkoutState && !Object.keys(attentionState).length && !advancedCount) { showToast("There is no training data to export"); return; }
-  const backup = { version: 12, exportedAt: new Date().toISOString(), entries, profiles, profileRequests, inBodyScans, summaryMeta, bodyGoals, assignedWorkouts, savedPrograms, clientMessages, clientDaily, activeWorkoutState, attentionState, checkIns, athleteMetrics, gymBrand, gymEquipment, teams, mentalPlans, marketPrograms, wearableConnections, automations, automationAlerts, exerciseLibraryEdits };
+  const backup = { version: 13, exportedAt: new Date().toISOString(), entries, profiles, profileRequests, inBodyScans, summaryMeta, bodyGoals, assignedWorkouts, savedPrograms, clientMessages, progressReceipts, progressReceiptResponses, clientDaily, activeWorkoutState, attentionState, checkIns, athleteMetrics, gymBrand, gymEquipment, teams, mentalPlans, marketPrograms, wearableConnections, automations, automationAlerts, exerciseLibraryEdits };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob), a = document.createElement("a");
   a.href = url; a.download = "fit4life-progress-" + new Date().toISOString().slice(0, 10) + ".json"; a.click(); URL.revokeObjectURL(url);
@@ -10619,8 +10837,9 @@ function importProgressFile(input) {
   reader.onload = () => {
     try {
       const backup = JSON.parse(reader.result), importedEntries = Array.isArray(backup.entries) ? backup.entries : [], importedProfiles = Array.isArray(backup.profiles) ? backup.profiles : [], importedRequests = Array.isArray(backup.profileRequests) ? backup.profileRequests : [], importedScans = Array.isArray(backup.inBodyScans) ? backup.inBodyScans : [], importedGoals = Array.isArray(backup.bodyGoals) ? backup.bodyGoals : [], importedAssignments = Array.isArray(backup.assignedWorkouts) ? backup.assignedWorkouts : [], importedPrograms = Array.isArray(backup.savedPrograms) ? backup.savedPrograms : [], importedMessages = Array.isArray(backup.clientMessages) ? backup.clientMessages : [];
+      const importedProgressReceipts = Array.isArray(backup.progressReceipts) ? backup.progressReceipts : [], importedProgressReceiptResponses = Array.isArray(backup.progressReceiptResponses) ? backup.progressReceiptResponses : [];
       const importedCheckIns = Array.isArray(backup.checkIns) ? backup.checkIns : [], importedAthleteMetrics = Array.isArray(backup.athleteMetrics) ? backup.athleteMetrics : [], importedTeams = Array.isArray(backup.teams) ? backup.teams : [], importedMentalPlans = Array.isArray(backup.mentalPlans) ? backup.mentalPlans : [], importedMarketPrograms = Array.isArray(backup.marketPrograms) ? backup.marketPrograms : [], importedAutomations = Array.isArray(backup.automations) ? backup.automations : [], importedAlerts = Array.isArray(backup.automationAlerts) ? backup.automationAlerts : [], importedExerciseLibraryEdits = Array.isArray(backup.exerciseLibraryEdits) ? backup.exerciseLibraryEdits : [];
-      const advancedCount = importedCheckIns.length + importedAthleteMetrics.length + importedTeams.length + importedMentalPlans.length + importedMarketPrograms.length + importedAutomations.length + importedAlerts.length + importedExerciseLibraryEdits.length + (backup.gymBrand ? 1 : 0) + (backup.gymEquipment ? 1 : 0) + (backup.wearableConnections && Object.keys(backup.wearableConnections).length ? 1 : 0);
+      const advancedCount = importedCheckIns.length + importedAthleteMetrics.length + importedTeams.length + importedMentalPlans.length + importedMarketPrograms.length + importedAutomations.length + importedAlerts.length + importedExerciseLibraryEdits.length + importedProgressReceipts.length + importedProgressReceiptResponses.length + (backup.gymBrand ? 1 : 0) + (backup.gymEquipment ? 1 : 0) + (backup.wearableConnections && Object.keys(backup.wearableConnections).length ? 1 : 0);
       if (!importedEntries.length && !importedProfiles.length && !importedRequests.length && !importedScans.length && !importedGoals.length && !importedAssignments.length && !advancedCount) throw new Error("empty");
       const entries = loadProgress(), ids = new Set(entries.map((e) => e.id));
       importedEntries.forEach((entry) => { if (entry && entry.id && !ids.has(entry.id)) { entries.push(entry); ids.add(entry.id); } });
@@ -10647,6 +10866,8 @@ function importProgressFile(input) {
       const mergeRecords = (current, imported) => { const merged = [...current], ids = new Set(merged.map((item) => item && item.id).filter(Boolean)); imported.forEach((item) => { if (item && item.id && !ids.has(item.id)) { merged.push(item); ids.add(item.id); } }); return merged; };
       writeSavedPrograms(mergeRecords(loadSavedPrograms(),importedPrograms));
       writeLocalArray(CLIENT_MESSAGES_KEY,mergeRecords(loadLocalArray(CLIENT_MESSAGES_KEY),importedMessages),1000);
+      writeProgressReceipts(mergeRecords(loadProgressReceipts(),importedProgressReceipts));
+      writeLocalArray(PROGRESS_RECEIPT_RESPONSES_KEY,mergeRecords(loadLocalArray(PROGRESS_RECEIPT_RESPONSES_KEY),importedProgressReceiptResponses),1000);
       if (backup.clientDaily && typeof backup.clientDaily === "object" && !Array.isArray(backup.clientDaily)) writeLocalObject(CLIENT_DAILY_KEY,Object.assign(loadLocalObject(CLIENT_DAILY_KEY,{}),backup.clientDaily));
       if (backup.activeWorkoutState && typeof backup.activeWorkoutState === "object" && !Array.isArray(backup.activeWorkoutState)) localStorage.setItem(ACTIVE_WORKOUT_KEY,JSON.stringify(backup.activeWorkoutState));
       if (backup.attentionState && typeof backup.attentionState === "object" && !Array.isArray(backup.attentionState)) writeLocalObject(ATTENTION_STATE_KEY,Object.assign(loadAttentionState(),backup.attentionState));
@@ -10695,6 +10916,7 @@ if (document.getElementById) {
   if (byId("reviewModal")) {
     byId("reviewModal").addEventListener("click", (event) => { if (event.target === byId("reviewModal")) closeWorkoutReview(); });
     byId("coachAdjustmentModal").addEventListener("click", (event) => { if (event.target === byId("coachAdjustmentModal")) closeCoachAdjustment(); });
+    byId("progressReceiptModal").addEventListener("click", (event) => { if (event.target === byId("progressReceiptModal")) closeProgressReceiptEditor(); });
     byId("trainerGateModal").addEventListener("click", (event) => { if (event.target === byId("trainerGateModal")) closeTrainerGate(); });
     byId("exerciseSwapModal").addEventListener("click", (event) => { if (event.target === byId("exerciseSwapModal")) closeExerciseSwap(); });
     byId("exerciseEditorModal").addEventListener("click", (event) => { if (event.target === byId("exerciseEditorModal")) closeExerciseEditor(); });
@@ -10707,7 +10929,7 @@ if (document.getElementById) {
     byId("completeDeleteModal").addEventListener("click", (event) => { if (event.target === byId("completeDeleteModal")) closeCompleteDeleteModal(); });
     byId("inBodyModal").addEventListener("click", (event) => { if (event.target === byId("inBodyModal")) closeInBodyModal(); });
     byId("bodyGoalModal").addEventListener("click", (event) => { if (event.target === byId("bodyGoalModal")) closeBodyGoalModal(); });
-    if (document.addEventListener) document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeWorkoutReview(); closeTrainerGate(); closeExerciseSwap(); closeExerciseEditor(); closePrescriptionEditor(); closeSupersetEditor(); closeProgramTemplatePreview(); closeSummaryEntryEditor(); closeClientIntake(); closeProfileEditor(); closeCompleteDeleteModal(); closeInBodyModal(); closeBodyGoalModal(); } });
+    if (document.addEventListener) document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeWorkoutReview(); closeCoachAdjustment(); closeProgressReceiptEditor(); closeTrainerGate(); closeExerciseSwap(); closeExerciseEditor(); closePrescriptionEditor(); closeSupersetEditor(); closeProgramTemplatePreview(); closeSummaryEntryEditor(); closeClientIntake(); closeProfileEditor(); closeCompleteDeleteModal(); closeInBodyModal(); closeBodyGoalModal(); } });
   }
 }
 
