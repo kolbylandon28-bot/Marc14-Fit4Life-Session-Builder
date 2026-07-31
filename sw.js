@@ -1,4 +1,4 @@
-const CACHE_NAME = "fit4life-shell-2026-07-31-baseline-calibration-v1";
+const CACHE_NAME = "fit4life-shell-2026-07-31-baseline-onboarding-v1";
 const SHELL = [
   "/",
   "/index.html",
