@@ -1,16 +1,19 @@
-const CACHE_NAME = "fit4life-shell-2026-08-10-replacement-calibration-fix-v1";
+const CACHE_NAME = "fit4life-shell-2026-08-10-stability-pass-v2";
+const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
 const SHELL = [
   "/",
   "/index.html",
   "/cloud-sync.js",
   "/dark-rock-background-v2.jpg",
-  "/manifest.webmanifest"
+  "/manifest.webmanifest",
+  "/fit4life-icon.svg",
+  "/fit4life-icon-maskable.svg"
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(SHELL))
+      .then((cache) => cache.addAll(SHELL).then(() => fetch(SUPABASE_SDK,{mode:"no-cors"}).then((response) => cache.put(SUPABASE_SDK,response)).catch(() => null)))
       .then(() => self.skipWaiting())
   );
 });
@@ -31,6 +34,13 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
+  if (request.url === SUPABASE_SDK) {
+    event.respondWith(caches.match(SUPABASE_SDK).then((cached) => cached || fetch(request).then((response) => {
+      caches.open(CACHE_NAME).then((cache) => cache.put(SUPABASE_SDK,response.clone()));
+      return response;
+    })));
+    return;
+  }
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
 

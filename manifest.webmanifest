@@ -7,5 +7,19 @@
   "display": "standalone",
   "background_color": "#08090c",
   "theme_color": "#0c0c0f",
-  "orientation": "any"
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/fit4life-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/fit4life-icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
 }

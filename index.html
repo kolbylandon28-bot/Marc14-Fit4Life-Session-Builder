@@ -8,6 +8,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
@@ -1133,7 +1135,17 @@
   .baseline-capture select{width:100%}.baseline-review-grid{display:grid;gap:10px;margin:14px 0}.baseline-evidence-row{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel-soft);display:grid;grid-template-columns:minmax(130px,.55fr) minmax(0,1.45fr);gap:14px;align-items:center}.baseline-evidence-row h4{margin:0;color:var(--text)}.baseline-evidence-row p{margin:4px 0 0;color:var(--text-dim);line-height:1.45}
   .baseline-evidence-row.missing{border-color:rgba(255,191,73,.42)}.baseline-client-card{border-color:rgba(75,150,255,.38)!important}.baseline-client-card.established{border-color:rgba(74,196,139,.42)!important}
   .program-calibration-summary{margin:12px 0;padding:12px 14px;border:1px solid rgba(75,150,255,.36);border-radius:12px;background:rgba(34,76,139,.1);color:var(--text-dim)}.program-calibration-summary b{display:block;color:var(--blue-bright);margin-bottom:4px}
+  /* Usability hardening: visible keyboard focus, readable support text, and full-size controls. */
+  :where(button,a,input,select,textarea,summary,[tabindex]):focus-visible{outline:3px solid var(--blue-bright)!important;outline-offset:3px;box-shadow:0 0 0 5px rgba(90,166,240,.18)!important}
+  button,a,input,select,textarea,summary{touch-action:manipulation}
+  .support-copy{font-size:11px;color:var(--text-faint);line-height:1.55;margin:5px 0 13px}
+  .trainer-message-compose{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;margin-top:12px;padding:12px;border:1px solid rgba(90,166,240,.34);border-radius:11px;background:linear-gradient(145deg,rgba(36,64,184,.12),rgba(7,9,14,.82))}
+  .trainer-message-compose .compact-field{margin:0}.trainer-message-compose textarea{width:100%;min-height:78px;resize:vertical;line-height:1.45}.trainer-message-compose .compact-field>span{display:block;margin-top:6px;font:600 9px var(--mono);color:var(--text-faint)}.trainer-message-compose>.small-btn{min-height:46px}
+  .checkin-review-item{display:grid;gap:10px}.checkin-review-item>.trainer-message-compose{width:100%}
+  .assignment-pill{font-size:9px}.trainer-program-day span{font-size:10px}.attendance-client>button:first-child span{font-size:9px}.market-preview-meta{font-size:10px}.library-item-tags span,.library-source-badge,.scratch-filter-label,.scratch-filter-chip{font-size:9px}
   @media(max-width:780px){.baseline-gate{grid-template-columns:1fr}.baseline-gate-actions{justify-content:flex-start}.baseline-session-banner{align-items:flex-start;flex-direction:column}.baseline-capture{margin-left:12px;margin-right:12px}.baseline-evidence-row{grid-template-columns:1fr}}
+  @media(max-width:900px){button,.small-btn,.mini-btn,.tiny-btn,.ex-btn,.multi-choice-btn,.scratch-filter-chip{min-height:44px}.trainer-message-compose{grid-template-columns:1fr}.trainer-message-compose>.small-btn{width:100%;justify-content:center}.coach-module-card p,.attention-person span,.attention-reason span,.program-setup-section-head p,.program-cardio-help{font-size:11px}}
+  @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
   @media print{
     .topbar,.mode-toggle,.build-actions,.panel,.ex-actions,.add-ex,.session-actions,.home-btn,.hero,.tools-grid,.section-eyebrow,.builder-head p,.tool-actions,.no-print,.toast,.ex-log-panel,.modal-backdrop{display:none!important}
     body{background:#fff!important;color:#111;background-image:none}
@@ -1759,18 +1771,6 @@
 
 <div id="appToast" class="toast" role="status" aria-live="polite"></div>
 
-<div id="trainerGateModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="trainerGateTitle">
-  <div class="review-dialog access-dialog">
-    <div class="access-mark" aria-hidden="true">&#128274;</div>
-    <h2 id="trainerGateTitle">Trainer Access</h2>
-    <p id="trainerGateCopy">Enter the trainer PIN for this device.</p>
-    <div class="compact-field"><label for="trainerPin">Trainer PIN</label><input id="trainerPin" type="password" inputmode="numeric" autocomplete="off" placeholder="4 or more digits" onkeydown="if(event.key==='Enter')submitTrainerAccess()"></div>
-    <div class="access-error" id="trainerGateError" role="alert"></div>
-    <div class="tool-actions"><button class="small-btn primary" id="trainerGateSubmit" onclick="submitTrainerAccess()">Unlock trainer hub</button><button class="small-btn" onclick="closeTrainerGate()">Cancel</button></div>
-    <p class="storage-note">This PIN protects trainer records on this browser. A hosted version should use organization-managed trainer accounts for true multi-device access control.</p>
-  </div>
-</div>
-
 <div id="exerciseSwapModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="exerciseSwapTitle">
   <div class="review-dialog swap-dialog">
     <h2 id="exerciseSwapTitle">Replace movement</h2>
@@ -2316,7 +2316,7 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
 <script src="cloud-sync.js"></script>
 <script>
 /* ===== LIBRARY ===== */
@@ -6239,7 +6239,7 @@ function renderCoachModule(destination) {
   } else if (destination === 'messages') {
     const messages = loadLocalArray(CLIENT_MESSAGES_KEY);
     const profiles = loadProfiles(), threads = profiles.map((profile) => { const items = messages.filter((message) => message.profileId === profile.id).sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt))); return {profile,items,needsReply:items.length && messageSenderRole(items[0]) === 'client'}; }).filter((thread) => thread.items.length).sort((a,b) => Number(b.needsReply) - Number(a.needsReply) || String(b.items[0].createdAt).localeCompare(String(a.items[0].createdAt)));
-    out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><h3>Client conversations</h3><p>Waiting conversations stay first. Messages you send are blue and aligned right; client messages are dark and aligned left. Each reply carries the trainer’s name.</p><div class="advanced-list" style="margin-top:14px">' + (threads.map((thread) => '<details class="formal-review-box" ' + (thread.needsReply || threads.length === 1 ? 'open' : '') + '><summary>' + (thread.needsReply ? '<span class="tag tag-burn">Reply needed</span> ' : '<span class="tag">Up to date</span> ') + escapeHtml(thread.profile.name) + ' · ' + escapeHtml(thread.profile.assignedTrainerName || 'Coaching team') + '</summary>' + messageThreadHtml(thread.items,thread.profile,'trainer') + '<div class="tool-actions"><button class="small-btn primary" onclick="replyToClientMessage(\'' + escapeHtml(thread.profile.id) + '\')">Reply to ' + escapeHtml(thread.profile.name) + '</button></div></details>').join('') || '<div class="empty-state">No direct client messages.</div>') + '</div></section>';
+    out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><h3>Client conversations</h3><p>Waiting conversations stay first. Messages you send are blue and aligned right; client messages are dark and aligned left. Each reply carries the trainer’s name.</p><div class="advanced-list" style="margin-top:14px">' + (threads.map((thread) => '<details class="formal-review-box" ' + (thread.needsReply || threads.length === 1 ? 'open' : '') + '><summary>' + (thread.needsReply ? '<span class="tag tag-burn">Reply needed</span> ' : '<span class="tag">Up to date</span> ') + escapeHtml(thread.profile.name) + ' · ' + escapeHtml(thread.profile.assignedTrainerName || 'Coaching team') + '</summary>' + messageThreadHtml(thread.items,thread.profile,'trainer') + trainerMessageComposerHtml(thread.profile) + '</details>').join('') || '<div class="empty-state">No direct client messages.</div>') + '</div></section>';
   } else if (destination === 'library') {
     out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap"><div><h3>Gym-approved exercise bank</h3><p>Add, edit, or remove movements without breaking generation. Every saved category controls when that exercise is eligible.</p></div><button class="small-btn primary" onclick="openExerciseEditor()">+ Add exercise</button></div><div class="library-toolbar"><div class="compact-field"><label for="coachLibrarySearch">Search</label><input id="coachLibrarySearch" placeholder="Exercise, cue, muscle, pattern, or equipment" oninput="renderCoachExerciseLibrary()"></div><div class="compact-field"><label for="coachLibraryPattern">Movement</label><select id="coachLibraryPattern" onchange="renderCoachExerciseLibrary()"><option value="">All movements</option></select></div><div class="compact-field"><label for="coachLibraryZone">Equipment</label><select id="coachLibraryZone" onchange="renderCoachExerciseLibrary()"><option value="">All equipment</option></select></div><div class="compact-field"><label for="coachLibraryRegion">Body part</label><select id="coachLibraryRegion" onchange="renderCoachExerciseLibrary()"><option value="">All body areas</option></select></div></div><div id="coachLibraryCount" class="library-count"></div><div id="coachLibraryResults" class="advanced-list"></div><div class="library-empty-tip"><b>How generator inclusion works:</b> equipment and cardio-machine categories are checked first, then client experience, age/impact, injuries and coaching limitations, muscle focus, movement role, and exercise preferences. A custom exercise is not usable until the required categories are complete.</div></section>'; setTimeout(initializeCoachLibraryFilters,0);
   } else if (destination === 'access') {
@@ -6248,9 +6248,9 @@ function renderCoachModule(destination) {
     out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap"><div><h3>Trainer approval center</h3><p>Client accounts never receive trainer permissions automatically. An approved staff member confirms a verified pending trainer request here; the approver and time are recorded. Owners can also make a manual grant or deactivate staff.</p></div><span class="tag ' + (canConfirm ? 'tag-circuit' : '') + '">' + (owner ? 'Owner controls' : canConfirm ? 'Trainer confirmation' : 'View only') + '</span></div>' + (owner ? '<div class="compact-grid" style="margin-top:18px"><div class="compact-field"><label for="trainerAccountEmail">Verified trainer login email</label><input id="trainerAccountEmail" type="email" placeholder="trainer@example.com"></div><div class="compact-field"><label for="trainerAccountName">Name clients will see</label><input id="trainerAccountName" placeholder="Jordan Smith"></div></div><div class="tool-actions"><button class="small-btn primary" onclick="approveTrainerAccount()">Grant trainer access manually</button></div>' : '<div class="portal-note">You can confirm a verified pending request below. Only the owner can manually grant access without a request or deactivate staff.</div>') + '<div id="trainerAccountStatus" class="storage-note" style="margin-top:10px"></div><h3 style="margin-top:22px">Pending trainer requests</h3><div id="trainerRequestList" class="trainer-account-list"><div class="empty-state">Checking the approval queue…</div></div><h3 style="margin-top:22px">Approved staff</h3><div id="trainerAccountList" class="trainer-account-list"><div class="empty-state">Loading trainer accounts…</div></div><h3 style="margin-top:22px">Recent trainer-access decisions</h3><div id="trainerApprovalHistory" class="trainer-account-list"><div class="empty-state">Loading approval history…</div></div><div class="library-empty-tip"><b>Permission boundary:</b> approved trainers may confirm only a verified pending trainer request. Only the owner may manually grant access, deactivate staff, or recover permissions. Client sign-up and email verification never grant trainer access by themselves.</div></section>'; setTimeout(refreshTrainerAccessManager,0);
   } else if (destination === 'settings') {
     const owner = window.fit4lifeCloudRole === 'owner';
-    out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><h3>Your trainer identity</h3><p>This is the name clients see on messages and feedback.</p><div class="compact-grid" style="margin-top:14px"><div class="compact-field"><label for="myTrainerDisplayName">Your name on messages</label><input id="myTrainerDisplayName" value="' + escapeHtml(currentAccountIdentity().displayName) + '" placeholder="Name clients should see"></div></div><div class="tool-actions"><button class="small-btn" onclick="saveMyTrainerDisplayName()">Save my sender name</button><button class="small-btn ' + (owner ? 'primary' : '') + '" onclick="openCoachDestination(\'access\')">Open Trainer Access</button></div><div id="trainerAccountStatus" class="storage-note" style="margin-top:10px"></div></section><section class="coach-module-card"><h3>Data & backups</h3><p>Export or restore the full local coaching record before changing devices.</p><div class="tool-actions"><button class="small-btn" onclick="exportProgress()">Export backup</button><button class="small-btn" onclick="byId(\'progressImport\').click()">Restore backup</button></div></section><section class="coach-module-card"><h3>Security</h3><p>Supabase roles control real trainer and client access. The legacy PIN is only a fallback for the offline prototype.</p><div class="tool-actions"><button class="small-btn" onclick="lockTrainerHub()">Sign out / lock workspace</button></div></section>';
+    out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><h3>Your trainer identity</h3><p>This is the name clients see on messages and feedback.</p><div class="compact-grid" style="margin-top:14px"><div class="compact-field"><label for="myTrainerDisplayName">Your name on messages</label><input id="myTrainerDisplayName" value="' + escapeHtml(currentAccountIdentity().displayName) + '" placeholder="Name clients should see"></div></div><div class="tool-actions"><button class="small-btn" onclick="saveMyTrainerDisplayName()">Save my sender name</button><button class="small-btn ' + (owner ? 'primary' : '') + '" onclick="openCoachDestination(\'access\')">Open Trainer Access</button></div><div id="trainerAccountStatus" class="storage-note" style="margin-top:10px"></div></section><section class="coach-module-card"><h3>Data & backups</h3><p>Export or restore the full local coaching record before changing devices.</p><div class="tool-actions"><button class="small-btn" onclick="exportProgress()">Export backup</button><button class="small-btn" onclick="byId(\'progressImport\').click()">Restore backup</button></div></section><section class="coach-module-card"><h3>Security</h3><p>Supabase accounts and approved organization roles control trainer and client access on every device.</p><div class="tool-actions"><button class="small-btn" onclick="lockTrainerHub()">Sign out / lock workspace</button></div></section>';
   } else {
-    out.innerHTML = '<section class="coach-module-card"><h3>Data & backups</h3><p>Export or restore the full local coaching record before changing devices.</p><div class="tool-actions"><button class="small-btn" onclick="exportProgress()">Export backup</button><button class="small-btn" onclick="byId(\'progressImport\').click()">Restore backup</button></div></section><section class="coach-module-card"><h3>Security</h3><p>Hosted accounts and Supabase roles control live trainer and client access. The legacy PIN is only an offline prototype fallback.</p><div class="tool-actions"><button class="small-btn" onclick="lockTrainerHub()">Sign out / lock workspace</button></div></section><section class="coach-module-card"><h3>Gym branding</h3><p>Manage gym identity, available equipment, and teams from one organization setup.</p><div class="tool-actions"><button class="small-btn" onclick="openAdvancedStudio(\'organization\')">Open organization setup</button></div></section><section class="coach-module-card"><h3>Monitoring imports</h3><p>Attach optional monitoring exports to a specific client, then review them alongside workout and check-in evidence.</p><div class="tool-actions"><button class="small-btn" onclick="openAdvancedStudio(\'monitoring\')">Open monitoring</button></div></section>';
+    out.innerHTML = '<section class="coach-module-card"><h3>Data & backups</h3><p>Export or restore the full local coaching record before changing devices.</p><div class="tool-actions"><button class="small-btn" onclick="exportProgress()">Export backup</button><button class="small-btn" onclick="byId(\'progressImport\').click()">Restore backup</button></div></section><section class="coach-module-card"><h3>Security</h3><p>Hosted accounts and approved Supabase roles control live trainer and client access. There is no shared trainer password.</p><div class="tool-actions"><button class="small-btn" onclick="lockTrainerHub()">Sign out / lock workspace</button></div></section><section class="coach-module-card"><h3>Gym branding</h3><p>Manage gym identity, available equipment, and teams from one organization setup.</p><div class="tool-actions"><button class="small-btn" onclick="openAdvancedStudio(\'organization\')">Open organization setup</button></div></section><section class="coach-module-card"><h3>Monitoring imports</h3><p>Attach optional monitoring exports to a specific client, then review them alongside workout and check-in evidence.</p><div class="tool-actions"><button class="small-btn" onclick="openAdvancedStudio(\'monitoring\')">Open monitoring</button></div></section>';
   }
 }
 async function refreshTrainerAccountManager() {
@@ -6380,23 +6380,41 @@ function deleteExerciseBankEntry(id) {
   if (!writeExerciseLibraryEdits(edits)) return false; applyExerciseLibraryEdits(); closeExerciseEditor(); renderCoachModule('library'); showToast(item.name + ' removed from future generation'); return true;
 }
 function deleteExerciseBankEntryFromEditor() { const id = byId('exerciseBankId').value; if (id) deleteExerciseBankEntry(id); }
-function replyToClientMessage(profileId) {
-  const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) return;
-  const identity = currentAccountIdentity(), body = window.prompt('Message ' + profile.name + ' as ' + identity.displayName + ':'); if (!body || !body.trim()) return;
-  const messages = loadLocalArray(CLIENT_MESSAGES_KEY);
-  messages.unshift({id:'message-' + Date.now(),profileId:profile.id,client:profile.name,from:'coach',senderRole:identity.role === 'owner' ? 'owner' : 'trainer',senderUserId:identity.id || '',senderName:identity.displayName,recipientRole:'client',recipientUserId:'',recipientName:profile.name,body:body.trim(),createdAt:new Date().toISOString()});
-  if (!profile.assignedTrainerId && identity.id) { const profiles = loadProfiles(), index = profiles.findIndex((item) => item.id === profile.id); if (index >= 0) { profiles[index] = {...profiles[index],assignedTrainerId:identity.id,assignedTrainerName:identity.displayName,assignedTrainerEmail:identity.email,updatedAt:new Date().toISOString()}; writeProfiles(profiles); } }
-  writeLocalArray(CLIENT_MESSAGES_KEY,messages,1000); renderCoachModule('messages'); renderTrainerAttention(); showToast('Message sent to ' + profile.name + ' as ' + identity.displayName);
+function trainerMessageComposerId(profileId,sourceCheckInId) {
+  return 'trainer-message-' + String(profileId || 'client').replace(/[^a-z0-9_-]/gi,'-') + (sourceCheckInId ? '-' + String(sourceCheckInId).replace(/[^a-z0-9_-]/gi,'-') : '');
 }
-const UNIVERSAL_TRAINER_PIN = "352804";
-const TRAINER_SESSION_KEY = "fit4life_trainer_unlocked";
+function trainerMessageComposerHtml(profile,sourceCheckInId,suggested) {
+  if (!profile) return '';
+  const inputId = trainerMessageComposerId(profile.id,sourceCheckInId);
+  return '<div class="trainer-message-compose"><div class="compact-field"><label for="' + inputId + '">Reply to ' + escapeHtml(profile.name) + '</label><textarea id="' + inputId + '" rows="3" placeholder="Write a clear coaching reply">' + escapeHtml(suggested || '') + '</textarea><span>Sent as ' + escapeHtml(currentAccountIdentity().displayName) + (sourceCheckInId ? ' · sending also marks this check-in reviewed' : '') + '</span></div><button class="small-btn primary" onclick="sendTrainerMessage(\'' + escapeHtml(profile.id) + '\',\'' + inputId + '\',\'' + escapeHtml(sourceCheckInId || '') + '\')">Send reply</button></div>';
+}
+function sendTrainerMessage(profileId,inputId,sourceCheckInId) {
+  if (!requireTrainerMutation('message a client')) return null;
+  const profile = loadProfiles().find((item) => item.id === profileId), input = byId(inputId); if (!profile || !input || !input.value.trim()) { showToast('Write a message before sending'); return null; }
+  const identity = currentAccountIdentity(), body = input.value.trim();
+  const messages = loadLocalArray(CLIENT_MESSAGES_KEY);
+  const record = {id:'message-' + Date.now(),profileId:profile.id,client:profile.name,from:'coach',senderRole:identity.role === 'owner' ? 'owner' : 'trainer',senderUserId:identity.id || '',senderName:identity.displayName,recipientRole:'client',recipientUserId:'',recipientName:profile.name,body,createdAt:new Date().toISOString(),sourceCheckInId:sourceCheckInId || ''};
+  messages.unshift(record);
+  if (!profile.assignedTrainerId && identity.id) { const profiles = loadProfiles(), index = profiles.findIndex((item) => item.id === profile.id); if (index >= 0) { profiles[index] = {...profiles[index],assignedTrainerId:identity.id,assignedTrainerName:identity.displayName,assignedTrainerEmail:identity.email,updatedAt:new Date().toISOString()}; writeProfiles(profiles); } }
+  if (!writeLocalArray(CLIENT_MESSAGES_KEY,messages,1000)) return null;
+  input.value = '';
+  if (sourceCheckInId && !markClientCheckInReviewed(sourceCheckInId,body)) return null;
+  if (byId('coachModuleContent') && openCoachDestination.current === 'messages') renderCoachModule('messages');
+  if (byId('trainerReport') && selectedTrainerClient) renderTrainerAnalysis(selectedTrainerClient);
+  renderTrainerAttention(); showToast('Message sent to ' + profile.name + ' as ' + identity.displayName); return record;
+}
+function replyToClientMessage(profileId) {
+  const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) return null;
+  const input = byId(trainerMessageComposerId(profile.id));
+  if (input) { input.focus(); input.scrollIntoView({behavior:'smooth',block:'center'}); return input; }
+  selectedTrainerClient = profile.name; trainerSummaryState.tab = 'messages'; renderTrainerAnalysis(profile.name);
+  setTimeout(() => { const field = byId(trainerMessageComposerId(profile.id)); if (field) field.focus(); },0); return true;
+}
 let pendingTrainerClient = "";
 let pendingTrainerDestination = "trainer-menu";
 function trainerIsUnlocked() {
   const cloudIdentity = window.fit4lifeCloudIdentity || {}, cloudRole = window.fit4lifeCloudRole || "";
-  if (cloudIdentity.id) return ["owner","trainer"].includes(cloudRole);
-  try { return window.sessionStorage && window.sessionStorage.getItem(TRAINER_SESSION_KEY) === "yes"; }
-  catch (_) { return false; }
+  return Boolean(cloudIdentity.id && ["owner","trainer"].includes(cloudRole));
 }
 function requireTrainerMutation(action) {
   if (trainerIsUnlocked()) return true;
@@ -6409,17 +6427,6 @@ function syncTrainerOnlyControls() {
   const programSave = byId("programSaveBtn");
   if (programSave) programSave.style.display = trainerIsUnlocked() ? "inline-flex" : "none";
 }
-async function hashTrainerPin(pin) {
-  try {
-    if (window.crypto && window.crypto.subtle && window.TextEncoder) {
-      const bytes = new TextEncoder().encode(pin), digest = await window.crypto.subtle.digest("SHA-256", bytes);
-      return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-    }
-  } catch (_) {}
-  let hash = 2166136261;
-  for (let i = 0; i < pin.length; i++) { hash ^= pin.charCodeAt(i); hash = Math.imul(hash, 16777619); }
-  return "local-" + (hash >>> 0).toString(16);
-}
 function requestTrainerAccess(destination,client) {
   portalRole = "trainer";
   pendingTrainerDestination = destination || "trainer-menu";
@@ -6431,11 +6438,9 @@ function requestTrainerAccess(destination,client) {
     if (activeClientProfile()) openClientTab("home"); else show("client-menu");
     return;
   }
-  byId("trainerGateTitle").textContent = "Trainer Access";
-  byId("trainerGateCopy").textContent = "Offline prototype only: enter the trainer password for this device. The hosted app requires an owner-approved named trainer account.";
-  byId("trainerGateSubmit").textContent = "Unlock trainer workspace";
-  byId("trainerPin").value = ""; byId("trainerGateError").textContent = "";
-  byId("trainerGateModal").classList.add("open"); setTimeout(() => byId("trainerPin").focus(), 20);
+  portalRole = ""; pendingTrainerDestination = "trainer-menu"; pendingTrainerClient = "";
+  if (typeof window.fit4lifeCloudShowAuthMode === "function") window.fit4lifeCloudShowAuthMode("signin");
+  showToast("Sign in with an approved trainer account to open the trainer workspace");
 }
 function openTrainerPortal() { requestTrainerAccess("trainer-menu"); }
 function openTrainerHub(client) { requestTrainerAccess("trainer",client); }
@@ -6451,16 +6456,9 @@ function finishPendingTrainerDestination() {
   if (destination === "advanced") { show("advanced"); renderAdvancedStudio(); return; }
   show("trainer-menu");
 }
-function closeTrainerGate() { byId("trainerGateModal").classList.remove("open"); byId("trainerPin").value = ""; }
-async function submitTrainerAccess() {
-  const pin = byId("trainerPin").value.trim(), error = byId("trainerGateError");
-  if (pin !== UNIVERSAL_TRAINER_PIN) { error.textContent = "That trainer password is not correct."; byId("trainerPin").select(); return false; }
-  try { window.sessionStorage.setItem(TRAINER_SESSION_KEY, "yes"); } catch (_) {}
-  closeTrainerGate(); syncTrainerOnlyControls(); renderForms(); finishPendingTrainerDestination(); return true;
-}
 function lockTrainerHub() {
-  try { window.sessionStorage.removeItem(TRAINER_SESSION_KEY); } catch (_) {}
   syncTrainerOnlyControls(); renderForms(); pendingTrainerDestination = "trainer-menu"; pendingTrainerClient = ""; portalRole = ""; show("home"); showToast("Trainer workspace locked");
+  if (typeof window.fit4lifeCloudSignOut === "function") window.fit4lifeCloudSignOut();
 }
 
 /* ---------- form construction ---------- */
@@ -10739,26 +10737,27 @@ function markClientCheckInReviewed(checkInId,trainerReply) {
   if (!writeCheckIns(items)) return null;
   renderTrainerAnalysis(selectedTrainerClient); renderTrainerAttention(); return items[index];
 }
-function replyToClientCheckIn(checkInId) {
-  if (!requireTrainerMutation("reply to a client recovery update")) return null;
-  const item = loadCheckIns().find((checkin) => checkin.id === checkInId), profile = item && loadProfiles().find((candidate) => candidate.id === item.profileId); if (!item || !profile) return null;
+function suggestedClientCheckInReply(item) {
+  if (!item) return '';
   const painHold = painRequiresSafetyHold(item.painLevel || item.pain,item.movementChanged), concern = Number(item.recovery) <= 2 || Number(item.soreness) >= 4 || ["unsure","no"].includes(item.nextSessionReadiness) || ["same","worse"].includes(item.painTrend);
-  const suggested = painHold || item.painTrend === "worse"
+  return painHold || item.painTrend === "worse"
     ? "Thanks for telling me. Do not repeat the movement that caused pain yet. I’m reviewing your next session and will follow up with a safe adjustment."
     : concern ? "Thanks for checking in. I’m reviewing your recovery and will adjust the next session if needed. Keep the next movement easy and pain-free until you hear from me."
       : "Thanks for checking in—your recovery looks on track. Nice job following through. Keep the next session controlled and let me know if anything changes.";
-  const identity = currentAccountIdentity(), body = window.prompt("Reply to " + profile.name + " as " + identity.displayName + ":",suggested); if (!body || !body.trim()) return null;
-  const messages = loadLocalArray(CLIENT_MESSAGES_KEY);
-  messages.unshift({id:"message-" + Date.now(),profileId:profile.id,client:profile.name,from:"coach",senderRole:identity.role === "owner" ? "owner" : "trainer",senderUserId:identity.id || "",senderName:identity.displayName,recipientRole:"client",recipientUserId:"",recipientName:profile.name,body:body.trim(),createdAt:new Date().toISOString(),sourceCheckInId:item.id});
-  if (!writeLocalArray(CLIENT_MESSAGES_KEY,messages,1000)) return null;
-  const reviewed = markClientCheckInReviewed(item.id,body.trim()); if (!reviewed) return null;
-  showToast("Reply sent and recovery pulse marked reviewed"); return reviewed;
+}
+function replyToClientCheckIn(checkInId) {
+  if (!requireTrainerMutation("reply to a client recovery update")) return null;
+  const item = loadCheckIns().find((checkin) => checkin.id === checkInId), profile = item && loadProfiles().find((candidate) => candidate.id === item.profileId); if (!item || !profile) return null;
+  const input = byId(trainerMessageComposerId(profile.id,item.id));
+  if (input) { input.focus(); input.scrollIntoView({behavior:'smooth',block:'center'}); return input; }
+  trainerSummaryState.tab = 'checkins'; selectedTrainerClient = profile.name; renderTrainerAnalysis(profile.name);
+  setTimeout(() => { const field = byId(trainerMessageComposerId(profile.id,item.id)); if (field) field.focus(); },0); return true;
 }
 function trainerCheckInsTab(profile) {
   const items = profile ? checkInsForProfile(profile.id) : [];
-  return '<section class="analysis-panel"><h4 class="analysis-section-title">Check-ins &amp; recovery</h4><p style="font-size:9px;color:var(--text-faint);margin:4px 0 12px">Recovery pulses are short post-workout signals. Weekly check-ins remain the broader coaching review.</p><div class="analysis-history">' + (items.map((item) => '<div class="analysis-history-item"><div><b>' + new Date(item.createdAt || item.date).toLocaleDateString() + ' · ' + escapeHtml(clientCheckInTypeLabel(item)) + (item.reviewedAt ? ' · reviewed' : ' · needs review') + '</b><span>' + escapeHtml(clientCheckInSummary(item)) + '</span>' + (item.reviewedAt ? '<span>Reviewed by ' + escapeHtml(item.reviewedBy || "trainer") + (item.trainerReply ? ' · reply sent' : '') + '</span>' : '') + '</div>' + (!item.reviewedAt ? '<div class="tool-actions"><button class="small-btn primary" onclick="replyToClientCheckIn(\'' + escapeHtml(item.id) + '\')">Reply &amp; review</button><button class="small-btn" onclick="markClientCheckInReviewed(\'' + escapeHtml(item.id) + '\');showToast(\'Check-in marked reviewed\')">Mark reviewed</button></div>' : '') + '</div>').join('') || '<div class="empty-state">No check-ins or recovery pulses submitted.</div>') + '</div></section>';
+  return '<section class="analysis-panel"><h4 class="analysis-section-title">Check-ins &amp; recovery</h4><p class="support-copy">Recovery pulses are short post-workout signals. Weekly check-ins remain the broader coaching review.</p><div class="analysis-history">' + (items.map((item) => '<div class="analysis-history-item checkin-review-item"><div><b>' + new Date(item.createdAt || item.date).toLocaleDateString() + ' · ' + escapeHtml(clientCheckInTypeLabel(item)) + (item.reviewedAt ? ' · reviewed' : ' · needs review') + '</b><span>' + escapeHtml(clientCheckInSummary(item)) + '</span>' + (item.reviewedAt ? '<span>Reviewed by ' + escapeHtml(item.reviewedBy || "trainer") + (item.trainerReply ? ' · reply sent' : '') + '</span>' : '') + '</div>' + (!item.reviewedAt ? trainerMessageComposerHtml(profile,item.id,suggestedClientCheckInReply(item)) + '<div class="tool-actions"><button class="small-btn" onclick="markClientCheckInReviewed(\'' + escapeHtml(item.id) + '\');showToast(\'Check-in marked reviewed\')">Mark reviewed without reply</button></div>' : '') + '</div>').join('') || '<div class="empty-state">No check-ins or recovery pulses submitted.</div>') + '</div></section>';
 }
-function trainerMessagesTab(profile) { const items = profile ? loadClientMessages(profile.id) : []; return '<section class="analysis-panel"><h4 class="analysis-section-title">Direct messages · ' + escapeHtml(profile && profile.assignedTrainerName || 'Coaching team') + '</h4>' + (profile ? messageThreadHtml(items,profile,'trainer') : '<div class="empty-state">Choose a client.</div>') + (profile ? '<div class="tool-actions"><button class="small-btn primary" onclick="replyToClientMessage(\'' + escapeHtml(profile.id) + '\')">Message ' + escapeHtml(profile.name) + '</button></div>' : '') + '</section>'; }
+function trainerMessagesTab(profile) { const items = profile ? loadClientMessages(profile.id) : []; return '<section class="analysis-panel"><h4 class="analysis-section-title">Direct messages · ' + escapeHtml(profile && profile.assignedTrainerName || 'Coaching team') + '</h4>' + (profile ? messageThreadHtml(items,profile,'trainer') + trainerMessageComposerHtml(profile) : '<div class="empty-state">Choose a client.</div>') + '</section>'; }
 function trainerNutritionTab(profile) { return '<section class="analysis-panel"><h4 class="analysis-section-title">Nutrition</h4><div class="empty-state">No nutrition target has been assigned. Keep this optional and use qualified nutrition or medical support when the client’s needs exceed general coaching scope.</div></section>'; }
 function trainerNotesTab(analysis) { const notes = analysis.entries.filter((entry) => entry.type === 'note' || summaryMetaFor(entry).note); return '<section class="analysis-panel"><h4 class="analysis-section-title">Coach & workout notes</h4><div class="analysis-history">' + (notes.map((entry) => '<div class="analysis-history-item"><b>' + escapeHtml(entry.label || 'Note') + ' · ' + new Date(entry.date).toLocaleDateString() + '</b><span>' + escapeHtml(entry.note || summaryMetaFor(entry).note || entry.value || '') + '</span></div>').join('') || '<div class="empty-state">No saved notes.</div>') + '</div></section>'; }
 function trainerDocumentsTab(analysis) { const scans = inBodyScansFor(analysis.client); return '<section class="analysis-panel"><h4 class="analysis-section-title">Documents</h4><div class="analysis-history">' + (scans.map((scan) => '<div class="analysis-history-item"><b>InBody scan · ' + new Date(scan.date + 'T12:00:00').toLocaleDateString() + '</b><span>' + escapeHtml(scan.fileName || 'Values entered manually') + '</span></div>').join('') || '<div class="empty-state">No client documents saved.</div>') + '</div><div class="tool-actions"><button class="small-btn primary" onclick="openInBodyModal()">Add InBody scan</button></div></section>'; }
@@ -11691,7 +11690,6 @@ if (document.getElementById) {
     byId("coachAdjustmentModal").addEventListener("click", (event) => { if (event.target === byId("coachAdjustmentModal")) closeCoachAdjustment(); });
     byId("progressReceiptModal").addEventListener("click", (event) => { if (event.target === byId("progressReceiptModal")) closeProgressReceiptEditor(); });
     byId("baselineReviewModal").addEventListener("click", (event) => { if (event.target === byId("baselineReviewModal")) closeBaselineReview(); });
-    byId("trainerGateModal").addEventListener("click", (event) => { if (event.target === byId("trainerGateModal")) closeTrainerGate(); });
     byId("exerciseSwapModal").addEventListener("click", (event) => { if (event.target === byId("exerciseSwapModal")) closeExerciseSwap(); });
     byId("programDayReworkModal").addEventListener("click", (event) => { if (event.target === byId("programDayReworkModal")) closeProgramDayRework(); });
     byId("exerciseEditorModal").addEventListener("click", (event) => { if (event.target === byId("exerciseEditorModal")) closeExerciseEditor(); });
@@ -11704,7 +11702,7 @@ if (document.getElementById) {
     byId("completeDeleteModal").addEventListener("click", (event) => { if (event.target === byId("completeDeleteModal")) closeCompleteDeleteModal(); });
     byId("inBodyModal").addEventListener("click", (event) => { if (event.target === byId("inBodyModal")) closeInBodyModal(); });
     byId("bodyGoalModal").addEventListener("click", (event) => { if (event.target === byId("bodyGoalModal")) closeBodyGoalModal(); });
-    if (document.addEventListener) document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeWorkoutReview(); closeCoachAdjustment(); closeProgressReceiptEditor(); closeBaselineReview(); closeTrainerGate(); closeExerciseSwap(); closeProgramDayRework(); closeExerciseEditor(); closePrescriptionEditor(); closeSupersetEditor(); closeProgramTemplatePreview(); closeSummaryEntryEditor(); closeClientIntake(); closeProfileEditor(); closeCompleteDeleteModal(); closeInBodyModal(); closeBodyGoalModal(); } });
+    if (document.addEventListener) document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeWorkoutReview(); closeCoachAdjustment(); closeProgressReceiptEditor(); closeBaselineReview(); closeExerciseSwap(); closeProgramDayRework(); closeExerciseEditor(); closePrescriptionEditor(); closeSupersetEditor(); closeProgramTemplatePreview(); closeSummaryEntryEditor(); closeClientIntake(); closeProfileEditor(); closeCompleteDeleteModal(); closeInBodyModal(); closeBodyGoalModal(); } });
   }
 }
 

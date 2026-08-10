@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FIT 4 LIFE">
+  <defs>
+    <radialGradient id="bg" cx="35%" cy="25%" r="85%">
+      <stop stop-color="#1b2333"/>
+      <stop offset="1" stop-color="#08090c"/>
+    </radialGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#68b2f6"/>
+      <stop offset="1" stop-color="#3155d1"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="168" fill="#10131a" stroke="#5aa6f0" stroke-opacity=".3" stroke-width="4"/>
+  <path d="M153 153h115l-9 51h-62l-7 36h53l-9 49h-53l-13 70h-54l39-206Z" fill="url(#blue)"/>
+  <path d="M294 153h52l-23 133h67l-13 73H257l37-206Z" fill="url(#blue)"/>
+  <text x="256" y="407" text-anchor="middle" fill="#eef4ff" font-family="Arial,Helvetica,sans-serif" font-size="28" font-weight="800" letter-spacing="6">FIT 4 LIFE</text>
+</svg>

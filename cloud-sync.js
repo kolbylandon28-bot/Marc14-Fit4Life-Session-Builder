@@ -61,6 +61,7 @@
   let authMode = "signin";
   const pendingScopes = new Set();
   const remoteProfilesByExternalId = new Map();
+  const remoteSyncRecords = new Map();
 
   window.fit4lifeCloudRole = "";
   window.fit4lifeCloudReady = false;
@@ -207,6 +208,95 @@
       if (nextTime >= previousTime) result[index] = item;
     });
     return result.sort((a, b) => String(b.createdAt || b.updatedAt || b.date || "").localeCompare(String(a.createdAt || a.updatedAt || a.date || "")));
+  }
+
+  function syncRecordCacheKey(clientId, recordType, recordKey) {
+    return [clientId || "organization", recordType, recordKey || "default"].join("|");
+  }
+
+  function recordTime(value) {
+    const parsed = Date.parse(value || "");
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function newestObject(current, incoming) {
+    if (!current) return incoming || null;
+    if (!incoming) return current;
+    const currentTime = recordTime(current.updatedAt || current.savedAt || current.completedAt || current.createdAt);
+    const incomingTime = recordTime(incoming.updatedAt || incoming.savedAt || incoming.completedAt || incoming.createdAt);
+    return incomingTime >= currentTime ? { ...current, ...incoming } : { ...incoming, ...current };
+  }
+
+  function mergeBundlePayload(recordType, current, incoming) {
+    const left = current && typeof current === "object" ? current : {};
+    const right = incoming && typeof incoming === "object" ? incoming : {};
+    if (!Object.keys(left).length) return right;
+    if (!Object.keys(right).length) return left;
+
+    if (recordType === "client_plan") {
+      const leftAssignments = Array.isArray(left.assignments) ? left.assignments : left.assignment ? [left.assignment] : [];
+      const rightAssignments = Array.isArray(right.assignments) ? right.assignments : right.assignment ? [right.assignment] : [];
+      const merged = {
+        ...left,
+        ...right,
+        version: Math.max(Number(left.version || 0), Number(right.version || 0), 3),
+        profile: newestObject(left.profile, right.profile),
+        assignments: mergeRecords(leftAssignments, rightAssignments),
+        programs: mergeRecords(left.programs, right.programs),
+        inBodyScans: mergeRecords(left.inBodyScans, right.inBodyScans),
+        bodyGoals: mergeRecords(left.bodyGoals, right.bodyGoals),
+        athleteMetrics: mergeRecords(left.athleteMetrics, right.athleteMetrics),
+        mentalPlans: mergeRecords(left.mentalPlans, right.mentalPlans),
+        progressReceipts: mergeRecords(left.progressReceipts, right.progressReceipts),
+        summaryMeta: { ...(left.summaryMeta || {}), ...(right.summaryMeta || {}) },
+        wearableConnections: { ...(left.wearableConnections || {}), ...(right.wearableConnections || {}) },
+        savedAt: recordTime(right.savedAt) >= recordTime(left.savedAt) ? right.savedAt : left.savedAt
+      };
+      merged.assignment = merged.assignments[0] || null;
+      return merged;
+    }
+
+    if (recordType === "client_activity") {
+      const leftStates = Array.isArray(left.assignmentStates) ? left.assignmentStates : left.assignmentState ? [left.assignmentState] : [];
+      const rightStates = Array.isArray(right.assignmentStates) ? right.assignmentStates : right.assignmentState ? [right.assignmentState] : [];
+      const merged = {
+        ...left,
+        ...right,
+        version: Math.max(Number(left.version || 0), Number(right.version || 0), 3),
+        progress: mergeRecords(left.progress, right.progress),
+        checkIns: mergeRecords(left.checkIns, right.checkIns),
+        messages: mergeRecords(left.messages, right.messages),
+        progressReceiptResponses: mergeRecords(left.progressReceiptResponses, right.progressReceiptResponses),
+        daily: { ...(left.daily || {}), ...(right.daily || {}) },
+        activeWorkout: newestObject(left.activeWorkout, right.activeWorkout),
+        assignmentStates: mergeRecords(leftStates, rightStates),
+        savedAt: recordTime(right.savedAt) >= recordTime(left.savedAt) ? right.savedAt : left.savedAt
+      };
+      merged.assignmentState = merged.assignmentStates[0] || null;
+      if (meaningfulIntake(left.clientIntake) && meaningfulIntake(right.clientIntake)) {
+        merged.clientIntake = intakeTime(right.clientIntake, right) >= intakeTime(left.clientIntake, left) ? right.clientIntake : left.clientIntake;
+      } else if (meaningfulIntake(left.clientIntake)) merged.clientIntake = left.clientIntake;
+      return merged;
+    }
+
+    if (recordType === "organization_snapshot") {
+      return {
+        ...left,
+        ...right,
+        profileRequests: mergeRecords(left.profileRequests, right.profileRequests),
+        teams: mergeRecords(left.teams, right.teams),
+        marketPrograms: mergeRecords(left.marketPrograms, right.marketPrograms),
+        automations: mergeRecords(left.automations, right.automations),
+        automationAlerts: mergeRecords(left.automationAlerts, right.automationAlerts),
+        exerciseLibraryEdits: mergeRecords(left.exerciseLibraryEdits, right.exerciseLibraryEdits),
+        gymBrand: { ...(left.gymBrand || {}), ...(right.gymBrand || {}) },
+        gymEquipment: { ...(left.gymEquipment || {}), ...(right.gymEquipment || {}) },
+        attentionState: { ...(left.attentionState || {}), ...(right.attentionState || {}) },
+        savedAt: recordTime(right.savedAt) >= recordTime(left.savedAt) ? right.savedAt : left.savedAt
+      };
+    }
+
+    return { ...left, ...right };
   }
 
   function cloudStatus(label, state) {
@@ -529,7 +619,7 @@
   async function findSyncRecord(clientId, recordType, recordKey) {
     let query = cloudClient
       .from("sync_records")
-      .select("id")
+      .select("id,payload,version,updated_at")
       .eq("organization_id", cloudOrganizationId)
       .eq("record_type", recordType)
       .eq("record_key", recordKey || "default");
@@ -540,19 +630,55 @@
   }
 
   async function saveSyncRecord(clientId, recordType, recordKey, payload) {
-    const existing = await findSyncRecord(clientId, recordType, recordKey);
-    const record = {
-      organization_id: cloudOrganizationId,
-      client_id: clientId || null,
-      record_type: recordType,
-      record_key: recordKey || "default",
-      payload,
-      deleted_at: null
-    };
-    const response = existing
-      ? await cloudClient.from("sync_records").update(record).eq("id", existing.id)
-      : await cloudClient.from("sync_records").insert(record);
-    if (response.error) throw response.error;
+    const cacheKey = syncRecordCacheKey(clientId, recordType, recordKey);
+    let expected = remoteSyncRecords.get(cacheKey) || null;
+    let nextPayload = payload;
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      if (!expected) expected = await findSyncRecord(clientId, recordType, recordKey);
+      const record = {
+        organization_id: cloudOrganizationId,
+        client_id: clientId || null,
+        record_type: recordType,
+        record_key: recordKey || "default",
+        payload: nextPayload,
+        deleted_at: null
+      };
+
+      if (!expected) {
+        const inserted = await cloudClient.from("sync_records").insert(record).select("id,payload,version,updated_at").maybeSingle();
+        if (!inserted.error && inserted.data) {
+          remoteSyncRecords.set(cacheKey, inserted.data);
+          return inserted.data;
+        }
+        if (!inserted.error || inserted.error.code === "23505") {
+          expected = await findSyncRecord(clientId, recordType, recordKey);
+          nextPayload = mergeBundlePayload(recordType, expected && expected.payload, nextPayload);
+          continue;
+        }
+        throw inserted.error;
+      }
+
+      const updated = await cloudClient
+        .from("sync_records")
+        .update(record)
+        .eq("id", expected.id)
+        .eq("version", expected.version)
+        .select("id,payload,version,updated_at")
+        .maybeSingle();
+      if (updated.error) throw updated.error;
+      if (updated.data) {
+        remoteSyncRecords.set(cacheKey, updated.data);
+        return updated.data;
+      }
+
+      const latest = await findSyncRecord(clientId, recordType, recordKey);
+      if (!latest) { expected = null; continue; }
+      nextPayload = mergeBundlePayload(recordType, latest.payload, nextPayload);
+      expected = latest;
+    }
+
+    throw new Error("This record changed on another device while it was saving. Its updates were preserved; retry the save.");
   }
 
   function profileProgress(profile) {
@@ -561,6 +687,7 @@
 
   function planBundle(profile) {
     const assignments = readJson(CLOUD_KEYS.assignments, []);
+    const profileAssignments = assignments.filter((item) => itemBelongsToProfile(item, profile));
     const progress = profileProgress(profile);
     const progressIds = new Set(progress.map((entry) => entry.id).filter(Boolean));
     const summaryMeta = readJson(CLOUD_KEYS.summaryMeta, {});
@@ -569,9 +696,10 @@
     const wearables = readJson(CLOUD_KEYS.wearableConnections, {});
     const wearableForProfile = wearables && wearables[profile.id] ? { [profile.id]: wearables[profile.id] } : {};
     return {
-      version: 2,
+      version: 3,
       profile,
-      assignment: assignments.find((item) => item.profileId === profile.id || sameClientName(item.client, profile.name)) || null,
+      assignments: profileAssignments,
+      assignment: profileAssignments[0] || null,
       programs: readJson(CLOUD_KEYS.programs, []).filter((item) => itemBelongsToProfile(item, profile)),
       inBodyScans: readJson(CLOUD_KEYS.scans, []).filter((item) => itemBelongsToProfile(item, profile)),
       bodyGoals: readJson(CLOUD_KEYS.goals, []).filter((item) => itemBelongsToProfile(item, profile)),
@@ -586,11 +714,15 @@
 
   function activityBundle(profile) {
     const assignments = readJson(CLOUD_KEYS.assignments, []);
-    const assignment = assignments.find((item) => item.profileId === profile.id || sameClientName(item.client, profile.name));
+    const profileAssignments = assignments.filter((item) => itemBelongsToProfile(item, profile));
     const daily = readJson(CLOUD_KEYS.clientDaily, {});
+    const dailyForProfile = {};
+    Object.keys(daily || {}).forEach((key) => {
+      if (key === profile.id || key.indexOf(profile.id + ":") === 0) dailyForProfile[key] = daily[key];
+    });
     const activeWorkout = readJson(CLOUD_KEYS.activeWorkout, null);
     return {
-      version: 2,
+      version: 3,
       profileId: profile.id,
       clientIntake: profile.intake || {},
       clientIntakeUpdatedAt: profile.intake && profile.intake.updatedAt || null,
@@ -598,15 +730,27 @@
       checkIns: readJson(CLOUD_KEYS.checkins, []).filter((item) => itemBelongsToProfile(item, profile)),
       messages: readJson(CLOUD_KEYS.clientMessages, []).filter((item) => itemBelongsToProfile(item, profile)),
       progressReceiptResponses: readJson(CLOUD_KEYS.progressReceiptResponses, []).filter((item) => itemBelongsToProfile(item, profile)),
-      daily: daily && daily[profile.id] ? { [profile.id]: daily[profile.id] } : {},
+      daily: dailyForProfile,
       activeWorkout: activeWorkout && activeWorkout.profileId === profile.id ? activeWorkout : null,
-      assignmentState: assignment ? {
+      assignmentStates: profileAssignments.map((assignment) => ({
         id: assignment.id,
+        profileId: profile.id,
         status: assignment.status,
         startedAt: assignment.startedAt || null,
         completedAt: assignment.completedAt || null,
         reviewedAt: assignment.reviewedAt || null,
-        clientReview: assignment.clientReview || null
+        clientReview: assignment.clientReview || null,
+        updatedAt: assignment.updatedAt || assignment.completedAt || assignment.startedAt || assignment.assignedAt || null
+      })),
+      assignmentState: profileAssignments[0] ? {
+        id: profileAssignments[0].id,
+        profileId: profile.id,
+        status: profileAssignments[0].status,
+        startedAt: profileAssignments[0].startedAt || null,
+        completedAt: profileAssignments[0].completedAt || null,
+        reviewedAt: profileAssignments[0].reviewedAt || null,
+        clientReview: profileAssignments[0].clientReview || null,
+        updatedAt: profileAssignments[0].updatedAt || profileAssignments[0].completedAt || profileAssignments[0].startedAt || profileAssignments[0].assignedAt || null
       } : null,
       savedAt: new Date().toISOString()
     };
@@ -748,7 +892,10 @@
 
   function applyBundles(profileRows, records) {
     const byClientAndType = new Map();
-    records.forEach((record) => byClientAndType.set((record.client_id || "organization") + "|" + record.record_type, record.payload || {}));
+    records.forEach((record) => {
+      byClientAndType.set((record.client_id || "organization") + "|" + record.record_type, record.payload || {});
+      remoteSyncRecords.set(syncRecordCacheKey(record.client_id, record.record_type, record.record_key), record);
+    });
     const profiles = [];
     let assignments = [];
     let programs = [];
@@ -781,7 +928,8 @@
         intake: newestClientIntake(plan,activity)
       };
       profiles.push(profile);
-      if (plan.assignment) assignments.push(plan.assignment);
+      const planAssignments = Array.isArray(plan.assignments) ? plan.assignments : plan.assignment ? [plan.assignment] : [];
+      assignments = mergeRecords(assignments, planAssignments);
       programs = mergeRecords(programs, plan.programs);
       scans = mergeRecords(scans, plan.inBodyScans);
       goals = mergeRecords(goals, plan.bodyGoals);
@@ -797,10 +945,11 @@
       clientDaily = Object.assign(clientDaily, activity.daily || {});
       if (activity.activeWorkout && (!clientActiveWorkout || profile.auth_user_id === cloudUser.id)) clientActiveWorkout = activity.activeWorkout;
 
-      if (activity.assignmentState) {
-        const index = assignments.findIndex((assignment) => assignment.profileId === profile.id || assignment.id === activity.assignmentState.id);
-        if (index >= 0) assignments[index] = { ...assignments[index], ...activity.assignmentState };
-      }
+      const assignmentStates = Array.isArray(activity.assignmentStates) ? activity.assignmentStates : activity.assignmentState ? [activity.assignmentState] : [];
+      assignmentStates.forEach((assignmentState) => {
+        const index = assignments.findIndex((assignment) => assignment.id === assignmentState.id);
+        if (index >= 0) assignments[index] = { ...assignments[index], ...assignmentState };
+      });
     });
 
     writeJson(CLOUD_KEYS.profiles, profiles);
@@ -1432,6 +1581,18 @@
     } else initializeCloud();
   });
   window.addEventListener("offline", () => cloudStatus("Offline · changes cached", "offline"));
+
+  if (window.__FIT4LIFE_TEST__) {
+    window.fit4lifeCloudTestHooks = {
+      CLOUD_KEYS,
+      mergeRecords,
+      mergeBundlePayload,
+      planBundle,
+      activityBundle,
+      applyBundles,
+      syncRecordCacheKey
+    };
+  }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initializeCloud, { once: true });
   else initializeCloud();
