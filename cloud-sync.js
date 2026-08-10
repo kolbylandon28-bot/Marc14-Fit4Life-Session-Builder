@@ -569,7 +569,7 @@
     const wearables = readJson(CLOUD_KEYS.wearableConnections, {});
     const wearableForProfile = wearables && wearables[profile.id] ? { [profile.id]: wearables[profile.id] } : {};
     return {
-      version: 1,
+      version: 2,
       profile,
       assignment: assignments.find((item) => item.profileId === profile.id || sameClientName(item.client, profile.name)) || null,
       programs: readJson(CLOUD_KEYS.programs, []).filter((item) => itemBelongsToProfile(item, profile)),
@@ -590,9 +590,10 @@
     const daily = readJson(CLOUD_KEYS.clientDaily, {});
     const activeWorkout = readJson(CLOUD_KEYS.activeWorkout, null);
     return {
-      version: 1,
+      version: 2,
       profileId: profile.id,
       clientIntake: profile.intake || {},
+      clientIntakeUpdatedAt: profile.intake && profile.intake.updatedAt || null,
       progress: profileProgress(profile),
       checkIns: readJson(CLOUD_KEYS.checkins, []).filter((item) => itemBelongsToProfile(item, profile)),
       messages: readJson(CLOUD_KEYS.clientMessages, []).filter((item) => itemBelongsToProfile(item, profile)),
@@ -689,6 +690,24 @@
     cloudPushTimer = setTimeout(pushPending, 650);
   }
 
+  async function flushCloudSync(scope) {
+    if (!cloudApplying) {
+      pendingScopes.add(scope || "all");
+      persistPendingScopes();
+    }
+    clearTimeout(cloudPushTimer);
+    if (!cloudReady || !cloudClient || !cloudUser) return false;
+    if (cloudPushing) {
+      const started = Date.now();
+      while (cloudPushing && Date.now() - started < 8000) await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+    return pushPending();
+  }
+
+  window.fit4lifeCloudSaveProfileNow = function fit4lifeCloudSaveProfileNow() {
+    return flushCloudSync(cloudRole === "client" ? "activity" : "plan");
+  };
+
   function applyOrganizationBundle(payload) {
     if (!payload) return;
     writeJson(CLOUD_KEYS.requests, payload.profileRequests || []);
@@ -701,6 +720,30 @@
     writeJson(CLOUD_KEYS.attentionState, payload.attentionState || {});
     writeJson(CLOUD_KEYS.exerciseLibraryEdits, payload.exerciseLibraryEdits || []);
     if (typeof window.applyExerciseLibraryEdits === "function") window.applyExerciseLibraryEdits();
+  }
+
+  function meaningfulIntake(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    return Object.keys(value).some((key) => {
+      const item = value[key];
+      if (Array.isArray(item)) return item.length > 0;
+      if (item && typeof item === "object") return Object.keys(item).length > 0;
+      return item !== "" && item != null && item !== false;
+    });
+  }
+
+  function intakeTime(intake,bundle) {
+    const value = intake && (intake.updatedAt || intake.submittedAt) || bundle && (bundle.clientIntakeUpdatedAt || bundle.savedAt) || "";
+    const parsed = Date.parse(value); return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function newestClientIntake(plan,activity) {
+    const planIntake = plan && plan.profile && plan.profile.intake || {}, activityIntake = activity && activity.clientIntake || {};
+    const planReady = meaningfulIntake(planIntake), activityReady = meaningfulIntake(activityIntake);
+    if (planReady && !activityReady) return planIntake;
+    if (activityReady && !planReady) return activityIntake;
+    if (!planReady && !activityReady) return {};
+    return intakeTime(activityIntake,activity) >= intakeTime(planIntake,plan) ? activityIntake : planIntake;
   }
 
   function applyBundles(profileRows, records) {
@@ -735,7 +778,7 @@
         name: row.full_name,
         username: row.username,
         email: row.email || (plan.profile && plan.profile.email) || "",
-        intake: activity.clientIntake || (plan.profile && plan.profile.intake) || {}
+        intake: newestClientIntake(plan,activity)
       };
       profiles.push(profile);
       if (plan.assignment) assignments.push(plan.assignment);
@@ -1300,7 +1343,8 @@
       const result = original.apply(this, arguments);
       if (result !== false) {
         const key = keyPosition == null ? "" : arguments[keyPosition];
-        queueCloudSync(fixedScope || scopeForLocalKey(key));
+        const requestedScope = typeof fixedScope === "function" ? fixedScope() : fixedScope;
+        queueCloudSync(requestedScope || scopeForLocalKey(key));
       }
       return result;
     };
@@ -1309,7 +1353,7 @@
   }
 
   function installWriterHooks() {
-    wrapWriter("writeProfiles", "plan");
+    wrapWriter("writeProfiles", () => cloudRole === "client" ? "activity" : "plan");
     wrapWriter("writeAssignedWorkouts", "plan");
     wrapWriter("writeSavedPrograms", "plan");
     wrapWriter("writeProgress", "activity");
