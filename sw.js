@@ -1,4 +1,4 @@
-const CACHE_NAME = "fit4life-shell-2026-08-10-assignment-profile-fix-v1";
+const CACHE_NAME = "fit4life-shell-2026-08-10-replacement-calibration-fix-v1";
 const SHELL = [
   "/",
   "/index.html",

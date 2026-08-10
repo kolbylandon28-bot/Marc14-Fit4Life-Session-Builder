@@ -5217,7 +5217,20 @@ function loadSavedPrograms() { return loadLocalArray(SAVED_PROGRAMS_KEY); }
 function writeSavedPrograms(items) { return writeLocalArray(SAVED_PROGRAMS_KEY,items,100); }
 function savedProgramFor(profile) {
   const matches = loadSavedPrograms().filter((item) => item.profileId === profile.id || clientMatches(item.setup && item.setup.client,profile.name));
-  return matches.find((item) => !item.calibration) || matches.find((item) => item.calibration) || null;
+  if (!matches.length) return null;
+  const programsById = new Map(matches.filter((item) => item.id).map((item) => [item.id,item]));
+  const activeAssignments = loadAssignedWorkouts().filter((item) => (item.profileId === profile.id || clientMatches(item.client,profile.name)) && programsById.has(item.programId) && ["assigned","in_progress"].includes(assignmentStatus(item)));
+  const newest = (items,dateFields) => items.slice().sort((a,b) => {
+    const dateFor = (item) => dateFields.map((field) => item[field]).find(Boolean) || "";
+    return String(dateFor(b)).localeCompare(String(dateFor(a)));
+  })[0] || null;
+  // A workout already in progress stays in front. Otherwise the most recently
+  // assigned program is the client's current program, including calibration.
+  // Never prefer a stale regular program merely because it is not calibration.
+  const active = newest(activeAssignments.filter((item) => assignmentStatus(item) === "in_progress"),["startedAt","assignedAt"])
+    || newest(activeAssignments.filter((item) => assignmentStatus(item) === "assigned"),["assignedAt","scheduledDate"]);
+  if (active) return programsById.get(active.programId) || null;
+  return newest(matches,["publishedAt","savedAt","createdAt"]);
 }
 function programRevisionSnapshot(program,reason) {
   const copy = JSON.parse(JSON.stringify(program || {})); delete copy.versions;
@@ -5271,12 +5284,24 @@ function assignmentsForClient(clientOrProfileId) {
   });
 }
 function assignmentForClient(clientOrProfileId) {
-  return assignmentsForClient(clientOrProfileId)[0] || null;
+  const candidates = assignmentsForClient(clientOrProfileId).filter((item) => !["superseded","cancelled"].includes(assignmentStatus(item)));
+  const inProgress = candidates.find((item) => assignmentStatus(item) === "in_progress");
+  if (inProgress) return inProgress;
+  const assigned = candidates.filter((item) => assignmentStatus(item) === "assigned");
+  if (assigned.length) {
+    // Select the newest assignment batch/program first, then its earliest
+    // scheduled workout. This repairs legacy accounts where an older program
+    // still has untouched assigned rows alongside a new calibration week.
+    const latest = assigned.slice().sort((a,b) => String(b.assignedAt || "").localeCompare(String(a.assignedAt || "")))[0];
+    const programId = latest.programId || "";
+    return assigned.filter((item) => programId ? item.programId === programId : item.id === latest.id).sort((a,b) => String(a.scheduledDate || a.assignedAt || "").localeCompare(String(b.scheduledDate || b.assignedAt || "")))[0] || latest;
+  }
+  return candidates[0] || null;
 }
 function assignmentStatus(assignment) { return assignment && assignment.status || "assigned"; }
 function assignmentStatusIndex(assignment) { return { assigned:0, in_progress:1, completed:2, reviewed:3 }[assignmentStatus(assignment)] || 0; }
 function assignmentStatusLabel(assignment) {
-  return { assigned:"Ready to start", in_progress:"Workout in progress", completed:"Waiting for trainer review", reviewed:"Trainer reviewed" }[assignmentStatus(assignment)] || "Ready to start";
+  return { assigned:"Ready to start", in_progress:"Workout in progress", completed:"Waiting for trainer review", reviewed:"Trainer reviewed", superseded:"Replaced by a newer program", cancelled:"Cancelled" }[assignmentStatus(assignment)] || "Ready to start";
 }
 function assignmentProgressStats(assignment) {
   let planned = 0, logged = 0;
@@ -7900,6 +7925,7 @@ function openExerciseSwap(session, block, ei, currentEx) {
   byId("exerciseSwapModal").classList.add("open");
   setSwapMode("recommended");
   setTimeout(() => byId("exerciseSwapSearch").focus(), 0);
+  return true;
 }
 function renderScratchExerciseMenus() {
   if (!activeSwap || !activeSwap.addMode) return;
@@ -8014,7 +8040,7 @@ function applyExerciseSwap(exercise) {
   }
   if (activeSwap.renderMode === "program") {
     const scope = byId("programSwapScope").value || "single", result = applyProgramExerciseReplacement(activeSwap,exercise,scope);
-    if (!result.changed) { showToast(result.message || "No program exercises were changed"); return; }
+    if (!result.changed || !result.originChanged) { showToast(result.message || "The selected program exercise was not changed"); return; }
     closeExerciseSwap(); renderProgram();
     showToast(exercise.name + " applied to " + result.changed + " workout" + (result.changed === 1 ? "" : "s") + (result.skipped ? " · " + result.skipped + " skipped to avoid duplicates" : ""));
     return;
@@ -8686,7 +8712,7 @@ function programBlockExercisesHtml(block,weekIndex,dayIndex,blockIndex) {
   const groups = block.groups && block.groups.length ? block.groups : (block.items || []).map((exercise) => ({type:"straight",items:[exercise]}));
   return groups.map((group) => {
     const rows = (group.items || []).map((exercise,index) => {
-      const exerciseIndex = block.items.indexOf(exercise);
+      const directIndex = block.items.indexOf(exercise), exerciseIndex = directIndex >= 0 ? directIndex : block.items.findIndex((item) => item && exercise && item.name === exercise.name);
       const calibration = Array.isArray(exercise.baselineDomains) && exercise.baselineDomains.length ? '<small class="baseline-domain-label">Calibration · ' + escapeHtml(exercise.baselineDomains.map((domain) => BASELINE_DOMAIN_LABELS[domain] || domain).join(' + ')) + '</small>' : '';
       const rx = exercise.rx || block.rx || {}, rest = rx.rest ? '<span class="program-ex-rest">Rest ' + escapeHtml(rx.rest) + '</span>' : '';
       return '<div class="program-ex"><div class="program-ex-copy"><strong>' + (group.type === "superset" ? '<b style="color:var(--blue-bright)">A' + (index + 1) + '</b> · ' : '') + escapeHtml(exercise.name) + '</strong>' + calibration + '</div><div class="program-ex-rx"><b>' + escapeHtml(rx.sets || '—') + ' × ' + escapeHtml(rx.reps || 'Coach set') + '</b>' + rest + '<span class="program-ex-actions"><button class="tiny-btn" type="button" onclick="openProgramPrescriptionEditor(' + weekIndex + ',' + dayIndex + ',' + blockIndex + ',' + exerciseIndex + ')">Edit</button><button class="tiny-btn" type="button" onclick="openProgramExerciseSwap(' + weekIndex + ',' + dayIndex + ',' + blockIndex + ',' + exerciseIndex + ')">Replace</button></span></div></div>';
@@ -8893,23 +8919,37 @@ function applyProgramDayRework() {
   return true;
 }
 function applyProgramExerciseReplacement(context,exercise,scope) {
-  if (!currentProgram || !context || !exercise) return {changed:0,skipped:0,message:"Program context is unavailable"};
+  if (!currentProgram || !context || !exercise) return {changed:0,skipped:0,originChanged:false,message:"Program context is unavailable"};
   const startWeek = Number(context.weekIndex), weekIndexes = scope === "single" ? [startWeek] : currentProgram.weeks.map((_,index) => index).filter((index) => scope === "all" || index >= startWeek);
-  let changed = 0, skipped = 0, blocked = 0, blockedReasons = [];
+  let changed = 0, skipped = 0, blocked = 0, originChanged = false, blockedReasons = [];
   weekIndexes.forEach((weekIndex) => {
     const day = currentProgram.weeks[weekIndex] && currentProgram.weeks[weekIndex].days[context.dayIndex]; if (!day || !day.session) return;
     const safetyIssues = hardExerciseSafetyIssues(exercise,day.session.spec || {});
     if (safetyIssues.length) { blocked += 1; blockedReasons.push(...safetyIssues.map((issue) => issue.label)); return; }
-    const targetBlock = day.session.blocks.find((candidate) => candidate.key === context.block.key) || day.session.blocks[context.blockIndex];
-    const target = targetBlock && targetBlock.items && targetBlock.items[context.exerciseIndex]; if (!target) return;
+    const blocks = day.session.blocks || [], indexedBlock = blocks[context.blockIndex], originalName = context.currentEx && context.currentEx.name;
+    let targetBlock = null, targetIndex = -1;
+    if (weekIndex === startWeek && indexedBlock && indexedBlock.items && indexedBlock.items[context.exerciseIndex]) {
+      // The visible workout is authoritative. Use its exact phase and row;
+      // repeated phase keys must never redirect this edit to an earlier phase.
+      targetBlock = indexedBlock; targetIndex = Number(context.exerciseIndex);
+    } else {
+      const candidates = [indexedBlock,...blocks.filter((candidate,index) => index !== Number(context.blockIndex) && context.block && candidate && (candidate.key === context.block.key || candidate.title === context.block.title))].filter(Boolean);
+      for (const candidate of candidates) {
+        const matchedIndex = (candidate.items || []).findIndex((item) => item && item.name === originalName);
+        if (matchedIndex >= 0) { targetBlock = candidate; targetIndex = matchedIndex; break; }
+      }
+      if (!targetBlock && indexedBlock && indexedBlock.items && indexedBlock.items[context.exerciseIndex]) { targetBlock = indexedBlock; targetIndex = Number(context.exerciseIndex); }
+    }
+    const target = targetBlock && targetBlock.items && targetBlock.items[targetIndex]; if (!target) return;
     const duplicate = day.session.blocks.some((candidate) => candidate.items.some((item) => item !== target && item.name === exercise.name));
     if (duplicate) { skipped += 1; return; }
-    if (replaceExercise(targetBlock,context.exerciseIndex,exercise)) {
+    if (replaceExercise(targetBlock,targetIndex,exercise)) {
       enrichSessionMetadata(day.session); markSessionDraft(day.session,"Exercise replaced in multi-week program"); changed += 1;
+      if (weekIndex === startWeek) originChanged = targetBlock.items[targetIndex] && targetBlock.items[targetIndex].name === exercise.name;
     }
   });
   if (changed) markCurrentProgramDraft("Exercise replaced by coach in " + changed + " program workout" + (changed === 1 ? "" : "s"));
-  return {changed,skipped,blocked,message:blocked ? "Safety filter blocked " + exercise.name + ": " + [...new Set(blockedReasons)].join(" · ") : skipped ? "The replacement already exists elsewhere in the selected workout" : ""};
+  return {changed,skipped,blocked,originChanged,message:!originChanged ? "The selected exercise on this workout was not changed" : blocked ? "Safety filter blocked " + exercise.name + ": " + [...new Set(blockedReasons)].join(" · ") : skipped ? "The replacement already exists elsewhere in the selected workout" : ""};
 }
 function openProgramSupersetEditor(weekIndex,dayIndex,blockIndex) {
   if (!currentProgram || !currentProgram.weeks[weekIndex] || !currentProgram.weeks[weekIndex].days[dayIndex]) return false;
@@ -9041,6 +9081,14 @@ function assignProgramWeeks(program,weekNumbers) {
   const safetyConflicts = selectedWeeks.flatMap((week) => (week.days || []).flatMap((day) => sessionSafetyConflictsForProfile(day.session,profile).map((conflict) => "Week " + week.number + " · " + day.name + ": " + conflict)));
   if (safetyConflicts.length) return programAssignmentFailure("Program assignment blocked by current client safety filters: " + safetyConflicts.slice(0,3).join(" · "));
   const trainingDays = inferredTrainingDays(profile,program.setup.days), scheduleBase = program.scheduleStart ? new Date(program.scheduleStart + "T12:00:00") : programScheduleBase(trainingDays), assignments = loadAssignedWorkouts(), registered = [];
+  // A newly published program becomes the source of truth for future work.
+  // Keep completed and in-progress history, but prevent untouched assignments
+  // from an older program from hiding this program in the client portal.
+  assignments.forEach((item) => {
+    if (item.profileId === profile.id && item.programId && item.programId !== program.id && assignmentStatus(item) === "assigned") {
+      item.status = "superseded"; item.supersededAt = new Date().toISOString(); item.supersededByProgramId = program.id;
+    }
+  });
   const validProgramDays = new Set(selectedWeeks.flatMap((week) => (week.days || []).map((day,index) => Number(week.number) + ":" + (index + 1))));
   for (let index = assignments.length - 1; index >= 0; index--) {
     const item = assignments[index], selectedWeek = weekNumbers.includes(Number(item.programWeek)), obsolete = item.profileId === profile.id && item.programId === program.id && selectedWeek && !validProgramDays.has(Number(item.programWeek) + ":" + Number(item.programDay));
