@@ -468,6 +468,9 @@
   .warmup-stage span{font-size:9.5px;line-height:1.4;color:var(--text-faint)}
   .preference-editor{display:grid;grid-template-columns:minmax(0,1fr) 180px auto;gap:8px;align-items:end}.preference-list{display:grid;gap:6px;margin-top:9px}.preference-row{display:flex;align-items:center;justify-content:space-between;gap:9px;border:1px solid #d9dce1;border-radius:7px;padding:7px 9px;background:#fff;color:#474c54;font-size:11px}.preference-row span{color:#08767d;font-weight:700}.preference-row button{border:0;background:transparent;color:#a03c44;cursor:pointer}
   .formal-review-box{margin-top:14px;border:1px solid var(--line);border-radius:9px;background:var(--slate-0);padding:12px}.formal-review-box summary{cursor:pointer;font:700 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--blue-bright)}
+  .limitation-assessment-list{display:grid;gap:10px;margin-top:12px}.limitation-assessment-card{border:1px solid var(--line);border-radius:10px;padding:12px;background:linear-gradient(145deg,var(--slate-1),var(--slate-0));color:var(--text)}.limitation-assessment-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}.limitation-assessment-head b{font-size:13px}.limitation-assessment-head span{font:700 8px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--blue-bright)}.limitation-assessment-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.limitation-assessment-grid .wide{grid-column:1/-1}.limitation-assessment-card select,.limitation-assessment-card input{min-width:0}.limitation-assessment-warning{margin-top:9px;padding:8px 10px;border-left:3px solid #e4c85b;background:rgba(228,200,91,.08);font-size:10px;line-height:1.45;color:var(--text-faint)}.limitation-assessment-warning.hard{border-color:var(--danger);background:rgba(232,102,102,.08);color:var(--text-dim)}
+  .program-ex-actions{display:inline-flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.program-ex-actions .tiny-btn.muted{color:var(--text-faint)}.focused-program-phase-head .phase-edit-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.scope-impact-note{border:1px solid var(--blue);background:var(--blue-glow);border-radius:8px;padding:10px 12px;color:var(--text-dim);font-size:11px;line-height:1.45}.profile-impact-check{display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--slate-0)}.profile-impact-check input{margin-top:3px}.profile-impact-check b{display:block;color:var(--text)}.profile-impact-check span{display:block;color:var(--text-faint);font-size:10px;margin-top:3px}.safety-override-record{display:block;margin-top:4px;color:#e4c85b;font:700 8px var(--mono);letter-spacing:.07em;text-transform:uppercase}
+  @media(max-width:700px){.limitation-assessment-grid{grid-template-columns:1fr}.limitation-assessment-grid .wide{grid-column:auto}}
 
   /* ---------- WAVES 2–4: TRAINER WORKSPACE ---------- */
   .workspace-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
@@ -1805,7 +1808,10 @@
       <div class="compact-field"><label for="exerciseSwapScope">Apply this preference</label><select id="exerciseSwapScope"><option value="today">Today only</option><option value="future">Future workouts too</option></select></div>
     </div>
     <div class="compact-grid" id="programSwapFields" style="margin-top:10px;display:none">
-      <div class="compact-field wide"><label for="programSwapScope">Apply replacement to</label><select id="programSwapScope"><option value="single">This workout only</option><option value="remaining">This program day from this week forward</option><option value="all">This program day in every week</option></select><span class="storage-note">Sets, reps, tempo, and rest stay specific to each week. Only the exercise is replaced.</span></div>
+      <div class="compact-field wide"><label for="programSwapScope">Apply replacement to</label><select id="programSwapScope"><option value="single">This workout only</option><option value="remaining">Unfinished repeats from this week forward</option><option value="all">Every matching workout in this program</option><option value="future">Future generated workouts too</option></select><span class="storage-note">Completed workout history never changes. Published workouts that have not started synchronize after the coach reapproves this draft.</span></div>
+      <div class="compact-field wide"><label for="programSwapReason">Coach reason</label><textarea id="programSwapReason" placeholder="Why this change is appropriate for this client"></textarea></div>
+      <div class="compact-field"><label for="programSwapCalibration">If this is calibration evidence</label><select id="programSwapCalibration"><option value="transfer">Transfer the calibration responsibility when the replacement tests the same pattern</option><option value="reassign">Keep this replacement, then reassign calibration to another movement</option><option value="remove">Remove this calibration measure with a documented reason</option></select></div>
+      <div class="compact-field"><label for="programSwapOverride">Safety override</label><select id="programSwapOverride"><option value="none">Do not override client filters</option><option value="modified">Coach-approved modified trial</option><option value="allow">Coach-approved normal trial</option></select></div>
     </div>
     <div id="exerciseSwapOptions" class="swap-list"></div>
     <p class="swap-help">The workout bank can place any exercise in any phase. Filter-matching choices are shown first; deliberate equipment, experience, phase, age, or limitation overrides stay clearly labeled and require confirmation.</p>
@@ -1873,9 +1879,40 @@
       <div class="compact-field"><label for="prescriptionTempo">Tempo / time per rep</label><input id="prescriptionTempo" placeholder="3-1-1 or controlled"></div>
       <div class="compact-field"><label for="prescriptionRest">Rest after set</label><input id="prescriptionRest" placeholder="60–90 sec"></div>
       <div class="compact-field wide"><label for="prescriptionEffort">Target effort</label><input id="prescriptionEffort" placeholder="RPE 8 / 2 reps in reserve"></div>
+      <div class="compact-field wide"><label for="prescriptionLoad">Target load or load rule</label><input id="prescriptionLoad" placeholder="95 lb, use last successful load, or form-first"></div>
+      <div class="compact-field wide"><label for="prescriptionCue">Coach cue / setup note</label><textarea id="prescriptionCue" placeholder="One clear instruction the client sees during the workout"></textarea></div>
+      <div class="compact-field wide" id="prescriptionScopeField"><label for="prescriptionScope">Apply this edit to</label><select id="prescriptionScope"><option value="single">This workout only</option><option value="remaining">Unfinished repeats from this week forward</option><option value="all">Every matching workout in this program</option><option value="future">Future generated workouts too</option></select></div>
+      <div class="compact-field wide" id="prescriptionCalibrationField"><label for="prescriptionCalibration">Calibration responsibility</label><select id="prescriptionCalibration"><option value="keep">Keep this as calibration evidence</option><option value="remove">Remove the calibration measure with a documented reason</option></select></div>
+      <div class="compact-field wide"><label for="prescriptionReason">Reason for change</label><textarea id="prescriptionReason" placeholder="Required for calibration changes or filter overrides"></textarea></div>
     </div>
     <div class="portal-note">Timed cardio and mobility can use a duration in the reps field. Tempo is optional when it does not add useful coaching direction.</div>
+    <div id="programPrescriptionStructureActions" class="tool-actions" hidden><button class="small-btn" type="button" onclick="applyProgramExerciseStructureAction('up')">Move up</button><button class="small-btn" type="button" onclick="applyProgramExerciseStructureAction('down')">Move down</button><button class="small-btn danger" type="button" onclick="applyProgramExerciseStructureAction('remove')">Remove exercise</button></div>
     <div class="tool-actions"><button class="small-btn primary" onclick="savePrescriptionEditor()">Save prescription</button><button class="small-btn" id="prescriptionReplaceBtn" onclick="replaceFromPrescriptionEditor()">Replace exercise</button><button class="small-btn" onclick="closePrescriptionEditor()">Cancel</button></div>
+  </div>
+</div>
+
+<div id="programStructureEditorModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="programStructureEditorTitle">
+  <div class="review-dialog prescription-dialog">
+    <h2 id="programStructureEditorTitle">Edit workout structure</h2>
+    <p id="programStructureEditorCopy">Edit the visible workout without silently rewriting completed history.</p>
+    <div class="prescription-grid">
+      <div class="compact-field wide"><label for="programStructureTitle">Title</label><input id="programStructureTitle" type="text"></div>
+      <div class="compact-field wide"><label for="programStructurePurpose">Purpose / client explanation</label><textarea id="programStructurePurpose"></textarea></div>
+      <div class="compact-field wide"><label for="programStructureScope">Apply this edit to</label><select id="programStructureScope"><option value="single">This workout only</option><option value="remaining">Unfinished repeats from this week forward</option><option value="all">Every matching workout in this program</option><option value="future">Future generated workouts too</option></select></div>
+      <div class="compact-field wide"><label for="programStructureReason">Coach reason</label><textarea id="programStructureReason" placeholder="Why this structure is right for the client"></textarea></div>
+    </div>
+    <div id="programPhaseStructureActions" class="tool-actions" hidden><button class="small-btn" type="button" onclick="applyProgramPhaseStructureAction('up')">Move phase up</button><button class="small-btn" type="button" onclick="applyProgramPhaseStructureAction('down')">Move phase down</button><button class="small-btn danger" type="button" onclick="applyProgramPhaseStructureAction('remove')">Remove phase</button></div>
+    <div class="tool-actions"><button class="small-btn primary" type="button" onclick="saveProgramStructureEditor()">Save structure</button><button class="small-btn" type="button" onclick="closeProgramStructureEditor()">Cancel</button></div>
+  </div>
+</div>
+
+<div id="profileImpactModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="profileImpactTitle">
+  <div class="review-dialog program-rework-dialog">
+    <h2 id="profileImpactTitle">Profile changed — review programming impact</h2>
+    <p>Profile answers are saved now. Choose whether unfinished programming should also be updated; completed and reviewed history is always preserved.</p>
+    <div id="profileImpactSummary" class="program-rework-note"></div>
+    <div id="profileImpactItems" class="data-list"></div>
+    <div class="tool-actions"><button class="small-btn primary" type="button" onclick="applyProfileImpactUpdates()">Update selected unfinished work</button><button class="small-btn" type="button" onclick="closeProfileImpactModal()">Keep existing workouts unchanged</button></div>
   </div>
 </div>
 
@@ -1887,8 +1924,12 @@
       <div class="compact-field"><label for="supersetFirst">A1 · first movement</label><select id="supersetFirst" onchange="paintSupersetEditorWarning()"></select></div>
       <div class="compact-field"><label for="supersetSecond">A2 · paired movement</label><select id="supersetSecond" onchange="paintSupersetEditorWarning()"></select></div>
     </div>
+    <div id="supersetProgramFields" class="prescription-grid" hidden>
+      <div class="compact-field wide"><label for="supersetProgramScope">Apply this pairing to</label><select id="supersetProgramScope"><option value="single">This workout only</option><option value="remaining">Unfinished repeats from this week forward</option><option value="all">Every matching workout in this program</option><option value="future">Future generated workouts too</option></select></div>
+      <div class="compact-field wide"><label for="supersetProgramReason">Coach reason</label><textarea id="supersetProgramReason" placeholder="Why this pairing or structure change fits the client"></textarea></div>
+    </div>
     <div id="supersetEditorWarning" class="superset-warning">Choose two different movements. The client can alternate them before taking the prescribed rest.</div>
-    <div class="tool-actions"><button class="small-btn primary" onclick="saveSupersetEditor()">Create A1 + A2</button><button class="small-btn" onclick="closeSupersetEditor()">Cancel</button></div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="saveSupersetEditor()">Create A1 + A2</button><button class="small-btn danger" id="supersetProgramClearBtn" onclick="clearProgramSupersetsFromEditor()" hidden>Clear pairing in selected scope</button><button class="small-btn" onclick="closeSupersetEditor()">Cancel</button></div>
   </div>
 </div>
 
@@ -2100,7 +2141,7 @@
       <div class="compact-field wide"><label for="profileEditSchedule">Practice, game, or work constraints</label><input id="profileEditSchedule" type="text" placeholder="Optional — e.g. league game Thursday"></div>
     </div>
     <div class="profile-editor-section"><label>Muscle emphasis</label><div id="profileEditMuscles" class="profile-editor-choices"></div></div>
-    <div class="profile-editor-section"><label>Injury limitations</label><div id="profileEditInjuries" class="profile-editor-choices"></div></div>
+    <div class="profile-editor-section"><label>Injury limitations</label><div id="profileEditInjuries" class="profile-editor-choices"></div><p class="storage-note">Select an area first, then document what the client can currently do. A client saying “I can do it” supports a coached trial; it never clears a medical hold or a severe/red response by itself.</p><div id="profileLimitationAssessments" class="limitation-assessment-list"></div></div>
     <div class="profile-editor-section"><label>Equipment available <span style="font-weight:400;text-transform:none;letter-spacing:0">(nothing selected means full gym)</span></label><div id="profileEditZones" class="profile-editor-choices"></div></div>
     <div class="profile-editor-section"><label>Exercise preferences</label><div class="preference-editor"><div class="compact-field"><input id="profilePreferenceExercise" list="profileExerciseNames" placeholder="Exercise name"><datalist id="profileExerciseNames"></datalist></div><div class="compact-field"><select id="profilePreferenceValue"><option value="favorite">Favorite</option><option value="like">Like</option><option value="neutral">Neutral</option><option value="dislike">Dislike</option><option value="unfamiliar">Unfamiliar</option><option value="discomfort">Causes discomfort</option><option value="unavailable">Unavailable</option></select></div><button class="small-btn" type="button" onclick="setProfileExercisePreference()">Set preference</button></div><div id="profilePreferenceList" class="preference-list"></div></div>
     <div class="tool-actions"><button class="small-btn primary" id="profileEditorSaveBtn" onclick="saveProfileEditor()">Save changes</button><button class="small-btn" id="profileEditorIntakeBtn" onclick="openIntakeFromProfileEditor()">Open intake checklist</button><button class="small-btn" onclick="closeProfileEditor()">Cancel</button><button class="small-btn danger" id="profileEditorDeleteBtn" onclick="deleteProfileFromEditor()">Delete profile only</button><button class="small-btn danger" id="profileEditorDeleteAllBtn" onclick="openCompleteDeleteFromEditor()">Delete everything</button></div>
@@ -2887,6 +2928,7 @@ function sessionBlockPriority(block) {
 }
 function normalizeSessionBlockOrder(session) {
   if (!session || !Array.isArray(session.blocks)) return session;
+  if (session.manualPhaseOrder === true) return session;
   session.blocks = session.blocks
     .map((block,index) => ({ block,index }))
     .sort((a,b) => sessionBlockPriority(a.block) - sessionBlockPriority(b.block) || a.index - b.index)
@@ -2931,8 +2973,44 @@ function auditWorkout(session) {
   const score = safety.length ? Math.min(79,detail.reduce((sum,item) => sum + item.score,0)) : detail.reduce((sum,item) => sum + item.score,0);
   return { score, pass:score >= PROGRAMMING_POLICY.minimumAuditScore && !safety.length, safety, detail, checkedAt:new Date().toISOString() };
 }
+function applySavedExerciseProgramming(session) {
+  if (!session || !session.spec) return session;
+  const profile = session.spec.profileId && loadProfiles().find((item) => item.id === session.spec.profileId);
+  const prescriptions = { ...(profile && profile.exercisePrescriptions || {}),...(session.spec.exercisePrescriptions || {}) };
+  const substitutions = { ...(profile && profile.exerciseSubstitutions || {}),...(session.spec.exerciseSubstitutions || {}) };
+  const phaseDefaults = profile && profile.programPhaseDefaults || {}, phaseAdditions = profile && profile.programPhaseAdditions || {}, exclusions = new Set(profile && profile.exerciseExclusions || []), orderDefaults = profile && profile.programExerciseOrderDefaults || {}, supersetDefaults = profile && profile.programSupersetDefaults || {}, phaseExclusions = new Set(profile && profile.programPhaseExclusions || []), phaseOrder = profile && profile.programPhaseOrder || [];
+  session.spec.exercisePrescriptions = prescriptions; session.spec.exerciseSubstitutions = substitutions;
+  session.blocks = (session.blocks || []).filter((block) => !phaseExclusions.has(block.key));
+  if (phaseOrder.length) { session.blocks.sort((a,b) => { const ai = phaseOrder.indexOf(a.key), bi = phaseOrder.indexOf(b.key); return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi); }); session.manualPhaseOrder = true; }
+  (session.blocks || []).forEach((block) => {
+    if (phaseDefaults[block.key]) { block.title = phaseDefaults[block.key].title || block.title; block.purpose = phaseDefaults[block.key].purpose || block.purpose; }
+    (phaseAdditions[block.key] || []).forEach((savedId) => {
+      const addition = LIBRARY.find((item) => exerciseId(item) === savedId);
+      if (addition && !(block.items || []).some((item) => item.name === addition.name) && !hardExerciseSafetyIssues(addition,session.spec).length) block.items.push({...addition,rx:{...(addition.rx || block.rx || {})}});
+    });
+    block.items = (block.items || []).filter((exercise) => exercise.baselineRequired || !exclusions.has(exerciseId(exercise)));
+    (block.items || []).slice().forEach((exercise,index) => {
+      const replacementId = substitutions[exerciseId(exercise)], replacement = replacementId && LIBRARY.find((item) => exerciseId(item) === replacementId);
+      if (replacement && (!exercise.baselineRequired || replacement.pattern === exercise.pattern) && !exerciseConstraintIssues(replacement,session.spec,session.spec.age).some((issue) => issue.hard) && !session.blocks.some((candidate) => candidate.items.some((item) => item !== exercise && item.name === replacement.name))) {
+        const retained = {rx:{...(exercise.rx || block.rx || {})},baselineDomains:exercise.baselineDomains,baselineRequired:exercise.baselineRequired,baselinePlanId:exercise.baselinePlanId,baselineSessionNumber:exercise.baselineSessionNumber,baselineProtocol:exercise.baselineProtocol,baselineMeasure:exercise.baselineMeasure,baselineMeasureLabel:exercise.baselineMeasureLabel};
+        block.items[index] = {...replacement,...Object.fromEntries(Object.entries(retained).filter(([,value]) => value != null))};
+      }
+    });
+    const savedOrder = orderDefaults[block.key] || [];
+    if (savedOrder.length) block.items.sort((a,b) => { const ai = savedOrder.indexOf(exerciseId(a)), bi = savedOrder.indexOf(exerciseId(b)); return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi); });
+    rebuildBlockGroups(block);
+    const savedPair = supersetDefaults[block.key] || [], first = block.items.find((exercise) => exercise.name === savedPair[0]), second = block.items.find((exercise) => exercise.name === savedPair[1]);
+    if (first && second && first !== second) rebuildBlockGroups(block,[first,second],[first.name,second.name]);
+    (block.items || []).forEach((exercise) => {
+      const saved = prescriptions[exerciseId(exercise)];
+      if (saved) { exercise.rx = {...(exercise.rx || block.rx || {}),...saved}; if (saved.cue) exercise.cue = saved.cue; }
+    });
+  });
+  return session;
+}
 function finalizeGeneratedSession(session) {
   if (!session) return session;
+  applySavedExerciseProgramming(session);
   normalizeSessionBlockOrder(session);
   applyBaselinePersonalization(session);
   enrichSessionMetadata(session);
@@ -3325,6 +3403,33 @@ function painNeedsCoachNotice(value) { return painLevelInfo(value).rank > PAIN_L
 function legacyPainValue(value,movementChanged) { return painLevelInfo(value,movementChanged).legacy; }
 function painLocationOptions(includeBlank) {
   return [...(includeBlank ? [["","Choose an area…"]] : []),...BODY_AREA_LIMITATIONS.map((key) => [key,INJURY_LABELS[key]])];
+}
+const LIMITATION_SEVERITY = {
+  mild:{rank:1,label:"Mild / occasional"},
+  moderate:{rank:2,label:"Moderate / needs modification"},
+  severe:{rank:3,label:"Severe, worsening, or movement-changing"},
+};
+function normalizedLimitationAssessment(value) {
+  const item = value && typeof value === "object" ? value : {};
+  return {
+    severity:LIMITATION_SEVERITY[item.severity] ? item.severity : "moderate",
+    ability:["normal","modified","cannot"].includes(item.ability) ? item.ability : "modified",
+    decision:["avoid","modified","allow","hold"].includes(item.decision) ? item.decision : "avoid",
+    note:String(item.note || ""),reviewedAt:item.reviewedAt || "",reviewedBy:item.reviewedBy || "",
+  };
+}
+function limitationAssessmentFor(spec,tag) { return normalizedLimitationAssessment(spec && spec.limitationAssessments && spec.limitationAssessments[tag]); }
+function limitationIsAbsoluteHold(spec,tag) {
+  const assessment = limitationAssessmentFor(spec,tag);
+  return tag === "medicalhold" || assessment.decision === "hold" || assessment.severity === "severe" || assessment.ability === "cannot";
+}
+function exerciseOverrideCovers(exercise,tag) {
+  const override = exercise && exercise.safetyOverride;
+  return Boolean(override && override.active !== false && Array.isArray(override.limitations) && override.limitations.includes(tag) && override.reason && override.approvedBy && override.approvedAt);
+}
+function exerciseGeneralOverrideCovers(exercise,code) {
+  const override = exercise && exercise.safetyOverride;
+  return Boolean(override && override.active !== false && Array.isArray(override.codes) && override.codes.includes(code) && override.reason && override.approvedBy && override.approvedAt);
 }
 const LIMITATION_RULES = {
   knee:{demands:["deep_knee_flexion","impact","ballistic"]},
@@ -3795,11 +3900,14 @@ function coachingLimitationIssues(exercise,spec) {
     const finisherConflict = Boolean(rule.blockFinishers && exercise && exercise.finisher);
     if (!rule.blockAll && !conflicts.length && !impactConflict && !finisherConflict) return;
     const detail = conflicts.slice(0,2).map((key) => MOVEMENT_DEMAND_LABELS[key] || key).join(" / ");
+    const assessment = limitationAssessmentFor(spec,tag), absolute = limitationIsAbsoluteHold(spec,tag);
+    const reviewedNormalTrial = assessment.decision === "allow" && assessment.ability === "normal" && assessment.severity === "mild" && assessment.reviewedAt;
+    const documentedExerciseOverride = !absolute && exerciseOverrideCovers(exercise,tag);
     issues.push({
       code:LIFE_STAGE_LIMITATIONS.includes(tag) ? tag : "movement_restriction",
       limitation:tag,
-      label:(INJURY_LABELS[tag] || tag) + " conflict" + (rule.blockAll ? " · exercise is paused until cleared" : detail ? " · " + detail : impactConflict ? " · impact level" : " · high-intensity finisher"),
-      hard:true,
+      label:(INJURY_LABELS[tag] || tag) + " conflict" + (rule.blockAll ? " · exercise is paused until cleared" : detail ? " · " + detail : impactConflict ? " · impact level" : " · high-intensity finisher") + (documentedExerciseOverride ? " · coach override documented" : reviewedNormalTrial ? " · mild/normal trial approved" : ""),
+      hard:!(documentedExerciseOverride || reviewedNormalTrial),absolute,
     });
   });
   return issues;
@@ -3811,11 +3919,21 @@ function exerciseConstraintIssues(exercise,spec,age) {
   if (zones && !zones.includes(exercise.zone)) issues.push({ code:"client_equipment",label:"Equipment unavailable for this client",hard:true });
   const cardioPreferences = cardioPreferencesFor(spec || {}), modality = cardioModalityFor(exercise);
   if (!cardioPreferences.includes("any") && modality !== "other" && !cardioPreferences.includes(modality)) issues.push({ code:"cardio_equipment",label:"Cardio machine not selected as available",hard:true });
-  limitations.forEach((tag) => { if (avoid.includes(tag)) issues.push({ code:"limitation",limitation:tag,label:(INJURY_LABELS[tag] || tag) + " conflict · exercise-specific exclusion",hard:true }); });
+  limitations.forEach((tag) => {
+    if (!avoid.includes(tag)) return;
+    const assessment = limitationAssessmentFor(spec || {},tag), absolute = limitationIsAbsoluteHold(spec || {},tag);
+    const reviewedNormalTrial = assessment.decision === "allow" && assessment.ability === "normal" && assessment.severity === "mild" && assessment.reviewedAt;
+    const documentedExerciseOverride = !absolute && exerciseOverrideCovers(exercise,tag);
+    issues.push({
+      code:"limitation",limitation:tag,absolute,
+      label:(INJURY_LABELS[tag] || tag) + " conflict · exercise-specific exclusion" + (documentedExerciseOverride ? " · coach override documented" : reviewedNormalTrial ? " · mild/normal trial approved" : ""),
+      hard:!(documentedExerciseOverride || reviewedNormalTrial),
+    });
+  });
   issues.push(...coachingLimitationIssues(exercise,spec || {}));
-  if (Number(exercise.exp || 1) > Number(spec && spec.experience || 1)) issues.push({ code:"experience",label:"Above selected experience",hard:true });
-  if (Number(exercise.impact || 0) > prof.impactCap || (exercise.pattern === "plyo" && !prof.plyoOK)) issues.push({ code:"impact",label:"Age / impact caution",hard:true });
-  const preference = exercisePreferenceFor(spec || {},exercise); if (["discomfort","unavailable"].includes(preference)) issues.push({ code:"preference",label:preference === "discomfort" ? "Marked as causing discomfort" : "Marked unavailable",hard:true });
+  if (Number(exercise.exp || 1) > Number(spec && spec.experience || 1)) { const covered = exerciseGeneralOverrideCovers(exercise,"experience"); issues.push({ code:"experience",label:"Above selected experience" + (covered ? " · coach override documented" : ""),hard:!covered }); }
+  if (Number(exercise.impact || 0) > prof.impactCap || (exercise.pattern === "plyo" && !prof.plyoOK)) { const covered = exerciseGeneralOverrideCovers(exercise,"impact"); issues.push({ code:"impact",label:"Age / impact caution" + (covered ? " · coach override documented" : ""),hard:!covered }); }
+  const preference = exercisePreferenceFor(spec || {},exercise); if (["discomfort","unavailable"].includes(preference)) { const covered = exerciseGeneralOverrideCovers(exercise,"preference"); issues.push({ code:"preference",label:(preference === "discomfort" ? "Marked as causing discomfort" : "Marked unavailable") + (covered ? " · coach override documented" : ""),hard:!covered }); }
   return issues.filter((issue,index,array) => array.findIndex((candidate) => candidate.code === issue.code && candidate.label === issue.label) === index);
 }
 function safetySpecForProfile(session,profile) {
@@ -3832,6 +3950,7 @@ function safetySpecForProfile(session,profile) {
     cardioMode:cardioModes[0],
     cardioModes,
     exercisePreferences:{ ...(original.exercisePreferences || {}),...(profile && profile.exercisePreferences || {}) },
+    limitationAssessments:{ ...(original.limitationAssessments || {}),...(profile && profile.limitationAssessments || {}) },
   };
 }
 function currentSafetyPainAreas(profile) {
@@ -7179,7 +7298,7 @@ function cloneSpec(p) {
   const goals = Array.isArray(p.goals) && p.goals.length ? [...p.goals] : (p.goal ? [p.goal] : []);
   const cardioModes = normalizeCardioPreferences(p.cardioModes || p.cardioMode);
   const profile = p.profileId ? loadProfiles().find((item) => item.id === p.profileId) : null, baselineContext = p.baselineContext || (profile ? baselineGeneratorContext(profile) : null);
-  return { client: p.client || "", profileId: p.profileId || "", goal: goals[0] || p.goal, goals, trainingStyle:p.trainingStyle || "auto", cardioMode:cardioModes[0], cardioModes, coachAdjustment:p.coachAdjustment ? { ...p.coachAdjustment } : null, readinessTrend:p.readinessTrend ? JSON.parse(JSON.stringify(p.readinessTrend)) : null, baselineContext:baselineContext ? JSON.parse(JSON.stringify(baselineContext)) : null, experience: p.experience, age: p.age, minutes: p.minutes, muscles: [...p.muscles], injuries: [...p.injuries], zones: [...p.zones], trainingPhase:p.trainingPhase || "general", phaseStartedAt:p.phaseStartedAt || "", availableDays:Number(p.availableDays) || 3, sport:p.sport || "", sportSchedule:p.sportSchedule || "", competitionDate:p.competitionDate || "", exercisePreferences:{ ...(p.exercisePreferences || {}) }, phaseCompoundAnchors:{ ...(p.phaseCompoundAnchors || {}) } };
+  return { client: p.client || "", profileId: p.profileId || "", goal: goals[0] || p.goal, goals, trainingStyle:p.trainingStyle || "auto", cardioMode:cardioModes[0], cardioModes, coachAdjustment:p.coachAdjustment ? { ...p.coachAdjustment } : null, readinessTrend:p.readinessTrend ? JSON.parse(JSON.stringify(p.readinessTrend)) : null, baselineContext:baselineContext ? JSON.parse(JSON.stringify(baselineContext)) : null, experience: p.experience, age: p.age, minutes: p.minutes, muscles: [...p.muscles], injuries: [...p.injuries], zones: [...p.zones], trainingPhase:p.trainingPhase || "general", phaseStartedAt:p.phaseStartedAt || "", availableDays:Number(p.availableDays) || 3, sport:p.sport || "", sportSchedule:p.sportSchedule || "", competitionDate:p.competitionDate || "", exercisePreferences:{ ...(p.exercisePreferences || {}) }, exercisePrescriptions:{ ...(p.exercisePrescriptions || {}) }, exerciseSubstitutions:{ ...(p.exerciseSubstitutions || {}) }, limitationAssessments:{ ...(p.limitationAssessments || {}) }, phaseCompoundAnchors:{ ...(p.phaseCompoundAnchors || {}) } };
 }
 
 /* ---------- rendering ---------- */
@@ -7470,6 +7589,8 @@ function openSupersetEditor(session,block,bi,sessionRef,partnerKey,renderMode) {
   if (!requireTrainerMutation("create supersets")) return false;
   const first = byId("supersetFirst"), second = byId("supersetSecond"); if (!first || !second || !block.items.length) return false;
   supersetEditorContext = {session,block,bi,sessionRef,partnerKey,renderMode:renderMode || "workout"};
+  byId("supersetProgramFields").hidden = renderMode !== "program"; byId("supersetProgramClearBtn").hidden = renderMode !== "program" || !blockGroupPairs(block).length;
+  if (renderMode === "program") { byId("supersetProgramScope").value = "single"; byId("supersetProgramReason").value = ""; }
   first.innerHTML = block.items.map((exercise,index) => '<option value="' + index + '">' + escapeHtml(exercise.name) + '</option>').join("");
   second.innerHTML = session.blocks.flatMap((candidateBlock,blockIndex) => (candidateBlock.items || []).map((exercise,exerciseIndex) => '<option value="' + blockIndex + '::' + exerciseIndex + '">' + escapeHtml(candidateBlock.title) + ' · ' + escapeHtml(exercise.name) + '</option>')).join("");
   first.value = "0";
@@ -7494,7 +7615,9 @@ function saveSupersetEditor() {
   const context = supersetEditorContext, data = supersetEditorExercises(); if (!context || !data.first || !data.second) return false;
   if (data.first === data.second) { showToast("Choose two different movements"); return false; }
   if (data.first.primary && data.second.primary) { showToast("Keep primary lifts separate and choose a supporting movement for A2"); return false; }
-  const target = context.block, source = data.sourceBlock, excluded = [data.first.name,data.second.name];
+  const firstName = data.first.name, secondName = data.second.name, targetKey = context.block.key, sourceKey = data.sourceBlock.key;
+  if (context.renderMode === "program" && !byId("supersetProgramReason").value.trim()) { showToast("Add a coach reason before changing a program pairing"); return false; }
+  const target = context.block, source = data.sourceBlock, excluded = [firstName,secondName];
   if (source !== target) {
     source.items.splice(data.secondIndex,1); rebuildBlockGroups(source,null,[data.second.name]);
     const firstPosition = target.items.indexOf(data.first); target.items.splice(firstPosition + 1,0,data.second);
@@ -7505,13 +7628,38 @@ function saveSupersetEditor() {
   rebuildBlockGroups(target,[data.first,data.second],excluded);
   markSessionDraft(context.session,"Superset pairing changed by coach");
   if (context.renderMode === "program" && currentProgram) {
+    const scope = byId("supersetProgramScope").value || "single", reason = byId("supersetProgramReason").value.trim(); let changed = 1;
+    programWeekIndexesForScope(context.weekIndex,scope).filter((weekIndex) => weekIndex !== context.weekIndex).forEach((weekIndex) => {
+      const day = currentProgram.weeks[weekIndex] && currentProgram.weeks[weekIndex].days[context.dayIndex], blocks = day && day.session && day.session.blocks || [], destination = blocks.find((block) => block.key === targetKey), origin = blocks.find((block) => block.key === sourceKey), first = destination && destination.items.find((exercise) => exercise.name === firstName), second = origin && origin.items.find((exercise) => exercise.name === secondName);
+      if (!destination || !origin || !first || !second || first === second) return;
+      if (origin !== destination) { origin.items.splice(origin.items.indexOf(second),1); rebuildBlockGroups(origin,null,[secondName]); destination.items.splice(destination.items.indexOf(first) + 1,0,second); }
+      else { destination.items = destination.items.filter((item) => item !== first && item !== second); destination.items.splice(Math.min(data.firstIndex,destination.items.length),0,first,second); }
+      rebuildBlockGroups(destination,[first,second],[firstName,secondName]); markSessionDraft(day.session,"Superset pairing changed by coach"); changed += 1;
+    });
+    if (scope === "future" && currentProgram.setup && currentProgram.setup.profileId) {
+      const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === currentProgram.setup.profileId);
+      if (index >= 0) { profiles[index].programSupersetDefaults = {...(profiles[index].programSupersetDefaults || {}),[targetKey]:[firstName,secondName]}; profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles); }
+    }
+    appendProgramEditAudit({type:"superset",scope,reason,first:firstName,second:secondName,targets:changed});
     currentProgram.lifecycle = "draft";
     currentProgram.approval = {status:"draft",required:true,changedAt:new Date().toISOString(),changeReason:"Superset pairing changed by coach"};
     byId("programApproveBtn").disabled = false; byId("programSaveBtn").disabled = true; byId("programSaveOnlyBtn").disabled = true;
   }
   closeSupersetEditor();
   if (context.renderMode === "program") renderProgram(); else renderOutput();
-  showToast(data.first.name + " + " + data.second.name + " paired as A1/A2"); return true;
+  showToast(firstName + " + " + secondName + " paired as A1/A2"); return true;
+}
+function clearProgramSupersetsFromEditor() {
+  const context = supersetEditorContext; if (!context || context.renderMode !== "program" || !currentProgram) return false;
+  const scope = byId("supersetProgramScope").value || "single", reason = byId("supersetProgramReason").value.trim(); if (!reason) { showToast("Add a coach reason before clearing a program pairing"); return false; }
+  let changed = 0;
+  programWeekIndexesForScope(context.weekIndex,scope).forEach((weekIndex) => {
+    const day = currentProgram.weeks[weekIndex] && currentProgram.weeks[weekIndex].days[context.dayIndex], blocks = day && day.session && day.session.blocks || [], block = blocks.find((item) => item.key === context.block.key); if (!block || !blockGroupPairs(block).length) return;
+    block.groups = (block.items || []).map((item) => ({type:"straight",items:[item]})); markSessionDraft(day.session,"Superset pairing cleared by coach"); changed += 1;
+  });
+  if (scope === "future" && currentProgram.setup && currentProgram.setup.profileId) { const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === currentProgram.setup.profileId); if (index >= 0) { const defaults = {...(profiles[index].programSupersetDefaults || {})}; delete defaults[context.block.key]; profiles[index].programSupersetDefaults = defaults; profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles); } }
+  if (!changed) { showToast("No matching supersets were found in that scope"); return false; }
+  appendProgramEditAudit({type:"superset_clear",scope,reason,phase:context.block.title,targets:changed}); markCurrentProgramDraft("Superset pairing cleared by coach"); closeSupersetEditor(); renderProgram(); showToast("Pairing cleared in " + changed + " workout" + (changed === 1 ? "" : "s")); return true;
 }
 function clearBlockSupersets(session,block,renderMode) {
   if (!requireTrainerMutation("clear supersets")) return false;
@@ -7572,6 +7720,15 @@ function openPrescriptionEditor(session,block,bi,ei,sessionRef,partnerKey) {
   byId("prescriptionTempo").value = rx.tempo || "";
   byId("prescriptionRest").value = rx.rest || "";
   byId("prescriptionEffort").value = rx.rpe || "";
+  byId("prescriptionLoad").value = rx.load || rx.targetLoad || "";
+  byId("prescriptionCue").value = exercise.cue || "";
+  byId("prescriptionReason").value = "";
+  byId("prescriptionScope").value = "single";
+  byId("prescriptionScope").disabled = true;
+  byId("prescriptionScopeField").style.display = "grid";
+  byId("programPrescriptionStructureActions").hidden = true;
+  byId("prescriptionCalibrationField").style.display = exercise.baselineRequired || exercise.baselineDomains && exercise.baselineDomains.length ? "grid" : "none";
+  byId("prescriptionCalibration").value = "keep";
   byId("prescriptionEditorModal").classList.add("open");
   return true;
 }
@@ -7584,21 +7741,97 @@ function replaceFromPrescriptionEditor() {
   if (context.renderMode === "program") return openProgramExerciseSwap(context.weekIndex,context.dayIndex,context.blockIndex,context.ei);
   return openExerciseSwap(context.session,context.block,context.ei,exercise);
 }
+function clearCalibrationResponsibility(exercise) {
+  ["baselineDomains","baselineRequired","baselinePlanId","baselineSessionNumber","baselineProtocol","baselineMeasure","baselineMeasureLabel"].forEach((key) => delete exercise[key]);
+  return exercise;
+}
+function calibrationResponsibility(exercise) {
+  return exercise && (exercise.baselineRequired || exercise.baselineDomains && exercise.baselineDomains.length) ? {
+    baselineRequired:Boolean(exercise.baselineRequired),baselineDomains:[...(exercise.baselineDomains || [])],baselinePlanId:exercise.baselinePlanId,baselineSessionNumber:exercise.baselineSessionNumber,baselineProtocol:exercise.baselineProtocol,baselineMeasure:exercise.baselineMeasure,baselineMeasureLabel:exercise.baselineMeasureLabel,
+  } : null;
+}
+function restoreCalibrationResponsibility(exercise,responsibility) {
+  if (!exercise || !responsibility) return exercise;
+  Object.entries(responsibility).forEach(([key,value]) => { if (value != null) exercise[key] = Array.isArray(value) ? [...value] : value; });
+  return exercise;
+}
+function programWeekIndexesForScope(startWeek,scope) {
+  if (!currentProgram || !Array.isArray(currentProgram.weeks)) return [];
+  if (scope === "single") return [Number(startWeek)];
+  return currentProgram.weeks.map((_,index) => index).filter((index) => scope === "all" || scope === "future" || index >= Number(startWeek));
+}
+function programExerciseTargets(context,scope) {
+  if (!currentProgram || !context) return [];
+  /* Older saved editors and the QA harness use `exerciseIndex`; current
+     editors use `ei`. Accept both so a replacement always points at the
+     visible row instead of reporting success without mutating the program. */
+  const contextExerciseIndex = Number.isInteger(Number(context.ei)) && Number(context.ei) >= 0 ? Number(context.ei) : Number(context.exerciseIndex);
+  const original = context.block && context.block.items && context.block.items[contextExerciseIndex], originalName = original && original.name;
+  const results = [];
+  programWeekIndexesForScope(context.weekIndex,scope).forEach((weekIndex) => {
+    const day = currentProgram.weeks[weekIndex] && currentProgram.weeks[weekIndex].days[context.dayIndex], blocks = day && day.session && day.session.blocks || [];
+    const preferred = blocks[context.blockIndex]; let block = preferred, exerciseIndex = -1;
+    if (weekIndex === Number(context.weekIndex) && preferred && preferred.items && preferred.items[contextExerciseIndex]) exerciseIndex = contextExerciseIndex;
+    else {
+      const candidates = [preferred,...blocks.filter((candidate,index) => index !== Number(context.blockIndex) && context.block && candidate && (candidate.key === context.block.key || candidate.title === context.block.title))].filter(Boolean);
+      for (const candidate of candidates) { const index = (candidate.items || []).findIndex((exercise) => exercise && exercise.name === originalName); if (index >= 0) { block = candidate; exerciseIndex = index; break; } }
+    }
+    if (day && block && exerciseIndex >= 0 && block.items[exerciseIndex]) results.push({weekIndex,day,session:day.session,block,exerciseIndex,exercise:block.items[exerciseIndex]});
+  });
+  return results;
+}
+function appendProgramEditAudit(entry) {
+  if (!currentProgram) return;
+  currentProgram.editAudit = [{id:"edit-" + Date.now() + "-" + Math.random().toString(16).slice(2),at:new Date().toISOString(),by:currentAccountIdentity().displayName,...entry},...(currentProgram.editAudit || [])].slice(0,100);
+}
 function savePrescriptionEditor() {
   if (!prescriptionEditContext || !requireTrainerMutation("edit workout prescriptions")) return false;
   const sets = Math.max(1,Math.min(12,parseInt(byId("prescriptionSets").value,10) || 1));
-  const reps = byId("prescriptionReps").value.trim(), tempo = byId("prescriptionTempo").value.trim(), rest = byId("prescriptionRest").value.trim(), rpe = byId("prescriptionEffort").value.trim();
+  const reps = byId("prescriptionReps").value.trim(), tempo = byId("prescriptionTempo").value.trim(), rest = byId("prescriptionRest").value.trim(), rpe = byId("prescriptionEffort").value.trim(), load = byId("prescriptionLoad").value.trim(), cue = byId("prescriptionCue").value.trim(), reason = byId("prescriptionReason").value.trim();
   if (!reps) { showToast("Enter reps or a duration"); return false; }
-  const {session,block,ei,renderMode} = prescriptionEditContext, exercise = block.items[ei];
-  exercise.rx = { ...(exercise.rx || block.rx || session.prescription || {}),sets:String(sets),reps,tempo:tempo || "controlled",rest:rest || "as needed",rpe:rpe || "coach set" };
-  markSessionDraft(session,"Prescription edited");
+  const {session,block,ei,renderMode} = prescriptionEditContext, exercise = block.items[ei], calibrationAction = byId("prescriptionCalibration").value;
+  if (calibrationAction === "remove" && !reason) { showToast("Document why this calibration measure is being removed"); return false; }
+  const rx = { ...(exercise.rx || block.rx || session.prescription || {}),sets:String(sets),reps,tempo:tempo || "controlled",rest:rest || "as needed",rpe:rpe || "coach set" };
+  if (load) rx.load = load; else delete rx.load;
   if (renderMode === "program" && currentProgram) {
-    currentProgram.lifecycle = "draft";
-    currentProgram.approval = {status:"draft",required:true,changedAt:new Date().toISOString(),changeReason:"Exercise prescription edited by coach"};
-    byId("programApproveBtn").disabled = false; byId("programSaveBtn").disabled = true; byId("programSaveOnlyBtn").disabled = true;
+    const scope = byId("prescriptionScope").value || "single", targets = programExerciseTargets(prescriptionEditContext,scope);
+    targets.forEach((target) => { target.exercise.rx = {...rx}; target.exercise.cue = cue; if (calibrationAction === "remove") clearCalibrationResponsibility(target.exercise); rebuildBlockGroups(target.block); enrichSessionMetadata(target.session); markSessionDraft(target.session,"Exercise prescription edited by coach"); });
+    if (!targets.length) { showToast("No matching program exercises were found for that scope"); return false; }
+    if (scope === "future" && currentProgram.setup && currentProgram.setup.profileId) {
+      const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === currentProgram.setup.profileId);
+      if (index >= 0) { profiles[index].exercisePrescriptions = {...(profiles[index].exercisePrescriptions || {}),[exerciseId(exercise)]:{...rx,cue}}; profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles); currentProgram.setup.exercisePrescriptions = {...(currentProgram.setup.exercisePrescriptions || {}),[exerciseId(exercise)]:{...rx,cue}}; }
+    }
+    appendProgramEditAudit({type:"prescription",exercise:exercise.name,scope,reason:reason || "Prescription updated",calibrationAction,targets:targets.length});
+    markCurrentProgramDraft("Exercise prescription edited by coach");
+    closePrescriptionEditor(); renderProgram(); showToast(exercise.name + " updated in " + targets.length + " workout" + (targets.length === 1 ? "" : "s")); return true;
   }
-  closePrescriptionEditor(); if (renderMode === "program") renderProgram(); else renderOutput(); showToast(exercise.name + " prescription updated");
-  return true;
+  exercise.rx = rx; exercise.cue = cue; if (calibrationAction === "remove") clearCalibrationResponsibility(exercise);
+  markSessionDraft(session,"Prescription edited"); closePrescriptionEditor(); renderOutput(); showToast(exercise.name + " prescription updated"); return true;
+}
+function applyProgramExerciseStructureAction(action) {
+  if (!prescriptionEditContext || prescriptionEditContext.renderMode !== "program" || !currentProgram || !requireTrainerMutation("change program exercise structure")) return false;
+  const scope = byId("prescriptionScope").value || "single", reason = byId("prescriptionReason").value.trim(), calibrationAction = byId("prescriptionCalibration").value;
+  if (!reason) { showToast("Add a coach reason before moving or removing this exercise"); return false; }
+  const original = prescriptionEditContext.block.items[prescriptionEditContext.ei], targets = programExerciseTargets(prescriptionEditContext,scope); if (!targets.length) { showToast("No matching program exercises were found for that scope"); return false; }
+  if (action === "remove" && targets.some((target) => calibrationResponsibility(target.exercise)) && calibrationAction !== "remove") { showToast("Choose ‘Remove the calibration measure’ and document why before deleting a calibration anchor"); return false; }
+  let changed = 0;
+  targets.forEach((target) => {
+    const from = target.exerciseIndex, to = action === "up" ? from - 1 : from + 1;
+    if (action === "remove") { target.block.items.splice(from,1); changed += 1; }
+    else if (to >= 0 && to < target.block.items.length) { const [moved] = target.block.items.splice(from,1); target.block.items.splice(to,0,moved); changed += 1; }
+    rebuildBlockGroups(target.block); enrichSessionMetadata(target.session); markSessionDraft(target.session,"Program exercise " + action + " by coach");
+  });
+  if (!changed) { showToast(action === "remove" ? "Exercise could not be removed" : "Exercise is already at that edge of the phase"); return false; }
+  if (scope === "future" && currentProgram.setup && currentProgram.setup.profileId && original) {
+    const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === currentProgram.setup.profileId);
+    if (index >= 0) {
+      if (action === "remove") profiles[index].exerciseExclusions = [...new Set([...(profiles[index].exerciseExclusions || []),exerciseId(original)])];
+      else profiles[index].programExerciseOrderDefaults = {...(profiles[index].programExerciseOrderDefaults || {}),[prescriptionEditContext.block.key]:(prescriptionEditContext.block.items || []).map((exercise) => exerciseId(exercise))};
+      profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles);
+    }
+  }
+  appendProgramEditAudit({type:"exercise_structure",action,exercise:original && original.name || "Exercise",scope,reason,calibrationAction,targets:changed});
+  markCurrentProgramDraft("Exercise structure changed by coach"); closePrescriptionEditor(); renderProgram(); showToast((original && original.name || "Exercise") + " " + (action === "remove" ? "removed from" : "moved in") + " " + changed + " workout" + (changed === 1 ? "" : "s")); return true;
 }
 
 function renderExercise(session, block, bi, ei, ex, sessionRef, partnerKey) {
@@ -8023,6 +8256,13 @@ function renderSwapOptions() {
 function applyExerciseSwap(exercise) {
   if (!activeSwap || !exercise) return;
   const { session, block, ei, currentEx, addMode } = activeSwap;
+  if (activeSwap.renderMode === "program") {
+    const scope = byId("programSwapScope").value || "single", result = addMode ? applyProgramExerciseAddition(activeSwap,exercise,scope) : applyProgramExerciseReplacement(activeSwap,exercise,scope);
+    if (!result.changed || !addMode && !result.originChanged) { showToast(result.message || "The selected program exercise was not changed"); return; }
+    closeExerciseSwap(); renderProgram();
+    showToast(exercise.name + (addMode ? " added to " : " applied to ") + result.changed + " workout" + (result.changed === 1 ? "" : "s") + (result.skipped ? " · " + result.skipped + " skipped to avoid duplicates" : ""));
+    return;
+  }
   const hardIssues = hardExerciseSafetyIssues(exercise,session.spec);
   if (hardIssues.length) {
     showToast("Safety filter blocked " + exercise.name + ": " + hardIssues.map((issue) => issue.label).join(" · "));
@@ -8035,13 +8275,6 @@ function applyExerciseSwap(exercise) {
     block.items.push(added);
     if (block.groups) block.groups.push({ type:"straight",items:[added] });
     enrichSessionMetadata(session); markSessionDraft(session,"Exercise added by coach"); closeExerciseSwap(); renderOutput(); showToast(exercise.name + " added to " + block.title); return;
-  }
-  if (activeSwap.renderMode === "program") {
-    const scope = byId("programSwapScope").value || "single", result = applyProgramExerciseReplacement(activeSwap,exercise,scope);
-    if (!result.changed || !result.originChanged) { showToast(result.message || "The selected program exercise was not changed"); return; }
-    closeExerciseSwap(); renderProgram();
-    showToast(exercise.name + " applied to " + result.changed + " workout" + (result.changed === 1 ? "" : "s") + (result.skipped ? " · " + result.skipped + " skipped to avoid duplicates" : ""));
-    return;
   }
   if (!replaceExercise(block, ei, exercise)) return;
   const reason = portalRole === "client" ? byId("exerciseSwapReason").value : "coach_edit", scope = portalRole === "client" ? byId("exerciseSwapScope").value : "today";
@@ -8636,10 +8869,65 @@ function calibrationDomainSchedule(required,sessionCount) {
   if (!second.length && first.length > 1) second.push(first.pop());
   return [first,second].filter((domains) => domains.length);
 }
+const MAJOR_CALIBRATION_LIFTS = {
+  h_push:["Barbell bench press","Dumbbell bench press","Machine chest press"],
+  squat:["Barbell back squat","Barbell front squat","Goblet squat","Box squat"],
+  hinge:["Trap bar deadlift","Conventional deadlift","Kettlebell deadlift"],
+};
+function markMajorCalibrationExercise(exercise,planId,sessionNumber,label) {
+  const protocol = calibrationProtocolFor("strength",exercise), domains = Array.isArray(exercise.baselineDomains) ? [...exercise.baselineDomains] : [];
+  if (!domains.includes("strength")) domains.push("strength");
+  exercise.baselineDomains = domains; exercise.baselinePlanId = planId; exercise.baselineSessionNumber = sessionNumber;
+  exercise.baselineRequired = true; exercise.baselineMeasure = "major_lift"; exercise.baselineMeasureLabel = label;
+  exercise.baselineProtocol = "Major-lift calibration: use clean submaximal work, never a true max. Stop or modify if pain changes the movement.";
+  exercise.rx = {...(exercise.rx || {}),sets:protocol.sets,reps:protocol.reps,rest:protocol.rest,tempo:protocol.tempo,rpe:protocol.rpe};
+}
+function ensureMajorCalibrationAnchor(day,pattern,planId,sessionNumber) {
+  const session = day && day.session; if (!session) return false;
+  const safe = eligibleFor(session.spec), names = MAJOR_CALIBRATION_LIFTS[pattern] || [], candidate = names.map((name) => safe.find((exercise) => exercise.name === name)).find(Boolean);
+  if (!candidate) return false;
+  let block = (session.blocks || []).find((item) => item.key === "strength");
+  if (!block) { block = {key:"strength",title:"Primary lift",items:[],groups:[],rx:{...calibrationProtocolFor("strength",candidate)}}; session.blocks.push(block); }
+  let exercise = (block.items || []).find((item) => item.name === candidate.name);
+  if (!exercise) {
+    const replaceIndex = (block.items || []).findIndex((item) => item.pattern === pattern);
+    if (replaceIndex >= 0) {
+      const prior = block.items[replaceIndex], retained = {baselineDomains:prior.baselineDomains,baselineRequired:prior.baselineRequired,baselinePlanId:prior.baselinePlanId,baselineSessionNumber:prior.baselineSessionNumber};
+      exercise = {...candidate,...Object.fromEntries(Object.entries(retained).filter(([,value]) => value != null))}; block.items[replaceIndex] = exercise;
+    } else { exercise = {...candidate}; block.items.push(exercise); }
+  }
+  markMajorCalibrationExercise(exercise,planId,sessionNumber,(pattern === "h_push" ? "Bench press" : pattern === "squat" ? "Squat" : "Deadlift") + " anchor");
+  rebuildBlockGroups(block); normalizeSessionBlockOrder(session); return true;
+}
+function attachMajorLiftCalibration(days,setup,planId) {
+  if (!(setup.goals || []).includes("strength") || !(days || []).length) return 0;
+  const anchors = [
+    {pattern:"h_push",match:(day) => /push|upper|full body/i.test(day.name) || (day.session.spec.muscles || []).includes("chest")},
+    {pattern:"squat",match:(day) => /leg|lower|full body/i.test(day.name) || (day.session.spec.muscles || []).includes("quads")},
+    {pattern:"hinge",match:(day) => /pull|posterior|leg|lower|full body/i.test(day.name) || (day.session.spec.muscles || []).some((muscle) => ["hamstrings","glutes","back"].includes(muscle))},
+  ];
+  let count = 0, usedDays = new Set();
+  anchors.forEach((anchor) => {
+    let index = days.findIndex((day,dayIndex) => !usedDays.has(dayIndex) && anchor.match(day));
+    if (index < 0) index = days.findIndex((day,dayIndex) => !usedDays.has(dayIndex));
+    /* A client may train only once or twice. Once every evidence day has an
+       anchor, keep the additional major lift inside the best matching useful
+       workout instead of consuming another visit just for testing. */
+    if (index < 0) index = days.findIndex((day) => anchor.match(day));
+    if (index < 0 && days.length) index = 0;
+    if (index >= 0 && ensureMajorCalibrationAnchor(days[index],anchor.pattern,planId,index + 1)) { usedDays.add(index); count += 1; }
+  });
+  return count;
+}
 function programSetupSnapshot(selectedProfile) {
   const cardioModes = normalizeCardioPreferences(programCardioModes), programMode = syncProgramMode(true);
-  const setup = {client:byId("programClient").value.trim() || selectedProfile && selectedProfile.name || "Client",goal:byId("programGoal").value,secondaryGoal:byId("programSecondaryGoal").value,experience:Number(byId("programExp").value),age:Math.max(18,Math.min(90,Math.round(numberFrom("programAge",30)))),days:Number(byId("programDays").value),weeks:programMode === "starter" ? 3 : Number(byId("programWeeks").value),programMode,starter:programMode === "starter",minutes:Number(byId("programMinutes").value),focus:byId("programFocus").value,trainingStyle:byId("programStyle").value || "auto",cardioMode:cardioModes[0],cardioModes,injuries:[...programFilters.injuries],zones:[...programFilters.zones],profileId:selectedProfile && selectedProfile.id || "",trainingPhase:selectedProfile && selectedProfile.trainingPhase || "general",phaseStartedAt:selectedProfile && selectedProfile.phaseStartedAt || "",availableDays:selectedProfile && selectedProfile.availableDays || Number(byId("programDays").value),sport:selectedProfile && selectedProfile.sport || "",sportSchedule:selectedProfile && selectedProfile.sportSchedule || "",competitionDate:selectedProfile && selectedProfile.competitionDate || "",exercisePreferences:{...(selectedProfile && selectedProfile.exercisePreferences || {})},phaseCompoundAnchors:{...(selectedProfile && selectedProfile.phaseCompoundAnchors || {})},readinessTrend:readinessTrendContext(selectedProfile),baselineContext:selectedProfile ? baselineGeneratorContext(selectedProfile) : null,templateId:loadedProgramTemplate && loadedProgramTemplate.id || "",templateTitle:loadedProgramTemplate && loadedProgramTemplate.title || ""};
+  const setup = {client:byId("programClient").value.trim() || selectedProfile && selectedProfile.name || "Client",goal:byId("programGoal").value,secondaryGoal:byId("programSecondaryGoal").value,experience:Number(byId("programExp").value),age:Math.max(18,Math.min(90,Math.round(numberFrom("programAge",30)))),days:Number(byId("programDays").value),weeks:programMode === "starter" ? 3 : Number(byId("programWeeks").value),programMode,starter:programMode === "starter",minutes:Number(byId("programMinutes").value),focus:byId("programFocus").value,trainingStyle:byId("programStyle").value || "auto",cardioMode:cardioModes[0],cardioModes,injuries:[...programFilters.injuries],zones:[...programFilters.zones],profileId:selectedProfile && selectedProfile.id || "",trainingPhase:selectedProfile && selectedProfile.trainingPhase || "general",phaseStartedAt:selectedProfile && selectedProfile.phaseStartedAt || "",availableDays:selectedProfile && selectedProfile.availableDays || Number(byId("programDays").value),sport:selectedProfile && selectedProfile.sport || "",sportSchedule:selectedProfile && selectedProfile.sportSchedule || "",competitionDate:selectedProfile && selectedProfile.competitionDate || "",exercisePreferences:{...(selectedProfile && selectedProfile.exercisePreferences || {})},exercisePrescriptions:{...(selectedProfile && selectedProfile.exercisePrescriptions || {})},exerciseSubstitutions:{...(selectedProfile && selectedProfile.exerciseSubstitutions || {})},limitationAssessments:{...(selectedProfile && selectedProfile.limitationAssessments || {})},phaseCompoundAnchors:{...(selectedProfile && selectedProfile.phaseCompoundAnchors || {})},readinessTrend:readinessTrendContext(selectedProfile),baselineContext:selectedProfile ? baselineGeneratorContext(selectedProfile) : null,templateId:loadedProgramTemplate && loadedProgramTemplate.id || "",templateTitle:loadedProgramTemplate && loadedProgramTemplate.title || ""};
   setup.goals = [setup.goal,setup.secondaryGoal].filter((goal,index,list) => goal && list.indexOf(goal) === index).slice(0,2); return setup;
+}
+function applyProgramDayDefaults(program,profile) {
+  const defaults = profile && profile.programDayDefaults || {};
+  (program && program.weeks || []).forEach((week) => (week.days || []).forEach((day,index) => { const saved = defaults[index]; if (!saved) return; day.name = saved.title || day.name; day.purpose = saved.purpose || day.purpose; if (day.session && saved.purpose) day.session.purpose = saved.purpose; }));
+  return program;
 }
 function generateCalibrationProgram() {
   if (!requireTrainerMutation("build client calibration workouts")) return null;
@@ -8657,9 +8945,11 @@ function generateCalibrationProgram() {
     session.rationale = (supportSession ? "This session fills the client’s selected weekly schedule while keeping first-week effort conservative. It does not add unnecessary testing. " : "Calibration is embedded in normal training. Only the marked anchors collect baseline evidence; the remaining movements build skill, fitness, and confidence. ") + session.rationale; finalizeGeneratedSession(session);
     return {name:supportSession ? (day.name || "Foundation practice " + (index + 1)) : schedule.length > 1 ? "Calibration " + String.fromCharCode(65 + index) + " · " + (day.name || "Training") : "Goal-specific calibration · " + (day.name || "Training"),session};
   });
+  const majorLiftAnchors = attachMajorLiftCalibration(days,setup,planId);
+  days.forEach((day) => { finalizeGeneratedSession(day.session); });
   const phase = {name:"Establish starting points",setDelta:-1,rpe:"Submaximal · leave 3–4 reps",directive:"Complete the full first-week schedule at conservative effort. Only the clearly marked anchors collect baseline evidence; the other days build familiarity without extra testing.",reviewRequired:true,reviewTitle:"Coach baseline verification",reviewPrompt:"After the marked anchors are logged, review the required domains, pain response, confidence, effort, and equipment fit before generating the tailored phase."};
-  setup.days = weeklyDays; setup.weeks = 1; setup.programMode = "calibration"; setup.starter = false; setup.baselineRequiredDomains = required; setup.baselinePlanId = planId; setup.calibrationAnchorSessions = schedule.length;
-  currentProgram = {setup,weeks:[{number:1,phase,reviewRequired:true,reviewType:"baseline_verification",days}],calibration:true,baselinePlanId:planId,createdAt:new Date().toISOString(),lifecycle:"draft",versionNumber:1,versions:[],approval:{status:"draft",required:true}};
+  setup.days = weeklyDays; setup.weeks = 1; setup.programMode = "calibration"; setup.starter = false; setup.baselineRequiredDomains = required; setup.baselinePlanId = planId; setup.calibrationAnchorSessions = Math.max(schedule.length,majorLiftAnchors ? Math.min(weeklyDays,2) : 0); setup.majorLiftCalibrationAnchors = majorLiftAnchors;
+  currentProgram = applyProgramDayDefaults({setup,weeks:[{number:1,phase,reviewRequired:true,reviewType:"baseline_verification",days}],calibration:true,baselinePlanId:planId,createdAt:new Date().toISOString(),lifecycle:"draft",versionNumber:1,versions:[],approval:{status:"draft",required:true}},profile);
   profile.baseline = {...(profile.baseline || {}),version:BASELINE_VERSION,status:"planned",planId,goals:setup.goals,requiredDomains:required,plannedSessions:schedule.length,plannedWeekDays:weeklyDays,plannedAt:new Date().toISOString()}; profile.updatedAt = new Date().toISOString(); writeProfiles(profiles);
   renderProgram(); renderProgramBaselineGate(); byId("programPrintBtn").disabled = false; byId("programApproveBtn").disabled = false; byId("programSaveBtn").disabled = true; byId("programSaveOnlyBtn").disabled = true; showToast(weeklyDays + " first-week workout" + (weeklyDays === 1 ? "" : "s") + " built · " + schedule.length + " contain calibration anchors"); return currentProgram;
 }
@@ -8683,7 +8973,7 @@ function generateProgram() {
     focus: byId("programFocus").value,
     trainingStyle: byId("programStyle").value || "auto", cardioMode: cardioModes[0], cardioModes,
     injuries: [...programFilters.injuries], zones: [...programFilters.zones],
-    profileId:selectedProfile && selectedProfile.id || "", trainingPhase:selectedProfile && selectedProfile.trainingPhase || "general", phaseStartedAt:selectedProfile && selectedProfile.phaseStartedAt || "", availableDays:selectedProfile && selectedProfile.availableDays || Number(byId("programDays").value), sport:selectedProfile && selectedProfile.sport || "", sportSchedule:selectedProfile && selectedProfile.sportSchedule || "", competitionDate:selectedProfile && selectedProfile.competitionDate || "", exercisePreferences:{ ...(selectedProfile && selectedProfile.exercisePreferences || {}) }, phaseCompoundAnchors:{ ...(selectedProfile && selectedProfile.phaseCompoundAnchors || {}) }, readinessTrend:readinessTrendContext(selectedProfile),
+    profileId:selectedProfile && selectedProfile.id || "", trainingPhase:selectedProfile && selectedProfile.trainingPhase || "general", phaseStartedAt:selectedProfile && selectedProfile.phaseStartedAt || "", availableDays:selectedProfile && selectedProfile.availableDays || Number(byId("programDays").value), sport:selectedProfile && selectedProfile.sport || "", sportSchedule:selectedProfile && selectedProfile.sportSchedule || "", competitionDate:selectedProfile && selectedProfile.competitionDate || "", exercisePreferences:{ ...(selectedProfile && selectedProfile.exercisePreferences || {}) }, exercisePrescriptions:{ ...(selectedProfile && selectedProfile.exercisePrescriptions || {}) }, exerciseSubstitutions:{ ...(selectedProfile && selectedProfile.exerciseSubstitutions || {}) }, limitationAssessments:{ ...(selectedProfile && selectedProfile.limitationAssessments || {}) }, phaseCompoundAnchors:{ ...(selectedProfile && selectedProfile.phaseCompoundAnchors || {}) }, readinessTrend:readinessTrendContext(selectedProfile),
     baselineContext:baselineGeneratorContext(selectedProfile), templateId:loadedProgramTemplate && loadedProgramTemplate.id || "", templateTitle:loadedProgramTemplate && loadedProgramTemplate.title || "",
   };
   setup.goals = [setup.goal, setup.secondaryGoal].filter((g, i, arr) => g && arr.indexOf(g) === i).slice(0, 2);
@@ -8694,13 +8984,13 @@ function generateProgram() {
   const seed = Math.floor(Date.now() / 1000) % 100000;
   const bases = split.map((day, i) => ({
     name: day.name,
-    session: buildBlendedSession({ client: setup.client, profileId:setup.profileId, goal: setup.goal, goals: setup.goals, trainingStyle:setup.trainingStyle, cardioMode:setup.cardioMode, cardioModes:setup.cardioModes, optionIndex:day.optionIndex, experience: setup.experience, age: setup.age, minutes: setup.minutes, muscles: day.muscles, injuries: setup.injuries, zones: setup.zones, trainingPhase:setup.trainingPhase, phaseStartedAt:setup.phaseStartedAt, availableDays:setup.availableDays, sport:setup.sport, sportSchedule:setup.sportSchedule, competitionDate:setup.competitionDate, exercisePreferences:setup.exercisePreferences, phaseCompoundAnchors:setup.phaseCompoundAnchors, readinessTrend:setup.readinessTrend, baselineContext:setup.baselineContext }, seed + i * 37),
+    session: buildBlendedSession({ client: setup.client, profileId:setup.profileId, goal: setup.goal, goals: setup.goals, trainingStyle:setup.trainingStyle, cardioMode:setup.cardioMode, cardioModes:setup.cardioModes, optionIndex:day.optionIndex, experience: setup.experience, age: setup.age, minutes: setup.minutes, muscles: day.muscles, injuries: setup.injuries, zones: setup.zones, trainingPhase:setup.trainingPhase, phaseStartedAt:setup.phaseStartedAt, availableDays:setup.availableDays, sport:setup.sport, sportSchedule:setup.sportSchedule, competitionDate:setup.competitionDate, exercisePreferences:setup.exercisePreferences, exercisePrescriptions:setup.exercisePrescriptions, exerciseSubstitutions:setup.exerciseSubstitutions, limitationAssessments:setup.limitationAssessments, phaseCompoundAnchors:setup.phaseCompoundAnchors, readinessTrend:setup.readinessTrend, baselineContext:setup.baselineContext }, seed + i * 37),
   }));
   const weeks = Array.from({ length: setup.weeks }, (_, i) => {
     const number = i + 1, phase = programPhaseForSetup(setup,number);
     return { number, phase, reviewRequired:!!phase.reviewRequired, reviewType:phase.reviewType || "", days: bases.map((day,di) => { const progressed = progressSession(day.session,phase); if (number === 1) applyReadinessTrendToSession(progressed); applyCompoundAnchorContinuity(progressed); if (!setup.starter) rotateProgramAccessories(progressed,number,seed + di * 37); finalizeGeneratedSession(progressed); return { name:day.name,session:progressed }; }) };
   });
-  currentProgram = { setup, weeks, starter:setup.starter, starterReviewWeek:setup.starter ? 1 : null, createdAt: new Date().toISOString(), lifecycle:"draft", versionNumber:1, versions:[], approval:{ status:"draft", required:true } };
+  currentProgram = applyProgramDayDefaults({ setup, weeks, starter:setup.starter, starterReviewWeek:setup.starter ? 1 : null, createdAt: new Date().toISOString(), lifecycle:"draft", versionNumber:1, versions:[], approval:{ status:"draft", required:true } },selectedProfile);
   renderProgram();
   byId("programPrintBtn").disabled = false;
   byId("programApproveBtn").disabled = false; byId("programSaveBtn").disabled = true; byId("programSaveOnlyBtn").disabled = true;
@@ -8719,6 +9009,7 @@ function programBlockExercisesHtml(block,weekIndex,dayIndex,blockIndex) {
   }).join("");
 }
 function programBlockPurpose(block) {
+  if (block && block.purpose) return block.purpose;
   const key = String(block && block.key || '').toLowerCase(), title = String(block && block.title || '').toLowerCase();
   if (key.includes('warm') || title.includes('warm') || title.includes('prepare')) return 'Raise temperature, prepare the joints, and rehearse the patterns without creating fatigue.';
   if (key.includes('strength') || title.includes('primary') || title.includes('main lift')) return 'Complete the highest-priority work while technique, attention, and force production are fresh.';
@@ -8731,13 +9022,18 @@ function programBlockPurpose(block) {
 }
 function programBlockHtml(block,weekIndex,dayIndex,blockIndex) {
   const hasSuperset = (block.groups || []).some((group) => group.type === "superset");
-  return '<section class="focused-program-phase"><div class="focused-program-phase-head"><div class="focused-program-phase-title"><span class="focused-program-phase-index">' + (blockIndex + 1) + '</span><div><div class="program-block-label">Phase ' + (blockIndex + 1) + '</div><h4>' + escapeHtml(block.title) + '</h4><p>' + escapeHtml(programBlockPurpose(block)) + '</p></div></div><div class="program-superset-tools"><span>Optional paired block</span><div class="tool-actions"><button class="small-btn" onclick="openProgramSupersetEditor(' + weekIndex + ',' + dayIndex + ',' + blockIndex + ')">' + (hasSuperset ? 'Edit' : 'Create') + ' superset</button>' + (hasSuperset ? '<button class="small-btn" onclick="clearProgramSupersets(' + weekIndex + ',' + dayIndex + ',' + blockIndex + ')">Clear</button>' : '') + '</div></div></div><div class="focused-program-exercises">' + programBlockExercisesHtml(block,weekIndex,dayIndex,blockIndex) + '</div></section>';
+  return '<section class="focused-program-phase"><div class="focused-program-phase-head"><div class="focused-program-phase-title"><span class="focused-program-phase-index">' + (blockIndex + 1) + '</span><div><div class="program-block-label">Phase ' + (blockIndex + 1) + '</div><h4>' + escapeHtml(block.title) + '</h4><p>' + escapeHtml(programBlockPurpose(block)) + '</p></div></div><div class="program-superset-tools"><span>Phase controls</span><div class="tool-actions"><button class="small-btn" onclick="openProgramStructureEditor(' + weekIndex + ',' + dayIndex + ',' + blockIndex + ')">Edit phase</button><button class="small-btn" onclick="openProgramExerciseAdd(' + weekIndex + ',' + dayIndex + ',' + blockIndex + ')">Add exercise</button><button class="small-btn" onclick="openProgramSupersetEditor(' + weekIndex + ',' + dayIndex + ',' + blockIndex + ')">' + (hasSuperset ? 'Edit / clear' : 'Create') + ' superset</button></div></div></div><div class="focused-program-exercises">' + programBlockExercisesHtml(block,weekIndex,dayIndex,blockIndex) + '</div></section>';
 }
 function openProgramPrescriptionEditor(weekIndex,dayIndex,blockIndex,exerciseIndex) {
   if (!currentProgram || !currentProgram.weeks[weekIndex] || !currentProgram.weeks[weekIndex].days[dayIndex]) return false;
   const session = currentProgram.weeks[weekIndex].days[dayIndex].session, block = session.blocks[blockIndex]; if (!block || !block.items[exerciseIndex]) return false;
   const opened = openPrescriptionEditor(session,block,blockIndex,exerciseIndex,null,"");
-  if (opened && prescriptionEditContext) Object.assign(prescriptionEditContext,{renderMode:"program",weekIndex,dayIndex,blockIndex});
+  if (opened && prescriptionEditContext) {
+    Object.assign(prescriptionEditContext,{renderMode:"program",weekIndex,dayIndex,blockIndex});
+    byId("prescriptionScope").disabled = false;
+    byId("prescriptionScope").value = currentProgram.starter || currentProgram.setup && currentProgram.setup.programMode === "starter" ? "all" : "single";
+    byId("programPrescriptionStructureActions").hidden = false;
+  }
   return opened;
 }
 function openProgramExerciseSwap(weekIndex,dayIndex,blockIndex,exerciseIndex) {
@@ -8749,9 +9045,83 @@ function openProgramExerciseSwap(weekIndex,dayIndex,blockIndex,exerciseIndex) {
   Object.assign(activeSwap,{renderMode:"program",weekIndex,dayIndex,blockIndex,exerciseIndex});
   byId("programSwapFields").style.display = "grid";
   byId("programSwapScope").value = currentProgram.starter || currentProgram.setup && currentProgram.setup.programMode === "starter" ? "all" : "single";
+  byId("programSwapReason").value = "";
+  byId("programSwapCalibration").value = "transfer";
+  byId("programSwapOverride").value = "none";
   byId("swapShuffleBtn").style.display = "none";
   byId("exerciseSwapCopy").textContent = "Choose a replacement for " + exercise.name + ". You can change only this workout or carry the exercise through the same program day while each week keeps its own sets, reps, tempo, and rest.";
   return true;
+}
+function openProgramExerciseAdd(weekIndex,dayIndex,blockIndex) {
+  if (!currentProgram || !currentProgram.weeks[weekIndex] || !currentProgram.weeks[weekIndex].days[dayIndex]) return false;
+  const session = currentProgram.weeks[weekIndex].days[dayIndex].session, block = session && session.blocks && session.blocks[blockIndex]; if (!block) return false;
+  const opened = openExerciseAdd(session,block,null,""); if (!opened || !activeSwap) return false;
+  Object.assign(activeSwap,{renderMode:"program",weekIndex,dayIndex,blockIndex,ei:-1,exerciseIndex:-1});
+  byId("programSwapFields").style.display = "grid"; byId("programSwapScope").value = "single"; byId("programSwapReason").value = ""; byId("programSwapCalibration").value = "remove"; byId("programSwapOverride").value = "none";
+  return true;
+}
+let programStructureEditorContext = null;
+function openProgramStructureEditor(weekIndex,dayIndex,blockIndex) {
+  if (!currentProgram || !requireTrainerMutation("edit workout structure")) return false;
+  const day = currentProgram.weeks[weekIndex] && currentProgram.weeks[weekIndex].days[dayIndex], block = blockIndex == null ? null : day && day.session && day.session.blocks[blockIndex]; if (!day || blockIndex != null && !block) return false;
+  programStructureEditorContext = {weekIndex:Number(weekIndex),dayIndex:Number(dayIndex),blockIndex:blockIndex == null ? null : Number(blockIndex),type:block ? "phase" : "day"};
+  byId("programStructureEditorTitle").textContent = block ? "Edit " + block.title : "Edit " + day.name;
+  byId("programStructureEditorCopy").textContent = block ? "Rename this phase or clarify its purpose. Choose exactly how far the edit should carry." : "Rename this workout day or change the client-facing session purpose.";
+  byId("programStructureTitle").value = block ? block.title || "" : day.name || "";
+  byId("programStructurePurpose").value = block ? block.purpose || programBlockPurpose(block) : day.purpose || day.session && day.session.purpose || "";
+  byId("programStructureScope").value = "single"; byId("programStructureReason").value = ""; byId("programPhaseStructureActions").hidden = !block; byId("programStructureEditorModal").classList.add("open"); return true;
+}
+function closeProgramStructureEditor() { programStructureEditorContext = null; const modal = byId("programStructureEditorModal"); if (modal) modal.classList.remove("open"); }
+function saveProgramStructureEditor() {
+  if (!programStructureEditorContext || !currentProgram || !requireTrainerMutation("edit workout structure")) return false;
+  const context = programStructureEditorContext, title = byId("programStructureTitle").value.trim(), purpose = byId("programStructurePurpose").value.trim(), scope = byId("programStructureScope").value || "single", reason = byId("programStructureReason").value.trim();
+  if (!title || !purpose) { showToast("Add both a title and a clear client-facing purpose"); return false; }
+  if (!reason) { showToast("Document why this workout structure is changing"); return false; }
+  let changed = 0;
+  programWeekIndexesForScope(context.weekIndex,scope).forEach((weekIndex) => {
+    const day = currentProgram.weeks[weekIndex] && currentProgram.weeks[weekIndex].days[context.dayIndex]; if (!day) return;
+    if (context.type === "day") { day.name = title; day.purpose = purpose; if (day.session) { day.session.purpose = purpose; markSessionDraft(day.session,"Workout details edited by coach"); } changed += 1; return; }
+    const origin = currentProgram.weeks[context.weekIndex].days[context.dayIndex].session.blocks[context.blockIndex], candidates = day.session && day.session.blocks || [];
+    const block = candidates[context.blockIndex] || candidates.find((candidate) => candidate.key === origin.key || candidate.title === origin.title); if (!block) return;
+    block.title = title; block.purpose = purpose; markSessionDraft(day.session,"Workout phase edited by coach"); changed += 1;
+  });
+  if (!changed) { showToast("No matching workout sections were found for that scope"); return false; }
+  if (scope === "future" && currentProgram.setup && currentProgram.setup.profileId) {
+    const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === currentProgram.setup.profileId);
+    if (index >= 0) {
+      if (context.type === "day") profiles[index].programDayDefaults = {...(profiles[index].programDayDefaults || {}),[context.dayIndex]:{title,purpose}};
+      else { const origin = currentProgram.weeks[context.weekIndex].days[context.dayIndex].session.blocks[context.blockIndex]; profiles[index].programPhaseDefaults = {...(profiles[index].programPhaseDefaults || {}),[origin.key]:{title,purpose}}; }
+      profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles);
+    }
+  }
+  appendProgramEditAudit({type:"structure",level:context.type,scope,title,reason,targets:changed}); markCurrentProgramDraft("Workout structure edited by coach"); closeProgramStructureEditor(); renderProgram(); showToast(title + " updated in " + changed + " workout" + (changed === 1 ? "" : "s")); return true;
+}
+function applyProgramPhaseStructureAction(action) {
+  if (!programStructureEditorContext || programStructureEditorContext.type !== "phase" || !currentProgram || !requireTrainerMutation("change program phase order")) return false;
+  const context = programStructureEditorContext, scope = byId("programStructureScope").value || "single", reason = byId("programStructureReason").value.trim();
+  if (!reason) { showToast("Add a coach reason before moving or removing a workout phase"); return false; }
+  const sourceDay = currentProgram.weeks[context.weekIndex] && currentProgram.weeks[context.weekIndex].days[context.dayIndex], source = sourceDay && sourceDay.session.blocks[context.blockIndex]; if (!source) return false;
+  const containsCalibration = (source.items || []).some((exercise) => calibrationResponsibility(exercise));
+  if (action === "remove" && containsCalibration && !window.confirm("This phase contains required calibration evidence. Removing it will keep tailored programming locked until that responsibility is reassigned. Continue?")) return false;
+  let changed = 0;
+  programWeekIndexesForScope(context.weekIndex,scope).forEach((weekIndex) => {
+    const day = currentProgram.weeks[weekIndex] && currentProgram.weeks[weekIndex].days[context.dayIndex], blocks = day && day.session && day.session.blocks; if (!blocks) return;
+    const from = weekIndex === context.weekIndex && blocks[context.blockIndex] ? context.blockIndex : blocks.findIndex((block) => block.key === source.key || block.title === source.title); if (from < 0) return;
+    const to = action === "up" ? from - 1 : from + 1;
+    if (action === "remove") { blocks.splice(from,1); changed += 1; }
+    else if (to >= 0 && to < blocks.length) { const [moved] = blocks.splice(from,1); blocks.splice(to,0,moved); day.session.manualPhaseOrder = true; changed += 1; }
+    enrichSessionMetadata(day.session); markSessionDraft(day.session,"Workout phase " + action + " by coach");
+  });
+  if (!changed) { showToast(action === "remove" ? "Phase could not be removed" : "Phase is already at that edge of the workout"); return false; }
+  if (scope === "future" && currentProgram.setup && currentProgram.setup.profileId) {
+    const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === currentProgram.setup.profileId);
+    if (index >= 0) {
+      if (action === "remove") profiles[index].programPhaseExclusions = [...new Set([...(profiles[index].programPhaseExclusions || []),source.key])];
+      else profiles[index].programPhaseOrder = (sourceDay.session.blocks || []).map((block) => block.key);
+      profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles);
+    }
+  }
+  appendProgramEditAudit({type:"phase_structure",action,phase:source.title,scope,reason,calibrationAffected:containsCalibration,targets:changed}); markCurrentProgramDraft("Workout phase structure changed by coach"); closeProgramStructureEditor(); renderProgram(); showToast(source.title + " " + (action === "remove" ? "removed from" : "moved in") + " " + changed + " workout" + (changed === 1 ? "" : "s")); return true;
 }
 function markCurrentProgramDraft(reason) {
   if (!currentProgram) return;
@@ -8918,41 +9288,74 @@ function applyProgramDayRework() {
 }
 function applyProgramExerciseReplacement(context,exercise,scope) {
   if (!currentProgram || !context || !exercise) return {changed:0,skipped:0,originChanged:false,message:"Program context is unavailable"};
-  const startWeek = Number(context.weekIndex), weekIndexes = scope === "single" ? [startWeek] : currentProgram.weeks.map((_,index) => index).filter((index) => scope === "all" || index >= startWeek);
-  let changed = 0, skipped = 0, blocked = 0, originChanged = false, blockedReasons = [];
-  weekIndexes.forEach((weekIndex) => {
-    const day = currentProgram.weeks[weekIndex] && currentProgram.weeks[weekIndex].days[context.dayIndex]; if (!day || !day.session) return;
-    const safetyIssues = hardExerciseSafetyIssues(exercise,day.session.spec || {});
-    if (safetyIssues.length) { blocked += 1; blockedReasons.push(...safetyIssues.map((issue) => issue.label)); return; }
-    const blocks = day.session.blocks || [], indexedBlock = blocks[context.blockIndex], originalName = context.currentEx && context.currentEx.name;
-    let targetBlock = null, targetIndex = -1;
-    if (weekIndex === startWeek && indexedBlock && indexedBlock.items && indexedBlock.items[context.exerciseIndex]) {
-      // The visible workout is authoritative. Use its exact phase and row;
-      // repeated phase keys must never redirect this edit to an earlier phase.
-      targetBlock = indexedBlock; targetIndex = Number(context.exerciseIndex);
-    } else {
-      const candidates = [indexedBlock,...blocks.filter((candidate,index) => index !== Number(context.blockIndex) && context.block && candidate && (candidate.key === context.block.key || candidate.title === context.block.title))].filter(Boolean);
-      for (const candidate of candidates) {
-        const matchedIndex = (candidate.items || []).findIndex((item) => item && item.name === originalName);
-        if (matchedIndex >= 0) { targetBlock = candidate; targetIndex = matchedIndex; break; }
-      }
-      if (!targetBlock && indexedBlock && indexedBlock.items && indexedBlock.items[context.exerciseIndex]) { targetBlock = indexedBlock; targetIndex = Number(context.exerciseIndex); }
-    }
-    const target = targetBlock && targetBlock.items && targetBlock.items[targetIndex]; if (!target) return;
-    const duplicate = day.session.blocks.some((candidate) => candidate.items.some((item) => item !== target && item.name === exercise.name));
+  const targets = programExerciseTargets(context,scope), reason = byId("programSwapReason").value.trim(), overrideMode = byId("programSwapOverride").value || "none", calibrationAction = byId("programSwapCalibration").value || "transfer";
+  if (!targets.length) return {changed:0,skipped:0,originChanged:false,message:"No matching program exercises were found for that scope"};
+  const hardByTarget = targets.map((target) => hardExerciseSafetyIssues(exercise,target.session.spec || {}));
+  const absolute = hardByTarget.flat().filter((issue) => issue.absolute || ["gym_equipment","client_equipment","cardio_equipment","safety_metadata"].includes(issue.code));
+  if (absolute.length) return {changed:0,skipped:0,originChanged:false,message:"This replacement cannot be overridden: " + [...new Set(absolute.map((issue) => issue.label))].join(" · ")};
+  if (hardByTarget.some((issues) => issues.length) && overrideMode === "none") return {changed:0,skipped:0,originChanged:false,message:"Choose a documented safety override or select an exercise that matches every client filter"};
+  if ((overrideMode !== "none" || calibrationAction === "remove") && !reason) return {changed:0,skipped:0,originChanged:false,message:"Enter the coach reason before applying this override"};
+  const original = targets[0].exercise, originalResponsibility = calibrationResponsibility(original);
+  if (originalResponsibility && calibrationAction === "transfer" && original.pattern !== exercise.pattern) return {changed:0,skipped:0,originChanged:false,message:"Calibration cannot silently move to a different pattern. Choose Reassign or Remove and document why."};
+  if (originalResponsibility && calibrationAction === "reassign") {
+    const missing = targets.find((target) => !target.session.blocks.flatMap((block) => block.items || []).some((candidate) => candidate !== target.exercise && candidate.pattern === target.exercise.pattern && !candidate.baselineRequired));
+    if (missing) return {changed:0,skipped:0,originChanged:false,message:"No other " + original.pattern.replace(/_/g," ") + " movement can own this calibration measure. Add one first or keep the calibration on the replacement."};
+  }
+  let changed = 0, skipped = 0, originChanged = false;
+  targets.forEach((target) => {
+    const duplicate = target.session.blocks.some((candidate) => (candidate.items || []).some((item) => item !== target.exercise && item.name === exercise.name));
     if (duplicate) { skipped += 1; return; }
-    if (replaceExercise(targetBlock,targetIndex,exercise)) {
-      enrichSessionMetadata(day.session); markSessionDraft(day.session,"Exercise replaced in multi-week program"); changed += 1;
-      if (weekIndex === startWeek) originChanged = targetBlock.items[targetIndex] && targetBlock.items[targetIndex].name === exercise.name;
-    }
+    const responsibility = calibrationResponsibility(target.exercise), issues = hardExerciseSafetyIssues(exercise,target.session.spec || {});
+    const replacement = {...exercise};
+    if (issues.length && overrideMode !== "none") replacement.safetyOverride = {
+      active:true,mode:overrideMode,reason,approvedAt:new Date().toISOString(),approvedBy:currentAccountIdentity().displayName,
+      limitations:[...new Set(issues.map((issue) => issue.limitation).filter(Boolean))],codes:[...new Set(issues.map((issue) => issue.code))],clientAssessment:Object.fromEntries([...new Set(issues.map((issue) => issue.limitation).filter(Boolean))].map((tag) => [tag,limitationAssessmentFor(target.session.spec || {},tag)])),
+    };
+    if (!replaceExercise(target.block,target.exerciseIndex,replacement)) return;
+    const inserted = target.block.items[target.exerciseIndex];
+    if (responsibility && calibrationAction === "transfer") restoreCalibrationResponsibility(inserted,responsibility);
+    else if (responsibility && calibrationAction === "reassign") {
+      const nextOwner = target.session.blocks.flatMap((candidate) => candidate.items || []).find((candidate) => candidate !== inserted && candidate.pattern === target.exercise.pattern && !candidate.baselineRequired);
+      restoreCalibrationResponsibility(nextOwner,responsibility); clearCalibrationResponsibility(inserted);
+    } else if (responsibility && calibrationAction === "remove") clearCalibrationResponsibility(inserted);
+    rebuildBlockGroups(target.block); enrichSessionMetadata(target.session); markSessionDraft(target.session,"Exercise replaced in multi-week program"); changed += 1;
+    if (target.weekIndex === Number(context.weekIndex)) originChanged = inserted && inserted.name === exercise.name;
   });
-  if (changed) markCurrentProgramDraft("Exercise replaced by coach in " + changed + " program workout" + (changed === 1 ? "" : "s"));
-  return {changed,skipped,blocked,originChanged,message:!originChanged ? "The selected exercise on this workout was not changed" : blocked ? "Safety filter blocked " + exercise.name + ": " + [...new Set(blockedReasons)].join(" · ") : skipped ? "The replacement already exists elsewhere in the selected workout" : ""};
+  if (changed && scope === "future" && currentProgram.setup && currentProgram.setup.profileId) {
+    const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === currentProgram.setup.profileId);
+    if (index >= 0) { profiles[index].exerciseSubstitutions = {...(profiles[index].exerciseSubstitutions || {}),[exerciseId(original)]:exerciseId(exercise)}; profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles); currentProgram.setup.exerciseSubstitutions = {...(currentProgram.setup.exerciseSubstitutions || {}),[exerciseId(original)]:exerciseId(exercise)}; }
+  }
+  if (changed) { appendProgramEditAudit({type:"replacement",from:original.name,to:exercise.name,scope,reason:reason || "Coach replacement",overrideMode,calibrationAction,targets:changed}); markCurrentProgramDraft("Exercise replaced by coach in " + changed + " program workout" + (changed === 1 ? "" : "s")); }
+  return {changed,skipped,originChanged,message:!originChanged ? "The selected exercise on this workout was not changed" : skipped ? "The replacement already exists elsewhere in part of the selected scope" : ""};
+}
+function applyProgramExerciseAddition(context,exercise,scope) {
+  if (!currentProgram || !context || !exercise) return {changed:0,skipped:0,message:"Program context is unavailable"};
+  const reason = byId("programSwapReason").value.trim(), overrideMode = byId("programSwapOverride").value || "none", refs = [];
+  programWeekIndexesForScope(context.weekIndex,scope).forEach((weekIndex) => { const day = currentProgram.weeks[weekIndex] && currentProgram.weeks[weekIndex].days[context.dayIndex], block = day && day.session && day.session.blocks[context.blockIndex]; if (day && block) refs.push({weekIndex,day,session:day.session,block}); });
+  const hardByTarget = refs.map((target) => hardExerciseSafetyIssues(exercise,target.session.spec || {})), absolute = hardByTarget.flat().filter((issue) => issue.absolute || ["gym_equipment","client_equipment","cardio_equipment","safety_metadata"].includes(issue.code));
+  if (absolute.length) return {changed:0,skipped:0,message:"This exercise cannot be added: " + [...new Set(absolute.map((issue) => issue.label))].join(" · ")};
+  if (hardByTarget.some((issues) => issues.length) && overrideMode === "none") return {changed:0,skipped:0,message:"Choose a documented safety override or select an exercise that matches every client filter"};
+  if (overrideMode !== "none" && !reason) return {changed:0,skipped:0,message:"Enter the coach reason before applying this override"};
+  let changed = 0, skipped = 0;
+  refs.forEach((target,index) => {
+    if (target.session.blocks.some((block) => (block.items || []).some((item) => item.name === exercise.name))) { skipped += 1; return; }
+    const issues = hardByTarget[index], added = {...exercise,rx:{...(exercise.rx || target.block.rx || {})}};
+    if (issues.length) added.safetyOverride = {active:true,mode:overrideMode,reason,approvedAt:new Date().toISOString(),approvedBy:currentAccountIdentity().displayName,limitations:[...new Set(issues.map((issue) => issue.limitation).filter(Boolean))],codes:[...new Set(issues.map((issue) => issue.code))]};
+    target.block.items.push(added); rebuildBlockGroups(target.block); enrichSessionMetadata(target.session); markSessionDraft(target.session,"Exercise added by coach"); changed += 1;
+  });
+  if (changed && scope === "future" && currentProgram.setup && currentProgram.setup.profileId) {
+    const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === currentProgram.setup.profileId), phaseKey = context.block && context.block.key;
+    if (index >= 0 && phaseKey) { const existing = profiles[index].programPhaseAdditions && profiles[index].programPhaseAdditions[phaseKey] || []; profiles[index].programPhaseAdditions = {...(profiles[index].programPhaseAdditions || {}),[phaseKey]:[...new Set([...existing,exerciseId(exercise)])]}; profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles); }
+  }
+  if (changed) { appendProgramEditAudit({type:"addition",exercise:exercise.name,scope,reason:reason || "Coach addition",overrideMode,targets:changed}); markCurrentProgramDraft("Exercise added by coach in " + changed + " program workout" + (changed === 1 ? "" : "s")); }
+  return {changed,skipped,message:changed ? "" : "The exercise already exists in the selected workout"};
 }
 function openProgramSupersetEditor(weekIndex,dayIndex,blockIndex) {
   if (!currentProgram || !currentProgram.weeks[weekIndex] || !currentProgram.weeks[weekIndex].days[dayIndex]) return false;
   const session = currentProgram.weeks[weekIndex].days[dayIndex].session, block = session.blocks[blockIndex]; if (!block) return false;
-  return openSupersetEditor(session,block,blockIndex,null,"","program");
+  const opened = openSupersetEditor(session,block,blockIndex,null,"","program");
+  if (opened && supersetEditorContext) Object.assign(supersetEditorContext,{weekIndex:Number(weekIndex),dayIndex:Number(dayIndex),blockIndex:Number(blockIndex)});
+  return opened;
 }
 function clearProgramSupersets(weekIndex,dayIndex,blockIndex) {
   if (!currentProgram || !currentProgram.weeks[weekIndex] || !currentProgram.weeks[weekIndex].days[dayIndex]) return false;
@@ -8985,7 +9388,7 @@ function focusedProgramWorkspaceHtml(program,savedAssignments,approved,starter) 
     return '<button class="focused-program-day-button ' + (index === focusedProgramDayIndex ? 'on' : '') + '" type="button" aria-pressed="' + (index === focusedProgramDayIndex) + '" onclick="selectFocusedProgramDay(' + focusedProgramWeekIndex + ',' + index + ')"><span class="focused-program-day-number">' + (index + 1) + '</span><span class="focused-program-day-copy"><b>' + escapeHtml(item.name) + '</b><span>' + escapeHtml(mode) + ' · ' + itemCount + ' exercises</span></span><span class="focused-program-day-state ' + (assigned ? 'done' : '') + '">' + (assigned ? 'Assigned' : 'Draft') + '</span></button>';
   }).join('') + '</nav>';
   const assigned = savedAssignments.some((assignment) => Number(assignment.programWeek) === week.number && Number(assignment.programDay) === focusedProgramDayIndex + 1), calibrationMode = session.calibration ? session.calibration.supportSession ? 'Foundation workout' : 'Calibration evidence' : 'Coach-built workout';
-  const selectedDay = '<article class="focused-program-detail"><header class="focused-program-day-head"><div><div class="result-label">Week ' + week.number + ' · Day ' + (focusedProgramDayIndex + 1) + ' of ' + week.days.length + '</div><h3>' + escapeHtml(day.name) + '</h3><p>' + escapeHtml(week.phase && week.phase.directive || 'Complete the phases in order and preserve the assigned technique, effort, and rest targets.') + '</p><div class="focused-program-day-meta"><span>' + escapeHtml(calibrationMode) + '</span><span>' + blocks.length + ' phases</span><span>' + exerciseCount + ' exercises</span><span>' + escapeHtml(String(program.setup.minutes || 60)) + ' min target</span></div></div><div class="tool-actions"><button class="small-btn primary" type="button" onclick="openProgramDayRework(' + focusedProgramWeekIndex + ',' + focusedProgramDayIndex + ')">Regenerate this workout</button><button class="small-btn" type="button" onclick="printProgram()">Print program</button></div></header><div class="focused-program-phases">' + blocks.map((block,index) => programBlockHtml(block,focusedProgramWeekIndex,focusedProgramDayIndex,index)).join('') + '</div><footer class="focused-program-day-foot"><div class="program-day-assignment ' + (assigned ? 'done' : '') + '">' + (assigned ? 'Registered to client' : 'Not assigned yet') + '</div>' + (approved && !program.calibration ? '<button class="small-btn primary" type="button" onclick="saveAndAssignCurrentProgram(' + week.number + ')">Assign all of Week ' + week.number + '</button>' : '<span class="result-note">' + (program.calibration ? 'Use the calibration-week assignment button above to keep the full first week together.' : 'Coach approval is required before assignment.') + '</span>') + '</footer></article>';
+  const selectedDay = '<article class="focused-program-detail"><header class="focused-program-day-head"><div><div class="result-label">Week ' + week.number + ' · Day ' + (focusedProgramDayIndex + 1) + ' of ' + week.days.length + '</div><h3>' + escapeHtml(day.name) + '</h3><p>' + escapeHtml(day.purpose || week.phase && week.phase.directive || 'Complete the phases in order and preserve the assigned technique, effort, and rest targets.') + '</p><div class="focused-program-day-meta"><span>' + escapeHtml(calibrationMode) + '</span><span>' + blocks.length + ' phases</span><span>' + exerciseCount + ' exercises</span><span>' + escapeHtml(String(program.setup.minutes || 60)) + ' min target</span></div></div><div class="tool-actions"><button class="small-btn" type="button" onclick="openProgramStructureEditor(' + focusedProgramWeekIndex + ',' + focusedProgramDayIndex + ',null)">Edit workout details</button><button class="small-btn primary" type="button" onclick="openProgramDayRework(' + focusedProgramWeekIndex + ',' + focusedProgramDayIndex + ')">Regenerate this workout</button><button class="small-btn" type="button" onclick="printProgram()">Print program</button></div></header><div class="focused-program-phases">' + blocks.map((block,index) => programBlockHtml(block,focusedProgramWeekIndex,focusedProgramDayIndex,index)).join('') + '</div><footer class="focused-program-day-foot"><div class="program-day-assignment ' + (assigned ? 'done' : '') + '">' + (assigned ? 'Registered to client' : 'Not assigned yet') + '</div>' + (approved && !program.calibration ? '<button class="small-btn primary" type="button" onclick="saveAndAssignCurrentProgram(' + week.number + ')">Assign all of Week ' + week.number + '</button>' : '<span class="result-note">' + (program.calibration ? 'Use the calibration-week assignment button above to keep the full first week together.' : 'Coach approval is required before assignment.') + '</span>') + '</footer></article>';
   return '<section class="focused-program-workspace">' + weekTabs + checkpoint + '<div class="focused-program-shell">' + dayRail + selectedDay + '</div></section>';
 }
 function syncProgramActionControls() {
@@ -9020,6 +9423,21 @@ function renderProgram() {
   syncProgramActionControls();
 }
 function printProgram() { if (currentProgram) window.print(); }
+function syncApprovedProgramToAssignments(program) {
+  if (!program || !program.id || !program.approval || program.approval.status !== "approved") return 0;
+  const assignments = loadAssignedWorkouts(); let synced = 0;
+  assignments.forEach((assignment) => {
+    if (assignment.programId !== program.id || assignmentStatus(assignment) !== "assigned") return;
+    const week = (program.weeks || []).find((item) => Number(item.number) === Number(assignment.programWeek));
+    const day = week && week.days && week.days[Number(assignment.programDay) - 1]; if (!day || !day.session) return;
+    const workout = {type:"solo",data:JSON.parse(JSON.stringify(day.session)),edits:{}}; assignSessionIds(workout);
+    workout.data.spec = {...(workout.data.spec || {}),client:assignment.client,profileId:assignment.profileId};
+    assignment.session = workout; assignment.programDayName = day.name; assignment.phaseName = week.phase && week.phase.name || assignment.phaseName || "";
+    assignment.syncedFromProgramAt = new Date().toISOString(); assignment.syncedFromProgramVersion = Number(program.versionNumber || 1); synced += 1;
+  });
+  if (synced) writeAssignedWorkouts(assignments);
+  return synced;
+}
 function approveCurrentProgram() {
   if (!requireTrainerMutation("approve programs") || !currentProgram) return false;
   const intakeProfile = loadProfiles().find((item) => item.id === currentProgram.setup.profileId) || loadProfiles().find((item) => clientMatches(item.name,currentProgram.setup.client));
@@ -9027,9 +9445,16 @@ function approveCurrentProgram() {
   if (intakeStatus && intakeStatus.approvalBlocked) { showToast("Program approval blocked — finish " + intakeProfile.name + "’s onboarding and document the trainer baseline decision first"); return false; }
   if (intakeProfile && !currentProgram.calibration && !baselineCanTailor(intakeProfile)) { showToast("Program approval blocked — complete and verify the client’s calibration baseline first"); renderProgramBaselineGate(); return false; }
   const sessions = currentProgram.weeks.flatMap((week) => week.days.map((day) => day.session)); sessions.forEach((session) => { session.audit = auditWorkout(session); });
+  if (currentProgram.calibration) {
+    const calibrationExercises = sessions.flatMap((session) => (session.blocks || []).flatMap((block) => block.items || [])).filter((exercise) => calibrationResponsibility(exercise));
+    const present = new Set(calibrationExercises.flatMap((exercise) => exercise.baselineDomains || [])), required = currentProgram.setup.baselineRequiredDomains || [], missing = required.filter((domain) => !present.has(domain));
+    const expectedMajor = Number(currentProgram.setup.majorLiftCalibrationAnchors || 0), actualMajor = calibrationExercises.filter((exercise) => exercise.baselineMeasure === "major_lift").length;
+    if (missing.length || actualMajor < expectedMajor) { showToast("Calibration approval blocked — reassign " + [...missing.map((domain) => BASELINE_DOMAIN_LABELS[domain] || domain),...(actualMajor < expectedMajor ? [(expectedMajor - actualMajor) + " major-lift anchor" + (expectedMajor - actualMajor === 1 ? "" : "s")] : [])].join(" · ")); return false; }
+  }
   const failed = sessions.filter((session) => !session.audit.pass); if (failed.length) { showToast("Program approval blocked: " + failed.length + " session audits need review"); renderProgram(); return false; }
   const approvedAt = new Date().toISOString(), approvedBy = currentAccountIdentity().displayName; sessions.forEach((session) => { session.approval = { ...(session.approval || {}),status:"approved",approvedAt,approvedBy,auditScore:session.audit.score }; }); currentProgram.approval = { status:"approved",approvedAt,approvedBy }; currentProgram.lifecycle = "approved"; programAssignmentNotice = "";
-  renderProgram(); syncProgramActionControls(); showToast("Coach approved the program · assignment controls are now unlocked"); return true;
+  const saved = saveCurrentProgram(true) || currentProgram, synced = syncApprovedProgramToAssignments(saved);
+  renderProgram(); syncProgramActionControls(); showToast("Coach approved and saved the program" + (synced ? " · " + synced + " not-yet-started assignment" + (synced === 1 ? " was" : "s were") + " updated" : " · assignment controls are now unlocked")); return true;
 }
 function saveCurrentProgram(silent) {
   if (!requireTrainerMutation("save programs to client records")) return null;
@@ -9239,7 +9664,7 @@ function buildReadinessSession() {
     client: ready.client, profileId:profile && profile.id || "",
     goal: recoveryOnly ? "recovery" : plannedGoal,
     experience: Number(byId("readyExp").value), age: Math.max(18, Math.min(90, Math.round(numberFrom("readyAge", 30)))),
-    minutes: Number(byId("readyMinutes").value), muscles: recoveryOnly ? [] : READINESS_FOCUS[byId("readyFocus").value], injuries: [...(profile && profile.injuries || [])], zones: [...(profile && profile.zones || [])], trainingPhase:profile && profile.trainingPhase || "general", sport:profile && profile.sport || "", sportSchedule:profile && profile.sportSchedule || "", competitionDate:profile && profile.competitionDate || "", exercisePreferences:{ ...(profile && profile.exercisePreferences || {}) }, phaseCompoundAnchors:{ ...(profile && profile.phaseCompoundAnchors || {}) },
+    minutes: Number(byId("readyMinutes").value), muscles: recoveryOnly ? [] : READINESS_FOCUS[byId("readyFocus").value], injuries: [...(profile && profile.injuries || [])], limitationAssessments:JSON.parse(JSON.stringify(profile && profile.limitationAssessments || {})), zones: [...(profile && profile.zones || [])], trainingPhase:profile && profile.trainingPhase || "general", sport:profile && profile.sport || "", sportSchedule:profile && profile.sportSchedule || "", competitionDate:profile && profile.competitionDate || "", exercisePreferences:{ ...(profile && profile.exercisePreferences || {}) }, exercisePrescriptions:{ ...(profile && profile.exercisePrescriptions || {}) }, exerciseSubstitutions:{ ...(profile && profile.exerciseSubstitutions || {}) }, phaseCompoundAnchors:{ ...(profile && profile.phaseCompoundAnchors || {}) },
   };
   let session = buildSession(spec, Math.floor(Date.now() / 1000) % 100000);
   session = tuneSessionForReadiness(session, ready);
@@ -9757,7 +10182,11 @@ function profileRecordFromTarget(target, name, username) {
     muscles: [...(target.muscles || [])], injuries: [...(target.injuries || [])], manualInjuries:[...(target.injuries || [])], zones: [...(target.zones || [])],
     trainingPhase:target.trainingPhase || "general", availableDays:Number(target.availableDays) || 3, trainingDays:inferredTrainingDays(target,Number(target.availableDays) || 3),
     sport:String(target.sport || "").trim(), sportSchedule:String(target.sportSchedule || "").trim(), competitionDate:target.competitionDate || "",
-    exercisePreferences:{ ...(target.exercisePreferences || {}) }, phaseCompoundAnchors:{ ...(target.phaseCompoundAnchors || {}) },
+    exercisePreferences:{ ...(target.exercisePreferences || {}) },
+    exercisePrescriptions:{ ...(target.exercisePrescriptions || {}) },
+    exerciseSubstitutions:{ ...(target.exerciseSubstitutions || {}) },
+    limitationAssessments:JSON.parse(JSON.stringify(target.limitationAssessments || {})),
+    phaseCompoundAnchors:{ ...(target.phaseCompoundAnchors || {}) },
   };
 }
 function createClientProfile(record) {
@@ -9818,7 +10247,8 @@ function updateClientProfile(profileId, updates) {
     schedule:{...(previousIntake.schedule || {}),daysPerWeek:availableDays,sessionMinutes:Number(updates.minutes) || Number(previous.minutes) || 60,trainingDays:trainingDays.length ? [...trainingDays] : inferredTrainingDays(previous,availableDays)},
     equipmentZones:[...(updates.zones || previous.zones || [])],updatedAt:now,lastEditorRole:"trainer"
   } : previousIntake;
-  const next = profileWithIntakeFilters({ ...previous, ...updates, name, username, goals: goals.length ? goals : ["general"], trainingStyle:updates.trainingStyle || previous.trainingStyle || "auto", cardioMode:cardioModes[0], cardioModes, experience: Number(updates.experience) || 1, age: Number(updates.age) || 30, minutes: Number(updates.minutes) || 60, muscles: [...(updates.muscles || previous.muscles || [])], injuries:trainerInjuries,manualInjuries:trainerInjuries,zones: [...(updates.zones || previous.zones || [])], trainingPhase:updates.trainingPhase || previous.trainingPhase || "general", phaseStartedAt:phaseChanged ? now : previous.phaseStartedAt || previous.updatedAt || now, availableDays, trainingDays:trainingDays.length ? trainingDays : inferredTrainingDays(previous,availableDays), sport:String(updates.sport != null ? updates.sport : previous.sport || "").trim(), sportSchedule:String(updates.sportSchedule != null ? updates.sportSchedule : previous.sportSchedule || "").trim(), competitionDate:updates.competitionDate != null ? updates.competitionDate : previous.competitionDate || "", exercisePreferences:{ ...(updates.exercisePreferences || previous.exercisePreferences || {}) }, phaseCompoundAnchors:phaseChanged ? {} : { ...(updates.phaseCompoundAnchors || previous.phaseCompoundAnchors || {}) }, intake:syncedIntake,updatedAt:now });
+  const limitationAssessments = Object.fromEntries(trainerInjuries.map((tag) => [tag,normalizedLimitationAssessment(updates.limitationAssessments && updates.limitationAssessments[tag] || previous.limitationAssessments && previous.limitationAssessments[tag])]));
+  const next = profileWithIntakeFilters({ ...previous, ...updates, name, username, goals: goals.length ? goals : ["general"], trainingStyle:updates.trainingStyle || previous.trainingStyle || "auto", cardioMode:cardioModes[0], cardioModes, experience: Number(updates.experience) || 1, age: Number(updates.age) || 30, minutes: Number(updates.minutes) || 60, muscles: [...(updates.muscles || previous.muscles || [])], injuries:trainerInjuries,manualInjuries:trainerInjuries,limitationAssessments,zones: [...(updates.zones || previous.zones || [])], trainingPhase:updates.trainingPhase || previous.trainingPhase || "general", phaseStartedAt:phaseChanged ? now : previous.phaseStartedAt || previous.updatedAt || now, availableDays, trainingDays:trainingDays.length ? trainingDays : inferredTrainingDays(previous,availableDays), sport:String(updates.sport != null ? updates.sport : previous.sport || "").trim(), sportSchedule:String(updates.sportSchedule != null ? updates.sportSchedule : previous.sportSchedule || "").trim(), competitionDate:updates.competitionDate != null ? updates.competitionDate : previous.competitionDate || "", exercisePreferences:{ ...(updates.exercisePreferences || previous.exercisePreferences || {}) }, exercisePrescriptions:{ ...(updates.exercisePrescriptions || previous.exercisePrescriptions || {}) },exerciseSubstitutions:{ ...(updates.exerciseSubstitutions || previous.exerciseSubstitutions || {}) }, phaseCompoundAnchors:phaseChanged ? {} : { ...(updates.phaseCompoundAnchors || previous.phaseCompoundAnchors || {}) }, intake:syncedIntake,updatedAt:now });
   profiles[index] = next; if (!writeProfiles(profiles)) return null;
   if (!clientMatches(previous.name, next.name) || previous.name !== next.name) {
     const entries = loadProgress(); entries.forEach((entry) => { if (clientMatches(entry.client, previous.name)) entry.client = next.name; }); writeProgress(entries);
@@ -9831,7 +10261,7 @@ function updateClientProfile(profileId, updates) {
     const automationAlerts = loadAutomationAlerts(); automationAlerts.forEach((item) => { if (item.profileId === profileId || clientMatches(item.client,previous.name)) item.client = next.name; }); writeLocalArray(AUTOMATION_ALERTS_KEY,automationAlerts,500);
     if (clientMatches(selectedTrainerClient, previous.name)) selectedTrainerClient = next.name;
   }
-  [state.solo,state.p1,state.p2].forEach((target) => { if (target && target.profileId === profileId) Object.assign(target, { profileId: next.id, client: next.name, username: next.username, goal: next.goals[0], goals: [...next.goals], trainingStyle:next.trainingStyle || "auto", cardioMode:next.cardioMode || "any", cardioModes:normalizeCardioPreferences(next.cardioModes || next.cardioMode), coachAdjustment:next.coachAdjustment ? { ...next.coachAdjustment } : null, experience: next.experience, age: next.age, minutes: next.minutes, muscles: [...next.muscles], injuries: [...next.injuries], zones: [...next.zones], trainingPhase:next.trainingPhase || "general", phaseStartedAt:next.phaseStartedAt || "", availableDays:Number(next.availableDays) || 3, sport:next.sport || "", sportSchedule:next.sportSchedule || "", competitionDate:next.competitionDate || "", exercisePreferences:{ ...(next.exercisePreferences || {}) }, phaseCompoundAnchors:{ ...(next.phaseCompoundAnchors || {}) } }); });
+  [state.solo,state.p1,state.p2].forEach((target) => { if (target && target.profileId === profileId) Object.assign(target, { profileId: next.id, client: next.name, username: next.username, goal: next.goals[0], goals: [...next.goals], trainingStyle:next.trainingStyle || "auto", cardioMode:next.cardioMode || "any", cardioModes:normalizeCardioPreferences(next.cardioModes || next.cardioMode), coachAdjustment:next.coachAdjustment ? { ...next.coachAdjustment } : null, experience: next.experience, age: next.age, minutes: next.minutes, muscles: [...next.muscles], injuries: [...next.injuries], limitationAssessments:{...(next.limitationAssessments || {})}, zones: [...next.zones], trainingPhase:next.trainingPhase || "general", phaseStartedAt:next.phaseStartedAt || "", availableDays:Number(next.availableDays) || 3, sport:next.sport || "", sportSchedule:next.sportSchedule || "", competitionDate:next.competitionDate || "", exercisePreferences:{ ...(next.exercisePreferences || {}) }, exercisePrescriptions:{...(next.exercisePrescriptions || {})}, exerciseSubstitutions:{...(next.exerciseSubstitutions || {})}, phaseCompoundAnchors:{ ...(next.phaseCompoundAnchors || {}) } }); });
   return next;
 }
 function renderProfileEditorChoices() {
@@ -9839,9 +10269,33 @@ function renderProfileEditorChoices() {
   groups.forEach(([id,key,items,labels]) => { const container = byId(id); if (!container) return; container.innerHTML = items.map((value) => '<button type="button" class="profile-editor-choice' + (profileEditorDraft[key].includes(value) ? ' on' : '') + '" aria-pressed="' + profileEditorDraft[key].includes(value) + '" onclick="toggleProfileEditorChoice(\'' + key + '\',\'' + value + '\')">' + escapeHtml(labels[value] || value) + '</button>').join(""); });
   const cardio = byId("profileEditCardioChips"); if (cardio) cardio.innerHTML = multiChoiceButtonsHtml(cardioChoiceEntries(),profileEditorDraft.cardioModes || ["any"],"toggleProfileEditorCardio");
   const days = byId("profileEditTrainingDays"); if (days) days.innerHTML = multiChoiceButtonsHtml(TRAINING_WEEKDAYS.map(([value,label]) => [String(value),label]),(profileEditorDraft.trainingDays || []).map(String),"toggleProfileEditorTrainingDay");
+  renderProfileLimitationAssessments();
 }
 function toggleProfileEditorChoice(key, value) {
-  if (!profileEditorDraft[key]) return; const index = profileEditorDraft[key].indexOf(value); if (index >= 0) profileEditorDraft[key].splice(index,1); else profileEditorDraft[key].push(value); renderProfileEditorChoices();
+  if (!profileEditorDraft[key]) return; const index = profileEditorDraft[key].indexOf(value); if (index >= 0) { profileEditorDraft[key].splice(index,1); if (key === "injuries" && profileEditorDraft.limitationAssessments) delete profileEditorDraft.limitationAssessments[value]; } else { profileEditorDraft[key].push(value); if (key === "injuries") profileEditorDraft.limitationAssessments[value] = normalizedLimitationAssessment(value === "medicalhold" ? {severity:"severe",ability:"cannot",decision:"hold"} : {}); } renderProfileEditorChoices();
+}
+function renderProfileLimitationAssessments() {
+  const list = byId("profileLimitationAssessments"); if (!list) return;
+  const selected = profileEditorDraft.injuries || [], assessments = profileEditorDraft.limitationAssessments || (profileEditorDraft.limitationAssessments = {});
+  if (!selected.length) { list.innerHTML = '<div class="lookup-note">No current limitation selected.</div>'; return; }
+  list.innerHTML = selected.map((tag) => {
+    const item = normalizedLimitationAssessment(assessments[tag]), absolute = tag === "medicalhold" || item.severity === "severe" || item.ability === "cannot" || item.decision === "hold";
+    assessments[tag] = item;
+    return '<article class="limitation-assessment-card"><div class="limitation-assessment-head"><b>' + escapeHtml(INJURY_LABELS[tag] || tag) + '</b><span>' + (absolute ? 'Hard stop' : item.decision === 'allow' ? 'Trial allowed' : item.decision === 'modified' ? 'Modified trial' : 'Filtered') + '</span></div><div class="limitation-assessment-grid">'
+      + '<div class="compact-field"><label>Current severity</label><select onchange="setProfileLimitationAssessment(\'' + tag + '\',\'severity\',this.value)"><option value="mild"' + (item.severity === 'mild' ? ' selected' : '') + '>Mild / occasional</option><option value="moderate"' + (item.severity === 'moderate' ? ' selected' : '') + '>Moderate / needs modification</option><option value="severe"' + (item.severity === 'severe' ? ' selected' : '') + '>Severe, worsening, or changes movement</option></select></div>'
+      + '<div class="compact-field"><label>Client says they can</label><select onchange="setProfileLimitationAssessment(\'' + tag + '\',\'ability\',this.value)"><option value="normal"' + (item.ability === 'normal' ? ' selected' : '') + '>Move normally</option><option value="modified"' + (item.ability === 'modified' ? ' selected' : '') + '>Move with modification</option><option value="cannot"' + (item.ability === 'cannot' ? ' selected' : '') + '>Cannot do this pattern now</option></select></div>'
+      + '<div class="compact-field"><label>Trainer decision</label><select onchange="setProfileLimitationAssessment(\'' + tag + '\',\'decision\',this.value)"><option value="avoid"' + (item.decision === 'avoid' ? ' selected' : '') + '>Keep filtered out</option><option value="modified"' + (item.decision === 'modified' ? ' selected' : '') + '>Allow only documented modified exercises</option><option value="allow"' + (item.decision === 'allow' ? ' selected' : '') + '>Allow a coached normal trial</option><option value="hold"' + (item.decision === 'hold' ? ' selected' : '') + '>Hold / seek qualified guidance</option></select></div>'
+      + '<div class="compact-field wide"><label>What is tolerated, what aggravates it, and coaching modifications</label><input type="text" value="' + escapeHtml(item.note) + '" onchange="setProfileLimitationAssessment(\'' + tag + '\',\'note\',this.value)" placeholder="Example: box squat to comfortable depth; avoid twisting under load"></div></div>'
+      + '<div class="limitation-assessment-warning ' + (absolute ? 'hard' : '') + '">' + (absolute ? 'This remains a hard stop. A client’s confidence cannot clear severe, movement-changing, or medically held activity.' : item.decision === 'allow' ? 'The generator may use this area only because the trainer documented mild severity, normal movement, and an approved trial. Reassess if symptoms change.' : item.decision === 'modified' ? 'The generator still filters conflicts. A trainer can approve a specific modified exercise with a visible override and reason.' : 'Conflicting exercises stay filtered through warm-up, work sets, conditioning, and cool-down.') + '</div></article>';
+  }).join('');
+}
+function setProfileLimitationAssessment(tag,key,value) {
+  if (!profileEditorDraft.limitationAssessments) profileEditorDraft.limitationAssessments = {};
+  const item = normalizedLimitationAssessment(profileEditorDraft.limitationAssessments[tag]); item[key] = value;
+  if (tag === "medicalhold") { item.severity = "severe"; item.ability = "cannot"; item.decision = "hold"; }
+  if ((item.severity === "severe" || item.ability === "cannot") && item.decision === "allow") item.decision = "hold";
+  item.reviewedAt = new Date().toISOString(); item.reviewedBy = currentAccountIdentity().displayName;
+  profileEditorDraft.limitationAssessments[tag] = item; renderProfileLimitationAssessments();
 }
 function toggleProfileEditorCardio(value) {
   profileEditorDraft.cardioModes = normalizeCardioPreferences(toggleMultiChoiceValue(profileEditorDraft.cardioModes,value,true)); renderProfileEditorChoices();
@@ -9886,7 +10340,7 @@ function setProfileEditorDeleteControls(visible) {
 }
 function openCreateProfileEditor() {
   if (!requireTrainerMutation("create client profiles")) return null;
-  profileEditorTarget = null; profileEditorDraft = { muscles:[],injuries:[],zones:[],preferences:{},cardioModes:["any"],trainingDays:[1,3,5] };
+  profileEditorTarget = null; profileEditorDraft = { muscles:[],injuries:[],zones:[],preferences:{},cardioModes:["any"],trainingDays:[1,3,5],limitationAssessments:{} };
   prepareProfileEditorMenus(); byId("profileEditId").value = ""; byId("profileEditName").value = ""; byId("profileEditUsername").value = ""; byId("profileEditEmail").value = "";
   byId("profileEditPrimary").value = "general"; byId("profileEditSecondary").value = ""; byId("profileEditStyle").value = "auto";
   byId("profileEditExperience").value = "1"; byId("profileEditAge").value = "30"; byId("profileEditMinutes").value = "60"; byId("profileEditPhase").value = "general"; byId("profileEditDays").value = "3";
@@ -9897,7 +10351,7 @@ function openCreateProfileEditor() {
 function openProfileEditor(profileId, target) {
   if (!requireTrainerMutation("edit client profiles")) return null;
   const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) { showToast("Choose a saved profile to edit"); return; }
-  profileEditorTarget = target || null; profileEditorDraft = { muscles: [...(profile.muscles || [])], injuries: [...(profile.injuries || [])], zones: [...(profile.zones || [])], preferences:{ ...(profile.exercisePreferences || {}) },cardioModes:normalizeCardioPreferences(profile.cardioModes || profile.cardioMode),trainingDays:inferredTrainingDays(profile,profile.availableDays || 3) };
+  profileEditorTarget = target || null; profileEditorDraft = { muscles: [...(profile.muscles || [])], injuries: [...(profile.injuries || [])], zones: [...(profile.zones || [])], preferences:{ ...(profile.exercisePreferences || {}) },cardioModes:normalizeCardioPreferences(profile.cardioModes || profile.cardioMode),trainingDays:inferredTrainingDays(profile,profile.availableDays || 3),limitationAssessments:JSON.parse(JSON.stringify(profile.limitationAssessments || {})) };
   byId("profileEditId").value = profile.id; byId("profileEditName").value = profile.name; byId("profileEditUsername").value = profileUsername(profile); byId("profileEditEmail").value = profile.email || "";
   prepareProfileEditorMenus();
   byId("profileEditPrimary").value = profile.goals && profile.goals[0] || "general"; byId("profileEditSecondary").value = profile.goals && profile.goals[1] || "";
@@ -9908,16 +10362,121 @@ function openProfileEditor(profileId, target) {
   renderProfileEditorChoices(); renderProfileExercisePreferences(); byId("profileEditorTitle").textContent = "Edit " + profile.name; byId("profileEditorCopy").textContent = "Change the client’s basic setup here. Renaming a client also updates their saved workout history, InBody scans, and optional body goals."; byId("profileEditorSaveBtn").textContent = "Save changes"; setProfileEditorDeleteControls(true); byId("profileEditorModal").classList.add("open");
 }
 function closeProfileEditor() { byId("profileEditorModal").classList.remove("open"); profileEditorTarget = null; }
+let profileImpactState = null;
+function comparableProfileValue(value) {
+  if (Array.isArray(value)) return [...value].map(String).sort();
+  if (value && typeof value === "object") return Object.keys(value).sort().reduce((out,key) => { out[key] = comparableProfileValue(value[key]); return out; },{});
+  return value == null ? "" : value;
+}
+function profileProgrammingChanges(previous,next) {
+  if (!previous || !next) return [];
+  const fields = [
+    ["goals","Goals"],["trainingStyle","Training route"],["cardioModes","Cardio equipment"],
+    ["experience","Experience"],["age","Age"],["minutes","Session length"],
+    ["muscles","Muscle emphasis"],["injuries","Limitations"],["limitationAssessments","Limitation severity / permission"],
+    ["zones","Available equipment"],["availableDays","Days per week"],["trainingDays","Training days"],
+  ];
+  return fields.filter(([key]) => JSON.stringify(comparableProfileValue(previous[key])) !== JSON.stringify(comparableProfileValue(next[key]))).map(([key,label]) => ({key,label}));
+}
+function profileSessionSpec(session,profile) {
+  const spec = safetySpecForProfile(session,profile);
+  return {
+    ...spec,goal:profile.goals && profile.goals[0] || spec.goal || "general",goals:[...(profile.goals || spec.goals || [spec.goal || "general"])],
+    trainingStyle:profile.trainingStyle || spec.trainingStyle || "auto",minutes:Number(profile.minutes || spec.minutes || 60),
+    availableDays:Number(profile.availableDays || spec.availableDays || 3),muscles:[...(profile.muscles || spec.muscles || [])],
+    trainingPhase:profile.trainingPhase || spec.trainingPhase || "general",exercisePrescriptions:{...(profile.exercisePrescriptions || {})},
+    exerciseSubstitutions:{...(profile.exerciseSubstitutions || {})},baselineContext:baselineGeneratorContext(profile),
+  };
+}
+function safeProfileReplacement(session,block,exercise,profile,used) {
+  const spec = profileSessionSpec(session,profile), needsAnchor = block.key === "strength" && isPrimaryAnchor(exercise), calibration = Array.isArray(exercise.baselineDomains) && exercise.baselineDomains.length;
+  return LIBRARY.filter((candidate) => !used.has(candidate.name) && candidate.name !== exercise.name)
+    .filter((candidate) => candidate.pattern === exercise.pattern)
+    .filter((candidate) => !needsAnchor || isPrimaryAnchor(candidate))
+    .filter((candidate) => !calibration || candidate.pattern === exercise.pattern)
+    .filter((candidate) => !hardExerciseSafetyIssues(candidate,spec).length)
+    .sort((a,b) => Number(b.region === exercise.region) - Number(a.region === exercise.region) || Number(a.exp || 1) - Number(b.exp || 1) || a.name.localeCompare(b.name))[0] || null;
+}
+function repairSessionForProfile(session,profile) {
+  const copy = JSON.parse(JSON.stringify(session || {})), changes = [], unresolved = [];
+  copy.spec = profileSessionSpec(copy,profile);
+  const used = new Set((copy.blocks || []).flatMap((block) => (block.items || []).map((exercise) => exercise.name)));
+  (copy.blocks || []).forEach((block) => {
+    (block.items || []).forEach((exercise,index) => {
+      const issues = hardExerciseSafetyIssues(exercise,copy.spec);
+      if (!issues.length) return;
+      const replacement = safeProfileReplacement(copy,block,exercise,profile,used);
+      if (!replacement) { unresolved.push(exercise.name + ": " + issues.map((issue) => issue.label).join(", ")); return; }
+      const retained = {
+        rx:{...(exercise.rx || block.rx || {})},baselineDomains:exercise.baselineDomains,baselineRequired:exercise.baselineRequired,
+        baselinePlanId:exercise.baselinePlanId,baselineSessionNumber:exercise.baselineSessionNumber,baselineProtocol:exercise.baselineProtocol,baselineMeasure:exercise.baselineMeasure,baselineMeasureLabel:exercise.baselineMeasureLabel,
+      };
+      used.delete(exercise.name); used.add(replacement.name);
+      block.items[index] = {...replacement,...Object.fromEntries(Object.entries(retained).filter(([,value]) => value != null))};
+      changes.push(exercise.name + " → " + replacement.name);
+    });
+    rebuildBlockGroups(block);
+  });
+  if (unresolved.length) return {ok:false,session:copy,changes,unresolved};
+  normalizeSessionBlockOrder(copy); enrichSessionMetadata(copy); copy.audit = auditWorkout(copy);
+  if (!copy.audit.pass) return {ok:false,session:copy,changes,unresolved:[...(copy.audit.safety || ["Workout audit did not pass"]) ]};
+  return {ok:true,session:copy,changes,unresolved:[]};
+}
+function openProfileImpactReview(previous,profile,changes) {
+  const assigned = loadAssignedWorkouts().filter((item) => item.profileId === profile.id && assignmentStatus(item) === "assigned");
+  const currentMatches = currentProgram && (currentProgram.profileId === profile.id || currentProgram.setup && currentProgram.setup.profileId === profile.id);
+  profileImpactState = {previous,profile,changes,assignmentIds:assigned.map((item) => item.id),currentMatches};
+  byId("profileImpactSummary").innerHTML = '<b>Changed:</b> ' + escapeHtml(changes.map((item) => item.label).join(" · ")) + '<br><span>Selected items will be re-audited against the new profile. Unsafe exercises are replaced only with a same-pattern safe option. Goal changes do not silently redesign a program—regenerate it when the training goal itself changed.</span>';
+  const items = [];
+  if (currentMatches) items.push('<label class="profile-impact-check"><input type="checkbox" data-impact-kind="current" checked><span><b>Current program draft</b><small>Update its profile filters, repair conflicts, and require coach reapproval.</small></span></label>');
+  assigned.forEach((item) => items.push('<label class="profile-impact-check"><input type="checkbox" data-impact-kind="assignment" data-impact-id="' + escapeHtml(item.id) + '" checked><span><b>' + escapeHtml(item.programDayName || item.session && item.session.data && item.session.data.goalLabel || "Assigned workout") + '</b><small>' + escapeHtml(item.scheduledDate || "Not yet started") + ' · completed and in-progress work is excluded.</small></span></label>'));
+  if (!items.length) items.push('<div class="lookup-note">No draft or not-yet-started workouts need review. Completed history was left unchanged.</div>');
+  byId("profileImpactItems").innerHTML = items.join(""); byId("profileImpactModal").classList.add("open");
+}
+function closeProfileImpactModal() { if (byId("profileImpactModal")) byId("profileImpactModal").classList.remove("open"); profileImpactState = null; }
+function applyProfileImpactUpdates() {
+  if (!requireTrainerMutation("update unfinished programming after profile changes") || !profileImpactState) return false;
+  const profile = loadProfiles().find((item) => item.id === profileImpactState.profile.id) || profileImpactState.profile;
+  const selected = [...byId("profileImpactItems").querySelectorAll('input[type="checkbox"]:checked')], problems = [], applied = [];
+  if (selected.some((input) => input.dataset.impactKind === "current") && currentProgram) {
+    const repaired = currentProgram.weeks.flatMap((week) => (week.days || []).map((day) => ({day,result:repairSessionForProfile(day.session,profile)})));
+    const failed = repaired.filter((item) => !item.result.ok);
+    if (failed.length) problems.push("Current program: " + failed.flatMap((item) => item.result.unresolved).slice(0,3).join(" · "));
+    else {
+      repaired.forEach((item) => { item.day.session = item.result.session; });
+      currentProgram.setup = {...currentProgram.setup,...profileSessionSpec({spec:currentProgram.setup},profile)};
+      markCurrentProgramDraft("Client profile changed; unfinished programming was re-audited"); applied.push("current program"); renderProgram();
+    }
+  }
+  const assignmentIds = new Set(selected.filter((input) => input.dataset.impactKind === "assignment").map((input) => input.dataset.impactId)), assignments = loadAssignedWorkouts();
+  assignmentIds.forEach((id) => {
+    const index = assignments.findIndex((item) => item.id === id && assignmentStatus(item) === "assigned"); if (index < 0) return;
+    const plan = workoutPlans(assignments[index].session)[0], repaired = plan && repairSessionForProfile(plan.session,profile);
+    if (!repaired || !repaired.ok) { problems.push((assignments[index].programDayName || "Assigned workout") + ": " + ((repaired && repaired.unresolved || ["could not be audited"]).slice(0,2).join(" · "))); return; }
+    repaired.session.approval = {status:"approved",approvedAt:new Date().toISOString(),approvedBy:currentAccountIdentity().displayName,reason:"Profile-impact review"};
+    if (assignments[index].session.type === "solo") assignments[index].session.data = repaired.session;
+    else if (assignments[index].session.data && assignments[index].session.data.a && assignments[index].session.data.a.sessionId === plan.session.sessionId) assignments[index].session.data.a = repaired.session;
+    else if (assignments[index].session.data) assignments[index].session.data.b = repaired.session;
+    assignments[index].profileImpactUpdatedAt = new Date().toISOString(); assignments[index].profileImpactUpdatedBy = currentAccountIdentity().displayName; applied.push(assignments[index].programDayName || "assigned workout");
+  });
+  if (assignmentIds.size) writeAssignedWorkouts(assignments);
+  if (problems.length) { byId("profileImpactSummary").innerHTML = '<b>Some selected work could not be changed safely.</b><br>' + escapeHtml(problems.join(" · ")); showToast("Profile saved, but some workout updates need manual coach review"); return false; }
+  closeProfileImpactModal(); showToast(applied.length ? "Updated " + applied.length + " unfinished programming item" + (applied.length === 1 ? "" : "s") : "Profile saved; existing workouts kept unchanged"); return true;
+}
 function saveProfileEditor() {
   if (!requireTrainerMutation("edit client profiles")) return null;
   const profileId = byId("profileEditId").value, goals = [byId("profileEditPrimary").value,byId("profileEditSecondary").value].filter(Boolean);
   const cardioModes = normalizeCardioPreferences(profileEditorDraft.cardioModes);
   const trainerSelect = byId('profileEditTrainer'), trainerOption = trainerSelect && trainerSelect.selectedOptions[0];
-  const updates = { name: byId("profileEditName").value, username: byId("profileEditUsername").value, email:byId("profileEditEmail").value.trim().toLowerCase(), goals, trainingStyle:byId("profileEditStyle").value, cardioMode:cardioModes[0], cardioModes, experience: Number(byId("profileEditExperience").value), age: Number(byId("profileEditAge").value), minutes: Number(byId("profileEditMinutes").value), muscles: [...profileEditorDraft.muscles], injuries: [...profileEditorDraft.injuries], zones: [...profileEditorDraft.zones], trainingPhase:byId("profileEditPhase").value, availableDays:Number(byId("profileEditDays").value), trainingDays:[...(profileEditorDraft.trainingDays || [])], sport:byId("profileEditSport").value, sportSchedule:byId("profileEditSchedule").value, competitionDate:byId("profileEditCompetition").value, exercisePreferences:{ ...profileEditorDraft.preferences }, assignedTrainerId:trainerSelect ? trainerSelect.value : '', assignedTrainerName:trainerOption && trainerSelect.value ? trainerOption.dataset.name || trainerOption.textContent.split(' · ')[0] : '', assignedTrainerEmail:trainerOption && trainerSelect.value ? trainerOption.dataset.email || '' : '' };
-  const creating = !profileId, profile = creating ? createClientProfile(updates) : updateClientProfile(profileId,updates);
+  const updates = { name: byId("profileEditName").value, username: byId("profileEditUsername").value, email:byId("profileEditEmail").value.trim().toLowerCase(), goals, trainingStyle:byId("profileEditStyle").value, cardioMode:cardioModes[0], cardioModes, experience: Number(byId("profileEditExperience").value), age: Number(byId("profileEditAge").value), minutes: Number(byId("profileEditMinutes").value), muscles: [...profileEditorDraft.muscles], injuries: [...profileEditorDraft.injuries], limitationAssessments:JSON.parse(JSON.stringify(profileEditorDraft.limitationAssessments || {})), zones: [...profileEditorDraft.zones], trainingPhase:byId("profileEditPhase").value, availableDays:Number(byId("profileEditDays").value), trainingDays:[...(profileEditorDraft.trainingDays || [])], sport:byId("profileEditSport").value, sportSchedule:byId("profileEditSchedule").value, competitionDate:byId("profileEditCompetition").value, exercisePreferences:{ ...profileEditorDraft.preferences }, assignedTrainerId:trainerSelect ? trainerSelect.value : '', assignedTrainerName:trainerOption && trainerSelect.value ? trainerOption.dataset.name || trainerOption.textContent.split(' · ')[0] : '', assignedTrainerEmail:trainerOption && trainerSelect.value ? trainerOption.dataset.email || '' : '' };
+  const creating = !profileId, previous = creating ? null : loadProfiles().find((item) => item.id === profileId), profile = creating ? createClientProfile(updates) : updateClientProfile(profileId,updates);
   if (!profile) return null;
+  const programmingChanges = creating ? [] : profileProgrammingChanges(previous,profile);
   if (profileEditorTarget) loadProfileIntoTarget(profile,profileEditorTarget);
-  byId("profileEditorModal").classList.remove("open"); profileEditorTarget = null; refreshProfileSelects(); renderForms(); renderTrainerHub(profile.name); showToast(creating ? "Created " + profile.name + " without assigning a workout or program" : "Updated " + profile.name + " and kept all connected history"); return profile;
+  byId("profileEditorModal").classList.remove("open"); profileEditorTarget = null; refreshProfileSelects(); renderForms(); renderTrainerHub(profile.name);
+  if (programmingChanges.length) { openProfileImpactReview(previous,profile,programmingChanges); showToast("Profile saved · review the effect on unfinished programming"); }
+  else showToast(creating ? "Created " + profile.name + " without assigning a workout or program" : "Updated " + profile.name + " and kept all connected history");
+  return profile;
 }
 function deleteClientProfile(profileId, target) {
   if (!requireTrainerMutation("delete client profiles")) return false;
@@ -9939,7 +10498,7 @@ function updateSelectedProgramProfileFromSetup() {
   if (!profile) { showToast("Choose a saved client profile first"); return null; }
   const cardioModes = normalizeCardioPreferences(programCardioModes), goals = [byId("programGoal").value,byId("programSecondaryGoal").value].filter((goal,index,list) => goal && list.indexOf(goal) === index).slice(0,2);
   const availableDays = Number(byId("programDays").value) || profile.availableDays || 3;
-  const updated = updateClientProfile(profile.id,{
+  const previous = JSON.parse(JSON.stringify(profile)), updated = updateClientProfile(profile.id,{
     name:profile.name,username:profile.username,email:profile.email,goals:goals.length ? goals : ["general"],
     trainingStyle:byId("programStyle").value || "auto",cardioMode:cardioModes[0],cardioModes,
     experience:Number(byId("programExp").value),age:Math.max(18,Math.min(90,Math.round(numberFrom("programAge",profile.age || 30)))),
@@ -9951,7 +10510,9 @@ function updateSelectedProgramProfileFromSetup() {
   });
   if (!updated) return null;
   selectProgramProfile(updated.id);
-  showToast("Updated " + updated.name + " from the program setup");
+  const changes = profileProgrammingChanges(previous,updated);
+  if (changes.length) { openProfileImpactReview(previous,updated,changes); showToast("Profile saved · review its impact on unfinished programming"); }
+  else showToast("Updated " + updated.name + " from the program setup");
   return updated;
 }
 function editSelectedProgramProfile() { const id = byId("programProfile").value; if (!id) { showToast("Choose a saved client profile first"); return; } openProfileEditor(id); }
@@ -11115,7 +11676,7 @@ function startNewClient() {
 function openSelectedClientSession() {
   const profile = trainerProfileFor(selectedTrainerClient);
   if (!profile) { state.solo.client = selectedTrainerClient; state.session = null; state.sessionOptions = []; renderForms(); setMode("solo"); openBuilder(); return; }
-  state.solo = { profileId: profile.id, client: profile.name, username: profileUsername(profile), goal: profile.goals[0] || "general", goals: [...(profile.goals || [])], trainingStyle:profile.trainingStyle || "auto", cardioMode:profile.cardioMode || "any", cardioModes:normalizeCardioPreferences(profile.cardioModes || profile.cardioMode), coachAdjustment:profile.coachAdjustment ? { ...profile.coachAdjustment } : null, readinessTrend:readinessTrendContext(profile), experience: profile.experience, age: profile.age, minutes: profile.minutes || 60, muscles: [...(profile.muscles || [])], injuries: [...(profile.injuries || [])], zones: [...(profile.zones || [])], trainingPhase:profile.trainingPhase || "general", phaseStartedAt:profile.phaseStartedAt || "", availableDays:Number(profile.availableDays) || 3, sport:profile.sport || "", sportSchedule:profile.sportSchedule || "", competitionDate:profile.competitionDate || "", exercisePreferences:{ ...(profile.exercisePreferences || {}) }, phaseCompoundAnchors:{ ...(profile.phaseCompoundAnchors || {}) } };
+  state.solo = { profileId: profile.id, client: profile.name, username: profileUsername(profile), goal: profile.goals[0] || "general", goals: [...(profile.goals || [])], trainingStyle:profile.trainingStyle || "auto", cardioMode:profile.cardioMode || "any", cardioModes:normalizeCardioPreferences(profile.cardioModes || profile.cardioMode), coachAdjustment:profile.coachAdjustment ? { ...profile.coachAdjustment } : null, readinessTrend:readinessTrendContext(profile), experience: profile.experience, age: profile.age, minutes: profile.minutes || 60, muscles: [...(profile.muscles || [])], injuries: [...(profile.injuries || [])], limitationAssessments:JSON.parse(JSON.stringify(profile.limitationAssessments || {})), zones: [...(profile.zones || [])], trainingPhase:profile.trainingPhase || "general", phaseStartedAt:profile.phaseStartedAt || "", availableDays:Number(profile.availableDays) || 3, sport:profile.sport || "", sportSchedule:profile.sportSchedule || "", competitionDate:profile.competitionDate || "", exercisePreferences:{ ...(profile.exercisePreferences || {}) }, exercisePrescriptions:{ ...(profile.exercisePrescriptions || {}) }, exerciseSubstitutions:{ ...(profile.exerciseSubstitutions || {}) }, phaseCompoundAnchors:{ ...(profile.phaseCompoundAnchors || {}) } };
   state.mode = "solo"; state.session = null; state.sessionOptions = []; renderForms(); setMode("solo"); openBuilder(); showToast("Loaded " + profile.name + " into a new session");
 }
 function openSelectedClientProgram() {

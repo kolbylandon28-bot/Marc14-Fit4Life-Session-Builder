@@ -15,7 +15,23 @@ GITHUB UPLOAD
 DO NOT upload the Supabase SQL files with this website package. SQL upgrades are run
 separately in Supabase's SQL Editor and are not browser assets.
 
-WHAT THIS BUILD HARDENS
+WHAT THIS BUILD ADDS AND HARDENS
+- Every generated workout—including calibration and starter workouts—uses the
+  same full editor for prescriptions, replacements, additions, supersets,
+  exercise order, phase order, phase details, and workout details.
+- Every program edit requires an explicit scope and keeps an auditable coach reason.
+- Calibration ownership must be transferred, reassigned, or deliberately removed;
+  it cannot disappear silently when an exercise or phase changes.
+- Strength calibration includes safe, submaximal bench, squat, and deadlift anchors when
+  the client's equipment, schedule, experience, and safety filters permit them.
+- Limitation records distinguish severity, current client-reported ability, and
+  the trainer's decision. Reviewed mild trials can be used; severe and medical
+  holds remain hard stops.
+- Profile changes show a downstream impact preview before updating a current
+  draft or any not-yet-started assignment. Started and completed records stay intact.
+- Approved program edits synchronize into matching not-yet-started assignments.
+- Exercise replacements now update the exact visible program row and are checked
+  across all selected weeks before the interface reports success.
 - Every assignment in a multiweek program is synchronized.
 - Assignment state and date-keyed habits are synchronized.
 - Conflicting cross-device saves use record versions and merge before retrying.
