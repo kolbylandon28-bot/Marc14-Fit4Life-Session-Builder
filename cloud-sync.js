@@ -347,7 +347,7 @@
     const copy = {
       signin: ["Sign in to your workspace", "Access your workouts and progress from any device."],
       signup: ["Create your client account", "Verify the message sent to your email, then sign in to the client workspace."],
-      trainer_signup: ["Request trainer access", "Create a verified login, then wait for an approved gym trainer or owner to confirm trainer permissions."],
+      trainer_signup: ["Request trainer access", "Create a verified login, then wait for a gym owner to confirm trainer permissions."],
       reset: ["Reset your password", "We will email you a secure link to choose a new password."],
       update: ["Choose a new password", "Enter a new password for your training account."],
       pending: ["Account status", "Your secure login is active while your client access is reviewed."]
@@ -388,13 +388,13 @@
       setText("cloudPendingIcon", "✉");
       setText("cloudPendingTitle", "Check your email");
       setText("cloudPendingCopy", trainerRequest
-        ? "Open the verification email sent to your address. After verification, an approved gym trainer or owner can confirm access from the Trainer Access center."
+        ? "Open the verification email sent to your address. After verification, a gym owner can confirm access from the Owner Access center."
         : "Open the verification email sent to your address. After verification, return here and sign in to activate your client workspace.");
       setText("cloudPendingCheck", "I verified my email");
     } else if (trainerRequest) {
       setText("cloudPendingIcon", "⏳");
       setText("cloudPendingTitle", "Trainer approval pending");
-      setText("cloudPendingCopy", "Your email is verified. An approved gym trainer or owner must confirm this request before any client records become available.");
+      setText("cloudPendingCopy", "Your email is verified. A gym owner must confirm this request before any client records become available.");
       setText("cloudPendingCheck", "Check trainer approval");
     } else {
       setText("cloudPendingIcon", "✓");
@@ -1289,7 +1289,7 @@
     button.textContent = "Submit trainer request";
     if (response.error) {
       const message = /already|registered|exists/i.test(response.error.message || "")
-        ? "If this email already has an account, sign in or use Forgot password. An approved trainer or owner can confirm a pending request for that verified login."
+        ? "If this email already has an account, sign in or use Forgot password. A gym owner can confirm a pending request for that verified login."
         : response.error.message;
       authMessage(message, true);
       return false;
@@ -1370,7 +1370,7 @@
       showAuthMode("signin");
       if (pending.email) document.getElementById("cloudAuthEmail").value = pending.email;
       authMessage(pending.requested_role === "trainer"
-        ? "After verifying your email, sign in to check whether an approved gym trainer or owner confirmed trainer access."
+        ? "After verifying your email, sign in to check whether a gym owner confirmed trainer access."
         : "After verifying your email, sign in to activate the client workspace.", false);
       return false;
     }
@@ -1415,7 +1415,7 @@
   };
 
   window.fit4lifeCloudListTrainerRequests = async function fit4lifeCloudListTrainerRequests() {
-    if (!cloudClient || !cloudOrganizationId || !(cloudRole === "owner" || cloudRole === "trainer")) return [];
+    if (!cloudClient || !cloudOrganizationId || cloudRole !== "owner") return [];
     const response = await cloudClient
       .from("registration_requests")
       .select("id,user_id,email,full_name,requested_role,status,created_at,reviewed_by,reviewed_at,review_note")
@@ -1429,11 +1429,57 @@
   };
 
   window.fit4lifeCloudApproveTrainer = async function fit4lifeCloudApproveTrainer(email, displayName) {
-    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return { ok:false,message:"An approved trainer account is required to review trainer requests." };
+    if (!cloudClient || cloudRole !== "owner") return { ok:false,message:"Only a gym owner can approve trainer access." };
     const response = await cloudClient.rpc("approve_fit4life_trainer_account", { target_email:normalizedEmail(email),target_display_name:String(displayName || "").trim() });
     if (response.error) return { ok:false,message:response.error.message || "Trainer approval failed." };
     await window.fit4lifeCloudListTrainers();
     return { ok:true,data:response.data };
+  };
+
+  window.fit4lifeCloudGrantStaff = async function fit4lifeCloudGrantStaff(email, displayName, role) {
+    if (!cloudClient || cloudRole !== "owner") return { ok:false,message:"Only a gym owner can grant staff access." };
+    const cleanRole = role === "owner" ? "owner" : "trainer";
+    const response = await cloudClient.rpc("grant_fit4life_staff_account", {
+      target_email:normalizedEmail(email),
+      target_display_name:String(displayName || "").trim(),
+      target_role:cleanRole,
+      change_reason:"Owner granted " + cleanRole + " access from the Owner Access center"
+    });
+    if (response.error) return { ok:false,message:response.error.message || "Staff access could not be granted." };
+    await window.fit4lifeCloudListTrainers();
+    return { ok:true,data:response.data };
+  };
+
+  window.fit4lifeCloudSetStaffRole = async function fit4lifeCloudSetStaffRole(userId, role, reason) {
+    if (!cloudClient || cloudRole !== "owner") return { ok:false,message:"Only a gym owner can change staff roles." };
+    const cleanRole = role === "owner" ? "owner" : "trainer";
+    const response = await cloudClient.rpc("set_fit4life_staff_role", {
+      target_user:userId,
+      target_role:cleanRole,
+      change_reason:String(reason || "Owner changed staff role").trim()
+    });
+    if (response.error) return { ok:false,message:response.error.message || "The staff role could not be changed." };
+    await window.fit4lifeCloudListTrainers();
+    return { ok:true,data:response.data };
+  };
+
+  window.fit4lifeCloudSetStaffActive = async function fit4lifeCloudSetStaffActive(userId, active, reason) {
+    if (!cloudClient || cloudRole !== "owner") return { ok:false,message:"Only a gym owner can change staff access." };
+    const response = await cloudClient.rpc("set_fit4life_staff_active", {
+      target_user:userId,
+      target_active:Boolean(active),
+      change_reason:String(reason || (active ? "Owner reactivated staff access" : "Owner deactivated staff access")).trim()
+    });
+    if (response.error) return { ok:false,message:response.error.message || "Staff access could not be changed." };
+    await window.fit4lifeCloudListTrainers();
+    return { ok:true };
+  };
+
+  window.fit4lifeCloudListMembershipAudit = async function fit4lifeCloudListMembershipAudit() {
+    if (!cloudClient || cloudRole !== "owner") return [];
+    const response = await cloudClient.rpc("list_fit4life_membership_audit");
+    if (response.error) { console.error("Membership audit failed", response.error); return null; }
+    return Array.isArray(response.data) ? response.data : [];
   };
 
   window.fit4lifeCloudUpdateMyTrainerName = async function fit4lifeCloudUpdateMyTrainerName(displayName) {
@@ -1445,7 +1491,7 @@
   };
 
   window.fit4lifeCloudDeactivateTrainer = async function fit4lifeCloudDeactivateTrainer(userId) {
-    if (!cloudClient || cloudRole !== "owner") return { ok:false,message:"Only the owner can deactivate trainer accounts." };
+    if (!cloudClient || cloudRole !== "owner") return { ok:false,message:"Only a gym owner can deactivate trainer accounts." };
     const response = await cloudClient.rpc("deactivate_fit4life_trainer_account", { target_user:userId });
     if (response.error) return { ok:false,message:response.error.message || "Trainer deactivation failed." };
     await window.fit4lifeCloudListTrainers();
