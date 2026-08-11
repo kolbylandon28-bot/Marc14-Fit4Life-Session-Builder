@@ -1,55 +1,89 @@
-FIT4LIFE — CURRENT VERIFIED WEBSITE PACKAGE
-Build date: 2026-08-10
+FIT4LIFE — TOMORROW-READY TRAINER + CLIENT RELEASE
+Build date: 2026-08-11
 
-THIS is the current upload folder. Older ZIP files under outputs/ are historical releases.
+THIS FOLDER IS THE UPDATED WEBSITE PACKAGE.
+The source folder supplied for this update was preserved unchanged.
 
-GITHUB UPLOAD
-1. Open the main branch of the FIT4LIFE GitHub repository.
-2. Remove the previous website files only after keeping a backup.
-3. Upload the CONTENTS of this folder—not this outer folder as one nested directory.
-4. The repository root must show index.html, cloud-sync.js, sw.js,
-   manifest.webmanifest, both icon SVG files, the rock background,
-   vercel.json, and the api folder.
-5. Commit directly to main. Vercel should deploy the commit automatically.
+WHAT CHANGED
+- Sign-in now routes an approved trainer/owner directly to the Trainer workspace
+  and a client directly to the single client profile linked to that login.
+- Client sessions use a second local account-isolation boundary in addition to
+  Supabase row-level security. A client only accepts cloud records whose
+  auth_user_id matches the signed-in user.
+- Shared-device client logins clear the prior account's sensitive offline cache.
+- Trainer access remains a separate verified request that approved staff must confirm.
+- The dashboard attention queue now covers trainer requests, client account/profile
+  requests, next-workout requests, unanswered messages, workout reviews, check-ins,
+  pain/readiness concerns, progress receipts, recovery follow-ups, recognition,
+  inactive clients, and saved automation alerts.
+- Every attention item has a direct Open action. It routes to the exact client,
+  workout builder/review, message composer, check-in reply, access queue, receipt,
+  safety record, or coaching-support review that can resolve it.
+- Trainers assign one workout at a time. A not-started assignment is retained as
+  superseded history when replaced. A workout already in progress blocks another
+  assignment, and a completed workout must be reviewed before the next is assigned.
+- Clients can request their next workout. Assigning it automatically clears the request.
+- The visible multiweek Program and Onboarding workflows are removed from navigation.
+  Their stored legacy data and compatibility code are preserved for safe migration.
+- The trainer client page now has five sections: Overview, Workouts, Progress,
+  Communication, and Client details. The Overview starts with the next coaching action.
+- Workout history includes session results, planned/logged sets, effort, energy,
+  pain, notes, questions, substitutions, skips, changes, and coach feedback.
+- Destructive client-data controls are moved into a collapsed danger area.
+- The calendar is now a Monday–Sunday weekly schedule with Previous, Today, and Next
+  controls, exact assignment dates/statuses, an unscheduled-workout queue, and the
+  actionable coaching queue.
+- The PWA cache version was bumped and all local JavaScript/CSS shell assets are
+  explicitly included so deployed devices receive a consistent upgrade.
 
-DO NOT upload the Supabase SQL files with this website package. SQL upgrades are run
-separately in Supabase's SQL Editor and are not browser assets.
+GITHUB / VERCEL UPLOAD
+1. Keep a backup of the current production repository.
+2. Upload the CONTENTS of this folder to the repository root. Do not upload this
+   outer folder as a nested directory.
+3. Confirm the repository root contains index.html, styles.css, cloud-sync.js,
+   sw.js, manifest.webmanifest, vercel.json, the api folder, the js folder, icons,
+   and the rock-background assets.
+4. Commit to the branch connected to Vercel. This app has no build command.
+5. Wait for Vercel to show Ready, then open the production domain and hard-refresh
+   once so the new service worker replaces the prior cached shell.
 
-WHAT THIS BUILD ADDS AND HARDENS
-- Every generated workout—including calibration and starter workouts—uses the
-  same full editor for prescriptions, replacements, additions, supersets,
-  exercise order, phase order, phase details, and workout details.
-- Every program edit requires an explicit scope and keeps an auditable coach reason.
-- Calibration ownership must be transferred, reassigned, or deliberately removed;
-  it cannot disappear silently when an exercise or phase changes.
-- Strength calibration includes safe, submaximal bench, squat, and deadlift anchors when
-  the client's equipment, schedule, experience, and safety filters permit them.
-- Limitation records distinguish severity, current client-reported ability, and
-  the trainer's decision. Reviewed mild trials can be used; severe and medical
-  holds remain hard stops.
-- Profile changes show a downstream impact preview before updating a current
-  draft or any not-yet-started assignment. Started and completed records stay intact.
-- Approved program edits synchronize into matching not-yet-started assignments.
-- Exercise replacements now update the exact visible program row and are checked
-  across all selected weeks before the interface reports success.
-- Every assignment in a multiweek program is synchronized.
-- Assignment state and date-keyed habits are synchronized.
-- Conflicting cross-device saves use record versions and merge before retrying.
-- Trainer access requires an approved Supabase trainer or owner role; no shared PIN exists.
-- Trainer replies use an inline composer instead of browser pop-ups.
-- Keyboard focus, mobile touch targets, reduced motion, and support-text readability improved.
-- Supabase JS is pinned to an exact version and cached with the offline shell.
-- Installable app icons and correct root-level Vercel routing are included.
+PRODUCTION ACCEPTANCE CHECK
+1. Sign in with a trainer account: it must open the Trainer workspace automatically.
+2. Sign in with a client account: it must open only that client's Home page.
+3. From a client account with no active workout, press Request next workout.
+4. From the trainer dashboard, open that request; it must preload that client in
+   the workout builder.
+5. Approve and assign the workout. Confirm the request disappears and the client
+   sees one active workout.
+6. Start and complete the workout as the client. Confirm the trainer receives a
+   workout-review action and cannot assign another until the review is complete.
+7. Review it, then build the next workout. Confirm prior workout history remains.
+8. Open Calendar, schedule an unscheduled assignment, and confirm it appears only
+   on the selected date.
+9. Test a trainer-access request and a client-access request; each notification
+   must open its matching approval queue.
+10. On a phone-sized screen, confirm the five client tabs, trainer client page,
+    attention actions, and calendar queues remain readable and tappable.
 
-VERIFICATION COMPLETED BEFORE PACKAGING
-- 336 generated-session regression cases
-- 2,417 generated exercises inspected by the regression matrix
-- 1,008 multiweek program-day checks
-- workout replacement, assignment, calibration, intake, readiness, messaging,
-  progress, and profile-management runtime checks
-- 15-assignment cross-device serialization, conflict merge, daily-habit merge,
-  and pull/apply restoration test
-- package file references, manifest, route configuration, and JavaScript syntax checks
+BACKEND NOTE
+This release keeps the existing Supabase schema, row-level-security policies, and
+registration RPCs. It does not include or require a new SQL migration. Production
+still needs SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or the supported
+publishable-key equivalent) in the existing Vercel project.
 
-After Vercel says Ready, open the main production domain—not a protected preview URL—
-and hard-refresh once so the new service worker replaces the old cached build.
+VERIFICATION COMPLETED FOR THIS PACKAGE
+- JavaScript syntax for cloud-sync.js, the Vercel API function, and every local JS file
+- HTML parsing, duplicate-ID check, and inline-handler resolution
+- CSS brace/structure check
+- manifest.webmanifest and vercel.json JSON parsing
+- SVG icon parsing and image-format checks
+- service-worker shell reference/existence check for all 23 cached assets
+- role-boundary, client record/sync filtering, and shared-device cache-isolation tests
+- next-workout request creation/resolution and trainer attention tests
+- one-active-workout, supersession, in-progress blocking, review-before-next, and
+  reviewed-history preservation tests
+- Monday–Sunday calendar date uniqueness test
+
+The execution sandbox did not permit opening a local HTTP listening port, so the
+package was not browser-served inside this task. Perform the production acceptance
+check above after the Vercel deployment.

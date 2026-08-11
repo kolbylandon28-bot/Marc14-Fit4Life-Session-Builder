@@ -3,6 +3,7 @@
 
   const CONFIG_CACHE_KEY = "fit4life_public_cloud_config_v1";
   const PENDING_SYNC_KEY = "fit4life_cloud_pending_scopes_v1";
+  const ACCOUNT_CACHE_OWNER_KEY = "fit4life_account_cache_owner_v1";
   const CLOUD_KEYS = {
     profiles: "fit4life_profiles_v1",
     assignments: "fit4life_assigned_workouts_v1",
@@ -106,6 +107,35 @@
 
   function browserIsOffline() {
     return typeof navigator !== "undefined" && navigator.onLine === false;
+  }
+
+  function isolateSensitiveCacheForUser(userId, role) {
+    let previous = "";
+    try { previous = localStorage.getItem(ACCOUNT_CACHE_OWNER_KEY) || ""; } catch (_) {}
+    if (role === "client" && previous !== userId) {
+      Object.values(CLOUD_KEYS).forEach((key) => {
+        if (key !== CLOUD_KEYS.gymBrand && key !== CLOUD_KEYS.gymEquipment) {
+          try { localStorage.removeItem(key); } catch (_) {}
+        }
+      });
+      pendingScopes.clear();
+      persistPendingScopes();
+    }
+    try { localStorage.setItem(ACCOUNT_CACHE_OWNER_KEY, userId || ""); } catch (_) {}
+  }
+
+  function accountVisibleProfileRows(rows, role, userId) {
+    const list = Array.isArray(rows) ? rows : [];
+    if (role === "owner" || role === "trainer") return list;
+    if (role !== "client" || !userId) return [];
+    return list.filter((row) => row && row.auth_user_id === userId);
+  }
+
+  function accountVisibleSyncRecords(records, profileRows, role) {
+    const list = Array.isArray(records) ? records : [];
+    if (role === "owner" || role === "trainer") return list;
+    const clientIds = new Set((profileRows || []).map((row) => row && row.id).filter(Boolean));
+    return list.filter((record) => record && record.client_id && clientIds.has(record.client_id));
   }
 
   restorePendingScopes();
@@ -611,9 +641,10 @@
       .select("id,organization_id,external_id,auth_user_id,full_name,username,email,status,updated_at")
       .eq("organization_id", cloudOrganizationId);
     if (response.error) throw response.error;
+    const visibleRows = accountVisibleProfileRows(response.data, cloudRole, cloudUser && cloudUser.id);
     remoteProfilesByExternalId.clear();
-    (response.data || []).forEach((row) => remoteProfilesByExternalId.set(String(row.external_id || row.id), row));
-    return response.data || [];
+    visibleRows.forEach((row) => remoteProfilesByExternalId.set(String(row.external_id || row.id), row));
+    return visibleRows;
   }
 
   async function findSyncRecord(clientId, recordType, recordKey) {
@@ -1011,11 +1042,14 @@
         .is("deleted_at", null);
       if (recordResponse.error) throw recordResponse.error;
 
+      const visibleProfileRows = accountVisibleProfileRows(profileResponse.data, cloudRole, cloudUser.id);
+      const visibleRecords = accountVisibleSyncRecords(recordResponse.data, visibleProfileRows, cloudRole);
+
       cloudApplying = true;
       remoteProfilesByExternalId.clear();
-      applyBundles(profileResponse.data, recordResponse.data || []);
+      applyBundles(visibleProfileRows, visibleRecords);
       if (isTrainer) {
-        const orgRecord = (recordResponse.data || []).find((record) => record.client_id == null && record.record_type === "organization_snapshot");
+        const orgRecord = visibleRecords.find((record) => record.client_id == null && record.record_type === "organization_snapshot");
         if (orgRecord) applyOrganizationBundle(orgRecord.payload);
         await loadTrainerRegistrationRequests();
       }
@@ -1023,11 +1057,13 @@
       cloudApplying = false;
       refreshVisibleApp();
       cloudStatus("Saved across devices", "synced");
+      return true;
     } catch (error) {
       cloudApplying = false;
       cloudStatus(navigator.onLine ? "Sync needs attention" : "Offline · cached data", navigator.onLine ? "error" : "offline");
       console.error("FIT 4 LIFE cloud load failed", error);
       if (initial) authMessage(error.message || "The cloud records could not be loaded.", true);
+      return false;
     }
   }
 
@@ -1105,6 +1141,7 @@
 
     cloudRole = membership.role;
     cloudOrganizationId = membership.organization_id;
+    isolateSensitiveCacheForUser(cloudUser.id, cloudRole);
     await loadOrganizationSettings();
     if (cloudRole === "client") {
       try { await cloudClient.rpc("complete_my_fit4life_registration"); } catch (_) {}
@@ -1136,9 +1173,13 @@
     authMessage("", false);
     showAuthGate(false);
 
-    if (cloudRole === "client") {
+    if (typeof routeAuthenticatedWorkspace === "function") routeAuthenticatedWorkspace();
+    else if (cloudRole === "client") {
       portalRole = "client";
       if (typeof openClientTab === "function") openClientTab("home");
+    } else if (cloudRole === "owner" || cloudRole === "trainer") {
+      portalRole = "trainer";
+      if (typeof show === "function") show("trainer-menu");
     }
   }
 
@@ -1625,6 +1666,9 @@
       planBundle,
       activityBundle,
       applyBundles,
+      accountVisibleProfileRows,
+      accountVisibleSyncRecords,
+      isolateSensitiveCacheForUser,
       syncRecordCacheKey
     };
   }

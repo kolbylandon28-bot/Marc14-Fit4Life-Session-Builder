@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
-<title>FIT4LIFE — Session Builder</title>
+<title>FIT4LIFE — Trainer &amp; Client Hub</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -121,14 +121,14 @@
         <span class="tc-tag">Approved account</span>
         <div class="tc-icon" aria-hidden="true">&#128274;</div>
         <div class="tc-title">I’m a trainer</div>
-        <div class="tc-desc">Create and manage clients, build workouts and programs, review progress, and use the full trainer toolkit.</div>
+        <div class="tc-desc">Manage clients, assign one workout at a time, review results, and decide what comes next.</div>
         <span class="role-action">Open trainer workspace →</span>
       </button>
       <button class="tool-card role-card" onclick="selectPortalRole('client')">
-        <span class="tc-tag">Lookup first</span>
+        <span class="tc-tag">Protected account</span>
         <div class="tc-icon" aria-hidden="true">&#128100;</div>
         <div class="tc-title">I’m a client</div>
-        <div class="tc-desc">Find your profile and workout, check readiness, and use the workout tools without seeing anyone else’s information.</div>
+        <div class="tc-desc">Open only the client profile connected to your login, complete your workout, and review your own progress.</div>
         <span class="role-action">Open client workspace →</span>
       </button>
     </div>
@@ -145,24 +145,23 @@
     <div class="section-eyebrow">Start here</div>
     <div class="tools-grid">
       <button class="tool-card primary" onclick="openNewClientProfile()"><div class="tc-icon">+</div><div class="tc-title">Create client profile</div><span class="portal-question">Who is new?</span><div class="tc-desc">Search first, then create a new profile only when there is no duplicate or near-duplicate match.</div></button>
-      <button class="tool-card live" onclick="openBuilder()"><div class="tc-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v18M18 3v18M6 8h12M6 16h12"/></svg></div><div class="tc-title">Build a workout</div><span class="portal-question">What are we training today?</span><div class="tc-desc">Choose the client, goals, focus, and time; then compare three genuinely different workout approaches.</div></button>
+      <button class="tool-card live" onclick="openSingleWorkoutBuilder()"><div class="tc-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v18M18 3v18M6 8h12M6 16h12"/></svg></div><div class="tc-title">Build next workout</div><span class="portal-question">Who needs their next session?</span><div class="tc-desc">Choose one client, build one coach-approved workout, then assign it as their only active session.</div></button>
       <button class="tool-card" onclick="openScratchWorkoutBuilder()"><div class="tc-icon">&#9998;</div><div class="tc-title">Build from scratch</div><span class="portal-question">Do I want full control?</span><div class="tc-desc">Load a client, then build every phase from warm-up through cool-down using the complete filtered exercise bank.</div></button>
       <button class="tool-card live" onclick="openTools()"><div class="tc-icon">&#9201;</div><div class="tc-title">Trainer tools</div><span class="portal-question">What do I need on the floor?</span><div class="tc-desc">Fullscreen timers, plate math, warm-up ramps, 1RM estimates, and RPE coaching guides.</div></button>
     </div>
     <div class="section-eyebrow">Manage &amp; review</div>
     <div class="tools-grid">
       <button class="tool-card" onclick="openTrainerHub()"><span class="tc-tag">Private</span><div class="tc-icon">&#128202;</div><div class="tc-title">Clients &amp; summaries</div><div class="tc-desc">Search all clients, review workout history, injuries, strength trends, goals, and InBody analysis.</div></button>
-      <button class="tool-card" onclick="openPrograms()"><div class="tc-icon">&#128197;</div><div class="tc-title">Build a program</div><div class="tc-desc">Create progressive multi-week plans with clearly labeled workout blocks and deloads.</div></button>
       <button class="tool-card" onclick="openReadiness()"><div class="tc-icon">&#10003;</div><div class="tc-title">Progress logging</div><div class="tc-desc">Add and review clean set or workout records across clients.</div></button>
-      <button class="tool-card live" onclick="openAdvancedStudio('review')"><span class="tc-tag">5 connected workflows</span><div class="tc-icon">&#10024;</div><div class="tc-title">Coaching support</div><div class="tc-desc">Turn client check-ins, workout results, monitoring, templates, and alerts into a clear trainer action instead of opening disconnected feature demos.</div></button>
+      <button class="tool-card live" onclick="openAdvancedStudio('review')"><span class="tc-tag">Decision support</span><div class="tc-icon">&#10024;</div><div class="tc-title">Coaching support</div><div class="tc-desc">Turn client check-ins, workout results, monitoring, and alerts into one clear trainer decision.</div></button>
     </div>
   </section>
 
   <!-- LEVEL 2: CLIENT MENU -->
   <section class="view" id="view-client-menu">
     <div class="portal-menu-head">
-      <div><div class="level-path" style="justify-content:flex-start"><span>1 · Client</span><i>›</i><span class="active">2 · Choose task</span><i>›</i><span>3 · Workout</span></div><h1>Client <span class="grad-text">workspace</span></h1><p>Find your own workout and the tools you need without opening the trainer’s client directory.</p></div>
-      <button class="small-btn" onclick="switchPortalRole()">Switch role</button>
+      <div><div class="level-path" style="justify-content:flex-start"><span>1 · Client</span><i>›</i><span class="active">2 · Choose task</span><i>›</i><span>3 · Workout</span></div><h1>Client <span class="grad-text">workspace</span></h1><p>Your signed-in account opens only the client record connected to it.</p></div>
+      <button class="small-btn" onclick="if(window.fit4lifeCloudSignOut)window.fit4lifeCloudSignOut()">Sign out</button>
     </div>
     <div class="tools-grid">
       <button class="tool-card primary" onclick="openClientWorkout()"><div class="tc-icon">&#9654;</div><div class="tc-title">Find my workout</div><span class="portal-question">What am I doing today?</span><div class="tc-desc">Search your name or username, load your saved goals and limitations, then open today’s workout options.</div></button>
@@ -172,14 +171,14 @@
     <div class="portal-note">Can’t find your profile? Submit one request from the lookup. A trainer must approve it, and duplicate-name checks prevent extra profiles from piling up.</div>
   </section>
 
-  <!-- PROGRAM-LED CLIENT APP -->
+  <!-- CLIENT APP -->
   <section class="view client-app-view" id="view-client-home">
     <div class="client-app-head"><div><div class="client-section-label">Home</div><h1 id="clientHomeGreeting">Ready when you are</h1><p id="clientHomeSubhead">Your next coaching action is shown first.</p></div><div class="client-avatar" id="clientHomeAvatar">FL</div></div>
     <div id="clientHomeContent"></div>
   </section>
 
   <section class="view client-app-view" id="view-client-program">
-    <div class="client-app-head"><div><div class="client-section-label">Workout</div><h1>Your program</h1><p>See the week, preview the session, then train without extra navigation.</p></div><div class="client-avatar client-avatar-shared">FL</div></div>
+    <div class="client-app-head"><div><div class="client-section-label">Workout</div><h1>Your workout</h1><p>One active session, clear instructions, and your completed workout history.</p></div><div class="client-avatar client-avatar-shared">FL</div></div>
     <div id="clientProgramContent"></div>
   </section>
 
@@ -448,7 +447,7 @@
         <p class="storage-note" id="storageStatus">Signed-in records sync across devices. Offline changes stay queued on this device until the connection returns.</p>
         <div class="filter-bar">
           <div class="compact-field"><label for="historyClientFilter">Select client</label><select id="historyClientFilter" onchange="selectProgressHistoryClient()"><option value="">Choose a client…</option></select></div>
-          <div class="compact-field"><label for="historyTypeFilter">Entry type</label><select id="historyTypeFilter" onchange="renderProgressHistory()" disabled><option value="">All entries</option><option value="workout">Workout reviews</option><option value="set">Logged sets</option><option value="readiness">Readiness</option><option value="program">Programs</option></select></div>
+          <div class="compact-field"><label for="historyTypeFilter">Entry type</label><select id="historyTypeFilter" onchange="renderProgressHistory()" disabled><option value="">All entries</option><option value="workout">Workout reviews</option><option value="set">Logged sets</option><option value="readiness">Readiness</option></select></div>
           <div class="compact-field"><label>Workout summary</label><button class="small-btn" id="historySummaryBtn" onclick="renderClientSummary()" disabled>Build client summary</button></div>
         </div>
         <div id="clientSummary"></div>
@@ -505,7 +504,7 @@
 
   <!-- TRAINER CONNECTED COACHING SUPPORT -->
   <section class="view" id="view-advanced">
-    <div class="builder-head"><span class="portal-question">What decision or setup needs attention?</span><h2>Coaching Support</h2><p>Five connected workflows. Client evidence leads to a coach decision, monitoring feeds the client record, templates open the program builder, and alerts return to the trainer dashboard.</p></div>
+    <div class="builder-head"><span class="portal-question">What decision or setup needs attention?</span><h2>Coaching Support</h2><p>Client evidence leads to a coach decision, monitoring feeds the client record, and alerts return to the trainer dashboard.</p></div>
     <div class="advanced-shell">
       <nav class="advanced-nav" id="advancedNav" aria-label="Advanced coaching modules"></nav>
       <div class="advanced-main">
@@ -531,7 +530,7 @@
   <h2>Coach workspace</h2>
   <button data-coach-nav="dashboard" onclick="openCoachDestination('dashboard')">⌂ Dashboard</button>
   <button data-coach-nav="clients" onclick="openCoachDestination('clients')">● Clients</button>
-  <button data-coach-nav="programming" onclick="openCoachDestination('programming')">▤ Programming</button>
+  <button data-coach-nav="workouts" onclick="openCoachDestination('workouts')">▤ Build Workout</button>
   <button data-coach-nav="calendar" onclick="openCoachDestination('calendar')">□ Calendar<span class="coach-attention-badge" data-attention-badge="reviews"></span></button>
   <button data-coach-nav="messages" onclick="openCoachDestination('messages')">✉ Messages<span class="coach-attention-badge" data-attention-badge="messages"></span></button>
   <button data-coach-nav="library" onclick="openCoachDestination('library')">≡ Exercise Library</button>
@@ -906,7 +905,7 @@
       <div class="compact-field"><label for="profileEditMinutes">Usual session length</label><select id="profileEditMinutes"></select></div>
       <div class="compact-field"><label for="profileEditPhase">Training phase</label><select id="profileEditPhase"><option value="general">General preparation</option><option value="strength">Strength</option><option value="muscle">Muscle building</option><option value="conditioning">Conditioning</option><option value="performance">Sport performance</option><option value="recovery">Recovery / return</option></select></div>
       <div class="compact-field"><label for="profileEditDays">Available days each week</label><select id="profileEditDays"><option value="2">2 days</option><option value="3">3 days</option><option value="4">4 days</option><option value="5">5 days</option></select></div>
-      <div class="compact-field wide"><label>Usual training days · Monday–Saturday</label><div id="profileEditTrainingDays" class="multi-choice-grid weekday-choices"></div><span class="storage-note">These days populate the trainer calendar and schedule program workouts. Choose at least one.</span></div>
+      <div class="compact-field wide"><label>Usual training days · Monday–Saturday</label><div id="profileEditTrainingDays" class="multi-choice-grid weekday-choices"></div><span class="storage-note">These days help the trainer plan availability. Assigned workouts use their own calendar date.</span></div>
       <div class="compact-field"><label for="profileEditSport">Sport or activity</label><input id="profileEditSport" type="text" placeholder="Optional"></div>
       <div class="compact-field"><label for="profileEditCompetition">Competition / event date</label><input id="profileEditCompetition" type="date"></div>
       <div class="compact-field wide"><label for="profileEditSchedule">Practice, game, or work constraints</label><input id="profileEditSchedule" type="text" placeholder="Optional — e.g. league game Thursday"></div>
@@ -915,7 +914,7 @@
     <div class="profile-editor-section"><label>Injury limitations</label><div id="profileEditInjuries" class="profile-editor-choices"></div><p class="storage-note">Select an area first, then document what the client can currently do. A client saying “I can do it” supports a coached trial; it never clears a medical hold or a severe/red response by itself.</p><div id="profileLimitationAssessments" class="limitation-assessment-list"></div></div>
     <div class="profile-editor-section"><label>Equipment available <span style="font-weight:400;text-transform:none;letter-spacing:0">(nothing selected means full gym)</span></label><div id="profileEditZones" class="profile-editor-choices"></div></div>
     <div class="profile-editor-section"><label>Exercise preferences</label><div class="preference-editor"><div class="compact-field"><input id="profilePreferenceExercise" list="profileExerciseNames" placeholder="Exercise name"><datalist id="profileExerciseNames"></datalist></div><div class="compact-field"><select id="profilePreferenceValue"><option value="favorite">Favorite</option><option value="like">Like</option><option value="neutral">Neutral</option><option value="dislike">Dislike</option><option value="unfamiliar">Unfamiliar</option><option value="discomfort">Causes discomfort</option><option value="unavailable">Unavailable</option></select></div><button class="small-btn" type="button" onclick="setProfileExercisePreference()">Set preference</button></div><div id="profilePreferenceList" class="preference-list"></div></div>
-    <div class="tool-actions"><button class="small-btn primary" id="profileEditorSaveBtn" onclick="saveProfileEditor()">Save changes</button><button class="small-btn" id="profileEditorIntakeBtn" onclick="openIntakeFromProfileEditor()">Open intake checklist</button><button class="small-btn" onclick="closeProfileEditor()">Cancel</button><button class="small-btn danger" id="profileEditorDeleteBtn" onclick="deleteProfileFromEditor()">Delete profile only</button><button class="small-btn danger" id="profileEditorDeleteAllBtn" onclick="openCompleteDeleteFromEditor()">Delete everything</button></div>
+    <div class="tool-actions"><button class="small-btn primary" id="profileEditorSaveBtn" onclick="saveProfileEditor()">Save changes</button><button class="small-btn" onclick="closeProfileEditor()">Cancel</button><button class="small-btn danger" id="profileEditorDeleteBtn" onclick="deleteProfileFromEditor()">Delete profile only</button><button class="small-btn danger" id="profileEditorDeleteAllBtn" onclick="openCompleteDeleteFromEditor()">Delete everything</button></div>
     <p class="storage-note" id="profileEditorDeleteNote">“Delete profile only” keeps completed history. “Delete everything” permanently removes every saved record for this client.</p>
   </div>
 </div>

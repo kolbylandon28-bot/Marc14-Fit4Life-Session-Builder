@@ -1,9 +1,25 @@
-const CACHE_NAME = "fit4life-shell-2026-08-10-stability-pass-v2";
+const CACHE_NAME = "fit4life-shell-2026-08-11-tomorrow-ready-v1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
 const SHELL = [
   "/",
   "/index.html",
+  "/styles.css",
   "/cloud-sync.js",
+  "/js/engine/exercise-library.js",
+  "/js/engine/session-engine.js",
+  "/js/engine/session-builders.js",
+  "/js/engine/personalization.js",
+  "/js/app/navigation.js",
+  "/js/app/program-app.js",
+  "/js/app/forms.js",
+  "/js/engine/generation.js",
+  "/js/app/rendering.js",
+  "/js/app/calculations-timers.js",
+  "/js/engine/multiweek-programs.js",
+  "/js/app/readiness-progress.js",
+  "/js/trainer/trainer-hub.js",
+  "/js/trainer/coaching-support.js",
+  "/js/init.js",
   "/dark-rock-background-v2.jpg",
   "/manifest.webmanifest",
   "/fit4life-icon.svg",

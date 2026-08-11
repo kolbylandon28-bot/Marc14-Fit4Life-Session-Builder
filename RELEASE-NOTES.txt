@@ -1,0 +1,21 @@
+FIT4LIFE TOMORROW-READY RELEASE — 2026-08-11
+
+Release outcome
+- Secure automatic trainer/client routing after sign-in
+- One active workout per client, with preserved reviewed history
+- Client next-workout requests and direct trainer action links
+- Actionable trainer notifications across access, reviews, communication, safety,
+  recovery, progress updates, recognition, and coaching alerts
+- Five-section simplified trainer client record
+- Detailed workout evidence/history
+- Visible Programs and Onboarding removed
+- Reorganized weekly workout calendar and unscheduled/action queues
+- Updated offline shell and deployment documentation
+
+Important deployment status
+- This folder is ready to upload to the existing GitHub/Vercel project.
+- It has not been pushed or deployed by Codex.
+- No new Supabase SQL migration is included.
+- Preserve the current production repository as a backup before replacement.
+
+Start with README-FIRST.txt for deployment and the ten-step production acceptance test.

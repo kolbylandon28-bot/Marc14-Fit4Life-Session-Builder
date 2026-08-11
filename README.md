@@ -1,78 +1,104 @@
-# FIT4LIFE — Session Builder
+# FIT4LIFE — Trainer & Client Hub
 
-A trainer-led fitness coaching platform: workout programming, progress tracking, and
-coach/client communication. Ships as a static, framework-free PWA with a Supabase
-backend for shared/synced data.
+FIT4LIFE is a trainer-led coaching PWA for assigning one workout at a time,
+executing it from a protected client account, reviewing the result, and deciding
+what comes next.
 
-Live: https://marc14-fit4-life-session-builder.vercel.app
+Live production domain: <https://marc14-fit4-life-session-builder.vercel.app>
+
+## Release workflow
+
+Approved trainers and owners sign in directly to the Trainer workspace. Clients
+sign in directly to the one protected client profile connected to their Supabase
+account. Trainer permission remains a separately approved staff role.
+
+The primary loop is:
+
+1. Client requests a workout, or the trainer chooses a client.
+2. Trainer builds, reviews, approves, and assigns one workout.
+3. Client completes the workout and submits results/feedback.
+4. Trainer receives a direct review action, reviews the evidence, and records the
+   next coaching decision.
+5. Only then is the next workout assigned.
+
+Multiweek Programs and Onboarding are not exposed in this release. Existing stored
+records and compatibility logic are retained so older accounts are not damaged and
+future migration/integration remains possible.
+
+## Trainer workspace
+
+- Action-first dashboard with exact deep-links for access, messages, requests,
+  safety concerns, workout/check-in reviews, progress updates, and follow-ups.
+- One-workout builder and one-active-workout enforcement.
+- Client directory with a five-section client record: Overview, Workouts,
+  Progress, Communication, and Client details.
+- Detailed workout history and evidence-based summaries.
+- Monday–Sunday workout calendar, unscheduled assignment queue, and action queue.
+- Trainer access management, exercise library, progress logging, coaching support,
+  reports, business tools, and settings.
+
+## Client workspace
+
+- Home page with one primary next action.
+- One current workout and completed-workout history.
+- Next-workout request when no active assignment exists.
+- Workout execution, substitutions, readiness, pain reporting, check-ins,
+  messages, progress receipts, and optional progress/body data.
+- No trainer directory, role switching, onboarding page, or multiweek program UI.
+
+## Security and data boundaries
+
+- Supabase authentication, organization memberships, and row-level security remain
+  the authoritative access layer.
+- The browser applies a second client-only filter: profile rows must have an
+  `auth_user_id` matching the signed-in user, and sync records must belong to that
+  exact linked profile.
+- A different client signing in on the same device clears the prior account's
+  sensitive local cache while preserving only shared gym branding/equipment.
+- Clients cannot grant trainer access or mutate trainer-only records.
 
 ## Stack
 
-- No build step, no framework — plain HTML/CSS/JS served statically.
-- [Supabase](https://supabase.com) for auth, database, and realtime sync.
-- Deployed on [Vercel](https://vercel.com) (static hosting + one serverless function).
-- Installable PWA via a service worker and web app manifest.
+- Plain HTML, CSS, and JavaScript; no framework and no build step.
+- Supabase for authentication, database records, row-level security, RPCs, and
+  realtime synchronization.
+- Vercel static hosting plus `api/supabase-config.js`.
+- Installable PWA via `manifest.webmanifest` and `sw.js`.
 
 ## File layout
 
-```
-index.html                 Page shell + markup, loads styles and scripts in order
-styles.css                 All app styling
-js/                         App logic, grouped by domain (loaded in this order):
-  engine/                      Workout generation and program rules
-    exercise-library.js          Exercise database and edits
-    session-engine.js            Session-building rules (goal skeletons, eligibility, block builders)
-    session-builders.js          Public entry points: solo/group session generation
-    personalization.js           Goal-specific personalization baselines
-    generation.js                 Program/session generation flows
-    multiweek-programs.js         Multi-week program logic
-  app/                         Client-facing app shell + shared UI helpers
-    navigation.js                 View routing/state
-    program-app.js                Program-led client experience
-    forms.js                      Form construction
-    rendering.js                  Rendering helpers
-    calculations-timers.js        Numeric calculations + rest/work timers
-    readiness-progress.js         Readiness adjustments + local progress memory
-  trainer/                     Trainer-only features
-    trainer-hub.js                 Trainer dashboard + coaching analysis
-    coaching-support.js            Connected coaching support features
-  init.js                      Bootstraps the app on load (must load last)
-cloud-sync.js               Supabase auth + data sync between localStorage and the cloud
-sw.js                       Service worker (offline shell cache)
-manifest.webmanifest        PWA manifest
-api/supabase-config.js      Vercel serverless function exposing Supabase URL/anon key
-vercel.json                 Security headers + service worker cache rules
+```text
+index.html                     App shell and accessible page/modal markup
+styles.css                     Responsive visual system
+cloud-sync.js                  Auth, roles, account isolation, and cloud sync
+js/engine/                     Exercise and workout-generation logic
+js/app/                        Navigation, forms, client flow, workout execution
+js/trainer/                    Trainer Hub and coaching-support features
+js/init.js                     Bootstraps the app after all dependencies load
+api/supabase-config.js         Vercel function exposing public Supabase config
+sw.js                          Versioned offline application shell
+manifest.webmanifest           Installable-app metadata
+vercel.json                    Hosting routes, headers, and service-worker policy
 ```
 
-The `js/` files share one global scope by design (no bundler, no modules) — they're
-loaded via sequential `<script>` tags in `index.html` in the exact order listed above.
-`init.js` must stay last since it calls functions defined in every other file.
+The JavaScript files intentionally share browser global scope and must remain in the
+script order defined at the bottom of `index.html`. `js/init.js` loads last.
 
 ## Local development
 
-No build step required. Serve the directory with any static file server, e.g.:
+Serve the directory with a static server. To exercise the live Supabase config
+endpoint locally, use `vercel dev`; a generic static server cannot execute the
+`api/supabase-config.js` function.
 
-```bash
-npx serve .
-```
+## Vercel environment
 
-Then open the printed local URL. Note: without a running Vercel dev server, `api/supabase-config.js`
-won't respond, so the app will show its "not connected" cloud state — that's expected locally
-unless you also run `vercel dev`.
+Set the existing Vercel project variables:
 
-## Environment variables (Vercel)
+- `SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` or the supported publishable-key equivalent
 
-Set these in the Vercel project's Environment Variables settings so
-`api/supabase-config.js` can hand them to the client at runtime:
+Push the folder contents to the repository branch connected to Vercel. There is no
+build command. After deployment, hard-refresh the production site once so the new
+service-worker cache replaces the previous shell.
 
-- `SUPABASE_URL` — your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — your Supabase anon/publishable key
-
-(A few alternate variable names are also accepted as fallbacks — see
-`api/supabase-config.js` — but the two above are the canonical ones to set.)
-
-## Deployment
-
-Push to the connected GitHub branch; Vercel auto-builds and deploys (no build command
-needed — it's served as-is). `vercel.json` sets security headers and service worker
-cache-control rules.
+See `README-FIRST.txt` for the exact production acceptance checklist.
