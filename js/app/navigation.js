@@ -405,11 +405,11 @@ function openAssignedWorkout(profileId,assignmentId) {
   if (!assignment || !assignment.session) { out.innerHTML = '<div class="empty-state">No workout is assigned to this profile yet. Ask your trainer to choose and assign a workout.</div>'; return null; }
   state.session = JSON.parse(JSON.stringify(assignment.session)); state.sessionOptions = [];
   const status = assignmentStatus(assignment), banner = el("div","assignment-banner"), identity = el("div"); identity.append(el("b","",profile.name + " · " + assignmentStatusLabel(assignment)),el("span","","Assigned " + new Date(assignment.assignedAt).toLocaleString()));
-  const tools = el("div","session-actions"), print = el("button","mini-btn","Print"), ready = el("button","mini-btn","Check readiness"); print.onclick = () => window.print(); ready.onclick = () => openClientReadinessForWorkout(profile.id,assignment.id,false); tools.appendChild(print);
+  const tools = el("div","session-actions"), print = el("button","mini-btn","Print"); print.onclick = () => window.print(); tools.appendChild(print);
   if (status === "assigned") { const start = el("button","mini-btn primary","Start workout"); start.onclick = () => startActiveWorkout(profile.id,false,assignment.id); tools.appendChild(start); }
   else if (status === "in_progress") { const review = el("button","mini-btn primary","Finish & Review"); review.onclick = () => openWorkoutReview(); tools.appendChild(review); }
   else { const sent = el("button","mini-btn",status === "reviewed" ? "Coach reviewed" : "Review sent"); sent.disabled = true; tools.appendChild(sent); }
-  if (["assigned","in_progress"].includes(status)) tools.appendChild(ready); banner.append(identity,tools); out.append(banner,assignmentLoopElement(assignment));
+  banner.append(identity,tools); out.append(banner,assignmentLoopElement(assignment));
   if (["completed","reviewed"].includes(status)) { out.classList.add("assignment-complete"); const note = el("div","assignment-complete-note"); note.innerHTML = status === "reviewed" ? '<b>Your trainer reviewed this workout.</b>' + escapeHtml(assignment.coachNote || "Your next workout direction is saved. Check back when the next plan is assigned.") : '<b>Workout review sent.</b>Your trainer can now review your sets, difficulty, energy, and pain report before adjusting the next plan.'; out.appendChild(note); }
   out.appendChild(renderCard(state.session.data,state.session,null)); return assignment;
 }

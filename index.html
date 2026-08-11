@@ -153,7 +153,7 @@
     <div class="tools-grid">
       <button class="tool-card" onclick="openTrainerHub()"><span class="tc-tag">Private</span><div class="tc-icon">&#128202;</div><div class="tc-title">Clients &amp; summaries</div><div class="tc-desc">Search all clients, review workout history, injuries, strength trends, goals, and InBody analysis.</div></button>
       <button class="tool-card" onclick="openPrograms()"><div class="tc-icon">&#128197;</div><div class="tc-title">Build a program</div><div class="tc-desc">Create progressive multi-week plans with clearly labeled workout blocks and deloads.</div></button>
-      <button class="tool-card" onclick="openReadiness()"><div class="tc-icon">&#10003;</div><div class="tc-title">Readiness &amp; logging</div><div class="tc-desc">Score today’s readiness, tune the session, and add clean set or workout records.</div></button>
+      <button class="tool-card" onclick="openReadiness()"><div class="tc-icon">&#10003;</div><div class="tc-title">Progress logging</div><div class="tc-desc">Add and review clean set or workout records across clients.</div></button>
       <button class="tool-card live" onclick="openAdvancedStudio('review')"><span class="tc-tag">5 connected workflows</span><div class="tc-icon">&#10024;</div><div class="tc-title">Coaching support</div><div class="tc-desc">Turn client check-ins, workout results, monitoring, templates, and alerts into a clear trainer action instead of opening disconnected feature demos.</div></button>
     </div>
   </section>
@@ -167,7 +167,6 @@
     <div class="tools-grid">
       <button class="tool-card primary" onclick="openClientWorkout()"><div class="tc-icon">&#9654;</div><div class="tc-title">Find my workout</div><span class="portal-question">What am I doing today?</span><div class="tc-desc">Search your name or username, load your saved goals and limitations, then open today’s workout options.</div></button>
       <button class="tool-card live" onclick="openTools()"><div class="tc-icon">&#9201;</div><div class="tc-title">Workout tools</div><span class="portal-question">What helps me train?</span><div class="tc-desc">Use fullscreen rest and interval timers, plate math, warm-up sets, and the RPE guide.</div></button>
-      <button class="tool-card" onclick="openReadiness()"><div class="tc-icon">&#9829;</div><div class="tc-title">Check readiness</div><span class="portal-question">How ready am I?</span><div class="tc-desc">Check sleep, energy, soreness, stress, and pain before starting the session.</div></button>
       <button class="tool-card" onclick="openClientCheckIn()"><div class="tc-icon">&#128221;</div><div class="tc-title">Weekly check-in</div><span class="portal-question">How is training going?</span><div class="tc-desc">Share adherence, recovery, confidence, motivation, pain, wins, barriers, and schedule changes with your trainer.</div></button>
     </div>
     <div class="portal-note">Can’t find your profile? Submit one request from the lookup. A trainer must approve it, and duplicate-name checks prevent extra profiles from piling up.</div>
@@ -427,54 +426,8 @@
 
   <!-- WAVE 4: READINESS + PROGRESS -->
   <section class="view" id="view-readiness">
-    <div class="builder-head"><span class="portal-question">How ready am I today—and am I improving?</span><h2>Readiness &amp; Progress</h2><p>Check today's capacity, tune the session, and connect strength, measurements, consistency, PRs, and InBody history.</p></div>
+    <div class="builder-head"><span class="portal-question">Am I improving?</span><h2>Progress</h2><p>Connect strength, measurements, consistency, PRs, and InBody history.</p></div>
     <div class="workspace-grid">
-      <article class="utility-card">
-        <div class="utility-head"><div><h3 class="utility-title">Pre-workout check</h3><p class="utility-sub">Six quick taps help the app keep today’s assigned workout appropriate. This changes today only—not your coach’s program.</p></div><span class="wave-badge">Before training</span></div>
-        <div class="compact-grid">
-          <div class="compact-field profile-lookup"><label for="readyClient">Find profile</label><input id="readyClient" type="search" autocomplete="off" placeholder="Name or username" oninput="renderReadinessProfileLookup()"><input id="readyProfile" type="hidden"><div id="readyProfileLookupResults" class="profile-results"></div></div>
-          <input id="readySleepHours" type="hidden" value="7.5">
-          <div class="compact-field"><label for="readySleep">Sleep quality</label><select id="readySleep"><option value="1">1 · Very poor</option><option value="2">2 · Poor</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · Excellent</option></select></div>
-          <div class="compact-field"><label for="readyEnergy">Energy</label><select id="readyEnergy"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · High</option></select></div>
-          <div class="compact-field"><label for="readySoreness">Soreness</label><select id="readySoreness" onchange="updateReadinessSorenessFields()"><option value="1">1 · None</option><option value="2">2 · Mild</option><option value="3" selected>3 · Moderate</option><option value="4">4 · High</option><option value="5">5 · Severe</option></select></div>
-          <div class="compact-field review-safety" id="readySorenessAreaField" hidden><label for="readySorenessArea">Most sore area</label><select id="readySorenessArea"></select></div>
-          <div class="compact-field"><label for="readyStress">Life stress</label><select id="readyStress"><option value="1">1 · Low</option><option value="2">2 · Light</option><option value="3" selected>3 · Moderate</option><option value="4">4 · High</option><option value="5">5 · Extreme</option></select></div>
-          <div class="compact-field"><label for="readyPain">Pain today</label><select id="readyPain" onchange="updateReadinessPainFields()"><option value="0" selected>Green · No pain</option><option value="1">Yellow · Mild awareness; movement normal</option><option value="2">Orange · Changes technique, range, or balance</option><option value="3">Red · Severe, sharp, or worsening</option></select></div>
-          <div class="compact-field review-safety" id="readyPainAreaField" hidden><label for="readyPainArea">Where?</label><select id="readyPainArea"></select></div>
-          <div class="compact-field review-safety" id="readyPainMovementField" hidden><label for="readyPainMovement">Did it change movement?</label><select id="readyPainMovement" onchange="syncReadinessPainLevel()"><option value="no">No</option><option value="yes">Yes — technique, range, or balance changed</option></select></div>
-          <div class="compact-field review-safety" id="readyPainExerciseField" hidden><label for="readyPainExercise">Movement involved <span style="font-weight:400">(optional)</span></label><input id="readyPainExercise" placeholder="Example: squat, walking, reaching"></div>
-          <input id="readyMotivation" type="hidden" value="3">
-          <input id="readyOverall" type="hidden" value="3">
-          <div class="compact-field"><label for="readyIllness">Illness symptoms</label><select id="readyIllness"><option value="none" selected>None</option><option value="mild">Mild / monitor</option><option value="significant">Significant / affecting normal activity</option></select></div>
-        </div>
-        <div class="tool-actions"><button class="small-btn primary" onclick="calculateReadiness()">Save today’s check</button></div>
-        <div id="readinessResult" class="readiness-score" style="display:none" aria-live="polite"></div>
-      </article>
-
-      <article class="utility-card" id="readinessTuneCard">
-        <div class="utility-head"><div><h3 class="utility-title">Tune Today's Session</h3><p class="utility-sub">The readiness score can reduce volume, remove power work, or switch to recovery.</p></div><span class="wave-badge">Wave 4</span></div>
-        <div class="compact-grid">
-          <div class="compact-field"><label for="readyGoal">Planned goal</label><select id="readyGoal"><option value="strength">Get stronger</option><option value="hypertrophy">Build muscle</option><option value="fatloss">Lose body fat</option><option value="general" selected>Feel fitter</option><option value="athletic">Move faster / power</option><option value="conditioning">Improve stamina</option></select></div>
-          <div class="compact-field"><label for="readyExp">Experience</label><select id="readyExp"><option value="1">New</option><option value="2" selected>Intermediate</option><option value="3">Advanced</option></select></div>
-          <div class="compact-field"><label for="readyAge">Age</label><input id="readyAge" type="number" min="18" max="90" value="30"></div>
-          <div class="compact-field"><label for="readyMinutes">Time</label><select id="readyMinutes"><option value="30">30 min</option><option value="45">45 min</option><option value="60" selected>60 min</option><option value="90">90 min</option></select></div>
-          <div class="compact-field"><label for="readyFocus">Focus</label><select id="readyFocus"><option value="">Balanced full body</option><option value="push">Push</option><option value="pull">Pull</option><option value="legs">Legs</option><option value="core">Core</option></select></div>
-        </div>
-        <div class="tool-actions"><button class="small-btn primary" id="tuneSessionBtn" onclick="buildReadinessSession()">Check readiness first</button></div>
-        <p class="storage-note">A sharp or worsening pain score will never generate a hard session. Refer out when symptoms are new, severe, or unexplained.</p>
-      </article>
-
-      <article class="utility-card wide" id="clientReadinessReturnCard" style="display:none">
-        <div class="utility-head"><div><h3 class="utility-title">Readiness Saved for Your Coach</h3><p class="utility-sub">Your score and notes are added to your history. Workout changes remain coach-controlled.</p></div><span class="wave-badge">Client</span></div>
-        <div class="tool-actions"><button class="small-btn primary" onclick="openClientTab('home')">Return to client home</button><button class="small-btn" onclick="openClientTab('progress')">View my progress</button></div>
-      </article>
-
-      <article class="utility-card wide" id="readinessStartGate" style="display:none">
-        <div class="utility-head"><div><h3 class="utility-title">Start today’s assigned workout</h3><p class="utility-sub" id="readinessGateCopy">Complete the quick check above. The app will keep the coach-approved plan or make a temporary dose adjustment for today.</p></div><span class="wave-badge">Today only</span></div>
-        <div class="tool-actions" id="readinessGateActions"></div>
-        <details style="margin-top:14px"><summary>Cannot complete the check?</summary><div class="compact-grid" style="margin-top:12px"><div class="compact-field"><label for="readinessSkipReason">Reason for skipping</label><select id="readinessSkipReason"><option value="">Choose a reason…</option><option value="time">Time pressure</option><option value="trainer">Already checked with my trainer</option><option value="technical">Technical problem</option><option value="prefer_not">Prefer not to answer</option></select></div></div><div class="tool-actions"><button class="small-btn" onclick="recordReadinessSkipAndStart()">Record skip and use the assigned plan</button></div><p class="storage-note">The skip is recorded for the trainer. Pain or illness safety holds still prevent the workout from starting.</p></details>
-      </article>
-
       <article class="utility-card wide" id="progressLockedCard" style="display:none">
         <div class="utility-head"><div><h3 class="utility-title">Client Records Are Private</h3><p class="utility-sub">The all-client history and analysis now live inside the protected Trainer Hub.</p></div><span class="wave-badge">&#128274; Trainers</span></div>
         <button class="small-btn primary" onclick="openTrainerHub()">Unlock Trainer Hub</button>

@@ -829,23 +829,27 @@ function hardExerciseSafetyIssues(exercise,spec) {
   return exerciseConstraintIssues(exercise,spec,spec && spec.age).filter((issue) => issue.hard);
 }
 function openExerciseSwap(session, block, ei, currentEx) {
-  if (portalRole === "client" && !["accessory","iso","finisher","core","circuit"].includes(block.key)) { showToast("Ask your trainer to change a primary compound movement"); return false; }
-  activeSwap = { session, block, ei, currentEx };
+  const equipmentOnly = portalRole === "client" && !["accessory","iso","finisher","core","circuit"].includes(block.key);
+  activeSwap = { session, block, ei, currentEx, equipmentOnly };
   swapMode = "recommended";
   byId("exerciseSwapTitle").textContent = "Replace " + currentEx.name;
-  byId("exerciseSwapCopy").textContent = "Choose the exact movement you want in " + block.title + ", or let FIT4LIFE shuffle one recommended alternative.";
+  byId("exerciseSwapCopy").textContent = equipmentOnly
+    ? "Show only movements that keep the same training pattern, for when this equipment is unavailable right now."
+    : "Choose the exact movement you want in " + block.title + ", or let FIT4LIFE shuffle one recommended alternative.";
   byId("exerciseSwapSearch").value = "";
   byId("exerciseSwapSearch").placeholder = "Search by exercise name…";
   byId("clientSwapFields").style.display = portalRole === "client" ? "grid" : "none";
   byId("programSwapFields").style.display = "none";
   byId("swapBankBtn").style.display = portalRole === "client" ? "none" : "inline-flex";
-  byId("swapSimilarBtn").style.display = "inline-flex";
+  byId("swapSimilarBtn").style.display = equipmentOnly ? "none" : "inline-flex";
   byId("swapShuffleBtn").style.display = "inline-flex";
   byId("swapRecommendedBtn").textContent = "Recommended";
   byId("swapBankBtn").textContent = "Workout bank";
   byId("scratchFilterMenus").classList.remove("show");
   byId("swapBankFilters").classList.remove("scratch-mode");
-  byId("exerciseSwapReason").value = "preference"; byId("exerciseSwapScope").value = "today";
+  byId("exerciseSwapReason").value = equipmentOnly ? "equipment" : "preference";
+  byId("exerciseSwapReason").disabled = equipmentOnly;
+  byId("exerciseSwapScope").value = "today";
   fillSelectOptions(byId('swapPatternFilter'),[['','All patterns'],...EXERCISE_PATTERNS.map((key) => [key,EXERCISE_PATTERN_LABELS[key]])]);
   fillSelectOptions(byId('swapRegionFilter'),[['','All body areas'],...EXERCISE_REGIONS.map((key) => [key,EXERCISE_REGION_LABELS[key]])]);
   fillSelectOptions(byId('swapZoneFilter'),[['','All equipment'],...ALL_ZONES.map((key) => [key,ZONE_LABELS[key]])]);
@@ -918,9 +922,10 @@ function setSwapMode(mode) {
 }
 function renderSwapOptions() {
   if (!activeSwap) return;
-  const { session, block, currentEx, addMode } = activeSwap;
+  const { session, block, currentEx, addMode, equipmentOnly } = activeSwap;
   const search = byId("exerciseSwapSearch").value.trim().toLowerCase();
   let options = swapMode === "bank" ? workoutBankSwapCandidates(session,currentEx) : swapMode === "similar" ? similarSwapCandidates(session,block,currentEx) : candidatesFor(session, block, currentEx);
+  if (equipmentOnly) options = options.filter((exercise) => exercise.pattern === currentEx.pattern);
   if (swapMode === "bank" || addMode) {
     const pattern = byId('swapPatternFilter').value, region = byId('swapRegionFilter').value, zone = byId('swapZoneFilter').value, safeOnly = byId('swapSafetyFilter').value === 'safe';
     options = options.filter((exercise) => (!pattern || exercise.pattern === pattern) && (!region || exercise.region === region) && (!zone || exercise.zone === zone) && (!safeOnly || !exerciseConstraintIssues(exercise,session.spec,session.spec.age).some((issue) => issue.hard)));
@@ -930,7 +935,7 @@ function renderSwapOptions() {
   list.innerHTML = "";
   byId("swapResultSummary").textContent = options.length + (options.length === 1 ? " exercise" : " exercises") + " shown" + (addMode ? " for " + block.title : "");
   if (!options.length) {
-    list.appendChild(el("div", "swap-empty", search ? "No matching exercises. Clear a filter or try another search." : swapMode === "bank" ? "No workout-bank movements match those filters." : "No phase-fit movements match those filters. Clear one menu or check the entire exercise bank."));
+    list.appendChild(el("div", "swap-empty", search ? "No matching exercises. Clear a filter or try another search." : equipmentOnly ? "No other equipment-only movement matches this pattern right now. Ask your trainer for a substitute." : swapMode === "bank" ? "No workout-bank movements match those filters." : "No phase-fit movements match those filters. Clear one menu or check the entire exercise bank."));
     return;
   }
   options.forEach((exercise) => {
@@ -952,7 +957,11 @@ function renderSwapOptions() {
 }
 function applyExerciseSwap(exercise) {
   if (!activeSwap || !exercise) return;
-  const { session, block, ei, currentEx, addMode } = activeSwap;
+  const { session, block, ei, currentEx, addMode, equipmentOnly } = activeSwap;
+  if (equipmentOnly && (exercise.pattern !== currentEx.pattern || byId("exerciseSwapReason").value !== "equipment")) {
+    showToast("Ask your trainer to change " + currentEx.name + " for a reason other than equipment.");
+    return;
+  }
   if (activeSwap.renderMode === "program") {
     const scope = byId("programSwapScope").value || "single", result = addMode ? applyProgramExerciseAddition(activeSwap,exercise,scope) : applyProgramExerciseReplacement(activeSwap,exercise,scope);
     if (!result.changed || !addMode && !result.originChanged) { showToast(result.message || "The selected program exercise was not changed"); return; }

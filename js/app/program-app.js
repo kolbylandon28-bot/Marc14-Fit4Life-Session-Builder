@@ -2,7 +2,6 @@
 let clientProgressSection = "overview";
 let clientProgramWeek = 1;
 let activeWorkout = null;
-let pendingReadinessStart = null;
 function clientAssignedSession(assignment,profile) {
   if (!assignment || !assignment.session) return null;
   const plans = workoutPlans(assignment.session), match = plans.find((plan) => plan.session && plan.session.spec && (plan.session.spec.profileId === profile.id || clientMatches(plan.session.spec.client,profile.name)));
@@ -92,11 +91,10 @@ function renderClientAppView(view) {
 }
 function renderClientHome(profile) {
   const out = byId("clientHomeContent"); if (!out) return;
-  const assignment = assignmentForClient(profile.id), session = clientAssignedSession(assignment,profile), readiness = latestClientEntry(profile,"readiness"), readinessScore = readiness ? Math.max(0,Math.min(100,parseInt(readiness.value,10) || 0)) : 0;
+  const assignment = assignmentForClient(profile.id), session = clientAssignedSession(assignment,profile);
   const intakeStatus = intakeCompletion(profile), intakeCard = intakeStatus.status !== "complete"
     ? '<section class="client-card wide"><div class="client-section-label">Getting started · ' + intakeStatus.percent + '% complete</div><div class="client-action-row"><span><b>' + (intakeStatus.programmingBlocked ? 'Trainer safety review needed' : intakeStatus.status === 'trainer_review' ? 'Submitted · waiting for trainer review' : 'Finish your coaching intake') + '</b><span>' + (intakeStatus.programmingBlocked ? 'Your answers are saved. Your trainer must review the health or limitation response before difficult programming.' : intakeStatus.status === 'trainer_review' ? 'All client sections are saved. Your trainer will confirm the baseline plan and any modifications.' : 'Complete identity, goals, schedule, equipment, health, recovery, coaching fit, emergency contact, and consent. Save and return at any time.') + '</span></span><button class="small-btn primary" onclick="openClientOnboarding()">' + (intakeStatus.percent ? 'Continue intake' : 'Start intake') + '</button></div></section>'
     : '<section class="client-card wide"><div class="client-section-label">Onboarding</div><div class="client-action-row"><span><b>Coaching intake complete</b><span>Your goals, schedule, training context, and safety information are saved. Update them whenever something changes.</span></span><button class="small-btn" onclick="openClientOnboarding()">Review intake</button></div></section>';
-  const daily = clientDailyState(profile).value, completedHabits = [daily.movement,daily.hydration,daily.nutrition].filter(Boolean).length;
   const checkins = weeklyCheckInsForProfile(profile.id), lastCheckIn = checkins[0], nextCheck = lastCheckIn ? new Date(new Date(lastCheckIn.createdAt || lastCheckIn.date).getTime() + 7 * 86400000) : new Date();
   const recoveryStatus = recoveryFollowUpStatus(profile), recoveryCard = recoveryStatus.active && recoveryStatus.due
     ? '<section class="client-card wide recovery-reminder ' + (recoveryStatus.overdue ? 'overdue' : '') + '"><div class="client-section-label">' + (recoveryStatus.overdue ? 'Recovery pulse · overdue' : '24–48 hour recovery pulse') + '</div><div class="client-action-row"><span><b>How did your body respond?</b><span>Four quick taps. Your answer goes directly to ' + escapeHtml(profile.assignedTrainerName || 'your coaching team') + ' for review.</span></span><button class="small-btn primary" onclick="openClientRecoveryFollowUp(\'' + escapeHtml(recoveryStatus.assignment.id) + '\')">Check in now</button></div></section>'
@@ -111,16 +109,9 @@ function renderClientHome(profile) {
   const disabled = !assignment || ["completed","reviewed"].includes(assignmentStatus(assignment)) || intakeStatus.programmingBlocked;
   byId("clientHomeGreeting").textContent = "Hi, " + String(profile.name).split(/\s+/)[0]; byId("clientHomeSubhead").textContent = clientWorkoutStatusLabel(assignment); byId("clientHomeAvatar").textContent = clientInitials(profile);
   out.innerHTML = '<section class="client-hero"><div class="hero-kicker">Today’s workout</div><h2>' + escapeHtml(session ? session.goalLabel || 'Coach-planned session' : 'Your next plan is coming') + '</h2><div class="hero-meta"><span>' + escapeHtml(session ? (session.spec.minutes || 60) + ' min' : 'Not scheduled') + '</span><span>' + escapeHtml(session ? clientSessionEquipment(session).slice(0,3).join(' · ') || 'Bodyweight' : 'Coach assignment needed') + '</span><span>' + escapeHtml(clientWorkoutStatusLabel(assignment)) + '</span></div><p class="hero-purpose">' + escapeHtml(intakeStatus.programmingBlocked ? 'Workout start is paused until your trainer documents a safety decision from your intake. Your saved workout is not lost.' : clientPurpose(session)) + '</p><button class="start-workout-btn" ' + (disabled ? 'disabled' : '') + ' onclick="startActiveWorkout(\'' + escapeHtml(profile.id) + '\')">' + (intakeStatus.programmingBlocked ? 'Trainer review needed' : assignmentStatus(assignment) === 'in_progress' ? 'Continue workout' : 'Start workout') + '</button></section>'
-    + '<div class="client-grid">' + goalContractClientHtml(profile,"home") + baselineClientCardHtml(profile) + '<section class="client-card"><div class="client-section-label">Readiness check</div><div class="readiness-inline"><div class="readiness-dot" style="--score:' + readinessScore + '%"><b>' + (readiness ? readinessScore : '—') + '</b></div><div><h3>' + (readiness ? escapeHtml(readiness.note || 'Latest readiness') : 'Check how you feel') + '</h3><p>' + (readiness ? 'Saved ' + new Date(readiness.date).toLocaleDateString() : 'Sleep, soreness, energy, stress, and pain can adjust today’s session.') + '</p></div></div><div class="tool-actions"><button class="small-btn" onclick="openClientReadiness()">' + (readiness ? 'Update readiness' : 'Check readiness') + '</button></div></section>'
-    + '<section class="client-card"><div class="client-section-label">Coach message</div><h3>' + (assignment && assignment.coachNote ? 'Update from your coach' : 'No new message') + '</h3><p>' + escapeHtml(assignment && assignment.coachNote || 'Important program changes and workout feedback will appear here instead of getting buried in chat.') + '</p><div class="tool-actions"><button class="small-btn" onclick="openClientTab(\'coach\')">Open coach</button></div></section>'
-    + '<section class="client-card"><div class="client-section-label">Today’s habits · ' + completedHabits + '/3</div>' + [["movement","Daily movement",daily.movement],["hydration","Hydration target",daily.hydration],["nutrition","Nutrition plan",daily.nutrition]].map((habit) => '<label class="client-action-row"><span><b>' + habit[1] + '</b><span>Tap when complete</span></span><input class="habit-check" type="checkbox" ' + (habit[2] ? 'checked' : '') + ' onchange="toggleClientHabit(\'' + habit[0] + '\',this.checked)"></label>').join('') + '</section>'
-    + '<section class="client-card"><div class="client-section-label">Nutrition summary</div><h3>' + (daily.nutrition ? 'Plan completed today' : 'No nutrition check yet') + '</h3><p>Nutrition remains optional. Your coach can add a simple target without crowding the workout screen.</p><div class="tool-actions"><button class="small-btn" onclick="openClientMoreSection(\'nutrition\')">View nutrition</button></div></section>'
+    + '<div class="client-grid">' + goalContractClientHtml(profile,"home") + baselineClientCardHtml(profile)
+    + (assignment && assignment.coachNote ? '<section class="client-card"><div class="client-section-label">Coach message</div><h3>Update from your coach</h3><p>' + escapeHtml(assignment.coachNote) + '</p><div class="tool-actions"><button class="small-btn" onclick="openClientTab(\'coach\')">Open coach</button></div></section>' : '')
     + receiptCard + recoveryCard + intakeCard + completionSummary + checkInCard + competition;
-}
-function openClientReadiness() {
-  pendingReadinessStart = null;
-  const profile = activeClientProfile(); openReadiness(); if (!profile) return;
-  const lookup = byId("readyClient"), hidden = byId("readyProfile"); if (lookup) lookup.value = profile.name + " · @" + profileUsername(profile); if (hidden) hidden.value = profile.id;
 }
 function openClientCheckInForActive(reviewType) { const profile = activeClientProfile(); openClientCheckIn(reviewType); if (profile) selectCheckInProfile(profile.id); }
 function openClientRecoveryFollowUp(assignmentId) { const profile = activeClientProfile(); openClientCheckIn("recovery_24_48",assignmentId); if (profile) selectCheckInProfile(profile.id); }
@@ -261,13 +252,8 @@ function trainerAttentionSnapshot() {
     if (baselineState.status === "provisional") push({id:"baseline-review:" + profile.id + ":" + String((baselineState.evidence[0] && baselineState.evidence[0].entry.date) || "ready"),profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"baseline",urgency:"high",rank:1,createdAt:(baselineState.evidence[0] && baselineState.evidence[0].entry.date) || profile.updatedAt,label:"Baseline evidence ready",detail:"Calibration anchors are complete. Verify pain response, confidence, effort, and exercise fit before tailored programming."});
     else if (["missing","due"].includes(baselineState.status) && intakeStatus.status === "complete") push({id:"baseline-needed:" + profile.id + ":" + baselineState.status,profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"baseline",urgency:"normal",rank:4,createdAt:profile.updatedAt,label:baselineState.status === "due" ? "Baseline update needed" : "Calibration plan needed",detail:"Build one useful calibration workout for a once-weekly client or split the goal-specific anchors across two visits."});
 
-    const latestReady = progress.filter((entry) => entry.type === "readiness" && progressEntryBelongsToClient(entry,profile)).sort((a,b) => String(b.date).localeCompare(String(a.date)))[0];
-    const readinessScore = latestReady ? parseInt(latestReady.value,10) : null;
-    if (Number.isFinite(readinessScore) && readinessScore < 50 && now - new Date(latestReady.date).getTime() <= 7 * 86400000) push({id:"readiness:" + latestReady.id,profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"readiness",urgency:readinessScore < 35 || latestReady.data && latestReady.data.safetyHold ? "urgent" : "high",rank:readinessScore < 35 ? 0 : 1,createdAt:latestReady.date,label:readinessScore < 35 ? "Extreme readiness outlier" : "Low readiness",detail:"Readiness " + readinessScore + "/100 · " + (latestReady.data && latestReady.data.adjustmentPlan && latestReady.data.adjustmentPlan.changes || []).join(" · ")});
-    const recentReadinessSkip = progress.filter((entry) => entry.type === "readiness_skip" && progressEntryBelongsToClient(entry,profile) && now - new Date(entry.date || 0).getTime() <= 7 * 86400000).sort((a,b) => String(b.date).localeCompare(String(a.date)))[0];
-    if (recentReadinessSkip) push({id:"readiness-skip:" + recentReadinessSkip.id,profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"readiness",urgency:"normal",rank:5,createdAt:recentReadinessSkip.date,label:"Pre-workout check skipped",detail:"Reason: " + String(recentReadinessSkip.data && recentReadinessSkip.data.reason || recentReadinessSkip.value || "not entered").replace(/_/g," ") + ". Follow up if this becomes a pattern."});
     const trend = readinessTrendContext(profile);
-    if (trend.level !== "normal") push({id:"readiness-trend:" + profile.id + ":" + trend.level,profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"readiness",urgency:trend.level === "reduce" ? "high" : "normal",rank:trend.level === "reduce" ? 1 : 4,createdAt:latestReady && latestReady.date || profile.updatedAt,label:trend.level === "reduce" ? "Repeated recovery concern" : "Readiness trend to review",detail:trend.summary + (trend.causes.length ? " Repeated signals: " + trend.causes.join(", ") + "." : "")});
+    if (trend.level !== "normal") push({id:"readiness-trend:" + profile.id + ":" + trend.level,profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"readiness",urgency:trend.level === "reduce" ? "high" : "normal",rank:trend.level === "reduce" ? 1 : 4,createdAt:profile.updatedAt,label:trend.level === "reduce" ? "Repeated recovery concern" : "Readiness trend to review",detail:trend.summary + (trend.causes.length ? " Repeated signals: " + trend.causes.join(", ") + "." : "")});
 
     const recoveryDue = recoveryFollowUpStatus(profile);
     if (recoveryDue.active && recoveryDue.overdue) push({id:"recovery-overdue:" + recoveryDue.assignment.id,profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"recovery_due",urgency:"high",rank:2,createdAt:recoveryDue.targetEnd.toISOString(),label:"Recovery pulse overdue",detail:"The short 24–48 hour follow-up has not been completed. Send a reminder if this workout needs closer recovery or pain follow-up."});
@@ -307,7 +293,7 @@ function trainerAttentionSnapshot() {
   const attentionState = loadAttentionState(), visibleItems = items.filter((item) => attentionItemIsVisible(item,attentionState)).sort((a,b) => Number(a.rank || 9) - Number(b.rank || 9) || new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
   return {unanswered,assignmentReviews,checkinReviews,intakeReviews,recoveryOverdue,formalReviews,receiptRequests,recognition,trainerRequests,automationAlerts,reviews:intakeReviews.length + assignmentReviews.length + checkinReviews.length + receiptRequests.length,items:visibleItems};
 }
-function openCoachAttentionItem(profileId,kind) {
+function openCoachAttentionItem(profileId,kind,itemId) {
   if (kind === "trainer_request") { openCoachDestination("access"); return; }
   const profile = loadProfiles().find((item) => item.id === profileId);
   if (!profile) { openCoachDestination(kind === "message" ? "messages" : "clients"); return; }
@@ -317,13 +303,16 @@ function openCoachAttentionItem(profileId,kind) {
   trainerSummaryState.tab = kind === "message" || kind === "recognition" || kind === "inactive" || kind === "recovery_due" ? "messages"
     : ["checkin","recovery"].includes(kind) ? "checkins"
       : kind === "automation" ? "coaching"
-      : kind === "program" || kind === "formal" || kind === "baseline" ? "program"
+      : kind === "workout" || kind === "program" || kind === "formal" || kind === "baseline" ? "program"
         : ["receipt_weekly","receipt_formal"].includes(kind) ? "progress"
         : kind === "pain" || kind === "readiness" || kind === "intake" ? "assessments" : "overview";
   show("trainer");
   renderTrainerHub(profile.name);
   if (kind === "intake") setTimeout(() => openClientIntake(profile.id,"trainer"),30);
-  if (["receipt_weekly","receipt_formal"].includes(kind)) setTimeout(() => openProgressReceiptEditor(profile.id,kind === "receipt_formal" ? "formal" : "weekly"),30);
+  else if (kind === "workout") setTimeout(() => openCoachAdjustment(profile.id),30);
+  else if (kind === "baseline") setTimeout(() => openBaselineReview(profile.id),30);
+  else if (["checkin","recovery"].includes(kind)) { const checkInId = String(itemId || "").split(":")[1]; if (checkInId) setTimeout(() => replyToClientCheckIn(checkInId),30); }
+  else if (["receipt_weekly","receipt_formal"].includes(kind)) setTimeout(() => openProgressReceiptEditor(profile.id,kind === "receipt_formal" ? "formal" : "weekly"),30);
 }
 function updateCoachAttentionItem(id,status) {
   const state = loadAttentionState();
@@ -351,7 +340,7 @@ function renderTrainerAttention() {
     '<button class="attention-card positive" onclick="openCoachDestination(\'messages\')"><span>Recognition due</span><b>' + attention.recognition.length + '</b><p>Recent effort with no coach acknowledgement yet.</p></button>' +
     '<button class="attention-card" onclick="openCoachDestination(\'access\')"><span>Trainer requests</span><b>' + attention.trainerRequests.length + '</b><p>Approved trainers can confirm verified pending requests; owners control manual grants and removal.</p></button>' +
     '<section class="attention-command"><div class="attention-command-head"><div><h3>Who needs me next?</h3><p>Safety and unanswered communication come first, then required reviews, expiring plans, recognition, and inactive-client follow-up.</p></div><span class="attention-command-count">' + attention.items.length + '</span></div><div class="attention-queue">' +
-    (attention.items.slice(0,12).map((item) => '<article class="attention-item ' + escapeHtml(item.urgency) + '"><i class="attention-priority" aria-hidden="true"></i><div class="attention-person"><b>' + escapeHtml(item.client || "Workspace") + '</b><span>' + escapeHtml(item.trainer || "Coaching team") + ' · waiting ' + escapeHtml(attentionWaitingLabel(item.createdAt)) + '</span></div><div class="attention-reason"><b>' + escapeHtml(item.label) + '</b><span>' + escapeHtml(item.detail) + '</span></div><div class="attention-item-actions"><button class="mini-btn primary" onclick="openCoachAttentionItem(\'' + escapeHtml(item.profileId || "") + '\',\'' + escapeHtml(item.kind) + '\')">Open</button><button class="mini-btn" onclick="updateCoachAttentionItem(\'' + escapeHtml(item.id) + '\',\'snoozed\')">Tomorrow</button><button class="mini-btn" onclick="updateCoachAttentionItem(\'' + escapeHtml(item.id) + '\',\'done\')">Handled</button></div></article>').join("") || '<div class="attention-empty"><b>No client is waiting on the coaching team.</b><br>New pain reports, messages, reviews, recognition opportunities, and expiring programs will appear here.</div>') +
+    (attention.items.slice(0,12).map((item) => '<article class="attention-item ' + escapeHtml(item.urgency) + '"><i class="attention-priority" aria-hidden="true"></i><div class="attention-person"><b>' + escapeHtml(item.client || "Workspace") + '</b><span>' + escapeHtml(item.trainer || "Coaching team") + ' · waiting ' + escapeHtml(attentionWaitingLabel(item.createdAt)) + '</span></div><div class="attention-reason"><b>' + escapeHtml(item.label) + '</b><span>' + escapeHtml(item.detail) + '</span></div><div class="attention-item-actions"><button class="mini-btn primary" onclick="openCoachAttentionItem(\'' + escapeHtml(item.profileId || "") + '\',\'' + escapeHtml(item.kind) + '\',\'' + escapeHtml(item.id || "") + '\')">Open</button><button class="mini-btn" onclick="updateCoachAttentionItem(\'' + escapeHtml(item.id) + '\',\'snoozed\')">Tomorrow</button><button class="mini-btn" onclick="updateCoachAttentionItem(\'' + escapeHtml(item.id) + '\',\'done\')">Handled</button></div></article>').join("") || '<div class="attention-empty"><b>No client is waiting on the coaching team.</b><br>New pain reports, messages, reviews, recognition opportunities, and expiring programs will appear here.</div>') +
     '</div></section>';
   return attention;
 }
@@ -375,9 +364,10 @@ function renderClientCoach(profile) {
 }
 function openClientMoreSection(section) { openClientTab('more'); if (section) setTimeout(() => { const target = byId('client-more-' + section); if (target) target.scrollIntoView({behavior:'smooth',block:'start'}); },20); }
 function renderClientMore(profile) {
-  const out = byId('clientMoreContent'), intakeStatus = intakeCompletion(profile); if (!out) return; out.innerHTML = '<div class="client-grid"><section class="client-card wide" id="client-more-tools"><div class="client-section-label">Training tools</div><div class="client-grid" style="margin-top:10px"><div class="client-action-row"><span><b>Rest & interval timers</b><span>Fullscreen timers for sets and conditioning</span></span><button class="small-btn" onclick="openTools()">Open</button></div><div class="client-action-row"><span><b>Plate calculator</b><span>Load a barbell without mental math</span></span><button class="small-btn" onclick="openTools()">Open</button></div><div class="client-action-row"><span><b>1RM estimator</b><span>Estimate training percentages</span></span><button class="small-btn" onclick="openTools()">Open</button></div><div class="client-action-row"><span><b>RPE / RIR guide</b><span>Match effort to the prescription</span></span><button class="small-btn" onclick="openTools()">Open</button></div></div></section>'
+  const out = byId('clientMoreContent'), intakeStatus = intakeCompletion(profile), daily = clientDailyState(profile).value, completedHabits = [daily.movement,daily.hydration,daily.nutrition].filter(Boolean).length; if (!out) return; out.innerHTML = '<div class="client-grid"><section class="client-card wide" id="client-more-tools"><div class="client-section-label">Training tools</div><div class="client-grid" style="margin-top:10px"><div class="client-action-row"><span><b>Rest & interval timers</b><span>Fullscreen timers for sets and conditioning</span></span><button class="small-btn" onclick="openTools()">Open</button></div><div class="client-action-row"><span><b>Plate calculator</b><span>Load a barbell without mental math</span></span><button class="small-btn" onclick="openTools()">Open</button></div><div class="client-action-row"><span><b>1RM estimator</b><span>Estimate training percentages</span></span><button class="small-btn" onclick="openTools()">Open</button></div><div class="client-action-row"><span><b>RPE / RIR guide</b><span>Match effort to the prescription</span></span><button class="small-btn" onclick="openTools()">Open</button></div></div></section>'
+    + '<section class="client-card wide" id="client-more-habits"><div class="client-section-label">Today’s habits · ' + completedHabits + '/3</div>' + [["movement","Daily movement",daily.movement],["hydration","Hydration target",daily.hydration],["nutrition","Nutrition plan",daily.nutrition]].map((habit) => '<label class="client-action-row"><span><b>' + habit[1] + '</b><span>Tap when complete</span></span><input class="habit-check" type="checkbox" ' + (habit[2] ? 'checked' : '') + ' onchange="toggleClientHabit(\'' + habit[0] + '\',this.checked)"></label>').join('') + '</section>'
     + '<section class="client-card"><div class="client-section-label">Exercise library</div><h3>' + LIBRARY.length + ' approved movements</h3><p>Exercise instructions and substitutions appear contextually during the workout.</p></section>'
-    + '<section class="client-card" id="client-more-nutrition"><div class="client-section-label">Nutrition</div><h3>Optional daily support</h3><p>Keep targets simple and coach-defined. This is not a meal-prescription or medical nutrition tool.</p></section>'
+    + '<section class="client-card" id="client-more-nutrition"><div class="client-section-label">Nutrition</div><h3>' + (daily.nutrition ? 'Plan completed today' : 'Optional daily support') + '</h3><p>Keep targets simple and coach-defined. This is not a meal-prescription or medical nutrition tool.</p></section>'
     + '<section class="client-card"><div class="client-section-label">Education</div><h3>Learn the plan</h3><p>RPE/RIR, exercise technique, recovery, and program-phase guides live here instead of on Home.</p></section>'
     + '<section class="client-card wide"><div class="client-section-label">Coaching intake · ' + intakeStatus.percent + '%</div><div class="client-action-row"><span><b>' + (intakeStatus.programmingBlocked ? 'Safety review pending' : intakeStatus.status === 'trainer_review' ? 'Waiting for trainer review' : intakeStatus.status === 'complete' ? 'Onboarding complete' : 'Finish onboarding') + '</b><span>Identity, goals, schedule, equipment, health-readiness, recovery, coaching preferences, emergency contact, and consent stay together here.</span></span><button class="small-btn ' + (intakeStatus.status !== 'complete' ? 'primary' : '') + '" onclick="openClientOnboarding()">Open intake</button></div></section>'
     + '<section class="client-card wide"><div class="client-section-label">Account & settings</div><div class="client-action-row"><span><b>' + escapeHtml(profile.name) + '</b><span>@' + escapeHtml(profileUsername(profile)) + ' · ' + EXP_LABEL(profile.experience) + '</span></span><button class="small-btn" onclick="clearActiveClient()">Use another profile</button></div><p style="margin-top:10px">Profile editing remains trainer-only. When the cloud status says “Saved across devices,” completed sets, messages, check-ins, intake updates, and program activity are synchronized to this account.</p></section></div>';
@@ -450,150 +440,21 @@ function localDayKey(value) {
   if (Number.isNaN(date.getTime())) return "";
   return [date.getFullYear(),String(date.getMonth() + 1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");
 }
-function readinessEntryForWorkout(profileId,assignmentId) {
-  const today = localDayKey();
-  return loadProgress().find((entry) => entry.type === "readiness" && entry.profileId === profileId && localDayKey(entry.date) === today && entry.data && entry.data.purpose === "pre_workout" && entry.data.assignmentId === assignmentId) || null;
-}
-function readinessSkipForWorkout(profileId,assignmentId) {
-  const today = localDayKey();
-  return loadProgress().find((entry) => entry.type === "readiness_skip" && entry.profileId === profileId && localDayKey(entry.date) === today && entry.data && entry.data.assignmentId === assignmentId) || null;
-}
-function resetQuickReadinessForm() {
-  [["readySleep","3"],["readyEnergy","3"],["readySoreness","3"],["readyStress","3"],["readyPain","0"],["readyMotivation","3"],["readyOverall","3"],["readyIllness","none"]].forEach(([id,value]) => { if (byId(id)) byId(id).value = value; });
-  if (byId("readySleepHours")) byId("readySleepHours").value = "7.5";
-  if (byId("readyPainMovement")) byId("readyPainMovement").value = "no";
-  if (byId("readyPainExercise")) byId("readyPainExercise").value = "";
-  if (byId("readyPainArea")) byId("readyPainArea").value = "";
-  if (byId("readySorenessArea")) byId("readySorenessArea").value = "";
-  if (byId("readinessSkipReason")) byId("readinessSkipReason").value = "";
-  if (byId("readinessResult")) { byId("readinessResult").style.display = "none"; byId("readinessResult").innerHTML = ""; }
-  currentReadiness = null; updateReadinessPainFields(); updateReadinessSorenessFields();
-}
-function openClientReadinessForWorkout(profileId,assignmentId,shortened) {
-  const profile = loadProfiles().find((item) => item.id === profileId), assignment = loadAssignedWorkouts().find((item) => item.id === assignmentId && item.profileId === profileId) || assignmentForClient(profileId);
-  if (!profile || !assignment) { showToast("No coach-approved workout is assigned yet"); return null; }
-  pendingReadinessStart = {profileId,assignmentId:assignment.id,shortened:Boolean(shortened)};
-  portalRole = "client"; openReadiness(); selectReadinessProfile(profile.id); resetQuickReadinessForm(); selectReadinessProfile(profile.id);
-  const gate = byId("readinessStartGate"), copy = byId("readinessGateCopy"), actions = byId("readinessGateActions");
-  if (gate) gate.style.display = "block";
-  if (copy) copy.textContent = "Complete the six quick taps above. FIT 4 LIFE will keep " + profile.name + "’s coach-approved workout intact or make a temporary dose adjustment for today.";
-  if (actions) actions.innerHTML = "";
-  if (byId("clientReadinessReturnCard")) byId("clientReadinessReturnCard").style.display = "none";
-  setTimeout(() => byId("readySleep") && byId("readySleep").focus(),30);
-  return pendingReadinessStart;
-}
-function recordReadinessSkipAndStart() {
-  if (!pendingReadinessStart) { showToast("Open an assigned workout first"); return null; }
-  const reason = byId("readinessSkipReason") && byId("readinessSkipReason").value;
-  if (!reason) { showToast("Choose why the readiness check is being skipped"); return null; }
-  const profile = loadProfiles().find((item) => item.id === pendingReadinessStart.profileId);
-  addProgressEntry({type:"readiness_skip",profileId:pendingReadinessStart.profileId,client:profile && profile.name || "Client",label:"Pre-workout readiness skipped",value:reason,note:"Assigned workout used without a same-day readiness score.",data:{purpose:"pre_workout",assignmentId:pendingReadinessStart.assignmentId,reason,coachNotice:true}});
-  const request = {...pendingReadinessStart}; pendingReadinessStart = null;
-  return startActiveWorkout(request.profileId,request.shortened,request.assignmentId,true);
-}
-function continueReadinessAdjustedWorkout() {
-  if (!pendingReadinessStart) { showToast("Open an assigned workout first"); return null; }
-  const saved = readinessEntryForWorkout(pendingReadinessStart.profileId,pendingReadinessStart.assignmentId);
-  if (!saved) { showToast("Save today’s readiness check first"); return null; }
-  if (saved.data && saved.data.blockStart) { showToast("Hard training is paused. Contact your trainer and follow appropriate medical guidance for severe or worsening symptoms."); return null; }
-  const request = {...pendingReadinessStart}; pendingReadinessStart = null;
-  return startActiveWorkout(request.profileId,request.shortened,request.assignmentId,true);
-}
-function readinessAdjustmentPlan(readiness) {
-  const plan = {blockStart:false,safetyHold:false,setDelta:0,rpe:8,remove:[],straightSets:false,filterAreas:[],changes:[]};
-  if (!readiness) return plan;
-  if (readiness.illness === "significant" || readiness.pain >= 3 || readiness.key === "recovery") {
-    plan.blockStart = true; plan.safetyHold = readiness.illness === "significant" || readiness.pain >= 3; plan.rpe = 0; plan.changes.push("Hard training paused for severe symptoms or extremely low readiness"); return plan;
-  }
-  if (readiness.key === "adjust") { plan.setDelta = -1; plan.rpe = 7; plan.changes.push("One working set removed from higher-volume blocks"); }
-  if (readiness.key === "reduce") { plan.setDelta = -2; plan.rpe = 6; plan.remove.push("power","plyo","finisher"); plan.changes.push("Power work and finishers removed"); }
-  if (readiness.sleep <= 2 || readiness.energy <= 2) {
-    plan.setDelta = Math.min(plan.setDelta,-1); plan.rpe = Math.min(plan.rpe,7); plan.changes.push("Effort capped because sleep or energy is low");
-    if (readiness.sleep === 1 || readiness.energy === 1) { plan.setDelta = Math.min(plan.setDelta,-2); plan.remove.push("power","plyo","finisher"); }
-  }
-  if (readiness.stress >= 4) { plan.setDelta = Math.min(plan.setDelta,-1); plan.rpe = Math.min(plan.rpe,7); plan.straightSets = true; plan.changes.push("Complex pairings simplified because stress is high"); }
-  if (readiness.soreness >= 4) {
-    plan.setDelta = Math.min(plan.setDelta,-1); plan.rpe = Math.min(plan.rpe,7); plan.remove.push("finisher");
-    if (readiness.sorenessArea && BODY_AREA_LIMITATIONS.includes(readiness.sorenessArea)) { plan.filterAreas.push(readiness.sorenessArea); plan.changes.push((INJURY_LABELS[readiness.sorenessArea] || readiness.sorenessArea) + " demand filtered for high soreness"); }
-  }
-  if (readiness.pain === 1) { plan.rpe = Math.min(plan.rpe,7); plan.changes.push("Load and range kept conservative while mild pain is monitored"); }
-  if (readiness.pain >= 2 && BODY_AREA_LIMITATIONS.includes(readiness.painArea)) {
-    plan.setDelta = Math.min(plan.setDelta,-2); plan.rpe = Math.min(plan.rpe,6); plan.remove.push("power","plyo","finisher"); plan.filterAreas.push(readiness.painArea); plan.changes.push((INJURY_LABELS[readiness.painArea] || readiness.painArea) + " stress removed because pain changed movement");
-  }
-  if (readiness.illness === "mild") { plan.setDelta = Math.min(plan.setDelta,-2); plan.rpe = Math.min(plan.rpe,6); plan.remove.push("power","plyo","finisher"); plan.changes.push("Training simplified for mild illness symptoms"); }
-  plan.remove = [...new Set(plan.remove)]; plan.filterAreas = [...new Set(plan.filterAreas)]; plan.changes = [...new Set(plan.changes)];
-  return plan;
-}
-function readinessReplacement(exercise,block,spec,used,seed) {
-  const pool = eligible(spec,spec.age).filter((candidate) => !used.has(candidate.name) && candidate.name !== exercise.name && candidate.finisher === exercise.finisher);
-  const samePattern = pool.filter((candidate) => candidate.pattern === exercise.pattern);
-  const sameRegion = pool.filter((candidate) => candidate.region === exercise.region);
-  const candidates = samePattern.length ? samePattern : sameRegion.length ? sameRegion : pool;
-  if (!candidates.length) return null;
-  return biasSort(candidates,spec.muscles || [],makeRng(seed || 1),spec.experience,emphasisOf(block.items || []))[0] || null;
-}
-function buildTodayReadinessSession(session,profile,readiness) {
-  if (!session || !readiness) return {session,plan:readinessAdjustmentPlan(readiness),conflicts:["Workout is unavailable."]};
-  const copy = JSON.parse(JSON.stringify(session)), plan = readinessAdjustmentPlan(readiness);
-  if (plan.blockStart) return {session:null,plan,conflicts:[]};
-  const spec = safetySpecForProfile(copy,profile);
-  spec.injuries = [...new Set([...(spec.injuries || []),...plan.filterAreas])];
-  copy.spec = {...copy.spec,readinessToday:{score:readiness.score,key:readiness.key,causes:plan.changes},injuries:[...(copy.spec.injuries || [])]};
-  const used = new Set((copy.blocks || []).flatMap((block) => (block.items || []).map((exercise) => exercise.name)));
-  (copy.blocks || []).forEach((block,blockIndex) => {
-    const kept = [];
-    (block.items || []).forEach((exercise,exerciseIndex) => {
-      const conflicts = exerciseConstraintIssues(exercise,spec,spec.age).filter((issue) => issue.hard);
-      if (!conflicts.length) { kept.push(exercise); return; }
-      used.delete(exercise.name);
-      const replacement = readinessReplacement(exercise,block,spec,used,Date.now() + blockIndex * 97 + exerciseIndex * 17);
-      if (replacement) {
-        const next = {...replacement,rx:{...(exercise.rx || block.rx)}}; kept.push(next); used.add(next.name); plan.changes.push(exercise.name + " changed to " + next.name + " for today");
-      } else plan.changes.push(exercise.name + " removed because no safe same-day substitute was available");
-    });
-    block.items = kept;
-    block.groups = kept.map((exercise) => ({type:"straight",items:[exercise]}));
-  });
-  copy.blocks = (copy.blocks || []).filter((block) => block.items.length && !plan.remove.includes(block.key));
-  copy.blocks.forEach((block) => {
-    if (["warmup","mobility","primer"].includes(block.key)) return;
-    if (plan.setDelta < 0) {
-      block.rx = {...block.rx,sets:adjustSetCount(block.rx && block.rx.sets || "1",plan.setDelta),rpe:"Cap at RPE " + plan.rpe};
-      block.items.forEach((exercise) => { exercise.rx = {...(exercise.rx || block.rx),sets:adjustSetCount(exercise.rx && exercise.rx.sets || block.rx.sets,plan.setDelta),rpe:"Cap at RPE " + plan.rpe}; });
-    }
-    if (plan.straightSets) block.groups = block.items.map((exercise) => ({type:"straight",items:[exercise]}));
-  });
-  if (copy.prescription && plan.setDelta < 0) copy.prescription = {...copy.prescription,sets:adjustSetCount(copy.prescription.sets,plan.setDelta),rpe:"Cap at RPE " + plan.rpe};
-  copy.readinessToday = {score:readiness.score,key:readiness.key,title:readiness.title,changes:[...new Set(plan.changes)],createdAt:readiness.createdAt};
-  copy.rationale = "Today-only readiness adjustment (" + readiness.score + "/100): " + (plan.changes.join("; ") || "coach-approved plan kept as written") + ". The approved master program was not changed. " + (copy.rationale || "");
-  normalizeSessionBlockOrder(copy); enrichSessionMetadata(copy);
-  return {session:copy,plan,conflicts:sessionSafetyConflictsForProfile(copy,profile)};
-}
-function startActiveWorkout(profileId,shortened,assignmentId,bypassReadiness) {
+function startActiveWorkout(profileId,shortened,assignmentId) {
   const profile = loadProfiles().find((item) => item.id === profileId), assignments = loadAssignedWorkouts(), selected = assignmentId ? assignments.find((item) => item.id === assignmentId && item.profileId === profileId) : assignmentForClient(profileId), assignmentIndex = selected ? assignments.findIndex((item) => item.id === selected.id) : -1; if (!profile || assignmentIndex < 0) { showToast('No coach-approved workout is assigned yet'); return null; }
   if (["completed","reviewed"].includes(assignmentStatus(assignments[assignmentIndex]))) { showToast('That workout is already complete. Choose the next scheduled workout.'); return null; }
   const currentSession = clientAssignedSession(assignments[assignmentIndex],profile);
-  const readinessEntry = readinessEntryForWorkout(profile.id,assignments[assignmentIndex].id), readinessSkip = readinessSkipForWorkout(profile.id,assignments[assignmentIndex].id);
-  if (!bypassReadiness && !readinessEntry && !readinessSkip) {
-    openClientReadinessForWorkout(profile.id,assignments[assignmentIndex].id,shortened);
-    showToast("Complete the quick pre-workout check before starting");
-    return null;
-  }
-  const today = readinessEntry && readinessEntry.data ? buildTodayReadinessSession(currentSession,profile,readinessEntry.data) : {session:currentSession,plan:null,conflicts:[]};
-  if (today.plan && today.plan.blockStart) { showToast("Hard training is paused today. Contact your trainer before continuing."); return null; }
   const unresolvedSafety = unresolvedClientSafetyHold(profile);
   if (unresolvedSafety) { showToast("Workout paused until your trainer reviews the recent pain or discomfort report"); return null; }
-  const sessionForToday = today.session || currentSession, safetyConflicts = today.conflicts && today.conflicts.length ? today.conflicts : sessionSafetyConflictsForProfile(sessionForToday,profile);
+  const safetyConflicts = sessionSafetyConflictsForProfile(currentSession,profile);
   if (safetyConflicts.length) {
-    addProgressEntry({type:"safety_hold",client:profile.name,profileId:profile.id,sessionId:sessionForToday && sessionForToday.sessionId || "",label:"Workout safety recheck",value:"Trainer review required",note:safetyConflicts.join(" · "),data:{conflicts:safetyConflicts}});
+    addProgressEntry({type:"safety_hold",client:profile.name,profileId:profile.id,sessionId:currentSession && currentSession.sessionId || "",label:"Workout safety recheck",value:"Trainer review required",note:safetyConflicts.join(" · "),data:{conflicts:safetyConflicts}});
     showToast("Workout paused for trainer review: " + safetyConflicts.slice(0,2).join(" · "));
     return null;
   }
   if (assignmentStatus(assignments[assignmentIndex]) === 'assigned') { assignments[assignmentIndex].status = 'in_progress'; assignments[assignmentIndex].startedAt = new Date().toISOString(); writeAssignedWorkouts(assignments); }
-  const assignment = assignments[assignmentIndex], session = sessionForToday, saved = loadActiveWorkoutState(); state.session = JSON.parse(JSON.stringify(assignment.session)); state.sessionOptions = [];
+  const assignment = assignments[assignmentIndex], session = currentSession, saved = loadActiveWorkoutState(); state.session = JSON.parse(JSON.stringify(assignment.session)); state.sessionOptions = [];
   activeWorkout = saved && saved.assignmentId === assignment.id ? saved : {assignmentId:assignment.id,profileId:profile.id,sessionId:session.sessionId,unitIndex:0,pairIndex:0,setByExercise:{},extraSets:{},warmups:{},skippedSets:{},skippedExercises:{},supersetMode:{},shortened:Boolean(shortened),startedAt:new Date().toISOString()};
-  if (readinessEntry) { activeWorkout.readinessEntryId = readinessEntry.id; activeWorkout.readinessScore = readinessEntry.data.score; activeWorkout.readinessKey = readinessEntry.data.key; activeWorkout.sessionOverride = JSON.parse(JSON.stringify(sessionForToday)); }
-  else if (readinessSkip) { delete activeWorkout.readinessEntryId; delete activeWorkout.readinessScore; delete activeWorkout.readinessKey; delete activeWorkout.sessionOverride; }
   activeWorkout.setByExercise = activeWorkout.setByExercise || {}; activeWorkout.editingSetByExercise = activeWorkout.editingSetByExercise || {}; activeWorkout.extraSets = activeWorkout.extraSets || {}; activeWorkout.warmups = activeWorkout.warmups || {}; activeWorkout.skippedSets = activeWorkout.skippedSets || {}; activeWorkout.skippedExercises = activeWorkout.skippedExercises || {}; activeWorkout.supersetMode = activeWorkout.supersetMode || {};
   if (shortened) activeWorkout.shortened = true; restoreRestTimerSnapshot(activeWorkout.restTimer); saveActiveWorkoutState(); portalRole = 'client'; show('active-workout'); renderActiveWorkout(); return activeWorkout;
 }
@@ -646,7 +507,7 @@ function activeQueueHtml(units,session) {
     else phases.push({key,title:unit.block.title || 'Training block',units:[{unit,index}]});
   });
   const completed = units.filter((unit,index) => activeUnitIsDone(session,unit,index)).length;
-  return '<section class="active-workout-queue active-workout-flow"><div class="active-flow-head"><div><h2>Today’s workout flow</h2><p>Follow the phases from top to bottom. Your current exercise is highlighted, every result saves immediately, and future work unlocks as you log or intentionally skip each set.</p></div><span class="active-flow-count">' + completed + ' of ' + units.length + ' complete</span></div><div class="active-flow-phases">' + phases.map((phase,phaseIndex) => {
+  return '<section class="active-workout-queue active-workout-flow"><div class="active-flow-head"><h2>Today’s workout</h2><span class="active-flow-count">' + completed + ' of ' + units.length + ' complete</span></div><div class="active-flow-phases">' + phases.map((phase,phaseIndex) => {
     const phaseComplete = phase.units.every(({unit,index}) => activeUnitIsDone(session,unit,index)), phaseCurrent = phase.units.some(({index}) => index === activeWorkout.unitIndex);
     return '<section class="active-flow-phase ' + (phaseCurrent ? 'current ' : '') + (phaseComplete ? 'complete' : '') + '"><span class="active-flow-phase-index">' + (phaseComplete ? '✓' : phaseIndex + 1) + '</span><div class="active-flow-phase-body"><div class="active-flow-phase-title"><b>' + escapeHtml(phase.title) + '</b><span>' + phase.units.length + ' exercise' + (phase.units.length === 1 ? '' : 's') + '</span></div><div class="active-flow-units">' + phase.units.map(({unit,index}) => {
       const complete = activeUnitIsDone(session,unit,index), skipped = unit.items.every((exercise) => activeWorkout.skippedExercises[index + "::" + exercise.name]), current = index === activeWorkout.unitIndex, stateLabel = complete ? skipped ? "Skipped" : "Done" : current ? "Current" : index < activeWorkout.unitIndex ? "Passed" : "Upcoming", canOpen = index <= activeWorkout.unitIndex || complete;
@@ -677,7 +538,8 @@ function renderActiveWorkout() {
   const effort = effortSelect(exercise.name + ' effort',saved && saved.data && saved.data.rpe); effort.id = 'activeSetEffort'; effort.classList.add('active-effort');
   if (saved && saved.data) { if (saved.data.load != null) load.value = saved.data.load; if (saved.data.reps != null) reps.value = saved.data.reps; } else { if (recommendation && recommendation.load) load.value = recommendation.load; const target = plannedRepTarget(rx); if (target) reps.value = target; }
   const row = el('div','active-set-row' + (saved ? ' saved' : '')); row.append(el('div','active-set-number','Set ' + nextUnset)); if (!bodyweightOnly && !cardioOnly) row.append(activeSetField('Weight',load)); row.append(activeSetField(cardioOnly ? 'Minutes / distance' : bodyweightOnly ? 'Reps / seconds' : 'Reps',reps),activeSetField('Effort',effort,'active-effort')); const save = el('button','small-btn primary',saved ? 'Update result' : 'Log & continue'); save.onclick = () => saveActiveSet(exercise,nextUnset,saved && saved.id,bodyweightOnly,cardioOnly,recommendation && recommendation.unit || previous && previous.unit || 'lb'); const skip = el('button','small-btn',saved ? 'Saved' : 'Skip set'); skip.disabled = Boolean(saved); skip.onclick = () => skipCurrentActiveSet(); row.append(save,skip);
-  const card = '<article class="active-exercise-card"><header class="active-exercise-head"><div class="client-section-label">' + escapeHtml(unit.block.title) + '</div><h1>' + escapeHtml(exercise.name) + '</h1><p>' + escapeHtml(ZONE_LABELS[exercise.zone] || exercise.zone) + ' · ' + escapeHtml(unit.type === 'superset' ? 'Optional paired block' : 'Straight sets') + '</p></header><div class="active-demo"><div><div style="font-size:34px">▶</div><b>Demonstration video</b><span>' + (exercise.video ? 'Tap to play' : 'Coach video not attached · use the instructions below') + '</span></div></div>' + pair + calibrationCapture + '<div class="active-cue"><b>Coaching cue</b><p>' + escapeHtml(exercise.cue || 'Use controlled technique and stop if pain changes the movement.') + '</p></div><div class="active-prescription"><div><span>Sets</span><b>' + planned + '</b></div><div><span>Reps</span><b>' + escapeHtml(rx.reps || 'Coach set') + '</b></div><div><span>Tempo</span><b>' + escapeHtml(rx.tempo || 'Controlled') + '</b></div><div><span>RPE / RIR</span><b>' + escapeHtml(rx.rpe || 'Coach set') + '</b></div><div><span>Rest</span><b>' + escapeHtml(rx.rest || 'As needed') + '</b></div></div><div class="active-previous">Previous performance · ' + escapeHtml(previous ? (previous.load == null ? previous.unit === 'bodyweight' ? 'Bodyweight' : 'Completed' : previous.load + ' ' + previous.unit) + (previous.reps == null ? '' : ' × ' + previous.reps) : 'No previous result') + '</div>' + history + setSelector + '<div class="active-set-list" id="activeSetMount"></div><div class="active-rest-now"><div><b>Rest for ' + escapeHtml(rx.rest || 'as needed') + '</b><span>The timer starts after a newly logged set. Start or restart it manually anytime.</span></div><button class="small-btn primary" onclick="restartCurrentActiveRest()">Start rest timer</button></div><div class="active-tools"><button class="small-btn" onclick="addActiveWarmupSet()">+ Warm-up set</button><button class="small-btn" onclick="addActiveWorkingSet()">+ Working set</button><button class="small-btn" onclick="replaceActiveExercise()">Replace exercise</button><button class="small-btn" onclick="recordActiveNote()">Record note</button><button class="small-btn danger" onclick="openClientPainReport()">Report pain</button><button class="small-btn" onclick="skipCurrentActiveExercise()">Skip exercise</button></div>' + (!unitDone ? '<div class="active-progress-lock">The next exercise stays locked until every current set is logged or intentionally skipped. Skips are saved for your trainer instead of disappearing.</div>' : '') + '<div class="tool-actions" style="padding:0 20px 20px;justify-content:space-between"><button class="small-btn" onclick="moveActiveUnit(-1)" ' + (activeWorkout.unitIndex === 0 ? 'disabled' : '') + '>Previous</button><button class="small-btn primary" onclick="moveActiveUnit(1)" ' + (!unitDone ? 'disabled' : '') + '>' + (activeWorkout.unitIndex === units.length - 1 ? 'Finish workout' : 'Continue') + '</button></div></article>';
+  const demoBlock = exercise.video ? '<div class="active-demo"><div><div style="font-size:34px">▶</div><b>Demonstration video</b><span>Tap to play</span></div></div>' : '';
+  const card = '<article class="active-exercise-card"><header class="active-exercise-head"><div class="client-section-label">' + escapeHtml(unit.block.title) + '</div><h1>' + escapeHtml(exercise.name) + '</h1><p>' + escapeHtml(ZONE_LABELS[exercise.zone] || exercise.zone) + ' · ' + escapeHtml(unit.type === 'superset' ? 'Optional paired block' : 'Straight sets') + '</p></header>' + demoBlock + pair + calibrationCapture + '<div class="active-cue"><b>Coaching cue</b><p>' + escapeHtml(exercise.cue || 'Use controlled technique and stop if pain changes the movement.') + '</p></div><div class="active-prescription"><div><span>Sets</span><b>' + planned + '</b></div><div><span>Reps</span><b>' + escapeHtml(rx.reps || 'Coach set') + '</b></div><div><span>Tempo</span><b>' + escapeHtml(rx.tempo || 'Controlled') + '</b></div><div><span>RPE / RIR</span><b>' + escapeHtml(rx.rpe || 'Coach set') + '</b></div><div><span>Rest</span><b>' + escapeHtml(rx.rest || 'As needed') + '</b></div></div><div class="active-previous">Previous performance · ' + escapeHtml(previous ? (previous.load == null ? previous.unit === 'bodyweight' ? 'Bodyweight' : 'Completed' : previous.load + ' ' + previous.unit) + (previous.reps == null ? '' : ' × ' + previous.reps) : 'No previous result') + '</div>' + history + setSelector + '<div class="active-set-list" id="activeSetMount"></div><div class="active-tools"><button class="small-btn" onclick="addActiveWarmupSet()">+ Warm-up set</button><button class="small-btn" onclick="addActiveWorkingSet()">+ Working set</button><button class="small-btn" onclick="replaceActiveExercise()">Replace exercise</button><button class="small-btn" onclick="recordActiveNote()">Record note</button><button class="small-btn danger" onclick="openClientPainReport()">Report pain</button><button class="small-btn" onclick="skipCurrentActiveExercise()">Skip exercise</button></div>' + (!unitDone ? '<div class="active-progress-lock">The next exercise stays locked until every current set is logged or intentionally skipped. Skips are saved for your trainer instead of disappearing.</div>' : '') + '<div class="tool-actions" style="padding:0 20px 20px;justify-content:space-between"><button class="small-btn" onclick="moveActiveUnit(-1)" ' + (activeWorkout.unitIndex === 0 ? 'disabled' : '') + '>Previous</button><button class="small-btn primary" onclick="moveActiveUnit(1)" ' + (!unitDone ? 'disabled' : '') + '>' + (activeWorkout.unitIndex === units.length - 1 ? 'Finish workout' : 'Continue') + '</button></div></article>';
   const readinessToday = data.session.readinessToday, activeGoal = goalContractFor(data.profile);
   const readinessBanner = readinessToday ? '<section class="active-readiness-banner"><div class="active-readiness-score">' + escapeHtml(readinessToday.score) + '</div><div class="active-readiness-copy"><b>' + escapeHtml(readinessToday.title || 'Today’s readiness adjustment') + '</b><p>' + escapeHtml((readinessToday.changes || []).join(' · ') || 'The assigned workout is being used as written.') + '</p><small>Today only · the coach-approved program is unchanged</small></div><span>Pre-workout check</span></section>' : '';
   const goalReminder = activeGoal.deeperReason ? '<section class="active-goal-reminder"><span>Why you came today</span><p>' + escapeHtml(activeGoal.deeperReason) + '</p></section>' : '';
@@ -806,13 +668,9 @@ function openPrograms(preserveTemplate) {
 }
 function openReadiness() {
   show("readiness");
-  const isClient = portalRole === "client", unlocked = portalRole === "trainer" && trainerIsUnlocked(), memory = byId("progressMemoryCard"), locked = byId("progressLockedCard"), tune = byId("readinessTuneCard"), clientReturn = byId("clientReadinessReturnCard"), startGate = byId("readinessStartGate");
+  const unlocked = portalRole === "trainer" && trainerIsUnlocked(), memory = byId("progressMemoryCard"), locked = byId("progressLockedCard");
   if (memory) memory.style.display = unlocked ? "block" : "none";
   if (locked) locked.style.display = unlocked ? "none" : "block";
-  if (tune) tune.style.display = unlocked ? "block" : "none";
-  if (clientReturn) clientReturn.style.display = isClient ? "block" : "none";
-  if (startGate) startGate.style.display = isClient && pendingReadinessStart ? "block" : "none";
-  if (isClient && activeClientProfile()) selectReadinessProfile(activeClientProfile().id);
   if (unlocked) {
     const historyClient = byId("historyClientFilter");
     if (historyClient) historyClient.value = "";

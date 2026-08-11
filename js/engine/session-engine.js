@@ -1189,7 +1189,6 @@ function unresolvedClientSafetyHold(profile) {
     entry.type === "pain" && painRequiresSafetyHold(entry.data && (entry.data.level || entry.data.pain || entry.value),entry.data && entry.data.movementChanged)
     || entry.type === "substitution" && entry.data && entry.data.reason === "discomfort"
     || entry.type === "workout" && entry.data && painRequiresSafetyHold(entry.data.painLevel || entry.data.pain,entry.data.movementChanged)
-    || entry.type === "readiness" && entry.data && entry.data.safetyHold === true
   ));
   const checkInHolds = checkInsForProfile(profile.id).filter((item) => painRequiresSafetyHold(item.painLevel || item.pain,item.movementChanged)).map((item) => ({...item,type:"checkin",date:item.createdAt || item.date,data:item}));
   const latest = [...progressHolds,...checkInHolds].sort((a,b) => String(b.date || b.createdAt || "").localeCompare(String(a.date || a.createdAt || "")))[0];

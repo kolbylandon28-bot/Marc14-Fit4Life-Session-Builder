@@ -67,7 +67,7 @@
   .mark img{display:none}
   .mark::before{content:"F4L";font:italic 800 16px var(--display);letter-spacing:.01em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
   .brand-txt{display:flex;flex-direction:column;line-height:1}
-  .brand-name{font-family:var(--display);font-style:italic;font-weight:800;font-size:21px;letter-spacing:.02em;text-transform:uppercase}
+  .brand-name{font-family:var(--display);font-style:italic;font-weight:800;font-size:21px;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap}
   .brand-sub{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-faint);font-weight:500;margin-top:3px}
   .topbar-spacer{flex:1}
   .home-btn{display:none;align-items:center;gap:6px;background:var(--slate-2);border:1px solid var(--line);color:var(--text-dim);font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:.06em;text-transform:uppercase;padding:8px 14px;border-radius:7px}
@@ -123,7 +123,7 @@
   .cloud-auth-request-meta b{color:var(--text);font-weight:600;text-align:right}
   @media(max-width:560px){.cloud-auth-card{padding:23px 19px}.cloud-auth-row{grid-template-columns:1fr}.cloud-auth-card h1{font-size:29px}.cloud-auth-brand{font-size:37px}}
 
-  @media(max-width:720px){.cloud-status{max-width:105px}.cloud-account-btn{padding:7px 8px;font-size:10px}.topbar-inner{padding-left:12px;padding-right:12px;gap:8px}.brand-sub{display:none}}
+  @media(max-width:720px){.cloud-status{max-width:105px}.cloud-account-btn{padding:7px 8px;font-size:10px}.topbar-inner{padding-left:12px;padding-right:12px;gap:8px}.brand-sub{display:none}.brand-name{font-size:16px}.portal-context{display:none!important}}
 
   main{max-width:1000px;margin:0 auto;padding:26px 20px 90px}
 
@@ -967,7 +967,7 @@
   /* Focused active workout */
   #view-active-workout{max-width:1180px;margin:0 auto;padding-bottom:112px}
   .active-workout-top{position:sticky;top:70px;z-index:12;background:rgba(12,12,15,.94);backdrop-filter:blur(16px);padding:12px 0 14px;margin-bottom:12px;border-bottom:1px solid var(--line)}
-  .active-progress-row{display:flex;align-items:center;justify-content:space-between;gap:12px}.active-progress-row b{font-size:12px}.active-progress-row span{font:600 9px var(--mono);color:var(--text-faint)}
+  .active-progress-row{display:flex;align-items:center;justify-content:space-between;gap:12px}.active-progress-row>div{display:flex;flex-direction:column;gap:3px;min-width:0}.active-progress-row b{font-size:12px}.active-progress-row span{font:600 9px var(--mono);color:var(--text-faint)}
   .active-progress-track{height:6px;background:var(--slate-3);border-radius:99px;overflow:hidden;margin-top:10px}.active-progress-fill{height:100%;background:var(--grad);border-radius:inherit;transition:width .2s}
   .active-readiness-banner{grid-column:1/-1;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:13px 15px;border:1px solid rgba(90,166,240,.42);border-radius:14px;background:linear-gradient(135deg,rgba(64,139,255,.13),rgba(17,18,23,.96));box-shadow:var(--shadow)}
   .active-readiness-score{display:grid;place-items:center;width:48px;height:48px;border-radius:12px;background:var(--blue-glow);border:1px solid var(--blue);font:800 15px var(--mono);color:var(--blue-bright)}
