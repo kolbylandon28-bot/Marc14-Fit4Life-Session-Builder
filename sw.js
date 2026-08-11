@@ -1,4 +1,4 @@
-const CACHE_NAME = "fit4life-shell-2026-08-11-multi-owner-v1";
+const CACHE_NAME = "fit4life-shell-2026-08-10-stability-pass-v2";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
 const SHELL = [
   "/",

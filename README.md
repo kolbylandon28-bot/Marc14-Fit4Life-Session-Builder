@@ -18,21 +18,24 @@ Live: https://marc14-fit4-life-session-builder.vercel.app
 ```
 index.html                 Page shell + markup, loads styles and scripts in order
 styles.css                 All app styling
-js/                         App logic, split by feature area (loaded in this order):
-  exercise-library.js         Exercise database and edits
-  session-engine.js           Session-building rules (goal skeletons, eligibility, block builders)
-  session-builders.js         Public entry points: solo/group session generation
-  personalization.js          Goal-specific personalization baselines
-  navigation.js                View routing/state
-  program-app.js              Program-led client experience
-  forms.js                    Form construction
-  generation.js                Program/session generation flows
-  rendering.js                 Rendering helpers
-  calculations-timers.js       Numeric calculations + rest/work timers
-  multiweek-programs.js        Multi-week program logic
-  readiness-progress.js        Readiness adjustments + local progress memory
-  trainer-hub.js               Trainer dashboard + coaching analysis
-  coaching-support.js          Connected coaching support features
+js/                         App logic, grouped by domain (loaded in this order):
+  engine/                      Workout generation and program rules
+    exercise-library.js          Exercise database and edits
+    session-engine.js            Session-building rules (goal skeletons, eligibility, block builders)
+    session-builders.js          Public entry points: solo/group session generation
+    personalization.js           Goal-specific personalization baselines
+    generation.js                 Program/session generation flows
+    multiweek-programs.js         Multi-week program logic
+  app/                         Client-facing app shell + shared UI helpers
+    navigation.js                 View routing/state
+    program-app.js                Program-led client experience
+    forms.js                      Form construction
+    rendering.js                  Rendering helpers
+    calculations-timers.js        Numeric calculations + rest/work timers
+    readiness-progress.js         Readiness adjustments + local progress memory
+  trainer/                     Trainer-only features
+    trainer-hub.js                 Trainer dashboard + coaching analysis
+    coaching-support.js            Connected coaching support features
   init.js                      Bootstraps the app on load (must load last)
 cloud-sync.js               Supabase auth + data sync between localStorage and the cloud
 sw.js                       Service worker (offline shell cache)
