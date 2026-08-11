@@ -1,0 +1,40 @@
+FIT4LIFE V2 VERIFICATION — 2026-08-11
+
+AUTOMATED / STATIC CHECKS PASSED
+- All local JavaScript, the Vercel API function, cloud-sync.js, and sw.js pass
+  Node syntax validation.
+- index.html has 600 unique IDs, no duplicate IDs, 20 valid local asset refs,
+  16 valid local script refs, and 131 resolved inline function handlers.
+- styles.css has balanced structure and contains the explicit Client Details
+  contrast, trainer preview, and message-search rules.
+- manifest.webmanifest and vercel.json parse as valid JSON.
+- Both SVG icons parse as XML; JPEG/PNG/SVG asset formats were confirmed.
+- Every one of the 23 service-worker shell paths exists, and the cache is
+  versioned fit4life-shell-2026-08-11-trainer-preview-v2.
+
+WORKFLOW TESTS PASSED
+- Trainer/owner sign-in lands on the Trainer side / Client side choice.
+- Trainer side opens the coach workspace.
+- Trainer Client side lists saved clients, switches the active client, updates
+  the client experience, and returns to Trainer side.
+- Client sign-in bypasses the side choice and cannot activate another profile.
+- A movement set-count change stays on that movement unless the trainer opts in
+  to apply the count to both A1/A2 superset movements.
+- Superset propagation preserves the partner movement's own reps and other
+  prescription details.
+- Working-set input is bounded to 1–12.
+- A saved count of 4 resolves to 4 client active-workout targets; the workout
+  logging grid and active-workout selector both derive their rows from the saved
+  planned set count.
+- Message search filters client threads by name, username, or email and reports
+  the correct visible-thread count.
+- Business and Monitoring/imports are absent from active navigation.
+- Legacy Business/organization links safely redirect to Settings.
+- Gym name, colors, and equipment controls render inside Settings.
+- Client Details values use explicit dark text on white cards.
+
+MANUAL PRODUCTION CHECK STILL REQUIRED
+Use the 17-step checklist in README-FIRST.txt after deployment. In particular,
+verify the real Supabase role memberships, cloud synchronization, service-worker
+upgrade, and phone-sized layout against production data. This package was not
+pushed or deployed by Codex.

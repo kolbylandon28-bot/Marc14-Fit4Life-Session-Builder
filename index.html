@@ -120,15 +120,15 @@
       <button class="tool-card role-card primary" onclick="selectPortalRole('trainer')">
         <span class="tc-tag">Approved account</span>
         <div class="tc-icon" aria-hidden="true">&#128274;</div>
-        <div class="tc-title">I’m a trainer</div>
+        <div class="tc-title">Trainer side</div>
         <div class="tc-desc">Manage clients, assign one workout at a time, review results, and decide what comes next.</div>
         <span class="role-action">Open trainer workspace →</span>
       </button>
       <button class="tool-card role-card" onclick="selectPortalRole('client')">
-        <span class="tc-tag">Protected account</span>
+        <span class="tc-tag">Client view</span>
         <div class="tc-icon" aria-hidden="true">&#128100;</div>
-        <div class="tc-title">I’m a client</div>
-        <div class="tc-desc">Open only the client profile connected to your login, complete your workout, and review your own progress.</div>
+        <div class="tc-title">Open client side</div>
+        <div class="tc-desc">Clients open only their own record. Trainers can preview any saved client and switch clients from inside the preview.</div>
         <span class="role-action">Open client workspace →</span>
       </button>
     </div>
@@ -153,7 +153,7 @@
     <div class="tools-grid">
       <button class="tool-card" onclick="openTrainerHub()"><span class="tc-tag">Private</span><div class="tc-icon">&#128202;</div><div class="tc-title">Clients &amp; summaries</div><div class="tc-desc">Search all clients, review workout history, injuries, strength trends, goals, and InBody analysis.</div></button>
       <button class="tool-card" onclick="openReadiness()"><div class="tc-icon">&#10003;</div><div class="tc-title">Progress logging</div><div class="tc-desc">Add and review clean set or workout records across clients.</div></button>
-      <button class="tool-card live" onclick="openAdvancedStudio('review')"><span class="tc-tag">Decision support</span><div class="tc-icon">&#10024;</div><div class="tc-title">Coaching support</div><div class="tc-desc">Turn client check-ins, workout results, monitoring, and alerts into one clear trainer decision.</div></button>
+      <button class="tool-card live" onclick="openAdvancedStudio('review')"><span class="tc-tag">Decision support</span><div class="tc-icon">&#10024;</div><div class="tc-title">Coaching support</div><div class="tc-desc">Turn client check-ins, workout results, and alerts into one clear trainer decision.</div></button>
     </div>
   </section>
 
@@ -170,6 +170,12 @@
     </div>
     <div class="portal-note">Can’t find your profile? Submit one request from the lookup. A trainer must approve it, and duplicate-name checks prevent extra profiles from piling up.</div>
   </section>
+
+  <aside class="trainer-client-preview-bar" id="trainerClientPreviewBar" aria-label="Trainer client preview controls">
+    <div class="trainer-client-preview-copy"><span>Trainer client preview</span><b>Viewing the live client experience</b><small>Use the selector to double-check another client. Actions in this view affect the selected client’s record.</small></div>
+    <label for="trainerClientPreviewSelect">Viewing client<select id="trainerClientPreviewSelect" onchange="switchTrainerClientPreview(this.value)"></select></label>
+    <button class="small-btn" type="button" onclick="exitTrainerClientPreview()">Return to trainer side</button>
+  </aside>
 
   <!-- CLIENT APP -->
   <section class="view client-app-view" id="view-client-home">
@@ -504,7 +510,7 @@
 
   <!-- TRAINER CONNECTED COACHING SUPPORT -->
   <section class="view" id="view-advanced">
-    <div class="builder-head"><span class="portal-question">What decision or setup needs attention?</span><h2>Coaching Support</h2><p>Client evidence leads to a coach decision, monitoring feeds the client record, and alerts return to the trainer dashboard.</p></div>
+    <div class="builder-head"><span class="portal-question">What coaching decision needs attention?</span><h2>Coaching Support</h2><p>Client evidence leads to a coach decision, and alerts return to the trainer dashboard.</p></div>
     <div class="advanced-shell">
       <nav class="advanced-nav" id="advancedNav" aria-label="Advanced coaching modules"></nav>
       <div class="advanced-main">
@@ -536,7 +542,6 @@
   <button data-coach-nav="library" onclick="openCoachDestination('library')">≡ Exercise Library</button>
   <button data-coach-nav="assessments" onclick="openCoachDestination('assessments')">✓ Assessments</button>
   <button data-coach-nav="reports" onclick="openCoachDestination('reports')">↗ Reports</button>
-  <button data-coach-nav="business" onclick="openCoachDestination('business')">◇ Business</button>
   <button data-coach-nav="access" onclick="openCoachDestination('access')">♙ Trainer Access<span class="coach-attention-badge" data-attention-badge="access"></span></button>
   <button data-coach-nav="settings" onclick="openCoachDestination('settings')">⚙ Settings</button>
   <div class="coach-side-foot"><button onclick="lockTrainerHub()">⇥ Lock workspace</button></div>
@@ -652,6 +657,7 @@
       <div class="compact-field wide"><label for="prescriptionLoad">Target load or load rule</label><input id="prescriptionLoad" placeholder="95 lb, use last successful load, or form-first"></div>
       <div class="compact-field wide"><label for="prescriptionCue">Coach cue / setup note</label><textarea id="prescriptionCue" placeholder="One clear instruction the client sees during the workout"></textarea></div>
       <div class="compact-field wide" id="prescriptionScopeField"><label for="prescriptionScope">Apply this edit to</label><select id="prescriptionScope"><option value="single">This workout only</option><option value="remaining">Unfinished repeats from this week forward</option><option value="all">Every matching workout in this program</option><option value="future">Future generated workouts too</option></select></div>
+      <div class="compact-field wide prescription-pair-field" id="prescriptionPairField" hidden><label class="prescription-pair-option" for="prescriptionPairSets"><input id="prescriptionPairSets" type="checkbox"> Apply this working-set count to both superset movements</label><span>The A1 and A2 movements keep their own reps, load, tempo, rest, and coaching cues. Only their number of client log rows will match.</span></div>
       <div class="compact-field wide" id="prescriptionCalibrationField"><label for="prescriptionCalibration">Calibration responsibility</label><select id="prescriptionCalibration"><option value="keep">Keep this as calibration evidence</option><option value="remove">Remove the calibration measure with a documented reason</option></select></div>
       <div class="compact-field wide"><label for="prescriptionReason">Reason for change</label><textarea id="prescriptionReason" placeholder="Required for calibration changes or filter overrides"></textarea></div>
     </div>

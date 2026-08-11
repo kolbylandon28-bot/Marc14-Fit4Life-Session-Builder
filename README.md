@@ -8,9 +8,11 @@ Live production domain: <https://marc14-fit4-life-session-builder.vercel.app>
 
 ## Release workflow
 
-Approved trainers and owners sign in directly to the Trainer workspace. Clients
-sign in directly to the one protected client profile connected to their Supabase
-account. Trainer permission remains a separately approved staff role.
+Approved trainers and owners choose Trainer side or Client side after sign-in.
+The trainer Client side has a persistent selector for previewing any saved client.
+Clients sign in directly to the one protected client profile connected to their
+Supabase account and never receive the trainer choice or selector. Trainer permission
+remains a separately approved staff role.
 
 The primary loop is:
 
@@ -35,7 +37,9 @@ future migration/integration remains possible.
 - Detailed workout history and evidence-based summaries.
 - Monday–Sunday workout calendar, unscheduled assignment queue, and action queue.
 - Trainer access management, exercise library, progress logging, coaching support,
-  reports, business tools, and settings.
+  reports, and settings.
+- Searchable client conversations by name, username, or email.
+- Gym colors, identity, and equipment controls inside Settings.
 
 ## Client workspace
 
@@ -45,6 +49,21 @@ future migration/integration remains possible.
 - Workout execution, substitutions, readiness, pain reporting, check-ins,
   messages, progress receipts, and optional progress/body data.
 - No trainer directory, role switching, onboarding page, or multiweek program UI.
+
+## Trainer client preview
+
+- Trainers may open Client side from the post-sign-in role choice.
+- A persistent selector switches the preview among saved clients.
+- The selected client’s real assignment, progress, messages, and profile data are
+  shown so the trainer can verify the live experience.
+- Client accounts cannot use the selector or enter trainer-only pages.
+
+## Workout set counts
+
+The prescription editor accepts 1–12 working sets. A trainer can update one movement
+or apply only the set-count change to both movements in an A1/A2 superset. Client
+workout previews and active set logging derive their controls from the saved per-
+exercise prescription, so the visible/loggable set count stays synchronized.
 
 ## Security and data boundaries
 
@@ -102,3 +121,4 @@ build command. After deployment, hard-refresh the production site once so the ne
 service-worker cache replaces the previous shell.
 
 See `README-FIRST.txt` for the exact production acceptance checklist.
+See `VERIFICATION.txt` for the checks completed before packaging this release.

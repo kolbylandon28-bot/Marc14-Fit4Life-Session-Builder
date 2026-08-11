@@ -101,25 +101,23 @@ function saveClientCheckIn() {
 
 const ADVANCED_TABS = [
   ["review","Client coaching review"],
-  ["monitoring","Monitoring & imports"],
-  ["templates","Program templates"],
-  ["organization","Team & gym setup"],
   ["alerts","Alerts & rules"],
 ];
 const ADVANCED_TAB_ALIASES = {
   assist:"review",workload:"review",mental:"review",
-  athlete:"monitoring",wearables:"monitoring",
-  market:"templates",brand:"organization",teams:"organization",
+  athlete:"review",wearables:"review",monitoring:"review",
+  market:"review",templates:"review",
   automations:"alerts",
 };
 let advancedState = { tab:"review", profileId:"" };
 let currentAiCoachDraft = null;
 function normalizedAdvancedTab(tab) {
   const normalized = ADVANCED_TAB_ALIASES[tab] || tab || "review";
-  return !FIT4LIFE_RELEASE.programsVisible && normalized === "templates" ? "review" : normalized;
+  return ADVANCED_TABS.some(([key]) => key === normalized) ? normalized : "review";
 }
 function openAdvancedStudio(tab,profileId) {
   if (!trainerIsUnlocked()) { requestTrainerAccess("advanced"); return; }
+  if (["organization","brand","teams"].includes(tab)) { openCoachDestination("settings"); return; }
   advancedState.tab = normalizedAdvancedTab(tab || advancedState.tab);
   if (profileId) advancedState.profileId = profileId;
   portalRole = "trainer"; show("advanced"); renderAdvancedStudio();
@@ -133,11 +131,10 @@ function renderAdvancedStudio() {
   advancedState.tab = normalizedAdvancedTab(advancedState.tab);
   const profiles = loadProfiles(); if (!advancedState.profileId || !profiles.some((item) => item.id === advancedState.profileId)) advancedState.profileId = profiles[0] && profiles[0].id || "";
   const select = byId("advancedClient"); select.innerHTML = profiles.length ? profiles.map((profile) => '<option value="' + escapeHtml(profile.id) + '"' + (profile.id === advancedState.profileId ? ' selected' : '') + '>' + escapeHtml(profile.name) + ' · @' + escapeHtml(profileUsername(profile)) + '</option>').join("") : '<option value="">No saved clients yet</option>';
-  const visibleTabs = FIT4LIFE_RELEASE.programsVisible ? ADVANCED_TABS : ADVANCED_TABS.filter(([key]) => key !== "templates");
-  byId("advancedNav").innerHTML = visibleTabs.map(([key,label]) => '<button class="' + (advancedState.tab === key ? 'on' : '') + '" onclick="setAdvancedTab(\'' + key + '\')">' + label + '</button>').join("");
-  const clientContext = ["review","monitoring"].includes(advancedState.tab), clientBar = byId("advancedClientBar");
+  byId("advancedNav").innerHTML = ADVANCED_TABS.map(([key,label]) => '<button class="' + (advancedState.tab === key ? 'on' : '') + '" onclick="setAdvancedTab(\'' + key + '\')">' + label + '</button>').join("");
+  const clientContext = advancedState.tab === "review", clientBar = byId("advancedClientBar");
   if (clientBar) clientBar.style.display = clientContext ? "" : "none";
-  const renderers = { review:renderClientCoachingModule, monitoring:renderMonitoringModule, templates:renderMarketplaceModule, organization:renderOrganizationModule, alerts:renderAutomationsModule };
+  const renderers = { review:renderClientCoachingModule, alerts:renderAutomationsModule };
   byId("advancedContent").innerHTML = (renderers[advancedState.tab] || renderClientCoachingModule)(); return true;
 }
 function numberAverage(items,key) { const values = items.map((item) => Number(item[key])).filter(Number.isFinite); return values.length ? values.reduce((a,b) => a+b,0) / values.length : null; }
@@ -234,14 +231,21 @@ function saveGymBrand() {
   const brand = { name:byId("brandName").value.trim() || "Training Portal",sub:byId("brandSub").value.trim() || "Trainer Tools",primary:byId("brandPrimary").value,accent:byId("brandAccent").value,updatedAt:new Date().toISOString() };
   const blockedField = document.getElementById("gymBlockedEquipment"), blockedValue = blockedField ? blockedField.value : currentEquipment.blockedKeywords.join(", ");
   const equipment = { zones,cardioModes,blockedKeywords:blockedValue.split(/[,\n]/).map((item) => item.trim().toLowerCase()).filter(Boolean),updatedAt:new Date().toISOString() };
-  writeLocalObject(GYM_BRAND_KEY,brand); writeLocalObject(GYM_EQUIPMENT_KEY,equipment); applyGymBrand(); renderAdvancedStudio();
+  writeLocalObject(GYM_BRAND_KEY,brand); writeLocalObject(GYM_EQUIPMENT_KEY,equipment); applyGymBrand(); refreshGymSettingsSurface();
   if (typeof window.fit4lifeCloudSaveOrganizationSettings === "function") window.fit4lifeCloudSaveOrganizationSettings(brand,equipment); else showToast("Gym setup saved on this device");
   return { brand,equipment };
 }
 function resetGymBrand() {
+  if (!requireTrainerMutation("reset gym colors")) return null;
+  if (window.fit4lifeCloudOrganizationId && window.fit4lifeCloudRole !== "owner") { showToast("Only the gym owner can reset shared colors"); return null; }
   const brand = { ...currentGymBrand(),primary:"#3E6BE0",accent:"#5AA6F0",updatedAt:new Date().toISOString() }, equipment = currentGymEquipment();
-  writeLocalObject(GYM_BRAND_KEY,brand); applyGymBrand(); renderAdvancedStudio();
+  writeLocalObject(GYM_BRAND_KEY,brand); applyGymBrand(); refreshGymSettingsSurface();
   if (typeof window.fit4lifeCloudSaveOrganizationSettings === "function") window.fit4lifeCloudSaveOrganizationSettings(brand,equipment); else showToast("Default colors restored on this device");
+  return brand;
+}
+function refreshGymSettingsSurface() {
+  if (typeof openCoachDestination === "function" && openCoachDestination.current === "settings" && byId("coachModuleContent")) { renderCoachModule("settings"); return; }
+  if (currentView === "advanced") renderAdvancedStudio();
 }
 function renderTeamsModule() {
   const profiles = loadProfiles(), teams = loadTeams();

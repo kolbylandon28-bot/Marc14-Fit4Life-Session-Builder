@@ -9,36 +9,53 @@ const FIT4LIFE_RELEASE = Object.freeze({
 const CLIENT_APP_VIEWS = ["client-home","client-program","client-progress","client-coach","client-more"];
 const COACH_SHELL_VIEWS = ["trainer-menu","trainer","builder","programs","tools","readiness","advanced","coach-module"];
 const ACTIVE_CLIENT_KEY = "fit4life_active_client_v1";
+function signedInTrainerCanPreview() { return ["owner","trainer"].includes(window.fit4lifeCloudRole || ""); }
+function trainerClientPreviewActive() { return signedInTrainerCanPreview() && portalRole === "client"; }
+function syncTrainerClientPreviewBar() {
+  const bar = document.getElementById("trainerClientPreviewBar"), select = document.getElementById("trainerClientPreviewSelect");
+  if (!bar || !select) return false;
+  const visible = trainerClientPreviewActive() && (CLIENT_APP_VIEWS.includes(currentView) || ["active-workout","checkin","tools"].includes(currentView));
+  bar.classList.toggle("show",visible);
+  if (!visible) return false;
+  const profiles = loadProfiles(), activeId = activeClientProfileId();
+  select.innerHTML = profiles.map((profile) => '<option value="' + escapeHtml(profile.id) + '"' + (profile.id === activeId ? ' selected' : '') + '>' + escapeHtml(profile.name) + ' · @' + escapeHtml(profileUsername(profile)) + '</option>').join("") || '<option value="">No saved clients</option>';
+  select.disabled = !profiles.length;
+  return true;
+}
 function show(view) {
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
   const target = document.getElementById("view-" + view); if (target) target.classList.add("active");
   currentView = view;
   const home = document.getElementById("homeBtn"), context = document.getElementById("portalContext");
   const inMenu = ["trainer-menu","client-menu"].includes(view);
-  home.classList.toggle("show", view !== "home" && view !== "client-home" && view !== "trainer-menu");
-  home.textContent = CLIENT_APP_VIEWS.includes(view) ? "\u2190 Client home" : view === "active-workout" ? "\u2190 Leave workout" : inMenu ? "\u2190 Workspace" : portalRole ? "\u2190 " + (portalRole === "trainer" ? "Trainer" : "Client") + " workspace" : "\u2190 Home";
-  context.textContent = portalRole ? (portalRole === "trainer" ? "Trainer workspace" : "Client workspace") : "";
+  home.classList.toggle("show", view !== "home" && view !== "client-home" && (view !== "trainer-menu" || signedInTrainerCanPreview()));
+  home.textContent = view === "trainer-menu" && signedInTrainerCanPreview() ? "\u2190 Choose side" : CLIENT_APP_VIEWS.includes(view) ? "\u2190 Client home" : view === "active-workout" ? "\u2190 Leave workout" : inMenu ? "\u2190 Workspace" : portalRole ? "\u2190 " + (portalRole === "trainer" ? "Trainer" : "Client") + " workspace" : "\u2190 Home";
+  context.textContent = portalRole ? (portalRole === "trainer" ? "Trainer workspace" : trainerClientPreviewActive() ? "Trainer preview · client side" : "Client workspace") : "";
   context.classList.toggle("show", Boolean(portalRole) && view !== "home");
   const clientNav = document.getElementById("clientBottomNav"), showClientNav = portalRole === "client" && CLIENT_APP_VIEWS.includes(view);
   if (clientNav) { clientNav.classList.toggle("show",showClientNav); clientNav.querySelectorAll("button").forEach((button) => button.classList.toggle("on",view === "client-" + button.dataset.clientTab)); }
   const coachNav = document.getElementById("coachSidebar"), showCoachNav = portalRole === "trainer" && COACH_SHELL_VIEWS.includes(view) && trainerIsUnlocked();
-  if (coachNav) { coachNav.classList.toggle("show",showCoachNav); const key = openCoachDestination.current || ({"trainer-menu":"dashboard",trainer:"clients",builder:"workouts",programs:"workouts",tools:"dashboard",readiness:"assessments",advanced:"business"}[view] || ""); coachNav.querySelectorAll("[data-coach-nav]").forEach((button) => button.classList.toggle("on",button.dataset.coachNav === key)); }
+  if (coachNav) { coachNav.classList.toggle("show",showCoachNav); const key = openCoachDestination.current || ({"trainer-menu":"dashboard",trainer:"clients",builder:"workouts",programs:"workouts",tools:"dashboard",readiness:"assessments"}[view] || ""); coachNav.querySelectorAll("[data-coach-nav]").forEach((button) => button.classList.toggle("on",button.dataset.coachNav === key)); }
   if (document.body && document.body.classList) document.body.classList.toggle("coach-shell-on",showCoachNav);
   if (showClientNav) renderClientAppView(view);
+  syncTrainerClientPreviewBar();
   if (portalRole === "trainer" && trainerIsUnlocked()) renderTrainerAttention();
   window.scrollTo(0, 0);
 }
 function selectPortalRole(role) {
   const signedInRole = window.fit4lifeCloudRole || "";
   if (signedInRole === "client") { portalRole = "client"; if (activeClientProfile()) openClientTab("home"); else show("client-menu"); return; }
-  if (["owner","trainer"].includes(signedInRole)) { portalRole = "trainer"; show("trainer-menu"); return; }
+  if (["owner","trainer"].includes(signedInRole)) {
+    if (role === "client") { openTrainerClientPreview(); return; }
+    portalRole = "trainer"; show("trainer-menu"); return;
+  }
   if (role === "trainer") { openTrainerPortal(); return; }
   portalRole = "client";
   if (activeClientProfile()) openClientTab("home"); else show("client-menu");
 }
 function routeAuthenticatedWorkspace() {
   const role = window.fit4lifeCloudRole || "";
-  if (["owner","trainer"].includes(role)) { portalRole = "trainer"; show("trainer-menu"); return "trainer"; }
+  if (["owner","trainer"].includes(role)) { portalRole = ""; show("home"); return "trainer"; }
   if (role === "client") { portalRole = "client"; if (activeClientProfile()) openClientTab("home"); else show("client-menu"); return "client"; }
   portalRole = ""; show("home"); return "";
 }
@@ -57,9 +74,28 @@ function activeClientProfileId() { try { return localStorage.getItem(ACTIVE_CLIE
 function activeClientProfile() { const id = activeClientProfileId(); return loadProfiles().find((profile) => profile.id === id) || null; }
 function activateClientProfile(profileId) {
   const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) return null;
+  if ((window.fit4lifeCloudRole || "") === "client") {
+    const ownProfile = activeClientProfile() || loadProfiles()[0];
+    if (ownProfile && ownProfile.id !== profile.id) { showToast("Client accounts can open only their own profile"); return null; }
+  }
   try { localStorage.setItem(ACTIVE_CLIENT_KEY,profile.id); } catch (_) {}
   portalRole = "client"; openClientTab("home"); return profile;
 }
+function openTrainerClientPreview(profileId) {
+  if (!signedInTrainerCanPreview() || !trainerIsUnlocked()) { showToast("Trainer access is required to preview clients"); return null; }
+  const profiles = loadProfiles();
+  if (!profiles.length) { portalRole = "trainer"; show("trainer-menu"); showToast("Create a client profile before opening client preview"); return null; }
+  const profile = profiles.find((item) => item.id === profileId) || profiles.find((item) => item.id === activeClientProfileId()) || profiles[0];
+  try { localStorage.setItem(ACTIVE_CLIENT_KEY,profile.id); } catch (_) {}
+  portalRole = "client"; openClientTab("home"); return profile;
+}
+function switchTrainerClientPreview(profileId) {
+  if (!signedInTrainerCanPreview()) return null;
+  const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) return null;
+  try { localStorage.setItem(ACTIVE_CLIENT_KEY,profile.id); } catch (_) {}
+  portalRole = "client"; openClientTab("home"); showToast("Previewing " + profile.name); return profile;
+}
+function exitTrainerClientPreview() { if (!signedInTrainerCanPreview()) return routeAuthenticatedWorkspace(); portalRole = "trainer"; show("trainer-menu"); return "trainer"; }
 function clearActiveClient() { try { localStorage.removeItem(ACTIVE_CLIENT_KEY); } catch (_) {} portalRole = "client"; openClientWorkout(); }
 function openClientTab(tab) {
   if (!activeClientProfile()) { openClientWorkout(); return; }

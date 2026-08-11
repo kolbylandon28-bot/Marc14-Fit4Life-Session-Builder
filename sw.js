@@ -1,4 +1,4 @@
-const CACHE_NAME = "fit4life-shell-2026-08-11-tomorrow-ready-v1";
+const CACHE_NAME = "fit4life-shell-2026-08-11-trainer-preview-v2";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
 const SHELL = [
   "/",
