@@ -1,0 +1,23 @@
+FIT4LIFE OLD-LINK SAFETY
+
+Always share this link:
+https://marc14-fit4-life-session-builder.vercel.app
+
+What this release does:
+- Future Vercel preview, branch, and generated deployment links containing this code
+  immediately redirect to the production link above.
+- Query strings and URL hashes are carried forward for authentication callbacks.
+- The production link continues to point to the latest promoted Production deployment.
+
+One required Vercel setting:
+1. Open the FIT4LIFE project in Vercel.
+2. Open Settings > Deployment Protection.
+3. Enable Vercel Authentication with Standard Protection.
+4. Confirm that Production domains remain public.
+5. Test both the production link and an old generated link in a private browser window.
+
+Why the setting is required:
+Vercel commit-deployment URLs are immutable snapshots. A URL generated before this
+release still contains the old code and cannot learn about today's redirect. Standard
+Protection prevents those historical snapshots from remaining publicly accessible.
+Anyone holding an old generated link should receive the production link above once.

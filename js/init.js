@@ -1,7 +1,9 @@
 /* ---------- init ---------- */
 if (document.getElementById) {
   if ("serviceWorker" in navigator && /^https?:$/.test(window.location.protocol)) {
-    navigator.serviceWorker.register("/sw.js").catch((error) => console.warn("FIT4LIFE offline shell could not start",error));
+    navigator.serviceWorker.register("/sw.js",{updateViaCache:"none"})
+      .then((registration) => registration.update())
+      .catch((error) => console.warn("FIT4LIFE offline shell could not start",error));
   }
   renderForms();
   setMode("solo");
@@ -31,4 +33,3 @@ if (document.getElementById) {
     if (document.addEventListener) document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeWorkoutReview(); closeCoachAdjustment(); closeProgressReceiptEditor(); closeBaselineReview(); closeExerciseSwap(); closeProgramDayRework(); closeExerciseEditor(); closePrescriptionEditor(); closeSupersetEditor(); closeProgramTemplatePreview(); closeSummaryEntryEditor(); closeClientIntake(); closeProfileEditor(); closeCompleteDeleteModal(); closeInBodyModal(); closeBodyGoalModal(); } });
   }
 }
-

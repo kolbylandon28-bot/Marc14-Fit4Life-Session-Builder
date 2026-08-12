@@ -52,10 +52,7 @@ function baselineStateForProfile(profile) {
   else if (status === "missing" && baseline.planId) status = "planned";
   return {status,required,complete,missing,evidence,groups,baseline,goalChanged};
 }
-function baselineCanTailor(profile) {
-  if (typeof FIT4LIFE_RELEASE !== "undefined" && FIT4LIFE_RELEASE.singleWorkout) return true;
-  return baselineStateForProfile(profile).status === "established";
-}
+function baselineCanTailor(profile) { return baselineStateForProfile(profile).status === "established"; }
 function baselineStatusTitle(status) {
   return ({missing:"Baseline needed",planned:"Calibration assigned",provisional:"Evidence ready for coach review",established:"Personalization baseline established",due:"Baseline update needed"})[status] || "Baseline needed";
 }
@@ -190,3 +187,4 @@ let state = {
   session: null,   // rendered session state (with live edits)
   sessionOptions: [], // three contrasting generated directions awaiting trainer choice
 };
+

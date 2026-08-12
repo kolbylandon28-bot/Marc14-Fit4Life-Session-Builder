@@ -648,11 +648,14 @@ function prepareProfileTrainerMenu(selectedId,selectedName) {
   const identity = currentAccountIdentity(), trainers = Array.isArray(window.fit4lifeCloudTrainers) ? window.fit4lifeCloudTrainers.slice() : [];
   if (identity.id && ['owner','trainer'].includes(identity.role) && !trainers.some((trainer) => trainer.user_id === identity.id)) trainers.push({user_id:identity.id,display_name:identity.displayName,email:identity.email,role:identity.role});
   if (selectedId && !trainers.some((trainer) => trainer.user_id === selectedId)) trainers.push({user_id:selectedId,display_name:selectedName || 'Assigned trainer',email:'',role:'trainer'});
-  select.innerHTML = '<option value="">Coaching team / not assigned</option>' + trainers.sort((a,b) => String(a.display_name || '').localeCompare(String(b.display_name || ''))).map((trainer) => '<option value="' + escapeHtml(trainer.user_id) + '" data-name="' + escapeHtml(trainer.display_name || trainer.email || 'Trainer') + '" data-email="' + escapeHtml(trainer.email || '') + '">' + escapeHtml(trainer.display_name || trainer.email || 'Trainer') + (trainer.role === 'owner' ? ' · Owner' : '') + '</option>').join('');
-  select.value = selectedId || (identity.role === 'trainer' ? identity.id : '');
+  select.innerHTML = '<option value="">Shared client / no primary coach</option>' + trainers.sort((a,b) => String(a.display_name || '').localeCompare(String(b.display_name || ''))).map((trainer) => '<option value="' + escapeHtml(trainer.user_id) + '" data-name="' + escapeHtml(trainer.display_name || trainer.email || 'Trainer') + '" data-email="' + escapeHtml(trainer.email || '') + '">' + escapeHtml(trainer.display_name || trainer.email || 'Trainer') + (trainer.role === 'owner' ? ' · Owner' : '') + '</option>').join('');
+  select.value = selectedId || '';
+  select.disabled = identity.role === 'trainer';
+  const requestButton = byId('profileTrainerRequestBtn'); if (requestButton) requestButton.hidden = identity.role !== 'trainer';
 }
 function setProfileEditorDeleteControls(visible) {
-  ["profileEditorDeleteBtn","profileEditorDeleteAllBtn","profileEditorDeleteNote"].forEach((id) => { const element = byId(id); if (element) element.style.display = visible ? "" : "none"; });
+  const ownerVisible = visible && window.fit4lifeCloudRole === 'owner';
+  ["profileEditorDeleteBtn","profileEditorDeleteAllBtn","profileEditorDeleteNote"].forEach((id) => { const element = byId(id); if (element) element.style.display = ownerVisible ? "" : "none"; });
   if (byId("profileEditorIntakeBtn")) byId("profileEditorIntakeBtn").style.display = visible ? "" : "none";
 }
 function openCreateProfileEditor() {
@@ -785,8 +788,15 @@ function saveProfileEditor() {
   const profileId = byId("profileEditId").value, goals = [byId("profileEditPrimary").value,byId("profileEditSecondary").value].filter(Boolean);
   const cardioModes = normalizeCardioPreferences(profileEditorDraft.cardioModes);
   const trainerSelect = byId('profileEditTrainer'), trainerOption = trainerSelect && trainerSelect.selectedOptions[0];
-  const updates = { name: byId("profileEditName").value, username: byId("profileEditUsername").value, email:byId("profileEditEmail").value.trim().toLowerCase(), goals, trainingStyle:byId("profileEditStyle").value, cardioMode:cardioModes[0], cardioModes, experience: Number(byId("profileEditExperience").value), age: Number(byId("profileEditAge").value), minutes: Number(byId("profileEditMinutes").value), muscles: [...profileEditorDraft.muscles], injuries: [...profileEditorDraft.injuries], limitationAssessments:JSON.parse(JSON.stringify(profileEditorDraft.limitationAssessments || {})), zones: [...profileEditorDraft.zones], trainingPhase:byId("profileEditPhase").value, availableDays:Number(byId("profileEditDays").value), trainingDays:[...(profileEditorDraft.trainingDays || [])], sport:byId("profileEditSport").value, sportSchedule:byId("profileEditSchedule").value, competitionDate:byId("profileEditCompetition").value, exercisePreferences:{ ...profileEditorDraft.preferences }, assignedTrainerId:trainerSelect ? trainerSelect.value : '', assignedTrainerName:trainerOption && trainerSelect.value ? trainerOption.dataset.name || trainerOption.textContent.split(' · ')[0] : '', assignedTrainerEmail:trainerOption && trainerSelect.value ? trainerOption.dataset.email || '' : '' };
-  const creating = !profileId, previous = creating ? null : loadProfiles().find((item) => item.id === profileId), profile = creating ? createClientProfile(updates) : updateClientProfile(profileId,updates);
+  const creating = !profileId, previous = creating ? null : loadProfiles().find((item) => item.id === profileId);
+  const selectedAssignment = window.fit4lifeCloudRole === 'trainer' ? {id:previous && previous.assignedTrainerId || '',name:previous && previous.assignedTrainerName || '',email:previous && previous.assignedTrainerEmail || ''} : {id:trainerSelect ? trainerSelect.value : '',name:trainerOption && trainerSelect.value ? trainerOption.dataset.name || trainerOption.textContent.split(' · ')[0] : '',email:trainerOption && trainerSelect.value ? trainerOption.dataset.email || '' : ''};
+  const updates = { name: byId("profileEditName").value, username: byId("profileEditUsername").value, email:byId("profileEditEmail").value.trim().toLowerCase(), goals, trainingStyle:byId("profileEditStyle").value, cardioMode:cardioModes[0], cardioModes, experience: Number(byId("profileEditExperience").value), age: Number(byId("profileEditAge").value), minutes: Number(byId("profileEditMinutes").value), muscles: [...profileEditorDraft.muscles], injuries: [...profileEditorDraft.injuries], limitationAssessments:JSON.parse(JSON.stringify(profileEditorDraft.limitationAssessments || {})), zones: [...profileEditorDraft.zones], trainingPhase:byId("profileEditPhase").value, availableDays:Number(byId("profileEditDays").value), trainingDays:[...(profileEditorDraft.trainingDays || [])], sport:byId("profileEditSport").value, sportSchedule:byId("profileEditSchedule").value, competitionDate:byId("profileEditCompetition").value, exercisePreferences:{ ...profileEditorDraft.preferences }, assignedTrainerId:selectedAssignment.id, assignedTrainerName:selectedAssignment.name, assignedTrainerEmail:selectedAssignment.email };
+  if (window.fit4lifeCloudRole === 'trainer' && previous) {
+    const protectedLimitations = (previous.injuries || []).filter((tag) => { const item = normalizedLimitationAssessment(previous.limitationAssessments && previous.limitationAssessments[tag]); return tag === 'medicalhold' || item.severity === 'severe' || item.ability === 'cannot' || item.decision === 'hold'; });
+    const cleared = protectedLimitations.filter((tag) => { const next = normalizedLimitationAssessment(updates.limitationAssessments && updates.limitationAssessments[tag]); return !updates.injuries.includes(tag) || !(tag === 'medicalhold' || next.severity === 'severe' || next.ability === 'cannot' || next.decision === 'hold'); });
+    if (cleared.length) { openOwnerRequestDialog('safety_exception',previous.id,'',"Review protected limitation: " + cleared.map((tag) => INJURY_LABELS[tag] || tag).join(', ')); showToast('Protected safety holds require owner approval'); return null; }
+  }
+  const profile = creating ? createClientProfile(updates) : updateClientProfile(profileId,updates);
   if (!profile) return null;
   const programmingChanges = creating ? [] : profileProgrammingChanges(previous,profile);
   if (profileEditorTarget) loadProfileIntoTarget(profile,profileEditorTarget);
@@ -796,7 +806,7 @@ function saveProfileEditor() {
   return profile;
 }
 function deleteClientProfile(profileId, target) {
-  if (!requireTrainerMutation("delete client profiles")) return false;
+  if (!ownerOnlyMutation("Deleting client profiles","client_archive",profileId,"","Archive or delete a client")) return false;
   const profiles = loadProfiles(), profile = profiles.find((item) => item.id === profileId); if (!profile) { showToast("Choose a saved profile to delete"); return false; }
   if (!window.confirm("Delete " + profile.name + "’s saved profile? Completed workouts, reviews, InBody scans, and body goals will be kept.")) return false;
   if (!writeProfiles(profiles.filter((item) => item.id !== profileId))) return false;
@@ -1144,4 +1154,3 @@ function selectProgressHistoryClient() {
   if (!client && byId("historyTypeFilter")) byId("historyTypeFilter").value = "";
   renderProgressHistory();
 }
-

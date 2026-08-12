@@ -1,7 +1,7 @@
 {
   "name": "FIT4LIFE Training",
   "short_name": "FIT4LIFE",
-  "description": "Trainer-led workout assignment, client execution, progress history, and coaching feedback.",
+  "description": "Trainer-led programs, workout execution, progress, and coaching feedback.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

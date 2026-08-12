@@ -1,0 +1,35 @@
+FIT4LIFE V5 RELEASE CHECKS — 2026-08-12
+
+PASSED LOCALLY
+- JavaScript syntax: every .js file passed Node syntax validation.
+- JSON: manifest.webmanifest and vercel.json parsed successfully.
+- HTML: 601 unique element IDs; no duplicate IDs.
+- Assets: all 21 local HTML references resolve to included files.
+- Load order: role governance loads before application initialization.
+- Redirect behavior: future generated *.vercel.app hosts redirect to the production
+  root; production and localhost do not redirect; query strings and URL hashes remain.
+- Update delivery: app assets are version-tagged, the app shell revalidates, service
+  worker updates bypass cache, and JavaScript/CSS use network-first service-worker
+  handling with offline fallback.
+- V5 invariants: owner-only client preview, owner approval decisions, requester
+  self-approval guard, V5 database script, removed Business navigation, and preserved
+  trainer/client set-count behavior are present.
+- Update 3 preservation: multiweek-programs.js and rendering.js match the supplied
+  Update 3 versions byte-for-byte.
+
+REQUIRED BEFORE LIVE USE
+1. Upload this folder's contents to the same repository and Vercel project.
+2. Deploy/promote the intended commit to Production.
+3. Run supabase-v5-role-boundaries.sql in the connected Supabase SQL Editor.
+4. Enable Vercel Authentication + Standard Protection in Project Settings >
+   Deployment Protection.
+5. Test the production URL in a private browser window as an owner, trainer, and
+   client account.
+6. Test one future generated deployment URL and one historical generated URL.
+
+NOT PERFORMED BY THE LOCAL CHECKS
+- No live Vercel deployment was created or promoted.
+- No SQL was executed against the production Supabase database.
+- No production owner, trainer, or client account was modified.
+- Historical immutable Vercel deployment pages were not deleted. Standard Protection
+  is the Vercel-side control that prevents those old snapshots from remaining public.

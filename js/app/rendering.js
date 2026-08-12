@@ -410,8 +410,7 @@ function openPrescriptionEditor(session,block,bi,ei,sessionRef,partnerKey) {
   if (!requireTrainerMutation("edit workout prescriptions")) return false;
   const exercise = block && block.items && block.items[ei]; if (!exercise) return false;
   const rx = exercise.rx || block.rx || session.prescription || {};
-  const supersetPair = blockGroupPairs(block).find((pair) => pair.some((item) => item === exercise || item && item.name === exercise.name)) || [];
-  prescriptionEditContext = {session,block,bi,ei,sessionRef,partnerKey,supersetPair};
+  prescriptionEditContext = {session,block,bi,ei,sessionRef,partnerKey};
   byId("prescriptionEditorTitle").textContent = "Edit " + exercise.name;
   byId("prescriptionSets").value = parseInt(rx.sets,10) || 1;
   byId("prescriptionReps").value = rx.reps || "";
@@ -424,8 +423,6 @@ function openPrescriptionEditor(session,block,bi,ei,sessionRef,partnerKey) {
   byId("prescriptionScope").value = "single";
   byId("prescriptionScope").disabled = true;
   byId("prescriptionScopeField").style.display = "grid";
-  byId("prescriptionPairField").hidden = supersetPair.length !== 2;
-  byId("prescriptionPairSets").checked = false;
   byId("programPrescriptionStructureActions").hidden = true;
   byId("prescriptionCalibrationField").style.display = exercise.baselineRequired || exercise.baselineDomains && exercise.baselineDomains.length ? "grid" : "none";
   byId("prescriptionCalibration").value = "keep";
@@ -506,14 +503,7 @@ function savePrescriptionEditor() {
     closePrescriptionEditor(); renderProgram(); showToast(exercise.name + " updated in " + targets.length + " workout" + (targets.length === 1 ? "" : "s")); return true;
   }
   exercise.rx = rx; exercise.cue = cue; if (calibrationAction === "remove") clearCalibrationResponsibility(exercise);
-  const pairSetCount = Boolean(byId("prescriptionPairSets") && byId("prescriptionPairSets").checked && prescriptionEditContext.supersetPair && prescriptionEditContext.supersetPair.length === 2);
-  if (pairSetCount) {
-    prescriptionEditContext.supersetPair.forEach((pairedExercise) => {
-      if (pairedExercise === exercise || pairedExercise && pairedExercise.name === exercise.name) return;
-      pairedExercise.rx = { ...(pairedExercise.rx || block.rx || session.prescription || {}),sets:String(sets) };
-    });
-  }
-  markSessionDraft(session,pairSetCount ? "Superset set count edited" : "Prescription edited"); closePrescriptionEditor(); renderOutput(); showToast(pairSetCount ? "Both superset movements now have " + sets + " client logging sets" : exercise.name + " now has " + sets + " client logging sets"); return true;
+  markSessionDraft(session,"Prescription edited"); closePrescriptionEditor(); renderOutput(); showToast(exercise.name + " prescription updated"); return true;
 }
 function applyProgramExerciseStructureAction(action) {
   if (!prescriptionEditContext || prescriptionEditContext.renderMode !== "program" || !currentProgram || !requireTrainerMutation("change program exercise structure")) return false;
@@ -1056,3 +1046,4 @@ function showToast(message) {
 }
 function updateNetworkStatus() { const status = byId('networkStatus'); if (status) status.classList.toggle('show',typeof navigator !== 'undefined' && navigator.onLine === false); }
 if (typeof window !== 'undefined' && window.addEventListener) { window.addEventListener('online',updateNetworkStatus); window.addEventListener('offline',updateNetworkStatus); }
+

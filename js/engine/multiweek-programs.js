@@ -448,7 +448,6 @@ function openProgramPrescriptionEditor(weekIndex,dayIndex,blockIndex,exerciseInd
     Object.assign(prescriptionEditContext,{renderMode:"program",weekIndex,dayIndex,blockIndex});
     byId("prescriptionScope").disabled = false;
     byId("prescriptionScope").value = currentProgram.starter || currentProgram.setup && currentProgram.setup.programMode === "starter" ? "all" : "single";
-    byId("prescriptionPairField").hidden = true;
     byId("programPrescriptionStructureActions").hidden = false;
   }
   return opened;
@@ -976,3 +975,4 @@ function saveAndAssignCurrentProgram(scope) {
   showToast(registered.length + " workout" + (registered.length === 1 ? "" : "s") + " registered and assigned to " + saved.setup.client);
   return registered;
 }
+

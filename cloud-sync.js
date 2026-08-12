@@ -25,6 +25,9 @@
     automationAlerts: "fit4life_automation_alerts_v1",
     attentionState: "fit4life_attention_state_v1",
     exerciseLibraryEdits: "fit4life_exercise_library_edits_v1",
+    ownerRequests: "fit4life_owner_requests_v1",
+    coachTaskClaims: "fit4life_coach_task_claims_v1",
+    coachNotes: "fit4life_coach_notes_v1",
     clientDaily: "fit4life_client_daily_v1",
     clientMessages: "fit4life_client_messages_v1",
     progressReceipts: "fit4life_progress_receipts_v1",
@@ -40,7 +43,8 @@
     CLOUD_KEYS.teams, CLOUD_KEYS.mentalPlans, CLOUD_KEYS.marketPrograms,
     CLOUD_KEYS.automations, CLOUD_KEYS.automationAlerts,
     CLOUD_KEYS.clientMessages, CLOUD_KEYS.progressReceipts,
-    CLOUD_KEYS.progressReceiptResponses, CLOUD_KEYS.exerciseLibraryEdits
+    CLOUD_KEYS.progressReceiptResponses, CLOUD_KEYS.exerciseLibraryEdits,
+    CLOUD_KEYS.ownerRequests, CLOUD_KEYS.coachTaskClaims, CLOUD_KEYS.coachNotes
   ]);
 
   let cloudClient = null;
@@ -153,11 +157,24 @@
     return String(metadata.display_name || metadata.full_name || metadata.name || (user && user.email ? user.email.split("@")[0] : "FIT 4 LIFE coach")).trim();
   }
 
-  function authRedirectUrl() {
+  function configuredPublicSiteUrl() {
     const configured = document.querySelector && document.querySelector('meta[name="fit4life-site-url"]');
     const value = configured && configured.content ? configured.content.trim().replace(/\/$/, "") : "";
     return value || window.location.origin;
   }
+
+  function publicSiteUrl(pathname,params) {
+    const url = new URL(pathname || "/", configuredPublicSiteUrl() + "/");
+    Object.entries(params || {}).forEach(([key,value]) => { if (value != null && value !== "") url.searchParams.set(key,String(value)); });
+    return url.toString();
+  }
+
+  function authRedirectUrl() {
+    const gym = requestedPortalSlug();
+    return publicSiteUrl("/", gym ? { gym } : {});
+  }
+
+  window.fit4lifePublicSiteUrl = publicSiteUrl;
 
   function publishCloudIdentity() {
     window.fit4lifeCloudIdentity = cloudUser ? { id:cloudUser.id,email:cloudUser.email || "",role:cloudRole || "",displayName:accountDisplayName(cloudUser) } : null;
@@ -278,6 +295,7 @@
         athleteMetrics: mergeRecords(left.athleteMetrics, right.athleteMetrics),
         mentalPlans: mergeRecords(left.mentalPlans, right.mentalPlans),
         progressReceipts: mergeRecords(left.progressReceipts, right.progressReceipts),
+        clientCoachNotes: mergeRecords(left.clientCoachNotes, right.clientCoachNotes),
         summaryMeta: { ...(left.summaryMeta || {}), ...(right.summaryMeta || {}) },
         wearableConnections: { ...(left.wearableConnections || {}), ...(right.wearableConnections || {}) },
         savedAt: recordTime(right.savedAt) >= recordTime(left.savedAt) ? right.savedAt : left.savedAt
@@ -319,6 +337,9 @@
         automations: mergeRecords(left.automations, right.automations),
         automationAlerts: mergeRecords(left.automationAlerts, right.automationAlerts),
         exerciseLibraryEdits: mergeRecords(left.exerciseLibraryEdits, right.exerciseLibraryEdits),
+        ownerRequests: mergeRecords(left.ownerRequests, right.ownerRequests),
+        coachTaskClaims: mergeRecords(left.coachTaskClaims, right.coachTaskClaims),
+        coachNotes: mergeRecords(left.coachNotes, right.coachNotes),
         gymBrand: { ...(left.gymBrand || {}), ...(right.gymBrand || {}) },
         gymEquipment: { ...(left.gymEquipment || {}), ...(right.gymEquipment || {}) },
         attentionState: { ...(left.attentionState || {}), ...(right.attentionState || {}) },
@@ -727,7 +748,7 @@
     const wearables = readJson(CLOUD_KEYS.wearableConnections, {});
     const wearableForProfile = wearables && wearables[profile.id] ? { [profile.id]: wearables[profile.id] } : {};
     return {
-      version: 3,
+      version: 4,
       profile,
       assignments: profileAssignments,
       assignment: profileAssignments[0] || null,
@@ -739,6 +760,7 @@
       mentalPlans: readJson(CLOUD_KEYS.mentalPlans, []).filter((item) => itemBelongsToProfile(item, profile)),
       wearableConnections: wearableForProfile,
       progressReceipts: readJson(CLOUD_KEYS.progressReceipts, []).filter((item) => itemBelongsToProfile(item, profile) && item.status === "published"),
+      clientCoachNotes: readJson(CLOUD_KEYS.coachNotes, []).filter((item) => itemBelongsToProfile(item, profile) && item.visibility === "client" && !item.archivedAt),
       savedAt: new Date().toISOString()
     };
   }
@@ -789,7 +811,7 @@
 
   function organizationBundle() {
     return {
-      version: 1,
+      version: 2,
       profileRequests: readJson(CLOUD_KEYS.requests, []),
       gymBrand: readJson(CLOUD_KEYS.gymBrand, {}),
       gymEquipment: readJson(CLOUD_KEYS.gymEquipment, {}),
@@ -799,6 +821,9 @@
       automationAlerts: readJson(CLOUD_KEYS.automationAlerts, []),
       attentionState: readJson(CLOUD_KEYS.attentionState, {}),
       exerciseLibraryEdits: readJson(CLOUD_KEYS.exerciseLibraryEdits, []),
+      ownerRequests: readJson(CLOUD_KEYS.ownerRequests, []),
+      coachTaskClaims: readJson(CLOUD_KEYS.coachTaskClaims, []),
+      coachNotes: readJson(CLOUD_KEYS.coachNotes, []),
       savedAt: new Date().toISOString()
     };
   }
@@ -894,6 +919,9 @@
     writeJson(CLOUD_KEYS.automationAlerts, payload.automationAlerts || []);
     writeJson(CLOUD_KEYS.attentionState, payload.attentionState || {});
     writeJson(CLOUD_KEYS.exerciseLibraryEdits, payload.exerciseLibraryEdits || []);
+    writeJson(CLOUD_KEYS.ownerRequests, payload.ownerRequests || []);
+    writeJson(CLOUD_KEYS.coachTaskClaims, payload.coachTaskClaims || []);
+    writeJson(CLOUD_KEYS.coachNotes, payload.coachNotes || []);
     if (typeof window.applyExerciseLibraryEdits === "function") window.applyExerciseLibraryEdits();
   }
 
@@ -944,6 +972,7 @@
     let summaryMeta = {};
     let clientDaily = {};
     let wearableConnections = {};
+    let coachNotes = [];
     let clientActiveWorkout = null;
 
     profileRows.filter((row) => row.status === "active").forEach((row) => {
@@ -967,6 +996,7 @@
       metrics = mergeRecords(metrics, plan.athleteMetrics);
       mentalPlans = mergeRecords(mentalPlans, plan.mentalPlans);
       progressReceipts = mergeRecords(progressReceipts, plan.progressReceipts);
+      coachNotes = mergeRecords(coachNotes, plan.clientCoachNotes);
       summaryMeta = Object.assign(summaryMeta, plan.summaryMeta || {});
       wearableConnections = Object.assign(wearableConnections, plan.wearableConnections || {});
       progress = mergeRecords(progress, activity.progress);
@@ -998,6 +1028,7 @@
     writeJson(CLOUD_KEYS.progressReceiptResponses, progressReceiptResponses);
     writeJson(CLOUD_KEYS.clientDaily, clientDaily);
     writeJson(CLOUD_KEYS.wearableConnections, wearableConnections);
+    writeJson(CLOUD_KEYS.coachNotes, coachNotes);
     writeJson(CLOUD_KEYS.activeWorkout, clientActiveWorkout);
 
     if (cloudRole === "client" && profiles.length) {
@@ -1057,13 +1088,11 @@
       cloudApplying = false;
       refreshVisibleApp();
       cloudStatus("Saved across devices", "synced");
-      return true;
     } catch (error) {
       cloudApplying = false;
       cloudStatus(navigator.onLine ? "Sync needs attention" : "Offline · cached data", navigator.onLine ? "error" : "offline");
       console.error("FIT 4 LIFE cloud load failed", error);
       if (initial) authMessage(error.message || "The cloud records could not be loaded.", true);
-      return false;
     }
   }
 
@@ -1491,7 +1520,7 @@
   };
 
   window.fit4lifeCloudListTrainerRequests = async function fit4lifeCloudListTrainerRequests() {
-    if (!cloudClient || !cloudOrganizationId || !(cloudRole === "owner" || cloudRole === "trainer")) return [];
+    if (!cloudClient || !cloudOrganizationId || cloudRole !== "owner") return [];
     const response = await cloudClient
       .from("registration_requests")
       .select("id,user_id,email,full_name,requested_role,status,created_at,reviewed_by,reviewed_at,review_note")
@@ -1505,7 +1534,7 @@
   };
 
   window.fit4lifeCloudApproveTrainer = async function fit4lifeCloudApproveTrainer(email, displayName) {
-    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return { ok:false,message:"An approved trainer account is required to review trainer requests." };
+    if (!cloudClient || cloudRole !== "owner") return { ok:false,message:"Only an active owner can approve trainer access." };
     const response = await cloudClient.rpc("approve_fit4life_trainer_account", { target_email:normalizedEmail(email),target_display_name:String(displayName || "").trim() });
     if (response.error) return { ok:false,message:response.error.message || "Trainer approval failed." };
     await window.fit4lifeCloudListTrainers();
@@ -1557,7 +1586,8 @@
   function scopeForLocalKey(key) {
     if ([CLOUD_KEYS.progress, CLOUD_KEYS.checkins, CLOUD_KEYS.clientMessages, CLOUD_KEYS.progressReceiptResponses, CLOUD_KEYS.clientDaily, CLOUD_KEYS.activeWorkout].includes(key)) return "activity";
     if ([CLOUD_KEYS.profiles, CLOUD_KEYS.assignments, CLOUD_KEYS.programs, CLOUD_KEYS.summaryMeta, CLOUD_KEYS.scans, CLOUD_KEYS.goals, CLOUD_KEYS.metrics, CLOUD_KEYS.mentalPlans, CLOUD_KEYS.wearableConnections, CLOUD_KEYS.progressReceipts].includes(key)) return cloudRole === "client" ? "activity" : "plan";
-    if ([CLOUD_KEYS.requests, CLOUD_KEYS.gymBrand, CLOUD_KEYS.gymEquipment, CLOUD_KEYS.teams, CLOUD_KEYS.marketPrograms, CLOUD_KEYS.automations, CLOUD_KEYS.automationAlerts, CLOUD_KEYS.attentionState, CLOUD_KEYS.exerciseLibraryEdits].includes(key)) return "organization";
+    if ([CLOUD_KEYS.requests, CLOUD_KEYS.gymBrand, CLOUD_KEYS.gymEquipment, CLOUD_KEYS.teams, CLOUD_KEYS.marketPrograms, CLOUD_KEYS.automations, CLOUD_KEYS.automationAlerts, CLOUD_KEYS.attentionState, CLOUD_KEYS.exerciseLibraryEdits, CLOUD_KEYS.ownerRequests, CLOUD_KEYS.coachTaskClaims].includes(key)) return "organization";
+    if (key === CLOUD_KEYS.coachNotes) return "all";
     return "all";
   }
 
@@ -1592,7 +1622,7 @@
   }
 
   window.fit4lifeCloudDeleteProfile = async function fit4lifeCloudDeleteProfile(externalId, permanent) {
-    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return false;
+    if (!cloudClient || cloudRole !== "owner") return false;
     const remote = remoteProfilesByExternalId.get(String(externalId));
     if (!remote) return false;
     const response = permanent
@@ -1666,9 +1696,6 @@
       planBundle,
       activityBundle,
       applyBundles,
-      accountVisibleProfileRows,
-      accountVisibleSyncRecords,
-      isolateSensitiveCacheForUser,
       syncRecordCacheKey
     };
   }
