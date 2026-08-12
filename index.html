@@ -165,7 +165,7 @@
     </div>
     <div class="tools-grid">
       <button class="tool-card primary" onclick="openClientWorkout()"><div class="tc-icon">&#9654;</div><div class="tc-title">Find my workout</div><span class="portal-question">What am I doing today?</span><div class="tc-desc">Search your name or username, load your saved goals and limitations, then open today’s workout options.</div></button>
-      <button class="tool-card live" onclick="openTools()"><div class="tc-icon">&#9201;</div><div class="tc-title">Workout tools</div><span class="portal-question">What helps me train?</span><div class="tc-desc">Use fullscreen rest and interval timers, plate math, warm-up sets, and the RPE guide.</div></button>
+      <button class="tool-card live" onclick="openTools('rpe')"><div class="tc-icon">&#128161;</div><div class="tc-title">Workout help</div><span class="portal-question">What helps me train?</span><div class="tc-desc">Use the RPE/RIR guide, plain-language exercise terms, and plate math when your assigned workout includes a loaded bar.</div></button>
       <button class="tool-card" onclick="openClientCheckIn()"><div class="tc-icon">&#128221;</div><div class="tc-title">Weekly check-in</div><span class="portal-question">How is training going?</span><div class="tc-desc">Share adherence, recovery, confidence, motivation, pain, wins, barriers, and schedule changes with your trainer.</div></button>
     </div>
     <div class="portal-note">Can’t find your profile? Submit one request from the lookup. A trainer must approve it, and duplicate-name checks prevent extra profiles from piling up.</div>
@@ -282,7 +282,7 @@
       <p id="toolsCopy">Fast floor-side math, warm-up planning, and timers that work without an account.</p>
     </div>
     <div class="workspace-grid">
-      <article class="utility-card">
+      <article class="utility-card" id="toolOneRmCard">
         <div class="utility-head"><div><h3 class="utility-title">Estimated 1RM</h3><p class="utility-sub">Uses the Epley equation. Best with controlled sets of 2–10 reps.</p></div><span class="wave-badge">Wave 2</span></div>
         <div class="compact-grid">
           <div class="compact-field"><label for="oneRmWeight">Lifted weight</label><input id="oneRmWeight" type="number" min="1" step="0.5" value="225"></div>
@@ -293,7 +293,7 @@
         <div class="result-box" id="oneRmResult" aria-live="polite"></div>
       </article>
 
-      <article class="utility-card">
+      <article class="utility-card" id="toolPlateCard">
         <div class="utility-head"><div><h3 class="utility-title">Plate Math</h3><p class="utility-sub">Build the target weight evenly on a standard bar.</p></div><span class="wave-badge">Wave 2</span></div>
         <div class="compact-grid">
           <div class="compact-field"><label for="plateTarget">Target total</label><input id="plateTarget" type="number" min="0" step="0.5" value="225"></div>
@@ -304,7 +304,7 @@
         <div class="result-box" id="plateResult" aria-live="polite"></div>
       </article>
 
-      <article class="utility-card">
+      <article class="utility-card" id="toolWarmupCard">
         <div class="utility-head"><div><h3 class="utility-title">Warm-up Ramp</h3><p class="utility-sub">Progressive sets that prepare the lift without creating fatigue.</p></div><span class="wave-badge">Wave 2</span></div>
         <div class="compact-grid">
           <div class="compact-field"><label for="warmWeight">Working weight</label><input id="warmWeight" type="number" min="1" step="0.5" value="225"></div>
@@ -336,8 +336,8 @@
         <div class="tool-actions"><button class="small-btn primary" id="intervalStartBtn" onclick="toggleIntervalTimer()">Start</button><button class="small-btn" onclick="resetIntervalTimer()">Reset</button><button class="small-btn" id="intervalFullscreenBtn" onclick="toggleTimerFullscreen('intervalTimerCard')">Fullscreen</button></div>
       </article>
 
-      <article class="utility-card">
-        <div class="utility-head"><div><h3 class="utility-title">RPE / RIR Guide</h3><p class="utility-sub">Use reps in reserve to coach effort without guessing exact load.</p></div><span class="wave-badge">Wave 2</span></div>
+      <article class="utility-card" id="toolRpeCard">
+        <div class="utility-head"><div><h3 class="utility-title">RPE / RIR Guide</h3><p class="utility-sub">Use reps in reserve to match the prescribed effort without guessing an exact load.</p></div><span class="wave-badge">Effort guide</span></div>
         <table class="guide-table"><thead><tr><th>RPE</th><th>RIR</th><th>What it feels like</th></tr></thead><tbody>
           <tr><td>10</td><td>0</td><td>Max effort; no additional clean rep possible.</td></tr>
           <tr><td>9</td><td>1</td><td>One clean rep left; appropriate for a hard top set.</td></tr>
@@ -345,9 +345,9 @@
           <tr><td>7</td><td>3</td><td>Solid work with clear speed; technique and volume work.</td></tr>
           <tr><td>6</td><td>4+</td><td>Warm-up or recovery effort; fast, comfortable reps.</td></tr>
         </tbody></table>
-        <p class="storage-note">Stop a set if technique changes, pain appears, or the client cannot maintain the intended tempo.</p>
+        <p class="storage-note">Stop a set if technique changes, pain appears, or the intended tempo cannot be maintained.</p>
       </article>
-      <article class="utility-card wide">
+      <article class="utility-card wide" id="toolGlossaryCard">
         <div class="utility-head"><div><h3 class="utility-title">Beginner Glossary</h3><p class="utility-sub">Plain-language definitions for the terms used throughout the workouts.</p></div><span class="wave-badge">Quick guide</span></div>
         <div class="glossary-grid">
           <div class="glossary-item"><b>Working set</b><p>A set that counts toward the workout after the lighter warm-up sets are finished.</p></div>

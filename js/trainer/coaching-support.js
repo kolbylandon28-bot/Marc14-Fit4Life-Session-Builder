@@ -22,8 +22,12 @@ function athleteMetricsForProfile(profileId) { return loadAthleteMetrics().filte
 function loadTeams() { return loadLocalArray(TEAMS_KEY); }
 function loadMentalPlans() { return loadLocalArray(MENTAL_PLANS_KEY); }
 function loadMarketPrograms() { return loadLocalArray(MARKET_PROGRAMS_KEY); }
-function loadAutomations() { return loadLocalArray(AUTOMATIONS_KEY); }
-function loadAutomationAlerts() { return loadLocalArray(AUTOMATION_ALERTS_KEY); }
+function retiredReadinessNotification(item) {
+  if (FIT4LIFE_RELEASE.readinessNotifications || !item) return false;
+  return /readiness/i.test([item.trigger,item.kind,item.name,item.title,item.copy].filter(Boolean).join(" "));
+}
+function loadAutomations() { return loadLocalArray(AUTOMATIONS_KEY).filter((item) => !retiredReadinessNotification(item)); }
+function loadAutomationAlerts() { return loadLocalArray(AUTOMATION_ALERTS_KEY).filter((item) => !retiredReadinessNotification(item)); }
 
 let selectedCheckInProfileId = "";
 let selectedCheckInReviewType = "weekly";

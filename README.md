@@ -14,6 +14,11 @@ Clients sign in directly to the one protected client profile connected to their
 Supabase account and never receive the trainer choice or selector. Trainer permission
 remains a separately approved staff role.
 
+Readiness-check notifications are retired. Historical readiness records are
+left intact for compatibility, but they no longer create Trainer Hub cards, action-
+queue tasks, pain/safety notices, or automation alerts. Direct pain reports, workout
+reviews, check-ins, and recovery follow-ups remain active coaching notifications.
+
 The primary loop is:
 
 1. Client requests a workout, or the trainer chooses a client.
@@ -48,6 +53,10 @@ future migration/integration remains possible.
 - Next-workout request when no active assignment exists.
 - Workout execution, substitutions, readiness, pain reporting, check-ins,
   messages, progress receipts, and optional progress/body data.
+- A simplified More page with RPE/RIR help, plain-language workout terms,
+  contextual exercise guidance, and account controls.
+- Plate math only when the current assignment uses loaded bar equipment. The client
+  view does not expose standalone timers, 1RM estimation, or generic daily habits.
 - No trainer directory, role switching, onboarding page, or multiweek program UI.
 
 ## Trainer client preview

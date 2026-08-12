@@ -4,7 +4,8 @@ let currentView = "home";
 const FIT4LIFE_RELEASE = Object.freeze({
   singleWorkout: true,
   programsVisible: false,
-  onboardingVisible: false
+  onboardingVisible: false,
+  readinessNotifications: false
 });
 const CLIENT_APP_VIEWS = ["client-home","client-program","client-progress","client-coach","client-more"];
 const COACH_SHELL_VIEWS = ["trainer-menu","trainer","builder","programs","tools","readiness","advanced","coach-module"];

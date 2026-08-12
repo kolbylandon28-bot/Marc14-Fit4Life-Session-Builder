@@ -1,16 +1,16 @@
-FIT4LIFE V2 VERIFICATION — 2026-08-11
+FIT4LIFE V4 VERIFICATION — 2026-08-12
 
 AUTOMATED / STATIC CHECKS PASSED
 - All local JavaScript, the Vercel API function, cloud-sync.js, and sw.js pass
   Node syntax validation.
-- index.html has 600 unique IDs, no duplicate IDs, 20 valid local asset refs,
-  16 valid local script refs, and 131 resolved inline function handlers.
+- index.html has 605 unique IDs, no duplicate IDs, 20 valid local/runtime asset
+  references, 16 valid local script references, and 204 resolved inline handlers.
 - styles.css has balanced structure and contains the explicit Client Details
   contrast, trainer preview, and message-search rules.
 - manifest.webmanifest and vercel.json parse as valid JSON.
 - Both SVG icons parse as XML; JPEG/PNG/SVG asset formats were confirmed.
-- Every one of the 23 service-worker shell paths exists, and the cache is
-  versioned fit4life-shell-2026-08-11-trainer-preview-v2.
+- Every service-worker shell path exists, and the cache is versioned
+  fit4life-shell-2026-08-12-simplified-client-more-v4.
 
 WORKFLOW TESTS PASSED
 - Trainer/owner sign-in lands on the Trainer side / Client side choice.
@@ -32,9 +32,21 @@ WORKFLOW TESTS PASSED
 - Legacy Business/organization links safely redirect to Settings.
 - Gym name, colors, and equipment controls render inside Settings.
 - Client Details values use explicit dark text on white cards.
+- The Trainer Hub does not render the Low readiness card.
+- Readiness-trend records do not create trainer action-queue items.
+- Historical readiness entries do not create pain/safety notifications.
+- Legacy readiness-named automation rules and alerts are filtered from live UI.
+- Client More no longer renders standalone timers, 1RM estimation, daily movement,
+  hydration, nutrition-plan habits, or duplicate nutrition/education cards.
+- RPE/RIR help, the workout glossary, exercise guidance, and account/preview
+  controls remain available on the client side.
+- A current loaded barbell/rack/platform workout enables client plate math;
+  dumbbell/bodyweight-only workouts and reviewed history do not.
+- Client Workout Help hides 1RM, warm-up-ramp, rest-timer, and interval-timer cards.
+  Trainer Tools restores and retains every trainer utility card.
 
 MANUAL PRODUCTION CHECK STILL REQUIRED
-Use the 17-step checklist in README-FIRST.txt after deployment. In particular,
+Use the 24-step checklist in README-FIRST.txt after deployment. In particular,
 verify the real Supabase role memberships, cloud synchronization, service-worker
 upgrade, and phone-sized layout against production data. This package was not
 pushed or deployed by Codex.

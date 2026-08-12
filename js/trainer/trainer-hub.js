@@ -127,12 +127,11 @@ function renderProfileRequests() {
 function insightNames(names, empty) { return names.length ? names.slice(0,3).join(", ") + (names.length > 3 ? " +" + (names.length - 3) + " more" : "") : empty; }
 function renderCoachInsights() {
   const container = byId("coachInsights"); if (!container) return;
-  const names = trainerClientNames(), now = Date.now(), safety = [], lowReadiness = [], progression = [], followUp = [], formalDue = loadProfiles().filter((profile) => formalReviewStatus(profile).due).map((profile) => profile.name), awaiting = loadAssignedWorkouts().filter((item) => assignmentStatus(item) === "completed").map((item) => item.client), checkinWaiting = loadCheckIns().filter((item) => !item.reviewedAt).map((item) => item.client).filter((name,index,names) => names.indexOf(name) === index), automationClients = loadAutomationAlerts().map((item) => item.client).filter((name,index,names) => name && names.indexOf(name) === index);
+  const names = trainerClientNames(), now = Date.now(), safety = [], progression = [], followUp = [], formalDue = loadProfiles().filter((profile) => formalReviewStatus(profile).due).map((profile) => profile.name), awaiting = loadAssignedWorkouts().filter((item) => assignmentStatus(item) === "completed").map((item) => item.client), checkinWaiting = loadCheckIns().filter((item) => !item.reviewedAt).map((item) => item.client).filter((name,index,names) => names.indexOf(name) === index), automationClients = loadAutomationAlerts().map((item) => item.client).filter((name,index,names) => name && names.indexOf(name) === index);
   names.forEach((name) => {
-    const entries = trainerEntriesFor(name), latestReviewEntry = entries.find((entry) => entry.type === "workout" && entry.data), latestReady = entries.find((entry) => entry.type === "readiness"), latest = entries[0];
-    const review = latestReviewEntry && latestReviewEntry.data, readinessScore = latestReady ? Number(String(latestReady.value || "").split("/")[0]) : null;
+    const entries = trainerEntriesFor(name), latestReviewEntry = entries.find((entry) => entry.type === "workout" && entry.data), latest = entries[0];
+    const review = latestReviewEntry && latestReviewEntry.data;
     if (review && ["changed","stopped"].includes(review.pain)) safety.push(name);
-    if (Number.isFinite(readinessScore) && readinessScore < 50) lowReadiness.push(name);
     if (review && recommendedCoachAction(review) === "progress") progression.push(name);
     if (!latest || now - new Date(latest.date).getTime() > 21 * 86400000) followUp.push(name);
   });
@@ -142,7 +141,6 @@ function renderCoachInsights() {
     ["Check-ins waiting", insightNames(checkinWaiting,"No weekly check-ins waiting"), checkinWaiting.length ? "warn" : "good"],
     ["Automation alerts", insightNames(automationClients,"No active automation alerts"), automationClients.length ? "warn" : "good"],
     ["Pain trend", insightNames(safety,"No active pain flags"), safety.length ? "warn" : "good"],
-    ["Low readiness", insightNames(lowReadiness,"No recent scores below 50"), lowReadiness.length ? "warn" : "good"],
     ["Ready to progress", insightNames(progression,"No clear progression signal yet"), progression.length ? "good" : ""],
     ["Needs follow-up", insightNames(followUp,"Everyone has recent activity"), followUp.length ? "warn" : "good"],
   ];

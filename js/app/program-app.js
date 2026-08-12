@@ -10,15 +10,17 @@ function clientAssignedSession(assignment,profile) {
 function clientInitials(profile) { return String(profile && profile.name || "FL").split(/\s+/).filter(Boolean).slice(0,2).map((part) => part[0]).join("").toUpperCase(); }
 function clientSessionExercises(session) { return session ? (session.blocks || []).flatMap((block) => (block.items || []).map((exercise) => ({ exercise,block }))) : []; }
 function clientSessionEquipment(session) { return [...new Set(clientSessionExercises(session).map((item) => ZONE_LABELS[item.exercise.zone] || item.exercise.zone).filter(Boolean))]; }
+function clientCurrentAssignment(profile) { return profile ? assignmentsForClient(profile.id).find((item) => ["assigned","in_progress"].includes(assignmentStatus(item))) || null : null; }
+function clientSessionUsesLoadedBar(session) {
+  return clientSessionExercises(session).some((item) => {
+    const exercise = item.exercise || {}, name = String(exercise.name || "").toLowerCase(), zone = String(exercise.zone || "").toLowerCase();
+    if (/\b(barbell|trap bar|landmine)\b/.test(name)) return true;
+    if (zone === "platform") return true;
+    return zone === "rack" && !/\b(dead hang|pull-up|chin-up|dip|hanging|scapular|stretch|bodyweight)\b/.test(name);
+  });
+}
+function clientCurrentSessionUsesLoadedBar(profile) { const assignment = clientCurrentAssignment(profile); return clientSessionUsesLoadedBar(clientAssignedSession(assignment,profile || {})); }
 function latestClientEntry(profile,type) { return loadProgress().find((entry) => entry.type === type && (entry.profileId === profile.id || clientMatches(entry.client,profile.name))) || null; }
-function clientDailyState(profile) {
-  const today = new Date().toISOString().slice(0,10), all = loadLocalObject(CLIENT_DAILY_KEY,{}), key = profile.id + ":" + today;
-  return { all,key,value:{ movement:false,hydration:false,nutrition:false,...(all[key] || {}) } };
-}
-function toggleClientHabit(key,checked) {
-  const profile = activeClientProfile(); if (!profile) return;
-  const daily = clientDailyState(profile); daily.value[key] = Boolean(checked); daily.all[daily.key] = daily.value; writeLocalObject(CLIENT_DAILY_KEY,daily.all); renderClientHome(profile);
-}
 function clientWorkoutStatusLabel(assignment) { return assignment ? assignmentStatusLabel(assignment) : "Waiting for your coach"; }
 function clientPurpose(session) {
   if (!session) return "Your coach has not assigned the next session yet.";
@@ -241,7 +243,7 @@ function trainerAttentionSnapshot() {
       entry.type === "pain"
       || entry.type === "substitution" && entry.data && entry.data.reason === "discomfort"
       || entry.type === "workout" && entry.data && entry.data.pain && entry.data.pain !== "none"
-      || entry.type === "readiness" && entry.data && painRequiresSafetyHold(entry.data.painLevel || entry.data.pain,entry.data.movementChanged)
+      || FIT4LIFE_RELEASE.readinessNotifications && entry.type === "readiness" && entry.data && painRequiresSafetyHold(entry.data.painLevel || entry.data.pain,entry.data.movementChanged)
     )).sort((a,b) => String(b.date).localeCompare(String(a.date)));
     const latestPain = painEntries[0], reviewedAt = profile.coachAdjustment && new Date(profile.coachAdjustment.reviewedAt || 0).getTime();
     if (latestPain && new Date(latestPain.date || 0).getTime() > (reviewedAt || 0)) {
@@ -257,8 +259,10 @@ function trainerAttentionSnapshot() {
       if (baselineState.status === "provisional") push({id:"baseline-review:" + profile.id + ":" + String((baselineState.evidence[0] && baselineState.evidence[0].entry.date) || "ready"),profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"baseline",urgency:"high",rank:1,createdAt:(baselineState.evidence[0] && baselineState.evidence[0].entry.date) || profile.updatedAt,label:"Baseline evidence ready",detail:"Calibration anchors are complete. Verify pain response, confidence, effort, and exercise fit before tailored programming."});
     }
 
-    const trend = readinessTrendContext(profile);
-    if (trend.level !== "normal") push({id:"readiness-trend:" + profile.id + ":" + trend.level,profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"readiness",urgency:trend.level === "reduce" ? "high" : "normal",rank:trend.level === "reduce" ? 1 : 4,createdAt:profile.updatedAt,label:trend.level === "reduce" ? "Repeated recovery concern" : "Readiness trend to review",detail:trend.summary + (trend.causes.length ? " Repeated signals: " + trend.causes.join(", ") + "." : "")});
+    if (FIT4LIFE_RELEASE.readinessNotifications) {
+      const trend = readinessTrendContext(profile);
+      if (trend.level !== "normal") push({id:"readiness-trend:" + profile.id + ":" + trend.level,profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"readiness",urgency:trend.level === "reduce" ? "high" : "normal",rank:trend.level === "reduce" ? 1 : 4,createdAt:profile.updatedAt,label:trend.level === "reduce" ? "Repeated recovery concern" : "Readiness trend to review",detail:trend.summary + (trend.causes.length ? " Repeated signals: " + trend.causes.join(", ") + "." : "")});
+    }
 
     const recoveryDue = recoveryFollowUpStatus(profile);
     if (recoveryDue.active && recoveryDue.overdue) push({id:"recovery-overdue:" + recoveryDue.assignment.id,profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"recovery_due",urgency:"high",rank:2,createdAt:recoveryDue.targetEnd.toISOString(),label:"Recovery pulse overdue",detail:"The short 24–48 hour follow-up has not been completed. Send a reminder if this workout needs closer recovery or pain follow-up."});
@@ -391,11 +395,9 @@ function renderClientCoach(profile) {
 }
 function openClientMoreSection(section) { openClientTab('more'); if (section) setTimeout(() => { const target = byId('client-more-' + section); if (target) target.scrollIntoView({behavior:'smooth',block:'start'}); },20); }
 function renderClientMore(profile) {
-  const out = byId('clientMoreContent'), daily = clientDailyState(profile).value, completedHabits = [daily.movement,daily.hydration,daily.nutrition].filter(Boolean).length, trainerPreview = trainerClientPreviewActive(); if (!out) return; out.innerHTML = '<div class="client-grid"><section class="client-card wide" id="client-more-tools"><div class="client-section-label">Training tools</div><div class="client-grid" style="margin-top:10px"><div class="client-action-row"><span><b>Rest & interval timers</b><span>Fullscreen timers for sets and conditioning</span></span><button class="small-btn" onclick="openTools()">Open</button></div><div class="client-action-row"><span><b>Plate calculator</b><span>Load a barbell without mental math</span></span><button class="small-btn" onclick="openTools()">Open</button></div><div class="client-action-row"><span><b>1RM estimator</b><span>Estimate training percentages</span></span><button class="small-btn" onclick="openTools()">Open</button></div><div class="client-action-row"><span><b>RPE / RIR guide</b><span>Match effort to the prescription</span></span><button class="small-btn" onclick="openTools()">Open</button></div></div></section>'
-    + '<section class="client-card wide" id="client-more-habits"><div class="client-section-label">Today’s habits · ' + completedHabits + '/3</div>' + [["movement","Daily movement",daily.movement],["hydration","Hydration target",daily.hydration],["nutrition","Nutrition plan",daily.nutrition]].map((habit) => '<label class="client-action-row"><span><b>' + habit[1] + '</b><span>Tap when complete</span></span><input class="habit-check" type="checkbox" ' + (habit[2] ? 'checked' : '') + ' onchange="toggleClientHabit(\'' + habit[0] + '\',this.checked)"></label>').join('') + '</section>'
-    + '<section class="client-card"><div class="client-section-label">Exercise library</div><h3>' + LIBRARY.length + ' approved movements</h3><p>Exercise instructions and substitutions appear contextually during the workout.</p></section>'
-    + '<section class="client-card" id="client-more-nutrition"><div class="client-section-label">Nutrition</div><h3>' + (daily.nutrition ? 'Plan completed today' : 'Optional daily support') + '</h3><p>Keep targets simple and coach-defined. This is not a meal-prescription or medical nutrition tool.</p></section>'
-    + '<section class="client-card"><div class="client-section-label">Education</div><h3>Train with confidence</h3><p>RPE/RIR, exercise technique, and recovery guides stay here instead of crowding your Home page.</p></section>'
+  const out = byId('clientMoreContent'), trainerPreview = trainerClientPreviewActive(), assignment = clientCurrentAssignment(profile), session = clientAssignedSession(assignment,profile), showPlateMath = clientSessionUsesLoadedBar(session); if (!out) return; out.innerHTML = '<div class="client-grid"><section class="client-card wide" id="client-more-tools"><div class="client-section-label">Workout help</div><h3>Only the tools that support your current workout</h3><p>Rest timing is already built into the active workout. Your trainer handles max-strength estimates and programming decisions.</p><div class="client-grid client-more-tool-grid"><div class="client-action-row"><span><b>RPE / RIR guide</b><span>Understand how hard each working set should feel.</span></span><button class="small-btn" onclick="openTools(\'rpe\')">Open guide</button></div>'
+    + (showPlateMath ? '<div class="client-action-row"><span><b>Plate calculator</b><span>Your current workout uses loaded bar equipment.</span></span><button class="small-btn" onclick="openTools(\'plate\')">Open calculator</button></div>' : '') + '</div></section>'
+    + '<section class="client-card wide"><div class="client-section-label">Exercise guidance</div><h3>Cues and substitutions appear where you need them</h3><p>Open your workout to see the coach’s instructions, prior performance, set-by-set logging, and safe replacement options for each movement.</p><div class="tool-actions"><button class="small-btn" onclick="openClientTab(\'program\')">Open my workout</button></div></section>'
     + '<section class="client-card wide"><div class="client-section-label">' + (trainerPreview ? 'Trainer preview controls' : 'Account & settings') + '</div><div class="client-action-row"><span><b>' + escapeHtml(profile.name) + '</b><span>@' + escapeHtml(profileUsername(profile)) + ' · ' + EXP_LABEL(profile.experience) + '</span></span><button class="small-btn" onclick="' + (trainerPreview ? 'exitTrainerClientPreview()' : 'fit4lifeCloudSignOut()') + '">' + (trainerPreview ? 'Return to trainer side' : 'Sign out') + '</button></div><p style="margin-top:10px">' + (trainerPreview ? 'You are signed in as a trainer and viewing this selected client’s live experience. Use the preview selector above to switch clients.' : 'This client account opens only its connected profile. When the cloud status says “Saved across devices,” workouts, completed sets, messages, check-ins, and progress are synchronized.') + '</p></section></div>';
 }
 function openClientPainReport() {
@@ -690,13 +692,23 @@ function assignCurrentWorkout() {
   showToast(saved.length === 1 ? "Workout assigned to " + saved[0].client : "Workouts assigned to both clients");
   return saved;
 }
-function syncToolsRoleCopy() {
+function syncToolsRoleCopy(focus) {
   const client = portalRole === "client";
   byId("toolsQuestion").textContent = client ? "What helps me through the workout?" : "What do I need on the gym floor?";
-  byId("toolsTitle").textContent = client ? "Workout Tools" : "Trainer Tools";
-  byId("toolsCopy").textContent = client ? "Use the timers, plate math, warm-up sets, and effort guide during your workout." : "Fast floor-side math, warm-up planning, and fullscreen timers for coaching sessions.";
+  byId("toolsTitle").textContent = client ? "Workout Help" : "Trainer Tools";
+  byId("toolsCopy").textContent = client ? "Use the effort guide and plain-language glossary. Plate math appears only when your current assigned workout uses loaded bar equipment." : "Fast floor-side math, warm-up planning, and fullscreen timers for coaching sessions.";
+  const profile = client ? activeClientProfile() : null, clientCanUsePlates = client && clientCurrentSessionUsesLoadedBar(profile);
+  [["toolOneRmCard",!client],["toolPlateCard",!client || clientCanUsePlates],["toolWarmupCard",!client],["restTimerCard",!client],["intervalTimerCard",!client],["toolRpeCard",true],["toolGlossaryCard",true]].forEach((entry) => { const card = byId(entry[0]); if (card) card.style.display = entry[1] ? "" : "none"; });
+  if (client && focus === "plate" && !clientCanUsePlates) focus = "rpe";
+  return focus;
 }
-function openTools() { syncToolsRoleCopy(); show("tools"); calculateOneRm(); calculatePlates(); buildWarmupRamp(); }
+function openTools(focus) {
+  focus = syncToolsRoleCopy(focus); show("tools");
+  if (portalRole !== "client") { calculateOneRm(); calculatePlates(); buildWarmupRamp(); }
+  else if (byId("toolPlateCard").style.display !== "none") calculatePlates();
+  const target = focus === "plate" ? byId("toolPlateCard") : focus === "rpe" ? byId("toolRpeCard") : null;
+  if (target) setTimeout(() => target.scrollIntoView({behavior:"smooth",block:"start"}),20);
+}
 function openPrograms(preserveTemplate) {
   if (!trainerIsUnlocked()) { requestTrainerAccess("programs"); return; }
   if (!preserveTemplate) {
