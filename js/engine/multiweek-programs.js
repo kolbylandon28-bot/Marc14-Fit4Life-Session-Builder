@@ -348,7 +348,6 @@ function applyProgramDayDefaults(program,profile) {
 function generateCalibrationProgram() {
   if (!requireTrainerMutation("build client calibration workouts")) return null;
   const profiles = loadProfiles(), profileIndex = profiles.findIndex((profile) => profile.id === byId("programProfile").value), profile = profiles[profileIndex]; if (!profile) { showToast("Select a saved client profile first"); return null; }
-  const intakeStatus = intakeCompletion(profile); if (intakeStatus.approvalBlocked) { showToast("Onboarding is incomplete · use Complete onboarding, finish the missing sections, and record the trainer readiness decision"); return null; }
   const setup = programSetupSnapshot(profile), required = baselineRequiredDomains({...profile,goals:setup.goals}), weeklyDays = Math.max(1,Math.min(5,Number(setup.days || profile.availableDays || 1))), anchorSessionCount = Math.min(2,weeklyDays), schedule = calibrationDomainSchedule(required,anchorSessionCount), split = routeProgramSplit({...setup,days:weeklyDays}), planId = "baseline-" + profile.id + "-" + Date.now(), seed = Math.floor(Date.now() / 1000) % 100000;
   const calibrationPhase = {setDelta:-1,rpe:"RPE 6–7 · leave 3–4 reps",deload:false};
   const days = split.map((day,index) => {
@@ -857,8 +856,6 @@ function syncApprovedProgramToAssignments(program) {
 function approveCurrentProgram() {
   if (!requireTrainerMutation("approve programs") || !currentProgram) return false;
   const intakeProfile = loadProfiles().find((item) => item.id === currentProgram.setup.profileId) || loadProfiles().find((item) => clientMatches(item.name,currentProgram.setup.client));
-  const intakeStatus = intakeProfile ? intakeCompletion(intakeProfile) : null;
-  if (intakeStatus && intakeStatus.approvalBlocked) { showToast("Program approval blocked — finish " + intakeProfile.name + "’s onboarding and document the trainer baseline decision first"); return false; }
   if (intakeProfile && !currentProgram.calibration && !baselineCanTailor(intakeProfile)) { showToast("Program approval blocked — complete and verify the client’s calibration baseline first"); renderProgramBaselineGate(); return false; }
   const sessions = currentProgram.weeks.flatMap((week) => week.days.map((day) => day.session)); sessions.forEach((session) => { session.audit = auditWorkout(session); });
   if (currentProgram.calibration) {
@@ -975,4 +972,3 @@ function saveAndAssignCurrentProgram(scope) {
   showToast(registered.length + " workout" + (registered.length === 1 ? "" : "s") + " registered and assigned to " + saved.setup.client);
   return registered;
 }
-

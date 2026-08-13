@@ -140,8 +140,6 @@ function compareWorkoutOptions() {
 function generate() {
   if (state.mode === "solo" && !personReady(state.solo)) return;
   if (state.mode === "group" && (!personReady(state.p1) || !personReady(state.p2))) return;
-  const people = state.mode === "solo" ? [state.solo] : [state.p1,state.p2], blocked = people.map((person) => loadProfiles().find((profile) => profile.id === person.profileId) || loadProfiles().find((profile) => clientMatches(profile.name,person.client))).filter((profile) => profile && !baselineCanTailor(profile));
-  if (blocked.length) { showToast("Tailored generation is locked until calibration is coach-verified for " + blocked.map((profile) => profile.name).join(" and ") + ". Open Programs and build the first-workout calibration."); return; }
   state.session = null; state.sessionOptions = generateWorkoutOptions();
   document.getElementById("reshuffleBtn").style.display = "none";
   document.getElementById("disclaimer").style.display = "block";
@@ -240,4 +238,3 @@ function cloneSpec(p) {
   const profile = p.profileId ? loadProfiles().find((item) => item.id === p.profileId) : null, baselineContext = p.baselineContext || (profile ? baselineGeneratorContext(profile) : null);
   return { client: p.client || "", profileId: p.profileId || "", goal: goals[0] || p.goal, goals, trainingStyle:p.trainingStyle || "auto", cardioMode:cardioModes[0], cardioModes, coachAdjustment:p.coachAdjustment ? { ...p.coachAdjustment } : null, readinessTrend:p.readinessTrend ? JSON.parse(JSON.stringify(p.readinessTrend)) : null, baselineContext:baselineContext ? JSON.parse(JSON.stringify(baselineContext)) : null, experience: p.experience, age: p.age, minutes: p.minutes, muscles: [...p.muscles], injuries: [...p.injuries], zones: [...p.zones], trainingPhase:p.trainingPhase || "general", phaseStartedAt:p.phaseStartedAt || "", availableDays:Number(p.availableDays) || 3, sport:p.sport || "", sportSchedule:p.sportSchedule || "", competitionDate:p.competitionDate || "", exercisePreferences:{ ...(p.exercisePreferences || {}) }, exercisePrescriptions:{ ...(p.exercisePrescriptions || {}) }, exerciseSubstitutions:{ ...(p.exerciseSubstitutions || {}) }, limitationAssessments:{ ...(p.limitationAssessments || {}) }, phaseCompoundAnchors:{ ...(p.phaseCompoundAnchors || {}) } };
 }
-

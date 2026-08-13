@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20260813-v6-actions-calendar">
+<link rel="manifest" href="manifest.webmanifest?v=20260813-v7-client-workspace">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20260813-v6-actions-calendar">
+<link rel="stylesheet" href="styles.css?v=20260813-v7-client-workspace">
 </head>
 <body>
 
@@ -776,7 +776,7 @@
   </div>
 </div>
 
-<div id="clientIntakeModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="clientIntakeTitle">
+<div id="clientIntakeModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="clientIntakeTitle" aria-hidden="true" hidden>
   <div class="review-dialog intake-dialog" id="clientIntakeDialog">
     <h2 id="clientIntakeTitle">Client onboarding</h2>
     <p id="clientIntakeCopy">Complete the coaching information in short sections. You can save and return without finishing everything at once.</p>
@@ -942,7 +942,7 @@
     <div class="profile-editor-section"><label>Injury limitations</label><div id="profileEditInjuries" class="profile-editor-choices"></div><p class="storage-note">Select an area first, then document what the client can currently do. A client saying “I can do it” supports a coached trial; it never clears a medical hold or a severe/red response by itself.</p><div id="profileLimitationAssessments" class="limitation-assessment-list"></div></div>
     <div class="profile-editor-section"><label>Equipment available <span style="font-weight:400;text-transform:none;letter-spacing:0">(nothing selected means full gym)</span></label><div id="profileEditZones" class="profile-editor-choices"></div></div>
     <div class="profile-editor-section"><label>Exercise preferences</label><div class="preference-editor"><div class="compact-field"><input id="profilePreferenceExercise" list="profileExerciseNames" placeholder="Exercise name"><datalist id="profileExerciseNames"></datalist></div><div class="compact-field"><select id="profilePreferenceValue"><option value="favorite">Favorite</option><option value="like">Like</option><option value="neutral">Neutral</option><option value="dislike">Dislike</option><option value="unfamiliar">Unfamiliar</option><option value="discomfort">Causes discomfort</option><option value="unavailable">Unavailable</option></select></div><button class="small-btn" type="button" onclick="setProfileExercisePreference()">Set preference</button></div><div id="profilePreferenceList" class="preference-list"></div></div>
-    <div class="tool-actions"><button class="small-btn primary" id="profileEditorSaveBtn" onclick="saveProfileEditor()">Save changes</button><button class="small-btn" id="profileEditorIntakeBtn" onclick="openIntakeFromProfileEditor()">Open intake checklist</button><button class="small-btn" onclick="closeProfileEditor()">Cancel</button><button class="small-btn danger" id="profileEditorDeleteBtn" onclick="deleteProfileFromEditor()">Delete profile only</button><button class="small-btn danger" id="profileEditorDeleteAllBtn" onclick="openCompleteDeleteFromEditor()">Delete everything</button></div>
+    <div class="tool-actions"><button class="small-btn primary" id="profileEditorSaveBtn" onclick="saveProfileEditor()">Save changes</button><button class="small-btn" onclick="closeProfileEditor()">Cancel</button><button class="small-btn danger" id="profileEditorDeleteBtn" onclick="deleteProfileFromEditor()">Delete profile only</button><button class="small-btn danger" id="profileEditorDeleteAllBtn" onclick="openCompleteDeleteFromEditor()">Delete everything</button></div>
     <p class="storage-note" id="profileEditorDeleteNote">“Delete profile only” keeps completed history. “Delete everything” permanently removes every saved record for this client.</p>
   </div>
 </div>
@@ -1156,23 +1156,23 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/engine/exercise-library.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/engine/session-engine.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/engine/session-builders.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/engine/personalization.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/app/navigation.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/app/program-app.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/app/forms.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/engine/generation.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/app/rendering.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/app/calculations-timers.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/engine/multiweek-programs.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/app/readiness-progress.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/trainer/trainer-hub.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/trainer/coaching-support.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/app/role-governance.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/app/action-calendar.js?v=20260813-v6-actions-calendar"></script>
-<script src="js/init.js?v=20260813-v6-actions-calendar"></script>
+<script src="cloud-sync.js?v=20260813-v7-client-workspace"></script>
+<script src="js/engine/exercise-library.js?v=20260813-v7-client-workspace"></script>
+<script src="js/engine/session-engine.js?v=20260813-v7-client-workspace"></script>
+<script src="js/engine/session-builders.js?v=20260813-v7-client-workspace"></script>
+<script src="js/engine/personalization.js?v=20260813-v7-client-workspace"></script>
+<script src="js/app/navigation.js?v=20260813-v7-client-workspace"></script>
+<script src="js/app/program-app.js?v=20260813-v7-client-workspace"></script>
+<script src="js/app/forms.js?v=20260813-v7-client-workspace"></script>
+<script src="js/engine/generation.js?v=20260813-v7-client-workspace"></script>
+<script src="js/app/rendering.js?v=20260813-v7-client-workspace"></script>
+<script src="js/app/calculations-timers.js?v=20260813-v7-client-workspace"></script>
+<script src="js/engine/multiweek-programs.js?v=20260813-v7-client-workspace"></script>
+<script src="js/app/readiness-progress.js?v=20260813-v7-client-workspace"></script>
+<script src="js/trainer/trainer-hub.js?v=20260813-v7-client-workspace"></script>
+<script src="js/trainer/coaching-support.js?v=20260813-v7-client-workspace"></script>
+<script src="js/app/role-governance.js?v=20260813-v7-client-workspace"></script>
+<script src="js/app/action-calendar.js?v=20260813-v7-client-workspace"></script>
+<script src="js/init.js?v=20260813-v7-client-workspace"></script>
 </body>
 </html>

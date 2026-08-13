@@ -92,9 +92,6 @@ function renderClientAppView(view) {
 function renderClientHome(profile) {
   const out = byId("clientHomeContent"); if (!out) return;
   const assignment = assignmentForClient(profile.id), session = clientAssignedSession(assignment,profile);
-  const intakeStatus = intakeCompletion(profile), intakeCard = intakeStatus.status !== "complete"
-    ? '<section class="client-card wide"><div class="client-section-label">Getting started · ' + intakeStatus.percent + '% complete</div><div class="client-action-row"><span><b>' + (intakeStatus.programmingBlocked ? 'Trainer safety review needed' : intakeStatus.status === 'trainer_review' ? 'Submitted · waiting for trainer review' : 'Finish your coaching intake') + '</b><span>' + (intakeStatus.programmingBlocked ? 'Your answers are saved. Your trainer must review the health or limitation response before difficult programming.' : intakeStatus.status === 'trainer_review' ? 'All client sections are saved. Your trainer will confirm the baseline plan and any modifications.' : 'Complete identity, goals, schedule, equipment, health, recovery, coaching fit, emergency contact, and consent. Save and return at any time.') + '</span></span><button class="small-btn primary" onclick="openClientOnboarding()">' + (intakeStatus.percent ? 'Continue intake' : 'Start intake') + '</button></div></section>'
-    : '<section class="client-card wide"><div class="client-section-label">Onboarding</div><div class="client-action-row"><span><b>Coaching intake complete</b><span>Your goals, schedule, training context, and safety information are saved. Update them whenever something changes.</span></span><button class="small-btn" onclick="openClientOnboarding()">Review intake</button></div></section>';
   const checkins = weeklyCheckInsForProfile(profile.id), lastCheckIn = checkins[0], nextCheck = lastCheckIn ? new Date(new Date(lastCheckIn.createdAt || lastCheckIn.date).getTime() + 7 * 86400000) : new Date();
   const recoveryStatus = recoveryFollowUpStatus(profile), recoveryCard = recoveryStatus.active && recoveryStatus.due
     ? '<section class="client-card wide recovery-reminder ' + (recoveryStatus.overdue ? 'overdue' : '') + '"><div class="client-section-label">' + (recoveryStatus.overdue ? 'Recovery pulse · overdue' : '24–48 hour recovery pulse') + '</div><div class="client-action-row"><span><b>How did your body respond?</b><span>Four quick taps. Your answer goes directly to ' + escapeHtml(profile.assignedTrainerName || 'your coaching team') + ' for review.</span></span><button class="small-btn primary" onclick="openClientRecoveryFollowUp(\'' + escapeHtml(recoveryStatus.assignment.id) + '\')">Check in now</button></div></section>'
@@ -106,12 +103,12 @@ function renderClientHome(profile) {
   const competition = profile.competitionDate ? '<div class="client-card wide"><div class="client-section-label">Competition</div><h3>' + escapeHtml(profile.sport || 'Athlete event') + '</h3><p>' + new Date(profile.competitionDate + 'T12:00:00').toLocaleDateString() + (profile.sportSchedule ? ' · ' + escapeHtml(profile.sportSchedule) : '') + '</p></div>' : '';
   const review = assignment && assignment.clientReview, completionSummary = review ? '<section class="client-card wide"><div class="client-section-label">Latest workout summary</div><div class="simple-stat-grid"><div class="simple-stat"><b>' + (review.actualDuration || review.duration || '—') + '</b><span>Minutes</span></div><div class="simple-stat"><b>' + (review.loggedSets || 0) + '</b><span>Working sets</span></div><div class="simple-stat"><b>' + review.difficulty + '/10</b><span>Difficulty</span></div><div class="simple-stat"><b>' + ((review.personalRecords || []).length) + '</b><span>Personal records</span></div></div><p style="margin-top:12px">' + (review.pain === 'none' ? 'No pain reported.' : 'Pain or discomfort reported: ' + escapeHtml(review.injuryArea || review.pain) + '.') + ((review.personalRecords || []).length ? ' PRs: ' + escapeHtml(review.personalRecords.join(', ')) + '.' : '') + '</p></section>' : '';
   const latestReceipt = latestPublishedProgressReceipt(profile), receiptCard = latestReceipt ? progressReceiptCardHtml(profile,latestReceipt,true) : '';
-  const disabled = !assignment || ["completed","reviewed"].includes(assignmentStatus(assignment)) || intakeStatus.programmingBlocked;
+  const disabled = !assignment || ["completed","reviewed"].includes(assignmentStatus(assignment));
   byId("clientHomeGreeting").textContent = "Hi, " + String(profile.name).split(/\s+/)[0]; byId("clientHomeSubhead").textContent = clientWorkoutStatusLabel(assignment); byId("clientHomeAvatar").textContent = clientInitials(profile);
-  out.innerHTML = '<section class="client-hero"><div class="hero-kicker">Today’s workout</div><h2>' + escapeHtml(session ? session.goalLabel || 'Coach-planned session' : 'Your next plan is coming') + '</h2><div class="hero-meta"><span>' + escapeHtml(session ? (session.spec.minutes || 60) + ' min' : 'Not scheduled') + '</span><span>' + escapeHtml(session ? clientSessionEquipment(session).slice(0,3).join(' · ') || 'Bodyweight' : 'Coach assignment needed') + '</span><span>' + escapeHtml(clientWorkoutStatusLabel(assignment)) + '</span></div><p class="hero-purpose">' + escapeHtml(intakeStatus.programmingBlocked ? 'Workout start is paused until your trainer documents a safety decision from your intake. Your saved workout is not lost.' : clientPurpose(session)) + '</p><button class="start-workout-btn" ' + (disabled ? 'disabled' : '') + ' onclick="startActiveWorkout(\'' + escapeHtml(profile.id) + '\')">' + (intakeStatus.programmingBlocked ? 'Trainer review needed' : assignmentStatus(assignment) === 'in_progress' ? 'Continue workout' : 'Start workout') + '</button></section>'
-    + '<div class="client-grid">' + goalContractClientHtml(profile,"home") + baselineClientCardHtml(profile)
+  out.innerHTML = '<section class="client-hero"><div class="hero-kicker">Today’s workout</div><h2>' + escapeHtml(session ? session.goalLabel || 'Coach-planned session' : 'Your next plan is coming') + '</h2><div class="hero-meta"><span>' + escapeHtml(session ? (session.spec.minutes || 60) + ' min' : 'Not scheduled') + '</span><span>' + escapeHtml(session ? clientSessionEquipment(session).slice(0,3).join(' · ') || 'Bodyweight' : 'Coach assignment needed') + '</span><span>' + escapeHtml(clientWorkoutStatusLabel(assignment)) + '</span></div><p class="hero-purpose">' + escapeHtml(clientPurpose(session)) + '</p><button class="start-workout-btn" ' + (disabled ? 'disabled' : '') + ' onclick="startActiveWorkout(\'' + escapeHtml(profile.id) + '\')">' + (assignmentStatus(assignment) === 'in_progress' ? 'Continue workout' : 'Start workout') + '</button></section>'
+    + '<div class="client-grid">' + goalContractClientHtml(profile,"home")
     + (assignment && assignment.coachNote ? '<section class="client-card"><div class="client-section-label">Coach message</div><h3>Update from your coach</h3><p>' + escapeHtml(assignment.coachNote) + '</p><div class="tool-actions"><button class="small-btn" onclick="openClientTab(\'coach\')">Open coach</button></div></section>' : '')
-    + receiptCard + recoveryCard + intakeCard + completionSummary + checkInCard + competition;
+    + receiptCard + recoveryCard + completionSummary + checkInCard + competition;
 }
 function openClientCheckInForActive(reviewType) { const profile = activeClientProfile(); openClientCheckIn(reviewType); if (profile) selectCheckInProfile(profile.id); }
 function openClientRecoveryFollowUp(assignmentId) { const profile = activeClientProfile(); openClientCheckIn("recovery_24_48",assignmentId); if (profile) selectCheckInProfile(profile.id); }
@@ -295,15 +292,15 @@ function openCoachAttentionItem(profileId,kind,itemId) {
   trainerSummaryState = newTrainerSummaryState();
   trainerSummaryState.tab = kind === "message" || kind === "recognition" || kind === "inactive" || kind === "recovery_due" ? "messages"
     : ["checkin","recovery"].includes(kind) ? "checkins"
-      : kind === "automation" ? "coaching"
-      : kind === "workout" || kind === "program" || kind === "formal" || kind === "baseline" ? "program"
+      : kind === "automation" ? "overview"
+      : kind === "workout" || kind === "program" || kind === "formal" || kind === "baseline" ? "workouts"
         : ["receipt_weekly","receipt_formal"].includes(kind) ? "progress"
-        : kind === "pain" || kind === "readiness" || kind === "intake" ? "assessments" : "overview";
+        : kind === "pain" || kind === "readiness" || kind === "intake" ? "details" : "overview";
   show("trainer");
   renderTrainerHub(profile.name);
-  if (kind === "intake") setTimeout(() => openClientIntake(profile.id,"trainer"),30);
-  else if (kind === "workout") setTimeout(() => openCoachAdjustment(profile.id),30);
+  if (kind === "workout") setTimeout(() => openCoachAdjustment(profile.id),30);
   else if (kind === "baseline") setTimeout(() => openBaselineReview(profile.id),30);
+  else if (kind === "pain") setTimeout(() => { const target = byId("client-safety-reports"); if (target) target.scrollIntoView({behavior:"smooth",block:"start"}); },30);
   else if (["checkin","recovery"].includes(kind)) { const checkInId = String(itemId || "").split(":")[1]; if (checkInId) setTimeout(() => replyToClientCheckIn(checkInId),30); }
   else if (["receipt_weekly","receipt_formal"].includes(kind)) setTimeout(() => openProgressReceiptEditor(profile.id,kind === "receipt_formal" ? "formal" : "weekly"),30);
 }
@@ -615,12 +612,7 @@ function leaveActiveWorkout() { saveActiveWorkoutState(); openClientTab('program
 function finishActiveWorkout() { const data = activeAssignmentAndSession(); if (!data.assignment || !data.session) return; state.session = {type:"solo",data:JSON.parse(JSON.stringify(data.session)),edits:{}}; openWorkoutReview(); }
 function approveCurrentWorkoutDraft() {
   if (!requireTrainerMutation("approve generated workouts") || !state.session) return false;
-  const intakeProfile = loadProfiles().find((item) => workoutPlans(state.session).some((plan) => plan.session && plan.session.spec && (plan.session.spec.profileId === item.id || clientMatches(plan.session.spec.client,item.name))));
-  const intakeStatus = intakeProfile ? intakeCompletion(intakeProfile) : null;
-  if (intakeStatus && intakeStatus.approvalBlocked) { showToast("Coach approval blocked — finish " + intakeProfile.name + "’s onboarding and document the trainer baseline decision first"); return false; }
   const plans = workoutPlans(state.session), failures = [];
-  const baselineBlocked = plans.filter((plan) => { const spec = plan.session && plan.session.spec || {}, profile = loadProfiles().find((item) => item.id === spec.profileId) || loadProfiles().find((item) => clientMatches(item.name,spec.client)); return profile && !plan.session.calibration && !spec.baselineMode && !baselineCanTailor(profile); });
-  if (baselineBlocked.length) { showToast("Coach approval blocked — establish the client baseline or assign a marked calibration workout first"); return false; }
   plans.forEach((plan) => { plan.session.audit = auditWorkout(plan.session); if (!plan.session.audit.pass) failures.push(plan.label + " (" + plan.session.audit.score + "/100" + (plan.session.audit.safety.length ? ": " + plan.session.audit.safety.join("; ") : "") + ")"); });
   if (failures.length) { showToast("Coach approval blocked — audit must score 80+ with no safety conflicts: " + failures.join(" · ")); renderOutput(); return false; }
   const approvedAt = new Date().toISOString(), profiles = loadProfiles();
@@ -645,7 +637,6 @@ function assignCurrentWorkout() {
   workoutPlans(state.session).forEach((plan) => {
     const spec = plan.session.spec || {}, profile = loadProfiles().find((item) => item.id === spec.profileId) || loadProfiles().find((item) => clientMatches(item.name,spec.client));
     if (!profile) return;
-    if (!plan.session.calibration && !spec.baselineMode && !baselineCanTailor(profile)) { blocked.push(profile.name + ": personalization baseline is not coach-verified"); return; }
     if (unresolvedClientSafetyHold(profile)) { blocked.push(profile.name + ": recent pain or discomfort still needs trainer review"); return; }
     const conflicts = sessionSafetyConflictsForProfile(plan.session,profile);
     if (conflicts.length) { blocked.push(profile.name + ": " + conflicts.join("; ")); return; }

@@ -1,9 +1,10 @@
-FIT4LIFE — V6 ACTION CENTER + OPERATIONAL CALENDAR
+FIT4LIFE — V7 CLIENT WORKSPACE + ACTION FIXES
 Build date: 2026-08-13
 
 THIS is the versioned upload folder. It preserves Update 3 programming, the stable
-production link, and all V5 owner/trainer boundaries. V6 adds Batch 2 (one actionable
-trainer queue) and Batch 3 (an operational coaching calendar).
+production link, V5 owner/trainer boundaries, and the V6 Action Center/calendar.
+V7 repairs Action Center commands and replaces the crowded trainer-facing client
+record with a focused six-tab coaching workspace.
 
 USE THE SAME PUBLIC LINK AFTER EVERY DEPLOYMENT
 Public production link:
@@ -15,7 +16,7 @@ https://marc14-fit4-life-session-builder.vercel.app
 4. Share the production domain above—not a generated preview/deployment URL.
 5. In Vercel Project Settings > Domains, confirm the domain above is attached to
    this project and points to the latest Production deployment.
-6. After Vercel reports Ready, open the Production link and confirm V6 appears. This
+6. After Vercel reports Ready, open the Production link and confirm V7 appears. This
    release version-tags its app files, forces shell revalidation, and updates the
    service worker without relying on its browser cache.
 7. In Project Settings > Deployment Protection, enable Vercel Authentication with
@@ -50,6 +51,26 @@ V5 ROLE RULES
   or released after the 45-minute claim expires.
 - Coaching notes have explicit Team, Client feedback, or Protected safety visibility.
 
+V7 CLIENT WORKSPACE
+- The client record now has six task-based tabs: Overview, Workouts, Progress,
+  Check-ins, Messages, and Client details.
+- Program, Coaching, Assessments, Nutrition, Notes, and Documents are no longer
+  separate top-level tabs. Useful notes and documents are grouped under Details.
+- Workout filters are collapsed until a trainer needs them.
+- The default Overview prioritizes the current workout, recent activity, coaching
+  focus, messages, check-ins, and pain-report status.
+- Onboarding prompts and readiness notifications are removed from the live workflow.
+  Existing stored data is preserved for a later external intake integration.
+- Normal single workouts no longer require the retired onboarding or calibration
+  workflow. The workout quality audit, profile safety conflicts, and unresolved pain
+  holds still block unsafe assignment.
+- Delete controls live in a collapsed administrative area and remain owner-protected.
+
+V7 ACTION FIXES
+- Handle now receives the complete client/task arguments and opens the real source.
+- Workout requests open the selected client directly in the single-workout builder.
+- Tomorrow snoozes the action for 24 hours and refreshes the queue immediately.
+
 V6 BATCH 2 — ACTION CENTER
 - Action Center combines safety reports, unanswered messages, workout requests,
   workout/check-in reviews, client/trainer access, owner approvals, schedule changes,
@@ -77,8 +98,8 @@ V6 BATCH 3 — OPERATIONAL CALENDAR
   late/change history but does not impose a fee or notice cutoff until policy is set.
 - Client Coach pages now show upcoming appointments and dated workouts.
 
-NO NEW SUPABASE SQL IS REQUIRED FOR V6
-The V6 queue and calendar use the existing sync_records JSON architecture. The V5
+NO NEW SUPABASE SQL IS REQUIRED FOR V7
+The V7 workspace changes use the existing sync_records JSON architecture. The V5
 role-boundary SQL is still required if it has not already been run.
 
 REQUIRED SUPABASE STEP

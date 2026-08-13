@@ -66,16 +66,6 @@ function renderProgramBaselineGate() {
     out.dataset.status = "missing"; out.innerHTML = '<div class="baseline-gate-copy"><span>Personalization baseline</span><h4>Select a client to check baseline readiness</h4><p>Tailored programming unlocks after useful first-workout calibration and coach verification.</p></div>';
     if (build) build.disabled = true; if (calibration) calibration.disabled = true; return null;
   }
-  const intakeStatus = intakeCompletion(profile);
-  if (intakeStatus.approvalBlocked) {
-    const missing = intakeStatus.checks.filter((check) => !check.ready).length;
-    const copy = missing
-      ? missing + " onboarding section" + (missing === 1 ? " is" : "s are") + " still incomplete. Finish those sections, then record the trainer readiness decision before building calibration."
-      : "The client sections are complete. Record the trainer readiness decision before building calibration.";
-    out.dataset.status = "onboarding";
-    out.innerHTML = '<div class="baseline-gate-copy"><span>Step 1 of 3 · onboarding</span><h4>Finish onboarding before calibration</h4><p>' + escapeHtml(copy) + '</p></div><div class="baseline-gate-actions"><button class="small-btn primary" onclick="openClientIntake(\'' + escapeHtml(profile.id) + '\',\'trainer\')">Complete onboarding</button></div>';
-    if (build) build.disabled = true; if (calibration) calibration.disabled = true; return null;
-  }
   const state = baselineStateForProfile(profile), established = state.status === "established", reviewable = state.status === "provisional";
   const copy = established ? "Verified calibration results can now guide starting loads, effort, exercise familiarity, cardio pacing, and initial volume." : reviewable ? "The required observations were collected. Review the client’s pain response, confidence, effort, and exercise fit before unlocking tailored programming." : state.status === "planned" ? "The first workout is already set to collect the missing information without turning the visit into a testing-only session." : state.status === "due" ? "The client’s goals changed. Recheck only the missing goal-specific domains before the next tailored phase." : "Build one useful calibration workout for a once-weekly client, or split the anchors across two useful workouts when the client trains more often.";
   out.dataset.status = state.status; out.innerHTML = '<div class="baseline-gate-copy"><span>Personalization baseline · ' + escapeHtml(state.status) + '</span><h4>' + escapeHtml(baselineStatusTitle(state.status)) + '</h4><p>' + escapeHtml(copy) + '</p>' + baselineDomainChipsHtml(state) + '</div><div class="baseline-gate-actions">' + (reviewable || established ? '<button class="small-btn ' + (reviewable ? 'primary' : '') + '" onclick="openBaselineReview(\'' + escapeHtml(profile.id) + '\')">' + (reviewable ? 'Review evidence' : 'View baseline') + '</button>' : '') + (!established ? '<button class="small-btn" onclick="generateCalibrationProgram()">' + (state.status === 'planned' ? 'Rebuild calibration' : 'Build calibration') + '</button>' : '') + '</div>';
@@ -88,15 +78,8 @@ function baselineClientCardHtml(profile) {
 }
 function baselineTrainerCardHtml(profile) {
   if (!profile) return "";
-  const state = baselineStateForProfile(profile), intakeStatus = intakeCompletion(profile);
-  if (intakeStatus.approvalBlocked) {
-    const missing = intakeStatus.checks.filter((check) => !check.ready).length;
-    const copy = missing
-      ? missing + " of 9 onboarding sections still need information. Complete them and document the trainer readiness decision before calibration."
-      : "The client sections are complete. Document the trainer readiness decision before calibration.";
-    return '<section class="analysis-panel"><h4 class="analysis-section-title">Step 1 · Complete onboarding</h4><p>' + escapeHtml(copy) + '</p><div class="baseline-domain-row"><span class="baseline-domain-chip missing">' + intakeStatus.percent + '% onboarding</span><span class="baseline-domain-chip missing">Trainer decision ' + (intakeStatus.trainerReviewComplete ? 'recorded' : 'needed') + '</span></div><div class="tool-actions"><button class="small-btn primary" onclick="openClientIntake(\'' + escapeHtml(profile.id) + '\',\'trainer\')">Complete onboarding</button><button class="small-btn" onclick="setTrainerSummaryTab(\'assessments\')">View assessment summary</button></div></section>';
-  }
-  return '<section class="analysis-panel"><h4 class="analysis-section-title">Step 2 · Personalization baseline · ' + escapeHtml(state.status) + '</h4><p>' + escapeHtml(state.status === 'established' ? 'Verified evidence is available to the workout generator.' : state.status === 'provisional' ? 'Required evidence is complete and waiting for trainer verification.' : 'Onboarding is complete. Build calibration next; tailored program approval stays locked until its evidence is reviewed.') + '</p>' + baselineDomainChipsHtml(state) + '<div class="tool-actions"><button class="small-btn ' + (state.status === 'provisional' ? 'primary' : '') + '" onclick="openBaselineReview(\'' + escapeHtml(profile.id) + '\')">Review baseline</button><button class="small-btn ' + (["missing","planned","due"].includes(state.status) ? 'primary' : '') + '" onclick="openSelectedClientProgram()">' + (["missing","planned","due"].includes(state.status) ? 'Build calibration' : 'Open program builder') + '</button></div></section>';
+  const state = baselineStateForProfile(profile);
+  return '<section class="analysis-panel"><h4 class="analysis-section-title">Personalization baseline · ' + escapeHtml(state.status) + '</h4><p>' + escapeHtml(state.status === 'established' ? 'Verified evidence is available to the workout generator.' : state.status === 'provisional' ? 'Required evidence is complete and waiting for trainer verification.' : 'Build calibration only when a coach wants extra starting evidence; normal single workouts remain available.') + '</p>' + baselineDomainChipsHtml(state) + '<div class="tool-actions"><button class="small-btn ' + (state.status === 'provisional' ? 'primary' : '') + '" onclick="openBaselineReview(\'' + escapeHtml(profile.id) + '\')">Review baseline</button><button class="small-btn ' + (["missing","planned","due"].includes(state.status) ? 'primary' : '') + '" onclick="openSelectedClientProgram()">' + (["missing","planned","due"].includes(state.status) ? 'Build calibration' : 'Open program builder') + '</button></div></section>';
 }
 function baselineGeneratorContext(profile) {
   if (!baselineCanTailor(profile)) return null;
@@ -187,4 +170,3 @@ let state = {
   session: null,   // rendered session state (with live edits)
   sessionOptions: [], // three contrasting generated directions awaiting trainer choice
 };
-

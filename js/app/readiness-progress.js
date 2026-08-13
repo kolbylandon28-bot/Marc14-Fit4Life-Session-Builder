@@ -192,7 +192,13 @@ function trainerGoalContractSummaryHtml(profile) {
 }
 function openClientGoalContract(profileId) {
   const profile = loadProfiles().find((item) => item.id === (profileId || activeClientProfileId())); if (!profile) return false;
+  const modal = byId("clientIntakeModal"), dialog = byId("clientIntakeDialog");
+  if (modal) { modal.hidden = false; modal.setAttribute("aria-hidden","false"); }
   if (!openClientIntake(profile.id,portalRole === "trainer" ? "trainer" : "client")) return false;
+  if (dialog) dialog.classList.add("goal-only");
+  byId("clientIntakeTitle").textContent = profile.name + " · goal details";
+  byId("clientIntakeCopy").textContent = "Keep the client’s goal, reason, measurable target, milestones, and definition of success together.";
+  byId("clientIntakeSaveBtn").textContent = "Save goal details";
   const section = document.querySelector('#clientIntakeDialog [data-intake-key="goals"]');
   if (section) {
     document.querySelectorAll("#clientIntakeDialog .intake-section").forEach((item) => { item.open = item === section; });
@@ -371,7 +377,12 @@ function openIntakeFromProfileEditor() {
   if (!id) { showToast("Create the profile first, then open its intake checklist"); return; }
   closeProfileEditor(); openClientIntake(id,"trainer");
 }
-function closeClientIntake() { byId("clientIntakeModal").classList.remove("open"); }
+function closeClientIntake() {
+  const modal = byId("clientIntakeModal"), dialog = byId("clientIntakeDialog");
+  if (!modal) return;
+  modal.classList.remove("open"); modal.hidden = true; modal.setAttribute("aria-hidden","true");
+  if (dialog) dialog.classList.remove("goal-only");
+}
 async function saveClientIntake() {
   const profileId = byId("clientIntakeProfileId").value, profiles = loadProfiles(), index = profiles.findIndex((item) => item.id === profileId); if (index < 0) return null;
   const trainerMode = clientIntakeTrainerMode(), previous = profiles[index].intake || {}, intake = intakeFromFields(previous,trainerMode);
@@ -656,7 +667,6 @@ function prepareProfileTrainerMenu(selectedId,selectedName) {
 function setProfileEditorDeleteControls(visible) {
   const ownerVisible = visible && window.fit4lifeCloudRole === 'owner';
   ["profileEditorDeleteBtn","profileEditorDeleteAllBtn","profileEditorDeleteNote"].forEach((id) => { const element = byId(id); if (element) element.style.display = ownerVisible ? "" : "none"; });
-  if (byId("profileEditorIntakeBtn")) byId("profileEditorIntakeBtn").style.display = visible ? "" : "none";
 }
 function openCreateProfileEditor() {
   if (!requireTrainerMutation("create client profiles")) return null;

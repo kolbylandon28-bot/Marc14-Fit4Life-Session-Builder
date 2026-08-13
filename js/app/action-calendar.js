@@ -34,7 +34,12 @@ function calendarFormatTime(value) {
   return date.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
 }
 function calendarDateLabel(dateKey,options) { const date = calendarDate(dateKey); return Number.isNaN(date.getTime()) ? "No date" : date.toLocaleDateString([],options || {weekday:"short",month:"short",day:"numeric"}); }
-function calendarJsArg(value) { return JSON.stringify(String(value == null ? "" : value)).replace(/</g,"\\u003c"); }
+function calendarJsArg(value) {
+  // The JSON string is written inside a double-quoted HTML attribute. Escape it
+  // for HTML as well as JavaScript so the first argument cannot terminate the
+  // onclick attribute before Handle/Tomorrow receive the complete command.
+  return escapeHtml(JSON.stringify(String(value == null ? "" : value)).replace(/</g,"\\u003c"));
+}
 function loadCalendarEvents() { return loadLocalArray(CALENDAR_EVENTS_KEY); }
 function loadCalendarAudit() { return loadLocalArray(CALENDAR_AUDIT_KEY); }
 function loadCalendarNotices() { return loadLocalArray(CALENDAR_NOTICES_KEY); }
@@ -143,6 +148,7 @@ window.trainerAttentionSnapshot = function v6TrainerAttentionSnapshot() {
   allCoachCalendarEvents().filter((event) => event.status === "missed" || event.source === "calendar" && event.type === "followup" && ["scheduled","rescheduled"].includes(event.status) && calendarDate(event.date) <= calendarDate(calendarDateKey(new Date()))).forEach((event) => additions.push({id:"calendar-event:" + event.id,eventId:event.id,profileId:event.profileId || "",client:event.client || "Workspace",trainer:event.trainerName || "Coaching team",kind:"calendar_event",urgency:event.status === "missed" ? "high" : "normal",rank:event.status === "missed" ? 1 : 3,createdAt:event.updatedAt || event.createdAt || event.date,label:event.status === "missed" ? (event.type === "workout" ? "Missed workout follow-up" : "Missed appointment follow-up") : "Scheduled follow-up due",detail:event.title + " · " + calendarDateLabel(event.date) + (event.startTime ? " at " + calendarFormatTime(event.startTime) : "")}));
   const state = loadAttentionState(), map = new Map(), messages = loadLocalArray(CLIENT_MESSAGES_KEY);
   snapshot.items.concat(additions).filter((item) => {
+    if (["intake","readiness","baseline","program"].includes(item.kind)) return false;
     if (!attentionItemIsVisible(item,state) || actionSourceIsResolved(item)) return false;
     if (item.kind === "inactive" && messages.some((message) => message.profileId === item.profileId && messageSenderRole(message) !== "client" && new Date(message.createdAt || 0) > new Date(item.createdAt || 0))) return false;
     return true;
@@ -160,7 +166,18 @@ const legacyOpenCoachAttentionItem = window.openCoachAttentionItem;
 window.openCoachAttentionItem = function v6OpenCoachAttentionItem(profileId,kind,itemId) {
   if (kind === "calendar_notice") { const notice = loadCalendarNotices().find((entry) => "calendar-notice:" + entry.id === itemId); openCoachDestination("calendar"); if (notice) setTimeout(() => openCalendarEventEditor(notice.eventId),30); return; }
   if (kind === "calendar_event") { openCoachDestination("calendar"); setTimeout(() => openCalendarEventEditor(String(itemId).replace(/^calendar-event:/,"")),30); return; }
-  if (kind === "workout_request") { legacyOpenCoachAttentionItem(profileId,"program",itemId); return; }
+  if (kind === "workout_request") {
+    const profile = calendarProfile(profileId);
+    if (!profile) { openCoachDestination("clients"); return; }
+    selectedTrainerClient = profile.name;
+    selectedInBodyScanId = "";
+    trainerSummaryState = newTrainerSummaryState();
+    trainerSummaryState.tab = "workouts";
+    show("trainer");
+    renderTrainerHub(profile.name);
+    setTimeout(() => openSelectedClientSession(),30);
+    return;
+  }
   if (kind === "account_request") { openCoachDestination("clients"); return; }
   legacyOpenCoachAttentionItem(profileId,kind,itemId);
 };

@@ -6,9 +6,10 @@ backend for shared/synced data.
 
 Live: https://marc14-fit4-life-session-builder.vercel.app
 
-This V6 release combines the newer Update 3 workout/program editor and V5
-owner/trainer governance with a unified trainer Action Center and an operational
-coaching calendar. It does not replace the newer programming work.
+This V7 release keeps the V5 role boundaries and V6 Action Center/calendar, repairs
+the Action Center's Handle and Tomorrow commands, and replaces the crowded client
+record with a six-tab task-based trainer workspace. Retired onboarding and readiness
+prompts no longer block normal single-workout coaching.
 
 ## Stack
 
@@ -38,7 +39,7 @@ js/                         App logic, grouped by domain (loaded in this order):
     calculations-timers.js        Numeric calculations + rest/work timers
     readiness-progress.js         Readiness adjustments + local progress memory
     role-governance.js             Owner requests, task claims, note visibility, owner-only guards
-    action-calendar.js             V6 action queue, workout requests, calendar, audit history
+    action-calendar.js             Action queue, workout requests, calendar, audit history
   trainer/                     Trainer-only features
     trainer-hub.js                 Trainer dashboard + coaching analysis
     coaching-support.js            Connected coaching support features
