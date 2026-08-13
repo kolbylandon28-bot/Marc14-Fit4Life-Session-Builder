@@ -3,6 +3,7 @@ const CHECKINS_KEY = "fit4life_checkins_v1";
 const ATHLETE_METRICS_KEY = "fit4life_athlete_metrics_v1";
 const GYM_BRAND_KEY = "fit4life_gym_brand_v1";
 const GYM_EQUIPMENT_KEY = "fit4life_gym_equipment_v1";
+let portalThemeSaveInFlight = false;
 const TEAMS_KEY = "fit4life_teams_v1";
 const MENTAL_PLANS_KEY = "fit4life_mental_plans_v1";
 const MARKET_PROGRAMS_KEY = "fit4life_market_programs_v1";
@@ -208,13 +209,12 @@ function renderWorkloadModule() {
 }
 const PORTAL_THEME_PRESETS = {
   neon:{ label:"Neon blue",badge:"",description:"The original electric-blue Fit4Life look.",a:"#5AA6F0",b:"#3E6BE0" },
-  halloween:{ label:"Halloween",badge:"HALLOWEEN",description:"A quiet orange-and-violet glow.",a:"#FF8A3D",b:"#8B5CF6" },
-  thanksgiving:{ label:"Thanksgiving",badge:"THANKFUL SEASON",description:"Warm amber and copper accents.",a:"#E5A84B",b:"#9B5B36" },
-  christmas:{ label:"Christmas",badge:"HOLIDAY SEASON",description:"Evergreen and cranberry highlights.",a:"#36B97E",b:"#D94B5B" },
-  valentine:{ label:"Valentine’s",badge:"HEART SEASON",description:"Soft neon pink and red details.",a:"#FF69A8",b:"#E5485D" },
-  football:{ label:"Football",badge:"GAME DAY",description:"Field green with a gold stadium glow.",a:"#4CC38A",b:"#E4B84F" },
-  baseball:{ label:"Baseball",badge:"BALLPARK MODE",description:"Classic navy-blue and red accents.",a:"#6EA8FE",b:"#E35D6A" },
-  basketball:{ label:"Basketball",badge:"COURT MODE",description:"Hardwood orange with arena violet.",a:"#F28C3A",b:"#8D6AE8" },
+  newyear:{ label:"New Year",badge:"NEW YEAR",description:"Midnight clock, fireworks and metallic confetti.",a:"#7CCBFF",b:"#D9B865" },
+  halloween:{ label:"Halloween",badge:"HALLOWEEN",description:"Pumpkin, cauldron and magical embers.",a:"#FF8A3D",b:"#8B5CF6" },
+  thanksgiving:{ label:"Thanksgiving",badge:"THANKFUL SEASON",description:"Turkey, football, autumn tree and leaves.",a:"#E5A84B",b:"#9B5B36" },
+  christmas:{ label:"Christmas",badge:"HOLIDAY SEASON",description:"Snowy tree, gifts, Santa and snowfall.",a:"#36B97E",b:"#D94B5B" },
+  valentine:{ label:"Valentine’s",badge:"HEART SEASON",description:"Sculptural hearts, roses and teddy bear.",a:"#FF69A8",b:"#E5485D" },
+  independence:{ label:"Independence Day",badge:"JULY 4",description:"American flag, metallic stars and fireworks.",a:"#4F8DFF",b:"#F05B63" },
 };
 function normalizedPortalTheme(theme) { return Object.prototype.hasOwnProperty.call(PORTAL_THEME_PRESETS,theme) ? theme : "neon"; }
 function portalThemePreset(theme) { return PORTAL_THEME_PRESETS[normalizedPortalTheme(theme)]; }
@@ -223,6 +223,10 @@ function currentGymBrand() {
   return { ...fallback,...saved,theme:normalizedPortalTheme(saved.theme) };
 }
 function currentGymEquipment() { const fallback = { zones:Object.keys(ZONE_LABELS),cardioModes:Object.keys(CARDIO_MODALITIES).filter((key) => key !== "any"),blockedKeywords:["sled","battle rope"] }, saved = loadLocalObject(GYM_EQUIPMENT_KEY,fallback); return { ...fallback,...saved,zones:Array.isArray(saved.zones) ? saved.zones : fallback.zones,cardioModes:Array.isArray(saved.cardioModes) ? saved.cardioModes : fallback.cardioModes,blockedKeywords:Array.isArray(saved.blockedKeywords) ? saved.blockedKeywords : fallback.blockedKeywords }; }
+function syncPortalThemePickerState(themeId) {
+  const theme = normalizedPortalTheme(themeId);
+  document.querySelectorAll(".portal-theme-option").forEach((button) => { const selected = button.dataset.theme === theme; button.classList.toggle("on",selected); button.setAttribute("aria-pressed",selected ? "true" : "false"); });
+}
 function applyGymBrand() {
   const brand = currentGymBrand(); if (!document.documentElement || !document.documentElement.style) return brand;
   const theme = portalThemePreset(brand.theme);
@@ -236,12 +240,14 @@ function applyGymBrand() {
     if (!badge) { badge = document.createElement("span"); badge.className = "portal-theme-badge"; const spacer = topbar.querySelector(".topbar-spacer"); topbar.insertBefore(badge,spacer || null); }
     badge.textContent = theme.badge; badge.hidden = !theme.badge; badge.setAttribute("aria-label",theme.badge ? "Current portal theme: " + theme.label : "Default portal theme");
   }
+  syncPortalThemePickerState(brand.theme);
   document.title = (brand.name || "Training Portal") + " — Training Portal"; return brand;
 }
 function renderPortalThemePicker() {
-  const current = currentGymBrand().theme;
+  const current = currentGymBrand().theme, currentPreset = portalThemePreset(current), owner = typeof isFit4LifeOwner === "function" && isFit4LifeOwner();
+  if (!owner) return '<div class="portal-theme-section"><div class="portal-theme-heading"><div><h4>Published portal theme</h4><p>The owner publishes one shared theme for every trainer and client device. Trainers can request a different theme, but cannot preview or publish one themselves.</p></div><span class="tag">Owner only</span></div><div class="advanced-list-item"><b>' + escapeHtml(currentPreset.label) + '</b><span>' + escapeHtml(currentPreset.description) + '</span></div><div class="tool-actions"><button type="button" class="small-btn" onclick="openOwnerRequestDialog(\'organization_setting\',\'\',\'\',\'Change the shared portal theme from ' + escapeHtml(currentPreset.label) + '\')">Request a theme change</button></div></div>';
   const options = Object.entries(PORTAL_THEME_PRESETS).map(([key,theme]) => '<button type="button" class="portal-theme-option ' + (key === current ? 'on' : '') + '" data-theme="' + key + '" aria-pressed="' + (key === current ? 'true' : 'false') + '" onclick="setPortalTheme(\'' + key + '\')" style="--preset-a:' + theme.a + ';--preset-b:' + theme.b + '"><span class="portal-theme-swatch" aria-hidden="true"><i>F4L</i></span><span><b>' + escapeHtml(theme.label) + '</b><small>' + escapeHtml(theme.description) + '</small></span></button>').join("");
-  return '<div class="portal-theme-section"><div class="portal-theme-heading"><div><h4>Seasonal &amp; sport accents</h4><p>One click publishes a small seasonal badge, edge glow, and color highlights. The black rock background, neon-blue F4L sign, layout, and your brand colors stay intact.</p></div><span class="tag">Owner control</span></div><div class="portal-theme-grid">' + options + '</div><p class="storage-note">Themes stay selected until an owner changes them. They never turn on automatically, so the portal will not surprise clients after a holiday.</p></div>';
+  return '<div class="portal-theme-section"><div class="portal-theme-heading"><div><h4>Holiday themes</h4><p>One owner click publishes a holiday scene, matching F4L neon color, and ambient details to every trainer and client device. The portal layout, controls, and gym brand settings stay intact.</p></div><span class="tag">Owner only</span></div><div class="portal-theme-grid">' + options + '</div><p class="storage-note">Themes stay selected until an owner changes them. They never turn on automatically, so the portal will not surprise clients after a holiday.</p></div>';
 }
 function renderBrandModule() {
   const brand = currentGymBrand(), equipment = currentGymEquipment(), cloudTenant = window.fit4lifeCloudOrganizationSlug || "fit-4-life", portalUrl = window.fit4lifePublicSiteUrl ? window.fit4lifePublicSiteUrl('/',{gym:cloudTenant}) : location.origin + "/?gym=" + encodeURIComponent(cloudTenant);
@@ -249,19 +255,28 @@ function renderBrandModule() {
   const cardioOptions = Object.keys(CARDIO_MODALITIES).filter((key) => key !== "any").map((key) => '<label><input class="gym-cardio-mode" type="checkbox" value="' + key + '" ' + (equipment.cardioModes.includes(key) ? 'checked' : '') + '> ' + escapeHtml(CARDIO_MODALITIES[key].label) + '</label>').join("");
   return '<div class="advanced-grid"><section class="advanced-card wide"><h3>Shared gym setup</h3><p>These settings define this gym’s white-label identity and the equipment the workout engine may use. The gym owner’s changes sync to every trainer and client device.</p>' + renderPortalThemePicker() + '<div class="compact-grid"><div class="compact-field wide"><label for="brandName">Gym name</label><input id="brandName" value="' + escapeHtml(brand.name) + '"></div><div class="compact-field wide"><label for="brandSub">Portal subtitle</label><input id="brandSub" value="' + escapeHtml(brand.sub) + '"></div><div class="compact-field"><label for="brandPrimary">Primary color</label><input id="brandPrimary" type="color" value="' + escapeHtml(brand.primary) + '"></div><div class="compact-field"><label for="brandAccent">Accent color</label><input id="brandAccent" type="color" value="' + escapeHtml(brand.accent) + '"></div><div class="compact-field wide"><label>Equipment zones available at this gym</label><div class="summary-checks">' + zoneOptions + '</div></div><div class="compact-field wide"><label>Cardio machines available</label><div class="summary-checks">' + cardioOptions + '</div></div><div class="compact-field wide"><label for="gymBlockedEquipment">Blocked equipment or movement keywords</label><textarea id="gymBlockedEquipment" placeholder="sled, battle rope">' + escapeHtml((equipment.blockedKeywords || []).join(", ")) + '</textarea><span class="storage-note">The generator excludes any exercise name containing one of these terms.</span></div></div><div class="tool-actions"><button class="small-btn primary" onclick="saveGymBrand()">Save gym setup</button><button class="small-btn" onclick="resetGymBrand()">Reset colors</button></div><div class="brand-preview" style="--brand-primary:' + escapeHtml(brand.primary) + '"><h4>' + escapeHtml(brand.name) + '</h4><p>' + escapeHtml(brand.sub) + '</p></div><div class="capability-note"><strong>Current tenant link:</strong> ' + escapeHtml(portalUrl) + '<br>Use a different gym slug—or later a verified custom domain—to load a different brand, equipment bank, staff, and client records. Only an owner can change shared gym setup.</div></section></div>';
 }
-function persistOrganizationAppearance(brand,equipment,localMessage) {
-  if (window.fit4lifeCloudOrganizationId && typeof window.fit4lifeCloudSaveOrganizationSettings === "function") return window.fit4lifeCloudSaveOrganizationSettings(brand,equipment);
+async function persistOrganizationAppearance(brand,equipment,localMessage) {
+  if (window.fit4lifeCloudOrganizationId && typeof window.fit4lifeCloudSaveOrganizationSettings === "function") return await window.fit4lifeCloudSaveOrganizationSettings(brand,equipment);
   showToast(localMessage || "Appearance saved on this device"); return true;
 }
-function setPortalTheme(themeId) {
+async function setPortalTheme(themeId) {
   if (!requireTrainerMutation("change the portal theme")) return false;
-  if (typeof isFit4LifeOwner === "function" && !isFit4LifeOwner()) { openOwnerRequestDialog("organization_setting","","","Change the portal seasonal or sport theme to " + portalThemePreset(themeId).label); return false; }
-  if (window.fit4lifeCloudOrganizationId && window.fit4lifeCloudRole !== "owner") { showToast("Only the gym owner can publish portal themes"); return false; }
+  if (!(typeof isFit4LifeOwner === "function" && isFit4LifeOwner()) || window.fit4lifeCloudRole !== "owner") { openOwnerRequestDialog("organization_setting","","","Change the shared holiday theme to " + portalThemePreset(themeId).label); return false; }
+  if (!window.fit4lifeCloudOrganizationId || typeof window.fit4lifeCloudSaveOrganizationSettings !== "function") { showToast("Connect to the shared gym account before publishing a theme"); return false; }
+  if (portalThemeSaveInFlight) { showToast("The previous theme is still publishing"); return false; }
   const theme = normalizedPortalTheme(themeId), brand = { ...currentGymBrand(),theme,updatedAt:new Date().toISOString() }, equipment = currentGymEquipment();
-  if (!writeLocalObject(GYM_BRAND_KEY,brand)) return false;
-  applyGymBrand();
-  document.querySelectorAll(".portal-theme-option").forEach((button) => { const selected = button.dataset.theme === theme; button.classList.toggle("on",selected); button.setAttribute("aria-pressed",selected ? "true" : "false"); });
-  persistOrganizationAppearance(brand,equipment,portalThemePreset(theme).label + " accents saved on this device"); return true;
+  portalThemeSaveInFlight = true;
+  document.querySelectorAll(".portal-theme-option").forEach((button) => { button.disabled = true; });
+  try {
+    const published = await persistOrganizationAppearance(brand,equipment);
+    if (!published) {
+      showToast("Theme was not published. The shared theme is unchanged."); return false;
+    }
+    return true;
+  } finally {
+    portalThemeSaveInFlight = false;
+    document.querySelectorAll(".portal-theme-option").forEach((button) => { button.disabled = false; });
+  }
 }
 function saveGymBrand() {
   if (!requireTrainerMutation("change gym setup")) return null;
@@ -292,7 +307,7 @@ function renderTeamsModule() {
 function saveTeam() { if (!requireTrainerMutation("create teams")) return null; const name = byId("teamName").value.trim(); if (!name) { showToast("Add a team name"); return null; } const choices = document.querySelectorAll ? [...document.querySelectorAll(".team-member-choice:checked")].map((item) => item.value) : []; const teams = loadTeams(), team = { id:"team-" + Date.now(),name,coach:byId("teamCoach").value.trim(),focus:byId("teamFocus").value.trim(),profileIds:choices,createdAt:new Date().toISOString() }; teams.unshift(team); if (!writeLocalArray(TEAMS_KEY,teams,200)) return null; renderAdvancedStudio(); showToast("Team created"); return team; }
 function deleteTeam(id) { if (!requireTrainerMutation("delete teams")) return false; if (!writeLocalArray(TEAMS_KEY,loadTeams().filter((item) => item.id !== id),200)) return false; renderAdvancedStudio(); showToast("Team deleted"); return true; }
 function renderOrganizationModule() {
-  return '<section class="advanced-card" style="margin-bottom:12px"><h3>Organization setup</h3><p>Gym identity, available equipment, and operating groups live together because they change the environment around every client. Individual goals, injuries, and preferences still remain client-specific.</p><div class="tool-actions"><button class="small-btn" onclick="openCoachDestination(\'settings\')">Open account &amp; security settings</button><button class="small-btn" onclick="openCoachDestination(\'calendar\')">Open team calendar</button></div></section>'
+  return '<section class="advanced-card" style="margin-bottom:12px"><h3>Organization setup</h3><p>Gym identity, available equipment, and operating groups live together because they change the environment around every client. Holiday themes are owner-published and synchronize to every device. Individual goals, injuries, and preferences still remain client-specific.</p><div class="tool-actions"><button class="small-btn" onclick="openCoachDestination(\'settings\')">Open account &amp; security settings</button><button class="small-btn" onclick="openCoachDestination(\'calendar\')">Open team calendar</button></div></section>'
     + renderBrandModule()
     + '<div style="height:12px"></div>'
     + renderTeamsModule();

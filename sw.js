@@ -1,12 +1,18 @@
-const CACHE_NAME = "fit4life-shell-2026-08-13-v11-neon-legibility-r1";
+const CACHE_NAME = "fit4life-shell-2026-08-13-v12-immersive-themes-r2";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
 const SHELL = [
   "/",
   "/index.html",
-  "/cloud-sync.js?v=20260813-v11-neon-legibility-r1",
-  "/js/app/role-governance.js?v=20260813-v11-neon-legibility-r1",
-  "/js/app/action-calendar.js?v=20260813-v11-neon-legibility-r1",
+  "/cloud-sync.js?v=20260813-v12-immersive-themes-r2",
+  "/js/app/role-governance.js?v=20260813-v12-immersive-themes-r2",
+  "/js/app/action-calendar.js?v=20260813-v12-immersive-themes-r2",
   "/dark-rock-background-v2.jpg",
+  "/theme-assets/halloween-scene.jpg",
+  "/theme-assets/thanksgiving-scene.jpg",
+  "/theme-assets/christmas-scene.jpg",
+  "/theme-assets/valentine-scene.jpg",
+  "/theme-assets/new-year-scene.jpg",
+  "/theme-assets/independence-scene.jpg",
   "/manifest.webmanifest",
   "/fit4life-icon.svg",
   "/fit4life-icon-maskable.svg"

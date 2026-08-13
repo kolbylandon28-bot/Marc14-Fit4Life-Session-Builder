@@ -64,6 +64,11 @@
   let cloudPushTimer = null;
   let cloudChannel = null;
   let cloudRegistrationChannel = null;
+  let cloudOrganizationPullTimer = null;
+  let cloudOrganizationRefreshTimer = null;
+  let organizationSettingsLoad = null;
+  let lastOrganizationSettingsLoadedAt = 0;
+  let organizationRefreshListenersBound = false;
   let cloudRegistrationRequests = [];
   let portalOrganizationId = "";
   let portalOrganizationSlug = "fit-4-life";
@@ -240,6 +245,7 @@
     portalPublicRegistrationEnabled = context.public_registration_enabled !== false;
     if (context.brand_config && typeof context.brand_config === "object") writeJson(CLOUD_KEYS.gymBrand, context.brand_config);
     if (context.equipment_config && typeof context.equipment_config === "object") writeJson(CLOUD_KEYS.gymEquipment, context.equipment_config);
+    lastOrganizationSettingsLoadedAt = Date.now();
     try { if (typeof applyGymBrand === "function") applyGymBrand(); } catch (_) {}
     const signupTab = document.querySelector && document.querySelector('[data-auth-mode="signup"]');
     if (signupTab) signupTab.style.display = portalPublicRegistrationEnabled ? "" : "none";
@@ -594,27 +600,69 @@
 
   async function loadOrganizationSettings() {
     if (!cloudClient || !cloudOrganizationId) return null;
-    const response = await cloudClient
-      .from("organizations")
-      .select("id,slug,name,brand_config,equipment_config,public_registration_enabled,status,default_timezone,default_units,plan_code")
-      .eq("id", cloudOrganizationId)
-      .maybeSingle();
-    if (response.error || !response.data) {
-      if (response.error) console.error("Gym settings could not be loaded", response.error);
-      return null;
+    if (organizationSettingsLoad) return organizationSettingsLoad;
+    organizationSettingsLoad = (async () => {
+      const response = await cloudClient
+        .from("organizations")
+        .select("id,slug,name,brand_config,equipment_config,public_registration_enabled,status,default_timezone,default_units,plan_code")
+        .eq("id", cloudOrganizationId)
+        .maybeSingle();
+      if (response.error || !response.data) {
+        if (response.error) console.error("Gym settings could not be loaded", response.error);
+        return null;
+      }
+      cloudOrganizationSlug = response.data.slug || portalOrganizationSlug;
+      window.fit4lifeCloudOrganizationId = cloudOrganizationId;
+      window.fit4lifeCloudOrganizationSlug = cloudOrganizationSlug;
+      applyPortalContext({
+        organization_id: response.data.id,
+        slug: response.data.slug,
+        name: response.data.name,
+        brand_config: response.data.brand_config,
+        equipment_config: response.data.equipment_config,
+        public_registration_enabled: response.data.public_registration_enabled
+      });
+      lastOrganizationSettingsLoadedAt = Date.now();
+      return response.data;
+    })();
+    try {
+      return await organizationSettingsLoad;
+    } finally {
+      organizationSettingsLoad = null;
     }
-    cloudOrganizationSlug = response.data.slug || portalOrganizationSlug;
-    window.fit4lifeCloudOrganizationId = cloudOrganizationId;
-    window.fit4lifeCloudOrganizationSlug = cloudOrganizationSlug;
-    applyPortalContext({
-      organization_id: response.data.id,
-      slug: response.data.slug,
-      name: response.data.name,
-      brand_config: response.data.brand_config,
-      equipment_config: response.data.equipment_config,
-      public_registration_enabled: response.data.public_registration_enabled
-    });
-    return response.data;
+  }
+  window.fit4lifeCloudRefreshOrganizationSettings = loadOrganizationSettings;
+
+  function scheduleOrganizationSettingsPull(delay) {
+    if (!cloudReady || !cloudOrganizationId) return;
+    clearTimeout(cloudOrganizationPullTimer);
+    cloudOrganizationPullTimer = setTimeout(async () => {
+      const before = readJson(CLOUD_KEYS.gymBrand, {});
+      const loaded = await loadOrganizationSettings();
+      const after = readJson(CLOUD_KEYS.gymBrand, {});
+      if (loaded && JSON.stringify(before) !== JSON.stringify(after) && typeof showToast === "function") showToast("Portal theme updated for this gym");
+    }, Number.isFinite(delay) ? delay : 250);
+  }
+
+  function refreshOrganizationSettingsIfStale(force) {
+    if (typeof document !== "undefined" && document.hidden) return;
+    if (!force && Date.now() - lastOrganizationSettingsLoadedAt < 45000) return;
+    if (!cloudReady || !cloudOrganizationId) {
+      if (cloudClient) loadPortalContext();
+      return;
+    }
+    scheduleOrganizationSettingsPull(0);
+  }
+
+  function startOrganizationSettingsRefresh() {
+    clearInterval(cloudOrganizationRefreshTimer);
+    cloudOrganizationRefreshTimer = setInterval(() => refreshOrganizationSettingsIfStale(false), 60000);
+    if (!organizationRefreshListenersBound) {
+      organizationRefreshListenersBound = true;
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshOrganizationSettingsIfStale(true); });
+      window.addEventListener("focus", () => refreshOrganizationSettingsIfStale(false));
+      window.addEventListener("online", () => refreshOrganizationSettingsIfStale(true));
+    }
   }
 
   window.fit4lifeCloudSaveOrganizationSettings = async function fit4lifeCloudSaveOrganizationSettings(brand, equipment) {
@@ -634,6 +682,7 @@
       return false;
     }
     applyPortalContext(saved);
+    lastOrganizationSettingsLoadedAt = Date.now();
     queueCloudSync("organization");
     if (typeof showToast === "function") showToast("Gym setup saved for every device");
     return true;
@@ -1163,6 +1212,7 @@
       .on("postgres_changes", { event: "*", schema: "public", table: "sync_records" }, scheduleCloudPull)
       .on("postgres_changes", { event: "*", schema: "public", table: "client_profiles" }, scheduleCloudPull)
       .on("postgres_changes", { event: "*", schema: "public", table: "registration_requests" }, () => loadTrainerRegistrationRequests())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "organizations", filter:"id=eq." + cloudOrganizationId }, () => scheduleOrganizationSettingsPull(120))
       .subscribe();
   }
 
@@ -1253,6 +1303,7 @@
     else authMessage("Your saved-on-this-device changes are still waiting to upload. They were not replaced by older cloud data.", true);
     if ((cloudRole === "owner" || cloudRole === "trainer") && window.fit4lifeCloudListTrainers) await window.fit4lifeCloudListTrainers();
     subscribeToChanges();
+    startOrganizationSettingsRefresh();
     authMessage("", false);
     showAuthGate(false);
 
@@ -1626,6 +1677,8 @@
     if (cloudClient) await cloudClient.auth.signOut();
     if (cloudRegistrationChannel && cloudClient) cloudClient.removeChannel(cloudRegistrationChannel);
     cloudRegistrationChannel = null;
+    if (cloudChannel && cloudClient) cloudClient.removeChannel(cloudChannel);
+    cloudChannel = null;
     try { sessionStorage.removeItem("fit4life_trainer_unlocked"); } catch (_) {}
     cloudReady = false;
     cloudUser = null;
@@ -1710,6 +1763,7 @@
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
       });
       await loadPortalContext();
+      startOrganizationSettingsRefresh();
       installWriterHooks();
       const sessionResponse = await cloudClient.auth.getSession();
       if (sessionResponse.error) throw sessionResponse.error;

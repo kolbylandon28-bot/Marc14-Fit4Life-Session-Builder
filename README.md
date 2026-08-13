@@ -6,23 +6,27 @@ backend for shared/synced data.
 
 Live: https://marc14-fit4-life-session-builder.vercel.app
 
-This V11 release keeps the V5 role boundaries, V6 Action Center/calendar, V7 six-tab
+This V12 release keeps the V5 role boundaries, V6 Action Center/calendar, V7 six-tab
 client workspace, V8 interaction system, and V9 save reliability repairs. It adds a
-permanent metallic-black F4L sign with evenly spaced letters and a blue neon outline,
-plus owner-controlled seasonal and sport accents. The role-selection heading now sits
-inside a high-contrast translucent panel so the background sign cannot obscure it.
+permanent metallic-black F4L sign with evenly spaced letters and a theme-aware neon
+outline, plus owner-controlled holiday scenes. The role-selection heading
+stays inside a high-contrast translucent panel so background visuals cannot obscure it.
 
-## V10 appearance controls
+## V12 appearance controls
 
 Owners can open **Settings → Themes, appearance & gym setup** and choose Neon blue,
-Halloween, Thanksgiving, Christmas, Valentine’s, Football, Baseball, or Basketball.
-The change is immediate and syncs through the existing `brand_config` organization
-setting. Trainers cannot publish organization-wide themes; they use the existing
-owner-request workflow. No new Supabase SQL or Vercel variable is required.
+New Year, Valentine’s, Independence Day, Halloween, Thanksgiving, or Christmas.
+The choice is stored in the existing `brand_config` organization setting. Signed-in
+devices receive live changes, while every device refreshes the setting on app open,
+foreground return, reconnection, and a quiet periodic check. Trainers cannot publish
+organization-wide themes; they use the owner-request workflow. Rerun the included
+role-boundary SQL to install the V12 database guard and Realtime publication update.
+No new Vercel variable is required.
 
-The presets deliberately stay subtle: they change faint background glows, the top
-edge light, and a small status badge. They do not replace the rock background or
-change the application layout, and the large center F4L neon sign always stays blue.
+Each preset changes the F4L neon outline, ambient lighting, top-bar badge, animated
+atmosphere, and a polished 3D scene along the bottom of the rock wall. Each holiday
+has distinct artwork. The rock background, application layout, controls, and gym
+brand settings remain intact.
 
 ## Stack
 

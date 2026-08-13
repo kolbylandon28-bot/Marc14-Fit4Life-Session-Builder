@@ -1,4 +1,4 @@
-FIT4LIFE — V11 METALLIC NEON + ROLE-PAGE LEGIBILITY
+FIT4LIFE — V12 IMMERSIVE HOLIDAY THEMES
 Build date: 2026-08-13
 
 THIS is the versioned upload folder. It preserves Update 3 programming, the stable
@@ -7,9 +7,11 @@ V7 repaired Action Center commands and replaced the crowded trainer-facing clien
 record with a focused six-tab coaching workspace. V8 made secondary menus
 interactive and keyboard-safe. V9 made their save actions reliable and visible.
 V10 adds the permanent neon-blue F4L rock-background sign and owner-controlled
-seasonal/sport accent presets without replacing the core portal design.
+holiday accent presets without replacing the core portal design.
 V11 gives that sign an evenly spaced metallic-black face with a crisp blue outline,
 and places the role-selection question inside a high-contrast translucent panel.
+V12 makes the F4L outline theme-aware and adds six cinematic 3D holiday scenes,
+matching ambient particles, and real scene previews in the owner picker.
 
 USE THE SAME PUBLIC LINK AFTER EVERY DEPLOYMENT
 Public production link:
@@ -21,7 +23,7 @@ https://marc14-fit4-life-session-builder.vercel.app
 4. Share the production domain above—not a generated preview/deployment URL.
 5. In Vercel Project Settings > Domains, confirm the domain above is attached to
    this project and points to the latest Production deployment.
-6. After Vercel reports Ready, open the Production link and confirm V11 appears. This
+6. After Vercel reports Ready, open the Production link and confirm V12 appears. This
    release version-tags its app files, forces shell revalidation, and updates the
    service worker without relying on its browser cache.
 7. In Project Settings > Deployment Protection, enable Vercel Authentication with
@@ -57,21 +59,22 @@ V5 ROLE RULES
 - Coaching notes have explicit Team, Client feedback, or Protected safety visibility.
 
 V10 NEON + THEME PRESETS
-- A large fluorescent-blue F4L sign now sits behind the portal content on the black
-  rock wall. It is CSS-built, stays blue in every preset, does not block clicks, and
-  is removed from printed pages.
-- Settings > Themes, appearance & gym setup now includes Neon blue, Halloween,
-  Thanksgiving, Christmas, Valentine’s, Football, Baseball, and Basketball.
-- Presets add only subtle edge lighting, background glow, and a small top-bar badge.
-  They do not replace the rock background, rearrange the portal, or override the
-  gym’s primary and accent brand colors.
+- V10 introduced the large fluorescent-blue F4L sign behind the portal content on
+  the black rock wall. V12 now recolors its outline and glow with the active preset.
+- Settings > Themes, appearance & gym setup now includes Neon blue, New Year,
+  Valentine’s, Independence Day, Halloween, Thanksgiving, and Christmas.
+- The original presets added edge lighting, background glow, and a top-bar badge.
+  V12 expands them with themed 3D scene artwork and ambient particles without
+  replacing the rock background, rearranging the portal, or overriding gym colors.
 - Themes are manual and remain selected until an owner changes them. There are no
   automatic holiday dates that could unexpectedly change the client portal.
 - Only the owner can publish a preset. Trainers can request an organization-setting
   change through the existing owner approval workflow.
-- The selected preset is stored inside the existing gym brand configuration, so the
-  existing Supabase organization sync sends it to trainer and client devices. No new
-  SQL migration or environment variable is required.
+- The selected preset is stored inside the existing gym brand configuration. Live
+  Supabase organization updates, app-open/foreground/online refreshes, and a periodic
+  fallback check keep trainer and client devices synchronized. Rerun the included
+  role-boundary SQL for the V12 database guard and Realtime publication update; no
+  new environment variable is required.
 - See THEME-GUIDE.md for the short operating guide.
 
 V11 VISUAL REFINEMENTS
@@ -83,6 +86,24 @@ V11 VISUAL REFINEMENTS
 - The sign remains behind all content and cannot intercept clicks.
 - V11 has its own asset and service-worker version so browsers request the refinement
   immediately after the Production deployment.
+
+V12 IMMERSIVE THEMES
+- The F4L neon outline and glow now adopt the selected preset color while preserving
+  the crisp metallic-black face and even letter spacing.
+- Halloween adds a 3D jack-o'-lantern, cauldron, and falling magical embers.
+- Thanksgiving adds a turkey, football, pumpkins, autumn tree, and falling leaves.
+- Christmas adds a snowy tree, Santa, presents, and falling snow.
+- New Year, Valentine’s, and Independence Day have their own matching 3D scenes and
+  restrained atmospheric details.
+- Scene artwork stays at the bottom of the rock wall, behind all application panels,
+  and cannot intercept clicks. Reduced-motion devices do not animate particles.
+- Theme thumbnails now preview the actual scene instead of showing color alone.
+- All six compressed holiday-scene assets are included in the PWA shell cache for
+  reliable refreshes and offline use. Rerun the included role-boundary SQL for the
+  V12 theme guard and Realtime publication update; no new environment variable is
+  needed.
+- Only an authenticated owner can publish a theme. Trainers see the current theme and
+  may request a change, but cannot preview or save a different theme on their device.
 
 V7 CLIENT WORKSPACE
 - The client record now has six task-based tabs: Overview, Workouts, Progress,

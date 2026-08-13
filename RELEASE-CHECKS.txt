@@ -1,4 +1,4 @@
-FIT4LIFE V11 RELEASE CHECKS — 2026-08-13
+FIT4LIFE V12 RELEASE CHECKS — 2026-08-13
 
 PASSED LOCALLY
 - JavaScript syntax: every .js file passed Node syntax validation.
@@ -22,10 +22,8 @@ PASSED LOCALLY
   unmatched tokens were browser/JavaScript built-ins used inside valid handlers.
 - V10 rendered the permanent blue F4L sign over the black rock wall without blocking
   page controls.
-- All 8 preset buttons activated the matching root theme and selected state.
-- Halloween produced the HALLOWEEN badge; Basketball produced COURT MODE.
-- The Basketball selection survived a full reload; returning to Neon blue removed
-  the preset badge.
+- The earlier V10 preset browser run activated each matching root theme and selected
+  state. V12 intentionally narrows the published set to holidays only.
 - The V10 browser run reported zero runtime console errors.
 - V9 remains preserved separately; V10 is a new versioned folder.
 - V11 visually confirmed separate F, 4, and L spacing with no overlap.
@@ -34,6 +32,21 @@ PASSED LOCALLY
   dark panel even where the F4L sign crosses behind the panel.
 - Trainer-side controls stayed clickable over the layered sign.
 - The final V11 visual run reported zero runtime console errors.
+- V12 JavaScript syntax checks passed for every application, API, cloud-sync, and
+  service-worker file after the immersive-theme integration.
+- V12 JSON parsing passed for manifest.webmanifest and vercel.json.
+- V12 still contains 601 unique HTML IDs with no duplicate IDs.
+- All six final holiday-scene JPEGs resolve locally; together they add about 1.3 MB.
+- The V12 service-worker shell contains every theme scene and uses its own cache name.
+- The app shell and all JavaScript/CSS references use the V12 cache-busting tag.
+- Theme artwork is click-through, removed from printed pages, and its particle layer
+  is disabled when the operating system requests reduced motion.
+- The publisher requires an authenticated owner and a connected organization before
+  it calls the owner-only organization-settings RPC.
+- Trainer accounts receive only the published-theme summary and owner-request action;
+  they cannot preview or publish theme alternatives.
+- Organization settings refresh through Supabase Realtime and also on app open,
+  foreground return, reconnection, and a quiet 60-second fallback check.
 
 REQUIRED BEFORE LIVE USE
 1. Upload this folder's contents to the same repository and Vercel project.
@@ -45,18 +58,24 @@ REQUIRED BEFORE LIVE USE
    client account.
 6. Test one future generated deployment URL and one historical generated URL.
 
-LIVE V10 THEME CHECKS
-- [ ] Confirm a fluorescent-blue F4L sign is visible in the center of the rock wall.
+LIVE V12 THEME CHECKS
+- [ ] Confirm the metallic-black F4L sign is visible in the center of the rock wall.
 - [ ] Sign in as an owner and open Settings > Themes, appearance & gym setup.
-- [ ] Click one seasonal preset and confirm its top-bar badge and subtle glow appear.
+- [ ] Click each preset and confirm the sign outline, top-bar badge, scene thumbnail,
+      bottom 3D scene, and matching ambient particles all change together.
+- [ ] Confirm New Year, Halloween, Thanksgiving, Christmas, Valentine's, and
+      Independence Day each display their matching scene and ambient treatment.
 - [ ] Refresh the page and confirm the selected preset remains active.
-- [ ] Sign in as a trainer and confirm organization appearance is request-only.
-- [ ] Open a client account/device and confirm the published preset appears there.
-- [ ] Return to Neon blue when no seasonal or sport accent should be active.
+- [ ] Keep a trainer and client device open, publish from an owner device, and confirm
+      both other devices change without signing out or reloading.
+- [ ] Sign in as a trainer and confirm the picker is absent and change is request-only.
+- [ ] Return to Neon blue when no holiday theme should be active.
 
 NOT PERFORMED BY THE LOCAL CHECKS
 - No live Vercel deployment was created or promoted.
 - No SQL was executed against the production Supabase database.
 - No production owner, trainer, or client account was modified.
+- No post-integration browser screenshot run was performed for V12; complete the live
+  V12 theme checklist after uploading the release to the Production project.
 - Historical immutable Vercel deployment pages were not deleted. Standard Protection
   is the Vercel-side control that prevents those old snapshots from remaining public.
