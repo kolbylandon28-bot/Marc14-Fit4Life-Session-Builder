@@ -6,9 +6,9 @@ backend for shared/synced data.
 
 Live: https://marc14-fit4-life-session-builder.vercel.app
 
-This release combines the newer Update 3 workout/program editor with the V5
-owner/trainer governance model. It does not replace the newer programming work with
-the older V5 interface.
+This V6 release combines the newer Update 3 workout/program editor and V5
+owner/trainer governance with a unified trainer Action Center and an operational
+coaching calendar. It does not replace the newer programming work.
 
 ## Stack
 
@@ -38,6 +38,7 @@ js/                         App logic, grouped by domain (loaded in this order):
     calculations-timers.js        Numeric calculations + rest/work timers
     readiness-progress.js         Readiness adjustments + local progress memory
     role-governance.js             Owner requests, task claims, note visibility, owner-only guards
+    action-calendar.js             V6 action queue, workout requests, calendar, audit history
   trainer/                     Trainer-only features
     trainer-hub.js                 Trainer dashboard + coaching analysis
     coaching-support.js            Connected coaching support features
@@ -118,6 +119,30 @@ approved trainers; the primary coach identifies who leads routine follow-up. Sha
 attention tasks support claim/takeover/expiry, and coaching notes explicitly separate
 team-only, client-visible, and protected-safety content.
 
+## V6 Action Center
+
+The trainer sidebar now includes one Action Center. It unifies safety issues,
+unanswered messages, workout requests and reviews, access requests, owner approvals,
+schedule changes, expiring work, and follow-ups. Actions deep-link to the exact source.
+A snooze lasts 24 hours; it cannot falsely complete a task. Derived work disappears
+only after its underlying record is complete. Shared tasks retain the V5 claim,
+takeover, and 45-minute expiry behavior.
+
+## V6 operational calendar
+
+The calendar has day, week, month, and agenda views. It combines appointments, dated
+workout assignments, coaching follow-ups, and team tasks. Filters cover client,
+trainer/shared ownership, event type, status, service tier, and time of day. Calendar
+changes require a reason, warn about trainer time conflicts, and append immutable-style
+audit entries with actor and timestamp. Schedule changes may create actionable team
+notices, and client Coach pages show their upcoming schedule.
+
+Management has not finalized a rescheduling/fee cutoff. V6 makes that explicit and
+records the evidence without enforcing a fee or deadline prematurely.
+
 Before production use, run `supabase-v5-role-boundaries.sql` in Supabase SQL Editor.
 Interface guards improve clarity, while the SQL provides the database-side enforcement
 for owner-only membership and destructive operations.
+
+V6 does not require an additional SQL migration because calendar and Action Center
+records use the existing synchronized JSON record model.

@@ -855,7 +855,12 @@ function clientDeletionCounts(client) {
   const alerts = loadAutomationAlerts().filter((item) => profileIds.has(item.profileId) || clientMatches(item.client,client)).length;
   const receipts = loadProgressReceipts().filter((item) => profileIds.has(item.profileId) || clientMatches(item.client,client)).length;
   const teamMemberships = loadTeams().filter((team) => (team.profileIds || []).some((id) => profileIds.has(id))).length;
-  return { profiles: matchingProfiles.length, entries: entries.length, scans: scans.length, goals: goals.length, notes, requests, assignments, checkins, athleteMetrics, mentalPlans, alerts, receipts, teamMemberships };
+  const calendarEvents = typeof loadCalendarEvents === "function" ? loadCalendarEvents().filter((item) => profileIds.has(item.profileId) || clientMatches(item.client,client)) : [];
+  const calendarEventIds = new Set(calendarEvents.map((item) => item.id));
+  const calendarNotices = typeof loadCalendarNotices === "function" ? loadCalendarNotices().filter((item) => profileIds.has(item.profileId) || clientMatches(item.client,client) || calendarEventIds.has(item.eventId)).length : 0;
+  const calendarAudit = typeof loadCalendarAudit === "function" ? loadCalendarAudit().filter((item) => calendarEventIds.has(item.eventId)).length : 0;
+  const workoutRequests = typeof loadWorkoutRequests === "function" ? loadWorkoutRequests().filter((item) => profileIds.has(item.profileId) || clientMatches(item.client,client)).length : 0;
+  return { profiles: matchingProfiles.length, entries: entries.length, scans: scans.length, goals: goals.length, notes, requests, assignments, checkins, athleteMetrics, mentalPlans, alerts, receipts, teamMemberships, calendarEvents:calendarEvents.length, calendarNotices, calendarAudit, workoutRequests };
 }
 function openCompleteDeleteClient(clientOrProfileId) {
   if (!requireTrainerMutation("permanently delete client data")) return null;
@@ -863,7 +868,7 @@ function openCompleteDeleteClient(clientOrProfileId) {
   if (!client) { showToast("Choose a client to permanently delete"); return; }
   const counts = clientDeletionCounts(client); byId("completeDeleteClient").value = client; byId("completeDeleteConfirm").value = ""; byId("completeDeleteButton").disabled = true;
   byId("completeDeleteTitle").textContent = "Permanently delete " + client;
-  byId("completeDeleteSummary").textContent = "This will remove " + counts.profiles + " profile, " + counts.assignments + " assigned workout, " + counts.entries + " workout/history records, " + counts.notes + " trainer records, " + counts.scans + " InBody scans, " + counts.goals + " body-goal records, " + counts.checkins + " check-ins, " + counts.receipts + " progress receipts, " + counts.athleteMetrics + " athlete-monitoring records, " + counts.mentalPlans + " mental-performance plan, " + counts.alerts + " automation alerts, " + counts.teamMemberships + " team membership, and " + counts.requests + " pending requests from this device.";
+  byId("completeDeleteSummary").textContent = "This will remove " + counts.profiles + " profile, " + counts.assignments + " assigned workout, " + counts.entries + " workout/history records, " + counts.notes + " trainer records, " + counts.scans + " InBody scans, " + counts.goals + " body-goal records, " + counts.checkins + " check-ins, " + counts.receipts + " progress receipts, " + counts.athleteMetrics + " athlete-monitoring records, " + counts.mentalPlans + " mental-performance plan, " + counts.alerts + " automation alerts, " + counts.calendarEvents + " calendar items, " + counts.calendarAudit + " calendar audit entries, " + counts.calendarNotices + " schedule notices, " + counts.workoutRequests + " workout requests, " + counts.teamMemberships + " team membership, and " + counts.requests + " pending profile requests from this device.";
   byId("profileEditorModal").classList.remove("open"); byId("completeDeleteModal").classList.add("open"); setTimeout(() => byId("completeDeleteConfirm").focus(), 0);
 }
 function openCompleteDeleteFromEditor() {
@@ -898,6 +903,13 @@ function purgeClientData(client) {
   if (!writeAthleteMetrics(loadAthleteMetrics().filter((item) => !matchesAdvancedClient(item)))) return null;
   if (!writeLocalArray(MENTAL_PLANS_KEY,loadMentalPlans().filter((item) => !matchesAdvancedClient(item)),500)) return null;
   if (!writeLocalArray(AUTOMATION_ALERTS_KEY,loadAutomationAlerts().filter((item) => !matchesAdvancedClient(item)),500)) return null;
+  if (typeof loadCalendarEvents === "function") {
+    const deletedCalendarIds = new Set(loadCalendarEvents().filter((item) => matchesAdvancedClient(item)).map((item) => item.id));
+    if (!writeLocalArray(CALENDAR_EVENTS_KEY,loadCalendarEvents().filter((item) => !matchesAdvancedClient(item)),2000)) return null;
+    if (!writeLocalArray(CALENDAR_NOTICES_KEY,loadCalendarNotices().filter((item) => !matchesAdvancedClient(item) && !deletedCalendarIds.has(item.eventId)),1000)) return null;
+    if (!writeLocalArray(CALENDAR_AUDIT_KEY,loadCalendarAudit().filter((item) => !deletedCalendarIds.has(item.eventId)),2000)) return null;
+    if (!writeLocalArray(WORKOUT_REQUESTS_KEY,loadWorkoutRequests().filter((item) => !matchesAdvancedClient(item)),500)) return null;
+  }
   if (!writeLocalArray(TEAMS_KEY,loadTeams().map((team) => ({ ...team,profileIds:(team.profileIds || []).filter((id) => !profileIds.has(id)) })),200)) return null;
   const meta = loadSummaryMeta(); deletedEntryIds.forEach((id) => { delete meta[id]; }); if (!writeSummaryMeta(meta)) return null;
   [state.solo,state.p1,state.p2].forEach((target) => resetDeletedClientTarget(target, client));

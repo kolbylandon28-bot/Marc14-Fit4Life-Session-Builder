@@ -1,10 +1,11 @@
-const CACHE_NAME = "fit4life-shell-2026-08-12-stable-link-v5-canonical-redirect";
+const CACHE_NAME = "fit4life-shell-2026-08-13-v6-actions-calendar";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
 const SHELL = [
   "/",
   "/index.html",
-  "/cloud-sync.js?v=20260812-v5-stable",
-  "/js/app/role-governance.js?v=20260812-v5-stable",
+  "/cloud-sync.js?v=20260813-v6-actions-calendar",
+  "/js/app/role-governance.js?v=20260813-v6-actions-calendar",
+  "/js/app/action-calendar.js?v=20260813-v6-actions-calendar",
   "/dark-rock-background-v2.jpg",
   "/manifest.webmanifest",
   "/fit4life-icon.svg",
