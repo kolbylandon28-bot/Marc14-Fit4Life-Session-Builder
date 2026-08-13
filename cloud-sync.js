@@ -119,6 +119,35 @@
     return typeof navigator !== "undefined" && navigator.onLine === false;
   }
 
+  function localInteractionTestMode() {
+    if (!/^(?:localhost|127\.0\.0\.1)$/.test(String(window.location.hostname || ""))) return false;
+    try { return new URLSearchParams(window.location.search).get("interaction-test") === "1"; }
+    catch (_) { return false; }
+  }
+
+  function initializeLocalInteractionTest() {
+    const today = new Date(), dateKey = [today.getFullYear(),String(today.getMonth() + 1).padStart(2,"0"),String(today.getDate()).padStart(2,"0")].join("-");
+    const profileId = "interaction-test-client", assignmentId = "interaction-test-assignment";
+    const profiles = readJson(CLOUD_KEYS.profiles, []);
+    if (!profiles.some((profile) => profile && profile.id === profileId)) {
+      profiles.push({id:profileId,name:"Interaction Test Client",username:"interaction-test",email:"interaction@example.test",age:30,experience:2,minutes:60,availableDays:3,goals:["general"],muscles:[],injuries:[],zones:[],assignedTrainerId:"interaction-test-owner",assignedTrainerName:"Interaction Test Owner",createdAt:new Date().toISOString()});
+      writeJson(CLOUD_KEYS.profiles,profiles);
+    }
+    const assignments = readJson(CLOUD_KEYS.assignments, []);
+    if (!assignments.some((assignment) => assignment && assignment.id === assignmentId)) {
+      assignments.push({id:assignmentId,profileId,client:"Interaction Test Client",status:"assigned",scheduledDate:dateKey,scheduledTime:"12:30",assignedAt:new Date().toISOString(),session:{type:"solo",data:{sessionId:"interaction-test-session",goalLabel:"Interaction Test Workout",spec:{client:"Interaction Test Client",goal:"general"},blocks:[]}}});
+      writeJson(CLOUD_KEYS.assignments,assignments);
+    }
+    try { localStorage.setItem(CLOUD_KEYS.activeClient,profileId); } catch (_) {}
+    cloudUser = {id:"interaction-test-owner",email:"owner@interaction.test",user_metadata:{display_name:"Interaction Test Owner"}};
+    cloudRole = "owner"; cloudReady = true;
+    window.fit4lifeCloudRole = "owner"; window.fit4lifeCloudReady = true;
+    window.fit4lifeCloudIdentity = {id:cloudUser.id,email:cloudUser.email,role:"owner",displayName:"Interaction Test Owner"};
+    window.fit4lifeCloudTrainers = [{user_id:cloudUser.id,display_name:"Interaction Test Owner",email:cloudUser.email,role:"owner",is_active:true}];
+    showAuthGate(false); cloudStatus("Local interaction test", "offline"); authMessage("", false);
+    setTimeout(() => { refreshVisibleApp(); if (typeof routeAuthenticatedWorkspace === "function") routeAuthenticatedWorkspace(); },0);
+  }
+
   function isolateSensitiveCacheForUser(userId, role) {
     let previous = "";
     try { previous = localStorage.getItem(ACCOUNT_CACHE_OWNER_KEY) || ""; } catch (_) {}
@@ -1662,6 +1691,7 @@
   };
 
   async function initializeCloud() {
+    if (localInteractionTestMode()) { initializeLocalInteractionTest(); return; }
     showAuthGate(true);
     cloudStatus("Connecting…", "syncing");
     authMessage("Connecting to your gym's secure records…", false);

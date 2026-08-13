@@ -6,10 +6,10 @@ backend for shared/synced data.
 
 Live: https://marc14-fit4-life-session-builder.vercel.app
 
-This V7 release keeps the V5 role boundaries and V6 Action Center/calendar, repairs
-the Action Center's Handle and Tomorrow commands, and replaces the crowded client
-record with a six-tab task-based trainer workspace. Retired onboarding and readiness
-prompts no longer block normal single-workout coaching.
+This V8 release keeps the V5 role boundaries, V6 Action Center/calendar, and V7
+six-tab client workspace. It repairs the assigned-workout scheduling modal and adds
+one consistent interaction system across every secondary menu so buttons, dropdowns,
+closing controls, Escape, focus, and dynamically created dialogs behave reliably.
 
 ## Stack
 
@@ -141,9 +141,30 @@ notices, and client Coach pages show their upcoming schedule.
 Management has not finalized a rescheduling/fee cutoff. V6 makes that explicit and
 records the evidence without enforcing a fee or deadline prematurely.
 
+## V8 secondary-menu interaction audit
+
+Assigned workouts use a purpose-built scheduling editor. Workout, client, coach, and
+current status are shown as context instead of disabled appointment fields. Trainers
+can change the date, optional start time, reason, and schedule-notice choice; saving
+updates the assignment, audit history, Action Center notice, and visible calendar.
+
+Normal calendar items keep fully editable Type, Status, Client, Trainer, date/time,
+location, and internal-detail controls. All 21 secondary menus share one close/focus
+manager, including dialogs created after startup. It normalizes button types, keeps
+`aria-hidden` aligned with open state, closes the top menu with Escape, traps Tab
+focus inside the active dialog, and delegates backdrop closing to each menu's real
+cleanup function.
+
+Legacy or partially synchronized workout assignments are handled defensively. A
+missing session structure no longer prevents a trainer from opening the client page.
+
+For local UI verification only, serve the site on `localhost` and append
+`?interaction-test=1`. This seeds isolated browser data and bypasses cloud auth for
+click-through testing. The mode is hostname-locked and cannot activate on Vercel.
+
 Before production use, run `supabase-v5-role-boundaries.sql` in Supabase SQL Editor.
 Interface guards improve clarity, while the SQL provides the database-side enforcement
 for owner-only membership and destructive operations.
 
-V6 does not require an additional SQL migration because calendar and Action Center
-records use the existing synchronized JSON record model.
+V8 does not require an additional SQL migration because calendar, Action Center, and
+secondary-menu changes use the existing synchronized JSON record model.

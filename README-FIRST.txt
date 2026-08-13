@@ -1,10 +1,11 @@
-FIT4LIFE — V7 CLIENT WORKSPACE + ACTION FIXES
+FIT4LIFE — V8 SECONDARY-MENU INTERACTION AUDIT
 Build date: 2026-08-13
 
 THIS is the versioned upload folder. It preserves Update 3 programming, the stable
 production link, V5 owner/trainer boundaries, and the V6 Action Center/calendar.
-V7 repairs Action Center commands and replaces the crowded trainer-facing client
-record with a focused six-tab coaching workspace.
+V7 repaired Action Center commands and replaced the crowded trainer-facing client
+record with a focused six-tab coaching workspace. V8 makes the calendar editor and
+all 21 secondary menus consistently interactive, closable, and keyboard-safe.
 
 USE THE SAME PUBLIC LINK AFTER EVERY DEPLOYMENT
 Public production link:
@@ -16,7 +17,7 @@ https://marc14-fit4-life-session-builder.vercel.app
 4. Share the production domain above—not a generated preview/deployment URL.
 5. In Vercel Project Settings > Domains, confirm the domain above is attached to
    this project and points to the latest Production deployment.
-6. After Vercel reports Ready, open the Production link and confirm V7 appears. This
+6. After Vercel reports Ready, open the Production link and confirm V8 appears. This
    release version-tags its app files, forces shell revalidation, and updates the
    service worker without relying on its browser cache.
 7. In Project Settings > Deployment Protection, enable Vercel Authentication with
@@ -71,6 +72,23 @@ V7 ACTION FIXES
 - Workout requests open the selected client directly in the single-workout builder.
 - Tomorrow snoozes the action for 24 hours and refreshes the queue immediately.
 
+V8 SECONDARY-MENU + CALENDAR FIXES
+- Assigned workouts no longer open a misleading form full of grey, disabled
+  appointment controls. The modal shows a read-only workout/client/coach/status
+  summary and editable Date, optional Start time, Reason, notice, and history.
+- Changing an assigned workout now persists both scheduledDate and scheduledTime,
+  records the before/after audit entry, and updates the calendar chip immediately.
+- Normal appointment, follow-up, and team-task menus retain editable Type, Status,
+  Client, Trainer, date/time, location, and details controls.
+- All 21 secondary menus use one interaction manager: modal buttons default to
+  type="button", open/closed aria state stays accurate, Escape closes the top menu,
+  Tab remains inside the open menu, and backdrop clicks use the correct closer.
+- Dynamically created menus receive the same behavior as menus present at startup.
+- Incomplete legacy workout-session data can no longer crash the client workspace;
+  the record remains visible with zero planned efforts until it is replaced/rebuilt.
+- A localhost-only `?interaction-test=1` route is available for safe click-through
+  testing. It cannot activate on the Vercel production or preview domains.
+
 V6 BATCH 2 — ACTION CENTER
 - Action Center combines safety reports, unanswered messages, workout requests,
   workout/check-in reviews, client/trainer access, owner approvals, schedule changes,
@@ -98,8 +116,8 @@ V6 BATCH 3 — OPERATIONAL CALENDAR
   late/change history but does not impose a fee or notice cutoff until policy is set.
 - Client Coach pages now show upcoming appointments and dated workouts.
 
-NO NEW SUPABASE SQL IS REQUIRED FOR V7
-The V7 workspace changes use the existing sync_records JSON architecture. The V5
+NO NEW SUPABASE SQL IS REQUIRED FOR V8
+The V8 interaction changes use the existing sync_records JSON architecture. The V5
 role-boundary SQL is still required if it has not already been run.
 
 REQUIRED SUPABASE STEP

@@ -34,10 +34,17 @@ function applyCoachAdjustmentToSession(session) {
   session.rationale = (labels[adjustment.action] || "Coach-reviewed next-session direction.") + (adjustment.note ? " Trainer note: " + adjustment.note : "") + " " + session.rationale; return session;
 }
 function workoutPlans(sessionState) {
-  if (!sessionState) return [];
-  return sessionState.type === "solo"
-    ? [{ label: sessionState.data.spec.client || "Client", session: sessionState.data }]
-    : [{ label: sessionState.data.a.spec.client || "Partner 1", session: sessionState.data.a }, { label: sessionState.data.b.spec.client || "Partner 2", session: sessionState.data.b }];
+  if (!sessionState || !sessionState.data) return [];
+  if (sessionState.type === "solo") {
+    const session = sessionState.data;
+    if (!session || !session.spec || !Array.isArray(session.blocks)) return [];
+    return [{ label: session.spec.client || "Client", session }];
+  }
+  const partnerA = sessionState.data.a, partnerB = sessionState.data.b;
+  return [
+    partnerA && partnerA.spec && Array.isArray(partnerA.blocks) ? { label:partnerA.spec.client || "Partner 1", session:partnerA } : null,
+    partnerB && partnerB.spec && Array.isArray(partnerB.blocks) ? { label:partnerB.spec.client || "Partner 2", session:partnerB } : null,
+  ].filter(Boolean);
 }
 function allPrimaryLiftRefs(sessionState) {
   return workoutPlans(sessionState).flatMap((plan) => {
