@@ -6,10 +6,11 @@ backend for shared/synced data.
 
 Live: https://marc14-fit4-life-session-builder.vercel.app
 
-This V10 release keeps the V5 role boundaries, V6 Action Center/calendar, V7 six-tab
+This V11 release keeps the V5 role boundaries, V6 Action Center/calendar, V7 six-tab
 client workspace, V8 interaction system, and V9 save reliability repairs. It adds a
-permanent neon-blue F4L sign to the rock background plus owner-controlled seasonal
-and sport accent presets that sync through the existing organization brand settings.
+permanent metallic-black F4L sign with evenly spaced letters and a blue neon outline,
+plus owner-controlled seasonal and sport accents. The role-selection heading now sits
+inside a high-contrast translucent panel so the background sign cannot obscure it.
 
 ## V10 appearance controls
 

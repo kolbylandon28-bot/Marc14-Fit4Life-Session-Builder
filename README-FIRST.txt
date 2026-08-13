@@ -1,4 +1,4 @@
-FIT4LIFE — V10 NEON SIGN + SEASONAL THEMES
+FIT4LIFE — V11 METALLIC NEON + ROLE-PAGE LEGIBILITY
 Build date: 2026-08-13
 
 THIS is the versioned upload folder. It preserves Update 3 programming, the stable
@@ -8,6 +8,8 @@ record with a focused six-tab coaching workspace. V8 made secondary menus
 interactive and keyboard-safe. V9 made their save actions reliable and visible.
 V10 adds the permanent neon-blue F4L rock-background sign and owner-controlled
 seasonal/sport accent presets without replacing the core portal design.
+V11 gives that sign an evenly spaced metallic-black face with a crisp blue outline,
+and places the role-selection question inside a high-contrast translucent panel.
 
 USE THE SAME PUBLIC LINK AFTER EVERY DEPLOYMENT
 Public production link:
@@ -19,7 +21,7 @@ https://marc14-fit4-life-session-builder.vercel.app
 4. Share the production domain above—not a generated preview/deployment URL.
 5. In Vercel Project Settings > Domains, confirm the domain above is attached to
    this project and points to the latest Production deployment.
-6. After Vercel reports Ready, open the Production link and confirm V10 appears. This
+6. After Vercel reports Ready, open the Production link and confirm V11 appears. This
    release version-tags its app files, forces shell revalidation, and updates the
    service worker without relying on its browser cache.
 7. In Project Settings > Deployment Protection, enable Vercel Authentication with
@@ -71,6 +73,16 @@ V10 NEON + THEME PRESETS
   existing Supabase organization sync sends it to trainer and client devices. No new
   SQL migration or environment variable is required.
 - See THEME-GUIDE.md for the short operating guide.
+
+V11 VISUAL REFINEMENTS
+- F, 4, and L use even positive tracking so the 4 and L no longer overlap.
+- The F4L face is crisp metallic black with a separate bright-blue edge and restrained
+  glow. The dark face remains legible instead of turning into a solid blue block.
+- The role-selection heading and supporting explanation now sit in a dark translucent
+  rounded panel with a thin blue edge, keeping the question readable over the sign.
+- The sign remains behind all content and cannot intercept clicks.
+- V11 has its own asset and service-worker version so browsers request the refinement
+  immediately after the Production deployment.
 
 V7 CLIENT WORKSPACE
 - The client record now has six task-based tabs: Overview, Workouts, Progress,

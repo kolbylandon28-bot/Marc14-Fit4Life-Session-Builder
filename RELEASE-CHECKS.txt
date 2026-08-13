@@ -1,4 +1,4 @@
-FIT4LIFE V10 RELEASE CHECKS — 2026-08-13
+FIT4LIFE V11 RELEASE CHECKS — 2026-08-13
 
 PASSED LOCALLY
 - JavaScript syntax: every .js file passed Node syntax validation.
@@ -28,6 +28,12 @@ PASSED LOCALLY
   the preset badge.
 - The V10 browser run reported zero runtime console errors.
 - V9 remains preserved separately; V10 is a new versioned folder.
+- V11 visually confirmed separate F, 4, and L spacing with no overlap.
+- The V11 sign renders with a dark metallic face and separate blue neon edge.
+- The role-selection title and explanation remain readable inside their translucent
+  dark panel even where the F4L sign crosses behind the panel.
+- Trainer-side controls stayed clickable over the layered sign.
+- The final V11 visual run reported zero runtime console errors.
 
 REQUIRED BEFORE LIVE USE
 1. Upload this folder's contents to the same repository and Vercel project.

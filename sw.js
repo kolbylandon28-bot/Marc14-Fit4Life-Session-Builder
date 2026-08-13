@@ -1,11 +1,11 @@
-const CACHE_NAME = "fit4life-shell-2026-08-13-v10-seasonal-themes-r1";
+const CACHE_NAME = "fit4life-shell-2026-08-13-v11-neon-legibility-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
 const SHELL = [
   "/",
   "/index.html",
-  "/cloud-sync.js?v=20260813-v10-seasonal-themes-r1",
-  "/js/app/role-governance.js?v=20260813-v10-seasonal-themes-r1",
-  "/js/app/action-calendar.js?v=20260813-v10-seasonal-themes-r1",
+  "/cloud-sync.js?v=20260813-v11-neon-legibility-r1",
+  "/js/app/role-governance.js?v=20260813-v11-neon-legibility-r1",
+  "/js/app/action-calendar.js?v=20260813-v11-neon-legibility-r1",
   "/dark-rock-background-v2.jpg",
   "/manifest.webmanifest",
   "/fit4life-icon.svg",
