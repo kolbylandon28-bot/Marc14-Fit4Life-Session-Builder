@@ -67,7 +67,7 @@ function allCoachCalendarEvents() {
   const profiles = loadProfiles(), profileMap = new Map(profiles.map((profile) => [profile.id,profile]));
   const workouts = loadAssignedWorkouts().filter((assignment) => assignment.scheduledDate).map((assignment) => {
     const profile = profileMap.get(assignment.profileId) || profiles.find((item) => clientMatches(item.name,assignment.client));
-    return {id:"assignment:" + assignment.id,source:"assignment",sourceId:assignment.id,type:"workout",title:assignment.programDayName || assignment.session && assignment.session.data && assignment.session.data.goalLabel || "Assigned workout",profileId:profile && profile.id || assignment.profileId || "",client:profile && profile.name || assignment.client || "Client",trainerId:profile && profile.assignedTrainerId || "",trainerName:profile && profile.assignedTrainerName || "Coaching team",tier:calendarTier(profile),date:assignment.scheduledDate,startTime:assignment.scheduledTime || "",endTime:"",status:assignmentCalendarStatus(assignment),location:"",notes:"Workout status is controlled by assignment and client logging.",updatedAt:assignment.updatedAt || assignment.assignedAt};
+    return {id:"assignment:" + assignment.id,source:"assignment",sourceId:assignment.id,type:"workout",title:assignment.programDayName || assignment.session && assignment.session.data && assignment.session.data.goalLabel || "Assigned workout",profileId:profile && profile.id || assignment.profileId || "",client:profile && profile.name || assignment.client || "Client",trainerId:profile && profile.assignedTrainerId || "",trainerName:profile && profile.assignedTrainerName || "Coaching team",tier:calendarTier(profile),date:assignment.scheduledDate,startTime:assignment.scheduledTime || "",endTime:"",status:assignmentCalendarStatus(assignment),location:"",notes:"Workout status is controlled by assignment and client logging.",scheduleHandledAt:assignment.scheduleHandledAt || "",updatedAt:assignment.updatedAt || assignment.assignedAt};
   });
   const custom = loadCalendarEvents().map((event) => ({source:"calendar",tier:calendarTier(profileMap.get(event.profileId)),...event}));
   return custom.concat(workouts).sort((a,b) => String(a.date).localeCompare(String(b.date)) || String(a.startTime || "99:99").localeCompare(String(b.startTime || "99:99")) || String(a.title).localeCompare(String(b.title)));
@@ -78,10 +78,10 @@ function appendCalendarAudit(eventId,action,before,after,reason) {
   audit.unshift({id:"calendar-audit-" + Date.now() + "-" + Math.random().toString(16).slice(2),eventId,action,before:before || null,after:after || null,reason:String(reason || ""),actorId:identity.id,actorName:identity.name,actorRole:identity.role,createdAt:new Date().toISOString()});
   writeLocalArray(CALENDAR_AUDIT_KEY,audit,2000);
 }
-function createCalendarNotice(event,before,reason,requiresAction) {
+function createCalendarNotice(event,before,reason,requiresAction,copy) {
   const changed = before && (before.date !== event.date || before.startTime !== event.startTime), statusChanged = before && before.status !== event.status;
-  const label = changed ? "Schedule changed" : statusChanged ? "Schedule status changed" : "New calendar item";
-  const detail = changed ? calendarDateLabel(before.date) + " → " + calendarDateLabel(event.date) + (event.startTime ? " at " + calendarFormatTime(event.startTime) : "") : (CALENDAR_STATUS_LABELS[event.status] || event.status) + (reason ? " · " + reason : "");
+  const label = copy && copy.label || (changed ? "Schedule changed" : statusChanged ? "Schedule status changed" : "New calendar item");
+  const detail = copy && copy.detail || (changed ? calendarDateLabel(before.date) + " → " + calendarDateLabel(event.date) + (event.startTime ? " at " + calendarFormatTime(event.startTime) : "") : (CALENDAR_STATUS_LABELS[event.status] || event.status) + (reason ? " · " + reason : ""));
   const notices = loadCalendarNotices();
   notices.unshift({id:"calendar-notice-" + Date.now() + "-" + Math.random().toString(16).slice(2),eventId:event.id,profileId:event.profileId || "",client:event.client || "Workspace",kind:"calendar_notice",label,detail,reason:String(reason || ""),requiresAction:Boolean(requiresAction),createdAt:new Date().toISOString(),resolvedAt:""});
   writeLocalArray(CALENDAR_NOTICES_KEY,notices,1000);
@@ -92,6 +92,11 @@ function resolveCalendarNotice(noticeId) {
   writeLocalArray(CALENDAR_NOTICES_KEY,notices,1000); releaseCoachTask("calendar-notice:" + notice.id); renderTrainerAttention();
   if (openCoachDestination.current === "actions") renderCoachModule("actions");
   showToast("Schedule update acknowledged"); return true;
+}
+function resolveCalendarNoticesForEvent(eventId) {
+  const notices = loadCalendarNotices(); let changed = false;
+  notices.forEach((notice) => { if (notice.eventId === eventId && !notice.resolvedAt) { notice.resolvedAt = new Date().toISOString(); notice.resolvedBy = calendarIdentity().name; changed = true; } });
+  return !changed || writeLocalArray(CALENDAR_NOTICES_KEY,notices,1000);
 }
 
 function actionCategoryForKind(kind) {
@@ -111,7 +116,11 @@ function actionSourceIsResolved(item) {
     return loadAssignedWorkouts().some((assignment) => assignment.profileId === request.profileId && new Date(assignment.assignedAt || assignment.updatedAt || 0) > new Date(request.createdAt || 0));
   }
   if (item.kind === "calendar_notice") { const notice = loadCalendarNotices().find((entry) => "calendar-notice:" + entry.id === item.id); return !notice || Boolean(notice.resolvedAt); }
-  if (item.kind === "calendar_event") { const event = calendarEventById(item.eventId); return !event || ["completed","cancelled"].includes(event.status); }
+  if (item.kind === "calendar_event") {
+    const event = calendarEventById(item.eventId);
+    if (!event || ["completed","cancelled"].includes(event.status)) return true;
+    return event.source === "assignment" && event.status === "missed" && Boolean(event.scheduleHandledAt);
+  }
   return false;
 }
 
@@ -249,13 +258,70 @@ function requestNextWorkout(note) {
 function ensureCalendarEventDialog() {
   let modal = byId("calendarEventModal"); if (modal) return modal;
   const wrapper = document.createElement("div");
-  wrapper.innerHTML = '<div id="calendarEventModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="calendarEventTitle" aria-describedby="calendarEventGuidance" aria-hidden="true"><div class="review-dialog calendar-event-dialog"><div class="calendar-modal-head"><div><span id="calendarEventSource" class="client-section-label">Calendar item</span><h2 id="calendarEventTitle">Schedule coaching work</h2><p id="calendarEventGuidance" class="calendar-modal-guidance">Every visible field below can be changed.</p></div><button class="icon-close" type="button" onclick="closeCalendarEventEditor()" aria-label="Close calendar editor">×</button></div><input id="calendarEventId" type="hidden"><input id="calendarEventSourceId" type="hidden"><div id="calendarAssignmentSummary" class="calendar-assignment-summary" hidden></div><div class="calendar-event-form"><div class="compact-field" data-calendar-custom><label for="calendarEventType">Type</label><select id="calendarEventType"><option value="appointment">Appointment</option><option value="followup">Follow-up</option><option value="admin">Team task</option></select></div><div class="compact-field" data-calendar-custom><label for="calendarEventStatus">Status</label><select id="calendarEventStatus"><option value="scheduled">Scheduled</option><option value="rescheduled">Rescheduled</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="missed">Missed</option></select></div><div class="compact-field wide" data-calendar-custom><label for="calendarEventTitleInput">Title</label><input id="calendarEventTitleInput" maxlength="100" placeholder="Training appointment or follow-up"></div><div class="compact-field" data-calendar-custom><label for="calendarEventClient">Client</label><select id="calendarEventClient" onchange="calendarEventClientChanged()"></select></div><div class="compact-field" data-calendar-custom><label for="calendarEventTrainer">Trainer</label><select id="calendarEventTrainer"></select></div><div class="compact-field"><label for="calendarEventDate">Date</label><input id="calendarEventDate" type="date"></div><div class="compact-field"><label for="calendarEventStart">Start time <span class="calendar-optional">optional</span></label><input id="calendarEventStart" type="time"></div><div class="compact-field" data-calendar-custom><label for="calendarEventEnd">End</label><input id="calendarEventEnd" type="time"></div><div class="compact-field wide" data-calendar-custom><label for="calendarEventLocation">Location</label><input id="calendarEventLocation" maxlength="100" placeholder="Fit4Life, office, phone, or video"></div><div class="compact-field wide" data-calendar-custom><label for="calendarEventNotes">Internal details</label><textarea id="calendarEventNotes" rows="3" placeholder="Preparation or coaching context"></textarea></div><div class="compact-field wide"><label for="calendarEventReason">Reason for this schedule change</label><textarea id="calendarEventReason" rows="2" placeholder="Briefly explain why the date or time is changing"></textarea></div><label class="calendar-notify-check"><input id="calendarEventNotify" type="checkbox" checked> Record a client/team schedule notice</label></div><div id="calendarConflictNote" class="calendar-policy-note" hidden></div><div class="tool-actions"><button id="calendarEventSaveBtn" class="small-btn primary" type="button" onclick="saveCalendarEvent()">Save calendar item</button><button class="small-btn" type="button" onclick="closeCalendarEventEditor()">Cancel</button></div><details class="formal-review-box" id="calendarAuditBox"><summary>Change history</summary><div id="calendarEventAudit" class="calendar-audit-list"></div></details></div></div>';
+  wrapper.innerHTML = `<div id="calendarEventModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="calendarEventTitle" aria-describedby="calendarEventGuidance calendarEventFeedback" aria-hidden="true">
+    <div class="review-dialog calendar-event-dialog">
+      <div class="calendar-modal-head"><div><span id="calendarEventSource" class="client-section-label">Calendar item</span><h2 id="calendarEventTitle">Schedule coaching work</h2><p id="calendarEventGuidance" class="calendar-modal-guidance">Every visible field below can be changed.</p></div><button class="icon-close" type="button" onclick="closeCalendarEventEditor()" aria-label="Close calendar editor">×</button></div>
+      <input id="calendarEventId" type="hidden"><input id="calendarEventSourceId" type="hidden">
+      <div id="calendarAssignmentSummary" class="calendar-assignment-summary" hidden></div>
+      <div class="calendar-event-form">
+        <div class="compact-field wide" data-calendar-assignment hidden><label for="calendarAssignmentAction">What are you doing?</label><select id="calendarAssignmentAction" onchange="syncCalendarAssignmentAction()"><option value="reschedule">Reschedule this workout</option><option value="followup">Record missed-workout follow-up</option><option value="cancel">Cancel assigned workout</option></select><span id="calendarAssignmentActionHelp" class="calendar-field-help"></span></div>
+        <div class="compact-field" data-calendar-custom><label for="calendarEventType">Type</label><select id="calendarEventType"><option value="appointment">Appointment</option><option value="followup">Follow-up</option><option value="admin">Team task</option></select></div>
+        <div class="compact-field" data-calendar-custom><label for="calendarEventStatus">Status</label><select id="calendarEventStatus"><option value="scheduled">Scheduled</option><option value="rescheduled">Rescheduled</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="missed">Missed</option></select></div>
+        <div class="compact-field wide" data-calendar-custom><label for="calendarEventTitleInput">Title</label><input id="calendarEventTitleInput" maxlength="100" placeholder="Training appointment or follow-up"></div>
+        <div class="compact-field" data-calendar-custom><label for="calendarEventClient">Client</label><select id="calendarEventClient" onchange="calendarEventClientChanged()"></select></div>
+        <div class="compact-field" data-calendar-custom><label for="calendarEventTrainer">Trainer</label><select id="calendarEventTrainer"></select></div>
+        <div class="compact-field" data-calendar-schedule><label for="calendarEventDate">Date</label><input id="calendarEventDate" type="date"></div>
+        <div class="compact-field" data-calendar-schedule><label for="calendarEventStart">Start time <span class="calendar-optional">optional</span></label><input id="calendarEventStart" type="time"></div>
+        <div class="compact-field" data-calendar-custom><label for="calendarEventEnd">End</label><input id="calendarEventEnd" type="time"></div>
+        <div class="compact-field wide" data-calendar-custom><label for="calendarEventLocation">Location</label><input id="calendarEventLocation" maxlength="100" placeholder="Fit4Life, office, phone, or video"></div>
+        <div class="compact-field wide" data-calendar-custom><label for="calendarEventNotes">Internal details</label><textarea id="calendarEventNotes" rows="3" placeholder="Preparation or coaching context"></textarea></div>
+        <div class="compact-field wide"><label id="calendarEventReasonLabel" for="calendarEventReason">Reason for this schedule change</label><textarea id="calendarEventReason" rows="2" placeholder="Briefly explain why the date or time is changing"></textarea></div>
+        <label class="calendar-notify-check"><input id="calendarEventNotify" type="checkbox" checked> Record a client/team schedule notice</label>
+      </div>
+      <div id="calendarConflictNote" class="calendar-policy-note" hidden></div>
+      <div id="calendarEventFeedback" class="calendar-save-feedback" role="status" aria-live="polite" hidden></div>
+      <div class="tool-actions"><button id="calendarEventSaveBtn" class="small-btn primary" type="button" onclick="saveCalendarEvent()">Save calendar item</button><button class="small-btn" type="button" onclick="closeCalendarEventEditor()">Cancel</button></div>
+      <details class="formal-review-box" id="calendarAuditBox"><summary>Change history</summary><div id="calendarEventAudit" class="calendar-audit-list"></div></details>
+    </div>
+  </div>`;
   modal = wrapper.firstElementChild; document.body.appendChild(modal); return modal;
 }
 function calendarSelectOptions() {
   const profiles = loadProfiles(), trainers = calendarTrainerOptions();
   byId("calendarEventClient").innerHTML = '<option value="">No specific client</option>' + profiles.map((profile) => '<option value="' + escapeHtml(profile.id) + '">' + escapeHtml(profile.name) + (profile.assignedTrainerName ? ' · ' + escapeHtml(profile.assignedTrainerName) : ' · Shared') + '</option>').join("");
   byId("calendarEventTrainer").innerHTML = '<option value="">Coaching team / unassigned</option>' + trainers.map((trainer) => '<option value="' + escapeHtml(trainer.id) + '" data-name="' + escapeHtml(trainer.name) + '">' + escapeHtml(trainer.name) + '</option>').join("");
+}
+function calendarSetFeedback(message,tone) {
+  const feedback = byId("calendarEventFeedback");
+  if (!feedback) { if (message) showToast(message); return false; }
+  feedback.textContent = String(message || "");
+  feedback.className = "calendar-save-feedback" + (tone ? " " + tone : "");
+  feedback.hidden = !message;
+  if (message) showToast(message);
+  return Boolean(message);
+}
+function syncCalendarAssignmentAction() {
+  const select = byId("calendarAssignmentAction"); if (!select) return;
+  const action = select.value || "reschedule", rescheduling = action === "reschedule";
+  document.querySelectorAll("#calendarEventModal [data-calendar-schedule]").forEach((field) => { field.hidden = !rescheduling; });
+  const help = byId("calendarAssignmentActionHelp"), label = byId("calendarEventReasonLabel"), reason = byId("calendarEventReason"), guidance = byId("calendarEventGuidance"), save = byId("calendarEventSaveBtn");
+  if (action === "followup") {
+    help.textContent = "Use this when the workout remains missed and you want to document what happened and the next step.";
+    label.textContent = "Missed-workout follow-up"; reason.placeholder = "What happened and what is the next step?";
+    guidance.textContent = "Record the missed-workout follow-up without moving or deleting the assigned workout.";
+    save.textContent = "Save missed-workout follow-up";
+  } else if (action === "cancel") {
+    help.textContent = "This closes the assignment without deleting its history.";
+    label.textContent = "Reason for cancelling"; reason.placeholder = "Why is this assigned workout being cancelled?";
+    guidance.textContent = "Cancel the assignment while preserving its client and audit history.";
+    save.textContent = "Cancel assigned workout";
+  } else {
+    help.textContent = "Choose a new date or start time and explain the change.";
+    label.textContent = "Reason for this schedule change"; reason.placeholder = "Briefly explain why the date or time is changing";
+    guidance.textContent = "The workout stays connected to the client. Change its date or optional start time and record why.";
+    save.textContent = "Save workout schedule";
+  }
+  calendarSetFeedback("");
 }
 function calendarEventClientChanged() {
   const profile = calendarProfile(byId("calendarEventClient") && byId("calendarEventClient").value), trainer = byId("calendarEventTrainer");
@@ -270,10 +336,12 @@ function openCalendarEventEditor(eventId,dateKey,type) {
   const identity = calendarIdentity(), sourceAssignment = event && event.source === "assignment";
   modal.classList.toggle("assignment-mode",Boolean(sourceAssignment));
   modal.querySelectorAll("[data-calendar-custom]").forEach((field) => { field.hidden = Boolean(sourceAssignment); });
+  modal.querySelectorAll("[data-calendar-assignment]").forEach((field) => { field.hidden = !sourceAssignment; });
+  modal.querySelectorAll("[data-calendar-schedule]").forEach((field) => { field.hidden = false; });
   byId("calendarEventId").value = event && event.id || ""; byId("calendarEventSourceId").value = sourceAssignment ? event.sourceId : "";
   byId("calendarEventSource").textContent = sourceAssignment ? "Assigned workout · schedule" : event ? "Calendar item" : "New calendar item";
-  byId("calendarEventTitle").textContent = sourceAssignment ? "Reschedule assigned workout" : event ? "Edit " + event.title : "Schedule coaching work";
-  byId("calendarEventGuidance").textContent = sourceAssignment ? "The workout itself stays connected to the client. Change its date, optional start time, and reason below." : "Every visible field below can be changed and saved.";
+  byId("calendarEventTitle").textContent = sourceAssignment ? "Update assigned workout" : event ? "Edit " + event.title : "Schedule coaching work";
+  byId("calendarEventGuidance").textContent = sourceAssignment ? "Choose the action you need, then complete the fields shown below." : "Every visible field below can be changed and saved.";
   const assignmentSummary = byId("calendarAssignmentSummary");
   assignmentSummary.hidden = !sourceAssignment;
   assignmentSummary.innerHTML = sourceAssignment ? '<div><span>Workout</span><b>' + escapeHtml(event.title || "Assigned workout") + '</b></div><div><span>Client</span><b>' + escapeHtml(event.client || "Client") + '</b></div><div><span>Coach</span><b>' + escapeHtml(event.trainerName || "Coaching team") + '</b></div><div><span>Current status</span><b>' + escapeHtml(CALENDAR_STATUS_LABELS[event.status] || event.status || "Scheduled") + '</b></div>' : "";
@@ -287,9 +355,12 @@ function openCalendarEventEditor(eventId,dateKey,type) {
   byId("calendarEventLocation").value = event && event.location || ""; byId("calendarEventLocation").disabled = false;
   byId("calendarEventNotes").value = event && event.notes || ""; byId("calendarEventNotes").disabled = false; byId("calendarEventReason").value = "";
   byId("calendarEventNotify").checked = true; byId("calendarEventNotify").disabled = false;
-  byId("calendarEventSaveBtn").textContent = sourceAssignment ? "Save workout schedule" : "Save calendar item";
+  byId("calendarAssignmentAction").value = sourceAssignment && event.status === "missed" ? "followup" : "reschedule";
+  byId("calendarEventReasonLabel").textContent = "Reason for this schedule change"; byId("calendarEventReason").placeholder = "Briefly explain why the date or time is changing";
+  byId("calendarEventSaveBtn").textContent = "Save calendar item"; calendarSetFeedback("");
+  if (sourceAssignment) syncCalendarAssignmentAction();
   byId("calendarEventAudit").innerHTML = event ? calendarEventAuditHtml(event.id) : '<div class="empty-state">History begins after this item is saved.</div>';
-  byId("calendarAuditBox").hidden = !event; modal.classList.add("open"); modal.setAttribute("aria-hidden","false"); setTimeout(() => byId(sourceAssignment ? "calendarEventDate" : "calendarEventTitleInput").focus(),20);
+  byId("calendarAuditBox").hidden = !event; modal.classList.add("open"); modal.setAttribute("aria-hidden","false"); setTimeout(() => byId(sourceAssignment ? "calendarAssignmentAction" : "calendarEventTitleInput").focus(),20);
 }
 function closeCalendarEventEditor() { const modal = byId("calendarEventModal"); if (modal) { modal.classList.remove("open"); modal.setAttribute("aria-hidden","true"); } }
 function calendarOverlap(event,events) {
@@ -298,30 +369,50 @@ function calendarOverlap(event,events) {
   return events.find((candidate) => candidate.id !== event.id && candidate.date === event.date && candidate.trainerId === event.trainerId && candidate.startTime && !["cancelled","completed"].includes(candidate.status) && calendarDate(candidate.date,candidate.startTime).getTime() < end && (calendarDate(candidate.date,candidate.endTime || candidate.startTime).getTime() + (candidate.endTime ? 0 : 60 * 60000)) > start) || null;
 }
 function saveCalendarEvent() {
-  if (!isFit4LifeStaff()) return false;
+  if (!isFit4LifeStaff()) { calendarSetFeedback("Only approved Fit4Life staff can save calendar changes.","error"); return false; }
   const eventId = byId("calendarEventId").value, sourceId = byId("calendarEventSourceId").value, existing = eventId ? calendarEventById(eventId) : null, reason = byId("calendarEventReason").value.trim(), date = byId("calendarEventDate").value, startTime = byId("calendarEventStart").value;
-  if (!date) { showToast("Choose a calendar date"); return false; }
   if (sourceId) {
-    const assignments = loadAssignedWorkouts(), assignment = assignments.find((item) => item.id === sourceId); if (!assignment) return false;
-    const before = {...assignment}, dateChanged = String(assignment.scheduledDate || "") !== date, timeChanged = String(assignment.scheduledTime || "") !== startTime;
-    if (!dateChanged && !timeChanged) { showToast("Change the workout date or start time before saving"); return false; }
-    if (!reason) { showToast("Add the reason for changing this workout schedule"); return false; }
-    assignment.scheduledDate = date; assignment.scheduledTime = startTime; assignment.updatedAt = new Date().toISOString(); assignment.updatedBy = calendarIdentity().name;
-    if (!writeAssignedWorkouts(assignments)) return false;
-    const afterEvent = allCoachCalendarEvents().find((item) => item.id === eventId); appendCalendarAudit(eventId,"Workout rescheduled",existing,afterEvent,reason); if (byId("calendarEventNotify").checked) createCalendarNotice(afterEvent,existing,reason,true);
-    closeCalendarEventEditor(); coachCalendarState.anchor = date; renderCoachCalendarModule(); renderTrainerAttention(); showToast("Workout schedule updated and recorded"); return true;
+    const action = byId("calendarAssignmentAction") && byId("calendarAssignmentAction").value || "reschedule", assignments = loadAssignedWorkouts(), assignment = assignments.find((item) => item.id === sourceId);
+    if (!assignment) { calendarSetFeedback("This assigned workout could not be found. Refresh the page and try again.","error"); return false; }
+    if (!reason) {
+      calendarSetFeedback(action === "followup" ? "Add what happened and the next coaching step." : action === "cancel" ? "Add the reason for cancelling this assigned workout." : "Add the reason for changing this workout schedule.","error");
+      return false;
+    }
+    const identity = calendarIdentity(), now = new Date().toISOString(), dateChanged = String(assignment.scheduledDate || "") !== date, timeChanged = String(assignment.scheduledTime || "") !== startTime;
+    if (action === "reschedule") {
+      if (!date) { calendarSetFeedback("Choose the new workout date.","error"); return false; }
+      if (!dateChanged && !timeChanged) { calendarSetFeedback("Choose a different date or start time, or select “Record missed-workout follow-up” above.","error"); return false; }
+      assignment.scheduledDate = date; assignment.scheduledTime = startTime; assignment.updatedAt = now; assignment.updatedBy = identity.name;
+      delete assignment.scheduleHandledAt; delete assignment.scheduleHandledBy; delete assignment.scheduleFollowUpReason;
+      if (!writeAssignedWorkouts(assignments)) { calendarSetFeedback("The workout schedule could not be saved. Check the browser connection and try again.","error"); return false; }
+      const afterEvent = allCoachCalendarEvents().find((item) => item.id === eventId); appendCalendarAudit(eventId,"Workout rescheduled",existing,afterEvent,reason); if (byId("calendarEventNotify").checked) createCalendarNotice(afterEvent,existing,reason,true);
+      closeCalendarEventEditor(); coachCalendarState.anchor = date; renderCoachCalendarModule(); renderTrainerAttention(); showToast("Workout schedule updated and recorded"); return true;
+    }
+    if (action === "cancel") {
+      assignment.status = "cancelled"; assignment.cancelledAt = now; assignment.cancelledBy = identity.name; assignment.cancellationReason = reason; assignment.updatedAt = now; assignment.updatedBy = identity.name;
+      if (!writeAssignedWorkouts(assignments)) { calendarSetFeedback("The assigned workout could not be cancelled. Check the browser connection and try again.","error"); return false; }
+      resolveCalendarNoticesForEvent(eventId);
+      const afterEvent = allCoachCalendarEvents().find((item) => item.id === eventId); appendCalendarAudit(eventId,"Assigned workout cancelled",existing,afterEvent,reason); if (byId("calendarEventNotify").checked) createCalendarNotice(afterEvent,existing,reason,false,{label:"Assigned workout cancelled",detail:reason});
+      closeCalendarEventEditor(); renderCoachCalendarModule(); renderTrainerAttention(); showToast("Assigned workout cancelled and recorded"); return true;
+    }
+    assignment.scheduleHandledAt = now; assignment.scheduleHandledBy = identity.name; assignment.scheduleFollowUpReason = reason; assignment.updatedAt = now; assignment.updatedBy = identity.name;
+    if (!writeAssignedWorkouts(assignments)) { calendarSetFeedback("The missed-workout follow-up could not be saved. Check the browser connection and try again.","error"); return false; }
+    resolveCalendarNoticesForEvent(eventId);
+    const afterEvent = allCoachCalendarEvents().find((item) => item.id === eventId); appendCalendarAudit(eventId,"Missed workout follow-up recorded",existing,afterEvent,reason); if (byId("calendarEventNotify").checked) createCalendarNotice(afterEvent,existing,reason,false,{label:"Missed workout follow-up recorded",detail:reason});
+    closeCalendarEventEditor(); renderCoachCalendarModule(); renderTrainerAttention(); showToast("Missed-workout follow-up saved"); return true;
   }
+  if (!date) { calendarSetFeedback("Choose a calendar date.","error"); return false; }
   const profileId = byId("calendarEventClient").value, profile = calendarProfile(profileId), trainerSelect = byId("calendarEventTrainer"), trainerOption = trainerSelect.options[trainerSelect.selectedIndex];
   const next = {id:eventId || "calendar-event-" + Date.now() + "-" + Math.random().toString(16).slice(2),source:"calendar",type:byId("calendarEventType").value,title:byId("calendarEventTitleInput").value.trim(),profileId,client:profile && profile.name || "",trainerId:trainerSelect.value,trainerName:trainerOption && trainerOption.dataset.name || trainerOption && trainerOption.textContent || "Coaching team",date,startTime:byId("calendarEventStart").value,endTime:byId("calendarEventEnd").value,status:byId("calendarEventStatus").value,location:byId("calendarEventLocation").value.trim(),notes:byId("calendarEventNotes").value.trim(),createdAt:existing && existing.createdAt || new Date().toISOString(),updatedAt:new Date().toISOString(),updatedBy:calendarIdentity().name};
-  if (!next.title) { showToast("Add a clear calendar title"); return false; }
-  if (next.startTime && next.endTime && calendarDate(next.date,next.endTime) <= calendarDate(next.date,next.startTime)) { showToast("End time must be after start time"); return false; }
+  if (!next.title) { calendarSetFeedback("Add a clear calendar title.","error"); return false; }
+  if (next.startTime && next.endTime && calendarDate(next.date,next.endTime) <= calendarDate(next.date,next.startTime)) { calendarSetFeedback("End time must be after start time.","error"); return false; }
   const changed = existing && ["date","startTime","endTime","status","trainerId","profileId"].some((key) => String(existing[key] || "") !== String(next[key] || ""));
-  if (changed && !reason) { showToast("Add the reason for this schedule or status change"); return false; }
+  if (changed && !reason) { calendarSetFeedback("Add the reason for this schedule or status change.","error"); return false; }
   if (existing && (existing.date !== next.date || existing.startTime !== next.startTime) && next.status === "scheduled") next.status = "rescheduled";
   const conflict = calendarOverlap(next,allCoachCalendarEvents());
   if (conflict && !window.confirm((next.trainerName || "This trainer") + " already has “" + conflict.title + "” at that time. Save anyway?")) return false;
   const events = loadCalendarEvents(), index = events.findIndex((item) => item.id === next.id); if (index >= 0) events[index] = next; else events.unshift(next);
-  if (!writeLocalArray(CALENDAR_EVENTS_KEY,events,2000)) return false;
+  if (!writeLocalArray(CALENDAR_EVENTS_KEY,events,2000)) { calendarSetFeedback("The calendar item could not be saved. Check the browser connection and try again.","error"); return false; }
   const action = !existing ? "Created" : existing.date !== next.date || existing.startTime !== next.startTime ? "Rescheduled" : existing.status !== next.status ? "Status changed" : "Updated";
   appendCalendarAudit(next.id,action,existing,next,reason);
   if (byId("calendarEventNotify").checked) createCalendarNotice(next,existing,reason,Boolean(existing && (next.status === "missed" || next.status === "cancelled" || existing.date !== next.date || existing.startTime !== next.startTime)));

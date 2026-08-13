@@ -309,14 +309,15 @@ function updateCoachAttentionItem(id,status) {
   state[id] = status === "snoozed"
     ? {status:"snoozed",until:new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),updatedAt:new Date().toISOString(),updatedBy:currentAccountIdentity().displayName}
     : {status:"done",updatedAt:new Date().toISOString(),updatedBy:currentAccountIdentity().displayName};
-  writeLocalObject(ATTENTION_STATE_KEY,state);
+  if (!writeLocalObject(ATTENTION_STATE_KEY,state)) return false;
   if (status === "done" && typeof releaseCoachTask === "function") releaseCoachTask(id);
   if (status === "done" && String(id).startsWith("automation:")) {
     const alertId = String(id).slice("automation:".length);
-    writeLocalArray(AUTOMATION_ALERTS_KEY,loadAutomationAlerts().filter((item) => item.id !== alertId),500);
+    if (!writeLocalArray(AUTOMATION_ALERTS_KEY,loadAutomationAlerts().filter((item) => item.id !== alertId),500)) return false;
   }
   renderTrainerAttention();
   showToast(status === "snoozed" ? "Reminder snoozed until tomorrow" : "Attention item marked handled");
+  return true;
 }
 function renderTrainerAttention() {
   const attention = trainerAttentionSnapshot(), panel = byId("trainerAttentionPanel");
@@ -343,7 +344,7 @@ function sendClientMessage() {
   const profile = activeClientProfile(), input = byId('clientMessageInput'); if (!profile || !input || !input.value.trim()) return;
   const identity = currentAccountIdentity(), messages = loadLocalArray(CLIENT_MESSAGES_KEY), body = input.value.trim();
   messages.unshift({id:'message-' + Date.now(),profileId:profile.id,client:profile.name,from:'client',senderRole:'client',senderUserId:identity.id || '',senderName:profile.name,recipientRole:'trainer',recipientUserId:profile.assignedTrainerId || '',recipientName:profile.assignedTrainerName || 'Coaching team',body,createdAt:new Date().toISOString()});
-  writeLocalArray(CLIENT_MESSAGES_KEY,messages,1000); input.value = ''; renderClientCoach(profile); renderTrainerAttention(); showToast('Message sent to ' + (profile.assignedTrainerName || 'your coaching team'));
+  if (!writeLocalArray(CLIENT_MESSAGES_KEY,messages,1000)) return false; input.value = ''; renderClientCoach(profile); renderTrainerAttention(); showToast('Message sent to ' + (profile.assignedTrainerName || 'your coaching team')); return true;
 }
 function renderClientCoach(profile) {
   const out = byId('clientCoachContent'); if (!out) return; const assignment = assignmentForClient(profile.id), messages = loadClientMessages(profile.id), checkins = weeklyCheckInsForProfile(profile.id), recoveryFollowUps = recoveryFollowUpsForProfile(profile.id), recoveryStatus = recoveryFollowUpStatus(profile), pain = loadProgress().filter((entry) => (entry.profileId === profile.id || clientMatches(entry.client,profile.name)) && (entry.type === 'pain' || entry.type === 'substitution' && entry.data && entry.data.reason === 'discomfort'));
@@ -411,6 +412,7 @@ function saveClientPainReport() {
   if (info.rank >= PAIN_LEVELS.orange.rank && details.length < 5) { showToast("Briefly describe what changed and whether you stopped"); byId("clientPainDetails").focus(); return null; }
   const data = {area,injuryArea:area,level,pain:info.legacy,movementChanged,exercise,details,painScore:rawScore === "" ? null : Math.max(0,Math.min(10,Number(rawScore))),coachNotice:true,safetyHold:info.rank >= PAIN_LEVELS.orange.rank};
   const record = addProgressEntry({type:"pain",profileId:profile.id,client:profile.name,sessionId:activeWorkout && activeWorkout.sessionId || "",label:info.label,value:INJURY_LABELS[area] || area,note:(exercise ? exercise + " · " : "") + (details || info.action),data});
+  if (!record) return null;
   if (data.safetyHold && activeWorkout) {
     const current = activeAssignmentAndSession(), unit = current.session && activeWorkoutUnits(current.session,activeWorkout.shortened)[activeWorkout.unitIndex], activeExercise = unit && (unit.items[activeWorkout.pairIndex] || unit.items[0]);
     if (activeExercise) {
@@ -457,7 +459,7 @@ function startActiveWorkout(profileId,shortened,assignmentId) {
     showToast("Workout paused for trainer review: " + safetyConflicts.slice(0,2).join(" · "));
     return null;
   }
-  if (assignmentStatus(assignments[assignmentIndex]) === 'assigned') { assignments[assignmentIndex].status = 'in_progress'; assignments[assignmentIndex].startedAt = new Date().toISOString(); writeAssignedWorkouts(assignments); }
+  if (assignmentStatus(assignments[assignmentIndex]) === 'assigned') { assignments[assignmentIndex].status = 'in_progress'; assignments[assignmentIndex].startedAt = new Date().toISOString(); if (!writeAssignedWorkouts(assignments)) { showToast('The workout could not be started because its status was not saved'); return null; } }
   const assignment = assignments[assignmentIndex], session = currentSession, saved = loadActiveWorkoutState(); state.session = JSON.parse(JSON.stringify(assignment.session)); state.sessionOptions = [];
   activeWorkout = saved && saved.assignmentId === assignment.id ? saved : {assignmentId:assignment.id,profileId:profile.id,sessionId:session.sessionId,unitIndex:0,pairIndex:0,setByExercise:{},extraSets:{},warmups:{},skippedSets:{},skippedExercises:{},supersetMode:{},shortened:Boolean(shortened),startedAt:new Date().toISOString()};
   activeWorkout.setByExercise = activeWorkout.setByExercise || {}; activeWorkout.editingSetByExercise = activeWorkout.editingSetByExercise || {}; activeWorkout.extraSets = activeWorkout.extraSets || {}; activeWorkout.warmups = activeWorkout.warmups || {}; activeWorkout.skippedSets = activeWorkout.skippedSets || {}; activeWorkout.skippedExercises = activeWorkout.skippedExercises || {}; activeWorkout.supersetMode = activeWorkout.supersetMode || {};
@@ -625,7 +627,7 @@ function approveCurrentWorkoutDraft() {
       spec.phaseCompoundAnchors = { ...profile.phaseCompoundAnchors }; spec._lockedCompoundAnchor = anchor.name;
     }
   });
-  writeProfiles(profiles);
+  if (!writeProfiles(profiles)) return false;
   profiles.forEach((profile) => [state.solo,state.p1,state.p2].forEach((target) => { if (target && target.profileId === profile.id) target.phaseCompoundAnchors = { ...(profile.phaseCompoundAnchors || {}) }; }));
   renderOutput(); showToast("Coach approved " + (plans.length > 1 ? "both workout drafts" : "this workout draft") + " · quality audit passed"); return true;
 }
@@ -738,7 +740,7 @@ function renderCoachModule(destination) {
   } else if (destination === 'settings') {
     const owner = window.fit4lifeCloudRole === 'owner';
     out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><h3>Your trainer identity</h3><p>This is the name clients see on messages and feedback.</p><div class="compact-grid" style="margin-top:14px"><div class="compact-field"><label for="myTrainerDisplayName">Your name on messages</label><input id="myTrainerDisplayName" value="' + escapeHtml(currentAccountIdentity().displayName) + '" placeholder="Name clients should see"></div></div><div class="tool-actions"><button class="small-btn" onclick="saveMyTrainerDisplayName()">Save my sender name</button><button class="small-btn ' + (owner ? 'primary' : '') + '" onclick="openCoachDestination(\'access\')">Open Trainer Access</button></div><div id="trainerAccountStatus" class="storage-note" style="margin-top:10px"></div></section><section class="coach-module-card"><h3>Data & backups</h3><p>Export or restore the full local coaching record before changing devices.</p><div class="tool-actions"><button class="small-btn" onclick="exportProgress()">Export backup</button><button class="small-btn" onclick="byId(\'progressImport\').click()">Restore backup</button></div></section><section class="coach-module-card"><h3>Security</h3><p>Supabase accounts and approved organization roles control trainer and client access on every device.</p><div class="tool-actions"><button class="small-btn" onclick="lockTrainerHub()">Sign out / lock workspace</button></div></section>';
-    out.insertAdjacentHTML('beforeend',owner ? '<section class="coach-module-card"><h3>Appearance & gym setup</h3><p>Brand colors, gym identity, and shared equipment settings live here.</p><div class="tool-actions"><button class="small-btn primary" onclick="openAdvancedStudio(\'organization\')">Open appearance settings</button></div></section>' : '<section class="coach-module-card"><h3>Appearance & gym setup</h3><p>Organization-wide colors and shared setup require owner approval.</p><div class="tool-actions"><button class="small-btn" onclick="openOwnerRequestDialog(\'organization_setting\',\'\',\'\',\'Change gym appearance or shared setup\')">Request a change</button></div></section>');
+    out.insertAdjacentHTML('beforeend',owner ? '<section class="coach-module-card"><h3>Themes, appearance & gym setup</h3><p>Choose subtle holiday or sport accents, adjust brand colors, and manage shared equipment. Published themes appear for trainers and clients.</p><div class="tool-actions"><button class="small-btn primary" onclick="openAdvancedStudio(\'organization\')">Open themes & appearance</button></div></section>' : '<section class="coach-module-card"><h3>Themes, appearance & gym setup</h3><p>Organization-wide themes, colors, and shared setup require owner approval.</p><div class="tool-actions"><button class="small-btn" onclick="openOwnerRequestDialog(\'organization_setting\',\'\',\'\',\'Change portal theme, gym appearance, or shared setup\')">Request a change</button></div></section>');
   } else {
     out.innerHTML = '<section class="coach-module-card"><h3>Data & backups</h3><p>Export or restore the full local coaching record before changing devices.</p><div class="tool-actions"><button class="small-btn" onclick="exportProgress()">Export backup</button><button class="small-btn" onclick="byId(\'progressImport\').click()">Restore backup</button></div></section><section class="coach-module-card"><h3>Security</h3><p>Hosted accounts and approved Supabase roles control live trainer and client access. There is no shared trainer password.</p><div class="tool-actions"><button class="small-btn" onclick="lockTrainerHub()">Sign out / lock workspace</button></div></section><section class="coach-module-card"><h3>Gym branding</h3><p>Manage gym identity, available equipment, and teams from one organization setup.</p><div class="tool-actions"><button class="small-btn" onclick="openAdvancedStudio(\'organization\')">Open organization setup</button></div></section><section class="coach-module-card"><h3>Monitoring imports</h3><p>Attach optional monitoring exports to a specific client, then review them alongside workout and check-in evidence.</p><div class="tool-actions"><button class="small-btn" onclick="openAdvancedStudio(\'monitoring\')">Open monitoring</button></div></section>';
   }

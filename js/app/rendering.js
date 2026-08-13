@@ -335,7 +335,7 @@ function saveSupersetEditor() {
     });
     if (scope === "future" && currentProgram.setup && currentProgram.setup.profileId) {
       const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === currentProgram.setup.profileId);
-      if (index >= 0) { profiles[index].programSupersetDefaults = {...(profiles[index].programSupersetDefaults || {}),[targetKey]:[firstName,secondName]}; profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles); }
+      if (index >= 0) { profiles[index].programSupersetDefaults = {...(profiles[index].programSupersetDefaults || {}),[targetKey]:[firstName,secondName]}; profiles[index].updatedAt = new Date().toISOString(); if (!writeProfiles(profiles)) return false; }
     }
     appendProgramEditAudit({type:"superset",scope,reason,first:firstName,second:secondName,targets:changed});
     currentProgram.lifecycle = "draft";
@@ -354,7 +354,14 @@ function clearProgramSupersetsFromEditor() {
     const day = currentProgram.weeks[weekIndex] && currentProgram.weeks[weekIndex].days[context.dayIndex], blocks = day && day.session && day.session.blocks || [], block = blocks.find((item) => item.key === context.block.key); if (!block || !blockGroupPairs(block).length) return;
     block.groups = (block.items || []).map((item) => ({type:"straight",items:[item]})); markSessionDraft(day.session,"Superset pairing cleared by coach"); changed += 1;
   });
-  if (scope === "future" && currentProgram.setup && currentProgram.setup.profileId) { const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === currentProgram.setup.profileId); if (index >= 0) { const defaults = {...(profiles[index].programSupersetDefaults || {})}; delete defaults[context.block.key]; profiles[index].programSupersetDefaults = defaults; profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles); } }
+  if (scope === "future" && currentProgram.setup && currentProgram.setup.profileId) {
+    const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === currentProgram.setup.profileId);
+    if (index >= 0) {
+      const defaults = {...(profiles[index].programSupersetDefaults || {})};
+      delete defaults[context.block.key]; profiles[index].programSupersetDefaults = defaults; profiles[index].updatedAt = new Date().toISOString();
+      if (!writeProfiles(profiles)) { showToast("The future superset default could not be saved. Keep this editor open and try again."); return false; }
+    }
+  }
   if (!changed) { showToast("No matching supersets were found in that scope"); return false; }
   appendProgramEditAudit({type:"superset_clear",scope,reason,phase:context.block.title,targets:changed}); markCurrentProgramDraft("Superset pairing cleared by coach"); closeSupersetEditor(); renderProgram(); showToast("Pairing cleared in " + changed + " workout" + (changed === 1 ? "" : "s")); return true;
 }
@@ -496,7 +503,7 @@ function savePrescriptionEditor() {
     if (!targets.length) { showToast("No matching program exercises were found for that scope"); return false; }
     if (scope === "future" && currentProgram.setup && currentProgram.setup.profileId) {
       const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === currentProgram.setup.profileId);
-      if (index >= 0) { profiles[index].exercisePrescriptions = {...(profiles[index].exercisePrescriptions || {}),[exerciseId(exercise)]:{...rx,cue}}; profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles); currentProgram.setup.exercisePrescriptions = {...(currentProgram.setup.exercisePrescriptions || {}),[exerciseId(exercise)]:{...rx,cue}}; }
+      if (index >= 0) { profiles[index].exercisePrescriptions = {...(profiles[index].exercisePrescriptions || {}),[exerciseId(exercise)]:{...rx,cue}}; profiles[index].updatedAt = new Date().toISOString(); if (!writeProfiles(profiles)) return false; currentProgram.setup.exercisePrescriptions = {...(currentProgram.setup.exercisePrescriptions || {}),[exerciseId(exercise)]:{...rx,cue}}; }
     }
     appendProgramEditAudit({type:"prescription",exercise:exercise.name,scope,reason:reason || "Prescription updated",calibrationAction,targets:targets.length});
     markCurrentProgramDraft("Exercise prescription edited by coach");
@@ -524,7 +531,7 @@ function applyProgramExerciseStructureAction(action) {
     if (index >= 0) {
       if (action === "remove") profiles[index].exerciseExclusions = [...new Set([...(profiles[index].exerciseExclusions || []),exerciseId(original)])];
       else profiles[index].programExerciseOrderDefaults = {...(profiles[index].programExerciseOrderDefaults || {}),[prescriptionEditContext.block.key]:(prescriptionEditContext.block.items || []).map((exercise) => exerciseId(exercise))};
-      profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles);
+      profiles[index].updatedAt = new Date().toISOString(); if (!writeProfiles(profiles)) return false;
     }
   }
   appendProgramEditAudit({type:"exercise_structure",action,exercise:original && original.name || "Exercise",scope,reason,calibrationAction,targets:changed});
@@ -963,7 +970,14 @@ function applyExerciseSwap(exercise) {
     return;
   }
   if (activeSwap.renderMode === "program") {
+    const programBeforeChange = JSON.stringify(currentProgram);
     const scope = byId("programSwapScope").value || "single", result = addMode ? applyProgramExerciseAddition(activeSwap,exercise,scope) : applyProgramExerciseReplacement(activeSwap,exercise,scope);
+    if (result.saveFailed) {
+      currentProgram = JSON.parse(programBeforeChange);
+      closeExerciseSwap(); renderProgram();
+      showToast(result.message || "The program change could not be saved. Nothing was changed.");
+      return;
+    }
     if (!result.changed || !addMode && !result.originChanged) { showToast(result.message || "The selected program exercise was not changed"); return; }
     closeExerciseSwap(); renderProgram();
     showToast(exercise.name + (addMode ? " added to " : " applied to ") + result.changed + " workout" + (result.changed === 1 ? "" : "s") + (result.skipped ? " · " + result.skipped + " skipped to avoid duplicates" : ""));
@@ -984,10 +998,24 @@ function applyExerciseSwap(exercise) {
   }
   if (!replaceExercise(block, ei, exercise)) return;
   const reason = portalRole === "client" ? byId("exerciseSwapReason").value : "coach_edit", scope = portalRole === "client" ? byId("exerciseSwapScope").value : "today";
-  addProgressEntry({ type:"substitution", client:session.spec.client || "Client", sessionId:session.sessionId, label:"Exercise substitution", value:currentEx.name + " → " + exercise.name, note:"Reason: " + reason + " · scope: " + scope, data:{ from:currentEx.name,to:exercise.name,reason,scope,position:exercisePosition(block),coachNotice:reason === "discomfort" || block.key === "strength" } });
+  const progressEntry = addProgressEntry({ type:"substitution", client:session.spec.client || "Client", sessionId:session.sessionId, label:"Exercise substitution", value:currentEx.name + " → " + exercise.name, note:"Reason: " + reason + " · scope: " + scope, data:{ from:currentEx.name,to:exercise.name,reason,scope,position:exercisePosition(block),coachNotice:reason === "discomfort" || block.key === "strength" } });
+  if (!progressEntry) {
+    replaceExercise(block,ei,currentEx);
+    showToast("The exercise substitution could not be saved. Nothing was changed.");
+    return;
+  }
   if (portalRole === "client" && scope === "future" && session.spec.profileId) {
     const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === session.spec.profileId);
-    if (index >= 0) { profiles[index].exercisePreferences = { ...(profiles[index].exercisePreferences || {}), [exerciseId(currentEx)]:reason === "discomfort" ? "discomfort" : reason === "unfamiliar" ? "unfamiliar" : "dislike", [exerciseId(exercise)]:"like" }; profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles); }
+    if (index >= 0) {
+      profiles[index].exercisePreferences = { ...(profiles[index].exercisePreferences || {}), [exerciseId(currentEx)]:reason === "discomfort" ? "discomfort" : reason === "unfamiliar" ? "unfamiliar" : "dislike", [exerciseId(exercise)]:"like" };
+      profiles[index].updatedAt = new Date().toISOString();
+      if (!writeProfiles(profiles)) {
+        replaceExercise(block,ei,currentEx);
+        writeProgress(loadProgress().filter((entry) => entry.id !== progressEntry.id));
+        showToast("The future substitution preference could not be saved. Nothing was changed.");
+        return;
+      }
+    }
   }
   if (portalRole !== "client") markSessionDraft(session,"Exercise replaced by coach");
   else if (reason === "discomfort") { session.clientSafetyFlag = "Discomfort reported during substitution; trainer review required before repeating this pattern."; }
@@ -1046,4 +1074,3 @@ function showToast(message) {
 }
 function updateNetworkStatus() { const status = byId('networkStatus'); if (status) status.classList.toggle('show',typeof navigator !== 'undefined' && navigator.onLine === false); }
 if (typeof window !== 'undefined' && window.addEventListener) { window.addEventListener('online',updateNetworkStatus); window.addEventListener('offline',updateNetworkStatus); }
-

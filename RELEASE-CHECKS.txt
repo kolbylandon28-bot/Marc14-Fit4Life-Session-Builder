@@ -1,4 +1,4 @@
-FIT4LIFE V5 RELEASE CHECKS — 2026-08-12
+FIT4LIFE V10 RELEASE CHECKS — 2026-08-13
 
 PASSED LOCALLY
 - JavaScript syntax: every .js file passed Node syntax validation.
@@ -14,8 +14,20 @@ PASSED LOCALLY
 - V5 invariants: owner-only client preview, owner approval decisions, requester
   self-approval guard, V5 database script, removed Business navigation, and preserved
   trainer/client set-count behavior are present.
-- Update 3 preservation: multiweek-programs.js and rendering.js match the supplied
-  Update 3 versions byte-for-byte.
+- V9 calendar saves: follow-up, reschedule, cancel, and normal calendar creation
+  passed live click-through tests and persisted after reload.
+- V9 connected saves: profile edit, owner request, coaching note, trainer reply, and
+  Settings sender identity passed live click-through and reload tests.
+- 226 application functions referenced by inline click handlers resolved; the only
+  unmatched tokens were browser/JavaScript built-ins used inside valid handlers.
+- V10 rendered the permanent blue F4L sign over the black rock wall without blocking
+  page controls.
+- All 8 preset buttons activated the matching root theme and selected state.
+- Halloween produced the HALLOWEEN badge; Basketball produced COURT MODE.
+- The Basketball selection survived a full reload; returning to Neon blue removed
+  the preset badge.
+- The V10 browser run reported zero runtime console errors.
+- V9 remains preserved separately; V10 is a new versioned folder.
 
 REQUIRED BEFORE LIVE USE
 1. Upload this folder's contents to the same repository and Vercel project.
@@ -26,6 +38,15 @@ REQUIRED BEFORE LIVE USE
 5. Test the production URL in a private browser window as an owner, trainer, and
    client account.
 6. Test one future generated deployment URL and one historical generated URL.
+
+LIVE V10 THEME CHECKS
+- [ ] Confirm a fluorescent-blue F4L sign is visible in the center of the rock wall.
+- [ ] Sign in as an owner and open Settings > Themes, appearance & gym setup.
+- [ ] Click one seasonal preset and confirm its top-bar badge and subtle glow appear.
+- [ ] Refresh the page and confirm the selected preset remains active.
+- [ ] Sign in as a trainer and confirm organization appearance is request-only.
+- [ ] Open a client account/device and confirm the published preset appears there.
+- [ ] Return to Neon blue when no seasonal or sport accent should be active.
 
 NOT PERFORMED BY THE LOCAL CHECKS
 - No live Vercel deployment was created or promoted.

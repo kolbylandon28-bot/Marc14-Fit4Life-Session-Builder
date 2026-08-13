@@ -532,12 +532,12 @@ function approveProfileRequest(requestId) {
   const requests = loadProfileRequests(), request = requests.find((item) => item.id === requestId); if (!request) return null;
   const profile = createClientProfile({ name: request.name, username: request.username, goals: ["general"], experience: 1, age: 30, minutes: 60, muscles: [], injuries: [], zones: [] });
   if (!profile) return null;
-  writeProfileRequests(requests.filter((item) => item.id !== requestId)); selectedTrainerClient = profile.name; renderTrainerHub(profile.name); openProfileEditor(profile.id); return profile;
+  if (!writeProfileRequests(requests.filter((item) => item.id !== requestId))) return null; selectedTrainerClient = profile.name; renderTrainerHub(profile.name); openProfileEditor(profile.id); return profile;
 }
 function dismissProfileRequest(requestId) {
   if (!requireTrainerMutation("dismiss profile requests")) return false;
   const requests = loadProfileRequests(); if (!requests.some((item) => item.id === requestId)) return false;
-  writeProfileRequests(requests.filter((item) => item.id !== requestId)); renderProfileRequests(); showToast("Profile request dismissed"); return true;
+  if (!writeProfileRequests(requests.filter((item) => item.id !== requestId))) return false; renderProfileRequests(); showToast("Profile request dismissed"); return true;
 }
 function profileGuidance(profile) {
   const review = profile && profile.lastReview;
@@ -579,14 +579,14 @@ function updateClientProfile(profileId, updates) {
   const next = profileWithIntakeFilters({ ...previous, ...updates, name, username, goals: goals.length ? goals : ["general"], trainingStyle:updates.trainingStyle || previous.trainingStyle || "auto", cardioMode:cardioModes[0], cardioModes, experience: Number(updates.experience) || 1, age: Number(updates.age) || 30, minutes: Number(updates.minutes) || 60, muscles: [...(updates.muscles || previous.muscles || [])], injuries:trainerInjuries,manualInjuries:trainerInjuries,limitationAssessments,zones: [...(updates.zones || previous.zones || [])], trainingPhase:updates.trainingPhase || previous.trainingPhase || "general", phaseStartedAt:phaseChanged ? now : previous.phaseStartedAt || previous.updatedAt || now, availableDays, trainingDays:trainingDays.length ? trainingDays : inferredTrainingDays(previous,availableDays), sport:String(updates.sport != null ? updates.sport : previous.sport || "").trim(), sportSchedule:String(updates.sportSchedule != null ? updates.sportSchedule : previous.sportSchedule || "").trim(), competitionDate:updates.competitionDate != null ? updates.competitionDate : previous.competitionDate || "", exercisePreferences:{ ...(updates.exercisePreferences || previous.exercisePreferences || {}) }, exercisePrescriptions:{ ...(updates.exercisePrescriptions || previous.exercisePrescriptions || {}) },exerciseSubstitutions:{ ...(updates.exerciseSubstitutions || previous.exerciseSubstitutions || {}) }, phaseCompoundAnchors:phaseChanged ? {} : { ...(updates.phaseCompoundAnchors || previous.phaseCompoundAnchors || {}) }, intake:syncedIntake,updatedAt:now });
   profiles[index] = next; if (!writeProfiles(profiles)) return null;
   if (!clientMatches(previous.name, next.name) || previous.name !== next.name) {
-    const entries = loadProgress(); entries.forEach((entry) => { if (clientMatches(entry.client, previous.name)) entry.client = next.name; }); writeProgress(entries);
-    const scans = loadInBodyScans(); scans.forEach((scan) => { if (clientMatches(scan.client, previous.name)) scan.client = next.name; }); writeInBodyScans(scans);
-    const bodyGoals = loadBodyGoals(); bodyGoals.forEach((goal) => { if (clientMatches(goal.client, previous.name)) goal.client = next.name; }); writeBodyGoals(bodyGoals);
-    const assignments = loadAssignedWorkouts(); assignments.forEach((assignment) => { if (assignment.profileId === profileId || clientMatches(assignment.client,previous.name)) { assignment.client = next.name; workoutPlans(assignment.session).forEach((plan) => { plan.session.spec.client = next.name; plan.session.spec.profileId = next.id; }); } }); writeAssignedWorkouts(assignments);
-    const checkins = loadCheckIns(); checkins.forEach((item) => { if (item.profileId === profileId || clientMatches(item.client,previous.name)) item.client = next.name; }); writeCheckIns(checkins);
-    const metrics = loadAthleteMetrics(); metrics.forEach((item) => { if (item.profileId === profileId || clientMatches(item.client,previous.name)) item.client = next.name; }); writeAthleteMetrics(metrics);
-    const mentalPlans = loadMentalPlans(); mentalPlans.forEach((item) => { if (item.profileId === profileId || clientMatches(item.client,previous.name)) item.client = next.name; }); writeLocalArray(MENTAL_PLANS_KEY,mentalPlans,500);
-    const automationAlerts = loadAutomationAlerts(); automationAlerts.forEach((item) => { if (item.profileId === profileId || clientMatches(item.client,previous.name)) item.client = next.name; }); writeLocalArray(AUTOMATION_ALERTS_KEY,automationAlerts,500);
+    const entries = loadProgress(); entries.forEach((entry) => { if (clientMatches(entry.client, previous.name)) entry.client = next.name; }); if (!writeProgress(entries)) return null;
+    const scans = loadInBodyScans(); scans.forEach((scan) => { if (clientMatches(scan.client, previous.name)) scan.client = next.name; }); if (!writeInBodyScans(scans)) return null;
+    const bodyGoals = loadBodyGoals(); bodyGoals.forEach((goal) => { if (clientMatches(goal.client, previous.name)) goal.client = next.name; }); if (!writeBodyGoals(bodyGoals)) return null;
+    const assignments = loadAssignedWorkouts(); assignments.forEach((assignment) => { if (assignment.profileId === profileId || clientMatches(assignment.client,previous.name)) { assignment.client = next.name; workoutPlans(assignment.session).forEach((plan) => { plan.session.spec.client = next.name; plan.session.spec.profileId = next.id; }); } }); if (!writeAssignedWorkouts(assignments)) return null;
+    const checkins = loadCheckIns(); checkins.forEach((item) => { if (item.profileId === profileId || clientMatches(item.client,previous.name)) item.client = next.name; }); if (!writeCheckIns(checkins)) return null;
+    const metrics = loadAthleteMetrics(); metrics.forEach((item) => { if (item.profileId === profileId || clientMatches(item.client,previous.name)) item.client = next.name; }); if (!writeAthleteMetrics(metrics)) return null;
+    const mentalPlans = loadMentalPlans(); mentalPlans.forEach((item) => { if (item.profileId === profileId || clientMatches(item.client,previous.name)) item.client = next.name; }); if (!writeLocalArray(MENTAL_PLANS_KEY,mentalPlans,500)) return null;
+    const automationAlerts = loadAutomationAlerts(); automationAlerts.forEach((item) => { if (item.profileId === profileId || clientMatches(item.client,previous.name)) item.client = next.name; }); if (!writeLocalArray(AUTOMATION_ALERTS_KEY,automationAlerts,500)) return null;
     if (clientMatches(selectedTrainerClient, previous.name)) selectedTrainerClient = next.name;
   }
   [state.solo,state.p1,state.p2].forEach((target) => { if (target && target.profileId === profileId) Object.assign(target, { profileId: next.id, client: next.name, username: next.username, goal: next.goals[0], goals: [...next.goals], trainingStyle:next.trainingStyle || "auto", cardioMode:next.cardioMode || "any", cardioModes:normalizeCardioPreferences(next.cardioModes || next.cardioMode), coachAdjustment:next.coachAdjustment ? { ...next.coachAdjustment } : null, experience: next.experience, age: next.age, minutes: next.minutes, muscles: [...next.muscles], injuries: [...next.injuries], limitationAssessments:{...(next.limitationAssessments || {})}, zones: [...next.zones], trainingPhase:next.trainingPhase || "general", phaseStartedAt:next.phaseStartedAt || "", availableDays:Number(next.availableDays) || 3, sport:next.sport || "", sportSchedule:next.sportSchedule || "", competitionDate:next.competitionDate || "", exercisePreferences:{ ...(next.exercisePreferences || {}) }, exercisePrescriptions:{...(next.exercisePrescriptions || {})}, exerciseSubstitutions:{...(next.exerciseSubstitutions || {})}, phaseCompoundAnchors:{ ...(next.phaseCompoundAnchors || {}) } }); });
@@ -789,7 +789,7 @@ function applyProfileImpactUpdates() {
     else if (assignments[index].session.data) assignments[index].session.data.b = repaired.session;
     assignments[index].profileImpactUpdatedAt = new Date().toISOString(); assignments[index].profileImpactUpdatedBy = currentAccountIdentity().displayName; applied.push(assignments[index].programDayName || "assigned workout");
   });
-  if (assignmentIds.size) writeAssignedWorkouts(assignments);
+  if (assignmentIds.size && !writeAssignedWorkouts(assignments)) { byId("profileImpactSummary").innerHTML = "<b>The selected workout updates could not be saved.</b><br>Nothing is being reported as complete. Check browser storage and try again."; return false; }
   if (problems.length) { byId("profileImpactSummary").innerHTML = '<b>Some selected work could not be changed safely.</b><br>' + escapeHtml(problems.join(" · ")); showToast("Profile saved, but some workout updates need manual coach review"); return false; }
   closeProfileImpactModal(); showToast(applied.length ? "Updated " + applied.length + " unfinished programming item" + (applied.length === 1 ? "" : "s") : "Profile saved; existing workouts kept unchanged"); return true;
 }
@@ -955,7 +955,7 @@ function addProgressEntry(entry) {
   const entries = loadProgress();
   const record = { id: Date.now() + "-" + Math.random().toString(16).slice(2), date: new Date().toISOString(), ...entry };
   entries.unshift(record);
-  writeProgress(entries);
+  if (!writeProgress(entries)) { showToast("This coaching record could not be saved. Check browser storage and try again."); return null; }
   return record;
 }
 function latestSetFor(client, exercise) {
@@ -1002,7 +1002,8 @@ function saveManualProgress() {
   if (load) pieces.push(load + (unit === "lb" || unit === "kg" ? " " + unit : ""));
   if (reps) pieces.push(reps + " reps");
   if (rpe) pieces.push("RPE " + rpe);
-  addProgressEntry({ type: "set", client, label, value: pieces.join(" · ") || unit, note: byId("logNotes").value.trim(), data: { load: load === "" ? null : Number(load), reps: reps === "" ? null : Number(reps), unit, rpe: rpe === "" ? null : Number(rpe) } });
+  const saved = addProgressEntry({ type: "set", client, label, value: pieces.join(" · ") || unit, note: byId("logNotes").value.trim(), data: { load: load === "" ? null : Number(load), reps: reps === "" ? null : Number(reps), unit, rpe: rpe === "" ? null : Number(rpe) } });
+  if (!saved) return null;
   byId("logExercise").value = ""; byId("logLoad").value = ""; byId("logReps").value = ""; byId("logNotes").value = "";
   refreshHistoryFilters(); renderProgressHistory(); showToast("Progress entry saved on this device");
 }
@@ -1058,7 +1059,7 @@ function updateProfileFromReview(session, review) {
   if (!profile) return null;
   profile.lastReview = review; profile.updatedAt = new Date().toISOString();
   if (painRequiresSafetyHold(review.painLevel || review.pain,review.movementChanged) && review.injuryArea && !profile.injuries.includes(review.injuryArea)) profile.injuries.push(review.injuryArea);
-  writeProfiles(profiles); refreshProfileSelects(); return profile;
+  if (!writeProfiles(profiles)) return null; refreshProfileSelects(); return profile;
 }
 function completeAssignmentFromReview(session, review) {
   const assignments = loadAssignedWorkouts(), index = assignments.findIndex((item) => assignmentSessionIds(item).includes(session.sessionId)); if (index < 0) return null;
@@ -1096,7 +1097,7 @@ function openCoachAdjustment(profileId) {
 function saveCoachAdjustment(buildNext) {
   if (!requireTrainerMutation("save a coaching decision")) return null;
   const profileId = byId("coachAdjustmentProfileId").value, action = byId("coachAdjustmentAction").value, note = byId("coachAdjustmentNote").value.trim(), assignments = loadAssignedWorkouts();
-  const index = assignments.findIndex((item) => item.id === coachAdjustmentAssignmentId && item.profileId === profileId); if (index < 0) return null;
+  const index = assignments.findIndex((item) => item.id === coachAdjustmentAssignmentId && item.profileId === profileId); if (index < 0) { showToast("That workout review is no longer available. Close this window and reopen the client."); return null; }
   const reviewedAt = new Date().toISOString(), assignment = assignments[index], review = assignment.clientReview || {};
   let formalReceiptSeed = null;
   assignments[index] = { ...assignment, status:"reviewed", coachReviewedAt:reviewedAt, nextAction:action, coachNote:note };
@@ -1106,7 +1107,9 @@ function saveCoachAdjustment(buildNext) {
     if (["changed","stopped"].includes(review.pain) && review.injuryArea && !injuries.includes(review.injuryArea)) injuries.push(review.injuryArea);
     const completesFormal = byId("coachFormalReviewComplete").checked, formalDecision = byId("coachFormalDecision").value, formalNote = byId("coachFormalNote").value.trim();
     if (completesFormal) formalReceiptSeed = {profileId:profile.id,formalDecision,formalNote};
-    profiles[profileIndex] = { ...profile, injuries, coachAdjustment:{ action,note,reviewedAt,sourceSessionId:assignmentSessionIds(assignment)[0] || "" }, ...(completesFormal ? { lastFormalReviewAt:reviewedAt, formalReview:{ decision:formalDecision,note:formalNote,reviewedAt }, phaseCompoundAnchors:["change","rebuild"].includes(formalDecision) ? {} : { ...(profile.phaseCompoundAnchors || {}) } } : {}), updatedAt:reviewedAt }; writeProfiles(profiles); selectedTrainerClient = profile.name;
+    profiles[profileIndex] = { ...profile, injuries, coachAdjustment:{ action,note,reviewedAt,sourceSessionId:assignmentSessionIds(assignment)[0] || "" }, ...(completesFormal ? { lastFormalReviewAt:reviewedAt, formalReview:{ decision:formalDecision,note:formalNote,reviewedAt }, phaseCompoundAnchors:["change","rebuild"].includes(formalDecision) ? {} : { ...(profile.phaseCompoundAnchors || {}) } } : {}), updatedAt:reviewedAt };
+    if (!writeProfiles(profiles)) { showToast("The workout was marked reviewed, but the client profile update could not be saved. Keep this window open and try again."); return null; }
+    selectedTrainerClient = profile.name;
   }
   closeCoachAdjustment(); refreshProfileSelects(); renderTrainerHub(selectedTrainerClient);
   if (formalReceiptSeed) {
@@ -1145,11 +1148,12 @@ function saveWorkoutReview(openAnalysis) {
     personalRecords:sessionPersonalRecords(session.sessionId),
   };
   const injuryText = review.pain !== "none" ? " · " + (review.injuryArea ? INJURY_LABELS[review.injuryArea] : "Pain reported") : " · No pain reported";
-  addProgressEntry({
+  const savedReview = addProgressEntry({
     type: "workout", client: session.spec.client || chosen.label, sessionId: session.sessionId,
     label: session.goalLabel + " workout review", value: sets.length + " logged sets · difficulty " + review.difficulty + "/10",
     note: (review.completion === "all" ? "Completed" : "Completion: " + review.completion) + injuryText + (review.notes ? " · " + review.notes : ""), data: review,
   });
+  if (!savedReview) return null;
   const completedAssignment = completeAssignmentFromReview(session,review), profileUpdated = updateProfileFromReview(session, review); refreshHistoryFilters(); renderProgressHistory(); closeWorkoutReview();
   showToast(review.pain === "changed" || review.pain === "stopped"
     ? (profileUpdated ? "Review saved — injury area added to future filters" : "Review and injury report saved for the trainer")

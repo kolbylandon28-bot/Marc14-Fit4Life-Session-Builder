@@ -6,10 +6,22 @@ backend for shared/synced data.
 
 Live: https://marc14-fit4-life-session-builder.vercel.app
 
-This V8 release keeps the V5 role boundaries, V6 Action Center/calendar, and V7
-six-tab client workspace. It repairs the assigned-workout scheduling modal and adds
-one consistent interaction system across every secondary menu so buttons, dropdowns,
-closing controls, Escape, focus, and dynamically created dialogs behave reliably.
+This V10 release keeps the V5 role boundaries, V6 Action Center/calendar, V7 six-tab
+client workspace, V8 interaction system, and V9 save reliability repairs. It adds a
+permanent neon-blue F4L sign to the rock background plus owner-controlled seasonal
+and sport accent presets that sync through the existing organization brand settings.
+
+## V10 appearance controls
+
+Owners can open **Settings → Themes, appearance & gym setup** and choose Neon blue,
+Halloween, Thanksgiving, Christmas, Valentine’s, Football, Baseball, or Basketball.
+The change is immediate and syncs through the existing `brand_config` organization
+setting. Trainers cannot publish organization-wide themes; they use the existing
+owner-request workflow. No new Supabase SQL or Vercel variable is required.
+
+The presets deliberately stay subtle: they change faint background glows, the top
+edge light, and a small status badge. They do not replace the rock background or
+change the application layout, and the large center F4L neon sign always stays blue.
 
 ## Stack
 
@@ -168,3 +180,24 @@ for owner-only membership and destructive operations.
 
 V8 does not require an additional SQL migration because calendar, Action Center, and
 secondary-menu changes use the existing synchronized JSON record model.
+
+## V9 save reliability audit
+
+Assigned workouts now distinguish three jobs: reschedule the workout, record a
+missed-workout follow-up, or cancel it. Each route validates only the fields it truly
+needs, writes the assignment first, records history and optional notices, and then
+closes the editor. A missed follow-up no longer fails just because its original date
+and time are unchanged. Inline feedback stays visible in the open dialog, and global
+toasts render above modal overlays.
+
+The save audit also added result checks across profile editing, owner requests,
+coaching notes and messages, Settings identity, progress receipts, workout status,
+program defaults, calibration decisions, supersets, exercise substitutions, gym
+settings, teams, templates, athlete monitoring, and automation controls. A failed
+write is no longer followed by a false success message. Program/exercise flows that
+mutate in-memory state restore the previous state when a required connected write
+fails.
+
+V9 uses the `20260813-v9-save-audit-r3` asset version and service-worker cache. It
+does not require new Supabase SQL; the existing V5 role-boundary migration remains
+the only required database setup artifact in this package.

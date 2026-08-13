@@ -126,8 +126,8 @@
   }
 
   function initializeLocalInteractionTest() {
-    const today = new Date(), dateKey = [today.getFullYear(),String(today.getMonth() + 1).padStart(2,"0"),String(today.getDate()).padStart(2,"0")].join("-");
-    const profileId = "interaction-test-client", assignmentId = "interaction-test-assignment";
+    const today = new Date(), missedDate = new Date(today.getFullYear(),today.getMonth(),today.getDate() - 1), dateKey = [missedDate.getFullYear(),String(missedDate.getMonth() + 1).padStart(2,"0"),String(missedDate.getDate()).padStart(2,"0")].join("-");
+    const profileId = "interaction-test-client", assignmentId = "interaction-test-assignment", savedStaffName = String(localStorage.getItem("fit4life_interaction_staff_name_v1") || "Interaction Test Owner").trim() || "Interaction Test Owner";
     const profiles = readJson(CLOUD_KEYS.profiles, []);
     if (!profiles.some((profile) => profile && profile.id === profileId)) {
       profiles.push({id:profileId,name:"Interaction Test Client",username:"interaction-test",email:"interaction@example.test",age:30,experience:2,minutes:60,availableDays:3,goals:["general"],muscles:[],injuries:[],zones:[],assignedTrainerId:"interaction-test-owner",assignedTrainerName:"Interaction Test Owner",createdAt:new Date().toISOString()});
@@ -139,11 +139,11 @@
       writeJson(CLOUD_KEYS.assignments,assignments);
     }
     try { localStorage.setItem(CLOUD_KEYS.activeClient,profileId); } catch (_) {}
-    cloudUser = {id:"interaction-test-owner",email:"owner@interaction.test",user_metadata:{display_name:"Interaction Test Owner"}};
+    cloudUser = {id:"interaction-test-owner",email:"owner@interaction.test",user_metadata:{display_name:savedStaffName}};
     cloudRole = "owner"; cloudReady = true;
     window.fit4lifeCloudRole = "owner"; window.fit4lifeCloudReady = true;
-    window.fit4lifeCloudIdentity = {id:cloudUser.id,email:cloudUser.email,role:"owner",displayName:"Interaction Test Owner"};
-    window.fit4lifeCloudTrainers = [{user_id:cloudUser.id,display_name:"Interaction Test Owner",email:cloudUser.email,role:"owner",is_active:true}];
+    window.fit4lifeCloudIdentity = {id:cloudUser.id,email:cloudUser.email,role:"owner",displayName:savedStaffName};
+    window.fit4lifeCloudTrainers = [{user_id:cloudUser.id,display_name:savedStaffName,email:cloudUser.email,role:"owner",is_active:true}];
     showAuthGate(false); cloudStatus("Local interaction test", "offline"); authMessage("", false);
     setTimeout(() => { refreshVisibleApp(); if (typeof routeAuthenticatedWorkspace === "function") routeAuthenticatedWorkspace(); },0);
   }
@@ -1596,6 +1596,14 @@
   };
 
   window.fit4lifeCloudUpdateMyTrainerName = async function fit4lifeCloudUpdateMyTrainerName(displayName) {
+    if (localInteractionTestMode() && (cloudRole === "owner" || cloudRole === "trainer")) {
+      const name = String(displayName || "").trim(); if (name.length < 2) return {ok:false,message:"Enter the name clients should see."};
+      try { localStorage.setItem("fit4life_interaction_staff_name_v1",name); } catch (_) { return {ok:false,message:"This browser could not save the sender name."}; }
+      cloudUser.user_metadata = {...(cloudUser.user_metadata || {}),display_name:name};
+      window.fit4lifeCloudIdentity = {...(window.fit4lifeCloudIdentity || {}),displayName:name};
+      window.fit4lifeCloudTrainers = (window.fit4lifeCloudTrainers || []).map((trainer) => trainer.user_id === cloudUser.id ? {...trainer,display_name:name} : trainer);
+      return {ok:true};
+    }
     if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return { ok:false,message:"Trainer access is required." };
     const response = await cloudClient.rpc("update_my_fit4life_staff_name", { target_display_name:String(displayName || "").trim() });
     if (response.error) return { ok:false,message:response.error.message || "The display name could not be saved." };

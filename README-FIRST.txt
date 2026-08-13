@@ -1,11 +1,13 @@
-FIT4LIFE — V8 SECONDARY-MENU INTERACTION AUDIT
+FIT4LIFE — V10 NEON SIGN + SEASONAL THEMES
 Build date: 2026-08-13
 
 THIS is the versioned upload folder. It preserves Update 3 programming, the stable
 production link, V5 owner/trainer boundaries, and the V6 Action Center/calendar.
 V7 repaired Action Center commands and replaced the crowded trainer-facing client
-record with a focused six-tab coaching workspace. V8 makes the calendar editor and
-all 21 secondary menus consistently interactive, closable, and keyboard-safe.
+record with a focused six-tab coaching workspace. V8 made secondary menus
+interactive and keyboard-safe. V9 made their save actions reliable and visible.
+V10 adds the permanent neon-blue F4L rock-background sign and owner-controlled
+seasonal/sport accent presets without replacing the core portal design.
 
 USE THE SAME PUBLIC LINK AFTER EVERY DEPLOYMENT
 Public production link:
@@ -17,7 +19,7 @@ https://marc14-fit4-life-session-builder.vercel.app
 4. Share the production domain above—not a generated preview/deployment URL.
 5. In Vercel Project Settings > Domains, confirm the domain above is attached to
    this project and points to the latest Production deployment.
-6. After Vercel reports Ready, open the Production link and confirm V8 appears. This
+6. After Vercel reports Ready, open the Production link and confirm V10 appears. This
    release version-tags its app files, forces shell revalidation, and updates the
    service worker without relying on its browser cache.
 7. In Project Settings > Deployment Protection, enable Vercel Authentication with
@@ -51,6 +53,24 @@ V5 ROLE RULES
 - Shared attention items can be claimed, taken over with confirmation, completed,
   or released after the 45-minute claim expires.
 - Coaching notes have explicit Team, Client feedback, or Protected safety visibility.
+
+V10 NEON + THEME PRESETS
+- A large fluorescent-blue F4L sign now sits behind the portal content on the black
+  rock wall. It is CSS-built, stays blue in every preset, does not block clicks, and
+  is removed from printed pages.
+- Settings > Themes, appearance & gym setup now includes Neon blue, Halloween,
+  Thanksgiving, Christmas, Valentine’s, Football, Baseball, and Basketball.
+- Presets add only subtle edge lighting, background glow, and a small top-bar badge.
+  They do not replace the rock background, rearrange the portal, or override the
+  gym’s primary and accent brand colors.
+- Themes are manual and remain selected until an owner changes them. There are no
+  automatic holiday dates that could unexpectedly change the client portal.
+- Only the owner can publish a preset. Trainers can request an organization-setting
+  change through the existing owner approval workflow.
+- The selected preset is stored inside the existing gym brand configuration, so the
+  existing Supabase organization sync sends it to trainer and client devices. No new
+  SQL migration or environment variable is required.
+- See THEME-GUIDE.md for the short operating guide.
 
 V7 CLIENT WORKSPACE
 - The client record now has six task-based tabs: Overview, Workouts, Progress,
@@ -89,6 +109,24 @@ V8 SECONDARY-MENU + CALENDAR FIXES
 - A localhost-only `?interaction-test=1` route is available for safe click-through
   testing. It cannot activate on the Vercel production or preview domains.
 
+V9 SAVE RELIABILITY FIXES
+- Missed-workout handling is now separate from rescheduling. A trainer can record a
+  follow-up without changing the date, reschedule only after changing the date/time,
+  or cancel the assigned workout with a documented reason.
+- Validation and storage failures appear inside the active calendar window. Toasts
+  also render above open dialogs instead of being hidden behind the modal overlay.
+- Successful follow-up and cancellation resolve the originating schedule task so
+  stale Action Center and Calendar badges do not remain.
+- Normal appointments and team/follow-up calendar items still save independently.
+- Profile edits, owner requests, coaching notes, trainer messages, sender identity,
+  progress receipts, workout start state, monitoring records, program defaults,
+  calibration decisions, supersets, and exercise substitutions now check the write
+  result before closing or reporting success.
+- Failed program/exercise changes are rolled back where needed so the screen does not
+  show an unsaved change as complete.
+- V9 uses a new service-worker shell and versioned asset URLs so browsers request the
+  repaired files immediately after production deployment.
+
 V6 BATCH 2 — ACTION CENTER
 - Action Center combines safety reports, unanswered messages, workout requests,
   workout/check-in reviews, client/trainer access, owner approvals, schedule changes,
@@ -116,8 +154,8 @@ V6 BATCH 3 — OPERATIONAL CALENDAR
   late/change history but does not impose a fee or notice cutoff until policy is set.
 - Client Coach pages now show upcoming appointments and dated workouts.
 
-NO NEW SUPABASE SQL IS REQUIRED FOR V8
-The V8 interaction changes use the existing sync_records JSON architecture. The V5
+NO NEW SUPABASE SQL IS REQUIRED FOR V9
+The V9 save-reliability changes use the existing sync_records JSON architecture. The V5
 role-boundary SQL is still required if it has not already been run.
 
 REQUIRED SUPABASE STEP

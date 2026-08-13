@@ -239,7 +239,7 @@ function acknowledgeProgressReceipt(receiptId) {
   const profile = activeClientProfile(), receipt = loadProgressReceipts().find((item) => item.id === receiptId && item.status === "published"); if (!profile || !receipt || receipt.profileId !== profile.id) return false;
   const items = loadLocalArray(PROGRESS_RECEIPT_RESPONSES_KEY), existing = items.find((item) => item.receiptId === receipt.id), now = new Date().toISOString();
   if (existing) existing.acknowledgedAt = now; else items.unshift({id:"receipt-response-" + Date.now(),receiptId:receipt.id,profileId:profile.id,acknowledgedAt:now});
-  writeLocalArray(PROGRESS_RECEIPT_RESPONSES_KEY,items,1000); renderClientAppView(currentView); showToast("Receipt marked read"); return true;
+  if (!writeLocalArray(PROGRESS_RECEIPT_RESPONSES_KEY,items,1000)) return false; renderClientAppView(currentView); showToast("Receipt marked read"); return true;
 }
 function askAboutProgressReceipt(receiptId) {
   const profile = activeClientProfile(), receipt = loadProgressReceipts().find((item) => item.id === receiptId && item.status === "published"); if (!profile || !receipt) return false;
@@ -262,10 +262,10 @@ function openProgressReceiptEditor(profileId,type,receiptId,seed) {
   if (receipt && receipt.status === "published") {
     const original = receipt;
     receipt = {...original,id:"receipt-" + Date.now() + "-" + Math.random().toString(16).slice(2),status:"draft",supersedesId:original.id,publishedAt:"",publishedBy:"",publishedByUserId:"",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),createdBy:currentAccountIdentity().displayName};
-    upsertProgressReceipt(receipt);
+    if (!upsertProgressReceipt(receipt)) return null;
     showToast("A new draft was created so the published receipt remains in the coaching record");
   }
-  if (!receipt) { receipt = buildProgressReceiptDraft(profile,type,seed); upsertProgressReceipt(receipt); }
+  if (!receipt) { receipt = buildProgressReceiptDraft(profile,type,seed); if (!upsertProgressReceipt(receipt)) return null; }
   const due = progressReceiptDueStatus(profile,receipt.type);
   byId("progressReceiptId").value = receipt.id; byId("progressReceiptProfileId").value = profile.id; byId("progressReceiptType").value = receipt.type;
   byId("progressReceiptTitle").textContent = "Progress receipt · " + profile.name; byId("progressReceiptCadence").textContent = receipt.type === "formal" ? "Four-week formal receipt" : "Weekly progress receipt"; byId("progressReceiptStatus").textContent = receipt.status === "published" ? "Published" : "Draft";
@@ -276,7 +276,7 @@ function openProgressReceiptEditor(profileId,type,receiptId,seed) {
 }
 function saveProgressReceipt(publish) {
   if (!requireTrainerMutation(publish ? "publish progress receipts" : "save progress receipt drafts")) return null;
-  const id = byId("progressReceiptId").value, receipts = loadProgressReceipts(), index = receipts.findIndex((item) => item.id === id); if (index < 0) return null;
+  const id = byId("progressReceiptId").value, receipts = loadProgressReceipts(), index = receipts.findIndex((item) => item.id === id); if (index < 0) { showToast("This receipt draft is no longer available. Close this window and reopen it from the client record."); return null; }
   const improved = receiptLines(byId("progressReceiptImproved").value,3), needsWork = receiptLines(byId("progressReceiptNeedsWork").value,2), nextChanges = receiptLines(byId("progressReceiptNext").value,3), coachMessage = byId("progressReceiptCoachMessage").value.trim();
   if (!improved.length || !needsWork.length || !nextChanges.length) { showToast("Keep one clear item in each receipt section"); return null; }
   const now = new Date().toISOString(), identity = currentAccountIdentity(), receipt = {...receipts[index],improved,needsWork,nextChanges,coachMessage,updatedAt:now,updatedBy:identity.displayName};
@@ -288,11 +288,12 @@ function saveProgressReceipt(publish) {
       const profile = profiles[profileIndex], contract = goalContractFor(profile); contract.lastReviewedAt = now;
       const intake = {...(profile.intake || {}),goalContract:contract,updatedAt:now};
       profiles[profileIndex] = {...profile,intake,lastProgressReceiptAt:now,...(receipt.type === "formal" ? {lastFormalReceiptAt:now,lastFormalReviewAt:now} : {}),updatedAt:now};
-      writeProfiles(profiles); selectedTrainerClient = profiles[profileIndex].name;
+      if (!writeProfiles(profiles)) { showToast("The receipt was saved, but the client publication status could not be updated. Keep this window open and try again."); return null; }
+      selectedTrainerClient = profiles[profileIndex].name;
       const messages = loadLocalArray(CLIENT_MESSAGES_KEY);
       if (!messages.some((item) => item.receiptId === receipt.id)) {
         messages.unshift({id:"message-receipt-" + receipt.id,profileId:receipt.profileId,client:profile.name,senderRole:"trainer",senderName:identity.displayName,body:"Your " + (receipt.type === "formal" ? "four-week progress receipt" : "weekly progress receipt") + " is ready. Open Progress to review what improved, what needs work, and what changes next.",kind:"progress_receipt",receiptId:receipt.id,createdAt:now});
-        writeLocalArray(CLIENT_MESSAGES_KEY,messages,1000);
+        if (!writeLocalArray(CLIENT_MESSAGES_KEY,messages,1000)) { showToast("The receipt was saved, but its client notification could not be recorded. Keep this window open and try again."); return null; }
       }
     }
   }
@@ -302,7 +303,7 @@ function saveProgressReceipt(publish) {
 function deleteProgressReceiptDraft() {
   if (!requireTrainerMutation("delete progress receipt drafts")) return false;
   const id = byId("progressReceiptId").value, receipt = loadProgressReceipts().find((item) => item.id === id); if (!receipt || receipt.status === "published") { showToast("Published receipts stay in the coaching record"); return false; }
-  writeProgressReceipts(loadProgressReceipts().filter((item) => item.id !== id)); closeProgressReceiptEditor(); renderTrainerAttention(); if (selectedTrainerClient) renderTrainerAnalysis(selectedTrainerClient); showToast("Draft deleted"); return true;
+  if (!writeProgressReceipts(loadProgressReceipts().filter((item) => item.id !== id))) return false; closeProgressReceiptEditor(); renderTrainerAttention(); if (selectedTrainerClient) renderTrainerAnalysis(selectedTrainerClient); showToast("Draft deleted"); return true;
 }
 function loadSavedPrograms() { return loadLocalArray(SAVED_PROGRAMS_KEY); }
 function writeSavedPrograms(items) { return writeLocalArray(SAVED_PROGRAMS_KEY,items,100); }
@@ -422,7 +423,7 @@ function startAssignedWorkout(profileId) {
 }
 function touchAssignmentFromSession(sessionId) {
   const assignments = loadAssignedWorkouts(), index = assignments.findIndex((item) => assignmentSessionIds(item).includes(sessionId)); if (index < 0) return null;
-  if (assignmentStatus(assignments[index]) === "assigned") { assignments[index].status = "in_progress"; assignments[index].startedAt = new Date().toISOString(); writeAssignedWorkouts(assignments); }
+  if (assignmentStatus(assignments[index]) === "assigned") { assignments[index].status = "in_progress"; assignments[index].startedAt = new Date().toISOString(); if (!writeAssignedWorkouts(assignments)) return null; }
   refreshAssignmentProgress(sessionId); return assignments[index];
 }
 function openClientWorkout() {

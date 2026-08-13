@@ -132,12 +132,15 @@ function establishClientBaseline() {
   const now = new Date().toISOString(), usableEntries = [...new Map(state.evidence.filter((item) => item.usable).map((item) => [item.entry.id,item.entry])).values()];
   profiles[index].baseline = { ...(profiles[index].baseline || {}),version:BASELINE_VERSION,status:"established",goals:baselineGoalsFor(profiles[index]),requiredDomains:state.required,verifiedAt:now,verifiedBy:currentAccountIdentity().displayName,reviewNote:byId("baselineReviewNote").value.trim(),evidenceIds:usableEntries.map((entry) => entry.id),exerciseNames:[...new Set(usableEntries.map((entry) => entry.label))] };
   profiles[index].exercisePreferences = { ...(profiles[index].exercisePreferences || {}) }; usableEntries.forEach((entry) => { if (Number(entry.data.baselinePain || 0) <= 1 && Number(entry.data.baselineConfidence || 3) >= 3) { const exercise = LIBRARY.find((item) => item.name === entry.label); if (exercise) profiles[index].exercisePreferences[exerciseId(exercise)] = "like"; } }); profiles[index].updatedAt = now;
-  writeProfiles(profiles); addProgressEntry({type:"baseline_verified",client:profiles[index].name,profileId:profiles[index].id,label:"Personalization baseline",value:"Coach verified",note:profiles[index].baseline.reviewNote,data:{domains:state.required,evidenceIds:profiles[index].baseline.evidenceIds}});
+  if (!writeProfiles(profiles)) { showToast("The verified baseline could not be saved. Keep this review open and try again."); return false; }
+  if (!addProgressEntry({type:"baseline_verified",client:profiles[index].name,profileId:profiles[index].id,label:"Personalization baseline",value:"Coach verified",note:profiles[index].baseline.reviewNote,data:{domains:state.required,evidenceIds:profiles[index].baseline.evidenceIds}})) return false;
   closeBaselineReview(); renderProgramBaselineGate(); if (selectedTrainerClient && clientMatches(selectedTrainerClient,profiles[index].name)) renderTrainerAnalysis(selectedTrainerClient); showToast("Baseline established · tailored programming unlocked for " + profiles[index].name); return true;
 }
 function requestBaselineRetest() {
   if (!requireTrainerMutation("keep client calibration open")) return false; const profileId = byId("baselineReviewProfileId").value, profiles = loadProfiles(), profile = profiles.find((item) => item.id === profileId); if (!profile) return false;
-  profile.baseline = { ...(profile.baseline || {}),status:"planned",reviewNote:byId("baselineReviewNote").value.trim(),updatedAt:new Date().toISOString() }; writeProfiles(profiles); closeBaselineReview(); renderProgramBaselineGate(); showToast("Calibration remains open · rebuild only the missing or questionable anchors"); return true;
+  profile.baseline = { ...(profile.baseline || {}),status:"planned",reviewNote:byId("baselineReviewNote").value.trim(),updatedAt:new Date().toISOString() };
+  if (!writeProfiles(profiles)) { showToast("The calibration review could not be saved. Keep this review open and try again."); return false; }
+  closeBaselineReview(); renderProgramBaselineGate(); showToast("Calibration remains open · rebuild only the missing or questionable anchors"); return true;
 }
 const EXP_OPTIONS = [[1, "New — learning technique"], [2, "Intermediate — trains consistently"], [3, "Advanced — highly experienced"]];
 const TIME_OPTIONS = [[30, "30 min"], [45, "45 min"], [60, "60 min"], [90, "90 min"]];

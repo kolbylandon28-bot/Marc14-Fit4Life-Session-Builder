@@ -91,7 +91,7 @@ function decideOwnerRequest(id,status) {
   const response = window.prompt(status === "approved" ? "Owner response or implementation instructions:" : "Reason for denial:",status === "approved" ? "Approved. Complete the linked owner-only action." : "Not approved at this time.");
   if (response == null) return false;
   request.status = status; request.resolution = response.trim(); request.decidedAt = new Date().toISOString(); request.decidedByUserId = identity.id || ""; request.decidedByName = identity.displayName;
-  writeLocalArray(OWNER_REQUESTS_KEY,requests,500); syncRoleGovernanceControls(); renderCoachModule("approvals"); renderTrainerAttention(); showToast("Request " + status); return true;
+  if (!writeLocalArray(OWNER_REQUESTS_KEY,requests,500)) return false; syncRoleGovernanceControls(); renderCoachModule("approvals"); renderTrainerAttention(); showToast("Request " + status); return true;
 }
 function openOwnerRequestTarget(id) {
   if (!isFit4LifeOwner()) return false;
@@ -137,7 +137,7 @@ function saveCoachNote(profileId) {
   const text = byId("coachNoteText") && byId("coachNoteText").value.trim(), visibility = byId("coachNoteVisibility") && byId("coachNoteVisibility").value || "team"; if (!text) { showToast("Write the note first"); return null; }
   const profile = loadProfiles().find((item) => item.id === profileId), identity = currentAccountIdentity(), notes = loadCoachNotes();
   notes.unshift({id:"coach-note-" + Date.now(),profileId,client:profile && profile.name || "",visibility,text,authorUserId:identity.id || "",authorName:identity.displayName,createdAt:new Date().toISOString()});
-  writeLocalArray(COACH_NOTES_KEY,notes,1000); renderTrainerAnalysis(profile && profile.name || selectedTrainerClient); showToast(coachNoteVisibilityLabel(visibility) + " saved"); return true;
+  if (!writeLocalArray(COACH_NOTES_KEY,notes,1000)) return null; renderTrainerAnalysis(profile && profile.name || selectedTrainerClient); showToast(coachNoteVisibilityLabel(visibility) + " saved"); return true;
 }
 function archiveCoachNote(id,profileId) { if (!isFit4LifeOwner()) { showToast("Only an owner can archive protected coaching notes"); return false; } const notes = loadCoachNotes(), note = notes.find((item) => item.id === id); if (!note) return false; note.archivedAt = new Date().toISOString(); note.archivedBy = currentAccountIdentity().displayName; writeLocalArray(COACH_NOTES_KEY,notes,1000); const profile = loadProfiles().find((item) => item.id === profileId); renderTrainerAnalysis(profile && profile.name || selectedTrainerClient); return true; }
 function clientCoachNotesHtml(profile) { const notes = profile ? coachNotesForProfile(profile.id,"client") : []; return '<section class="client-card wide"><div class="client-section-label">Coach feedback</div><h3>Updates from your coaching team</h3><p>All approved FIT4LIFE trainers may review your record and cover normal coaching work. If you have a primary coach, they lead your plan while the rest of the team can still help.</p><div class="coach-note-list">' + (notes.map((note) => '<article class="coach-note client"><b>' + escapeHtml(note.authorName || "Coaching team") + ' · ' + new Date(note.createdAt).toLocaleDateString() + '</b><p>' + escapeHtml(note.text) + '</p></article>').join("") || '<div class="empty-state">No new coach feedback.</div>') + '</div></section>'; }
@@ -171,4 +171,3 @@ protectOwnerMutation("confirmCompleteClientDelete","client_archive","Permanently
 protectOwnerMutation("deleteInBodyScan","client_archive","Delete an InBody record");
 
 document.addEventListener("DOMContentLoaded",syncRoleGovernanceControls);
-

@@ -365,7 +365,8 @@ function generateCalibrationProgram() {
   const phase = {name:"Establish starting points",setDelta:-1,rpe:"Submaximal · leave 3–4 reps",directive:"Complete the full first-week schedule at conservative effort. Only the clearly marked anchors collect baseline evidence; the other days build familiarity without extra testing.",reviewRequired:true,reviewTitle:"Coach baseline verification",reviewPrompt:"After the marked anchors are logged, review the required domains, pain response, confidence, effort, and equipment fit before generating the tailored phase."};
   setup.days = weeklyDays; setup.weeks = 1; setup.programMode = "calibration"; setup.starter = false; setup.baselineRequiredDomains = required; setup.baselinePlanId = planId; setup.calibrationAnchorSessions = Math.max(schedule.length,majorLiftAnchors ? Math.min(weeklyDays,2) : 0); setup.majorLiftCalibrationAnchors = majorLiftAnchors;
   currentProgram = applyProgramDayDefaults({setup,weeks:[{number:1,phase,reviewRequired:true,reviewType:"baseline_verification",days}],calibration:true,baselinePlanId:planId,createdAt:new Date().toISOString(),lifecycle:"draft",versionNumber:1,versions:[],approval:{status:"draft",required:true}},profile);
-  profile.baseline = {...(profile.baseline || {}),version:BASELINE_VERSION,status:"planned",planId,goals:setup.goals,requiredDomains:required,plannedSessions:schedule.length,plannedWeekDays:weeklyDays,plannedAt:new Date().toISOString()}; profile.updatedAt = new Date().toISOString(); writeProfiles(profiles);
+  profile.baseline = {...(profile.baseline || {}),version:BASELINE_VERSION,status:"planned",planId,goals:setup.goals,requiredDomains:required,plannedSessions:schedule.length,plannedWeekDays:weeklyDays,plannedAt:new Date().toISOString()}; profile.updatedAt = new Date().toISOString();
+  if (!writeProfiles(profiles)) { currentProgram = null; showToast("The calibration plan could not be saved to the client profile. Try again before assigning it."); return null; }
   renderProgram(); renderProgramBaselineGate(); byId("programPrintBtn").disabled = false; byId("programApproveBtn").disabled = false; byId("programSaveBtn").disabled = true; byId("programSaveOnlyBtn").disabled = true; showToast(weeklyDays + " first-week workout" + (weeklyDays === 1 ? "" : "s") + " built · " + schedule.length + " contain calibration anchors"); return currentProgram;
 }
 function generateProgram() {
@@ -506,7 +507,7 @@ function saveProgramStructureEditor() {
     if (index >= 0) {
       if (context.type === "day") profiles[index].programDayDefaults = {...(profiles[index].programDayDefaults || {}),[context.dayIndex]:{title,purpose}};
       else { const origin = currentProgram.weeks[context.weekIndex].days[context.dayIndex].session.blocks[context.blockIndex]; profiles[index].programPhaseDefaults = {...(profiles[index].programPhaseDefaults || {}),[origin.key]:{title,purpose}}; }
-      profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles);
+      profiles[index].updatedAt = new Date().toISOString(); if (!writeProfiles(profiles)) return false;
     }
   }
   appendProgramEditAudit({type:"structure",level:context.type,scope,title,reason,targets:changed}); markCurrentProgramDraft("Workout structure edited by coach"); closeProgramStructureEditor(); renderProgram(); showToast(title + " updated in " + changed + " workout" + (changed === 1 ? "" : "s")); return true;
@@ -533,7 +534,7 @@ function applyProgramPhaseStructureAction(action) {
     if (index >= 0) {
       if (action === "remove") profiles[index].programPhaseExclusions = [...new Set([...(profiles[index].programPhaseExclusions || []),source.key])];
       else profiles[index].programPhaseOrder = (sourceDay.session.blocks || []).map((block) => block.key);
-      profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles);
+      profiles[index].updatedAt = new Date().toISOString(); if (!writeProfiles(profiles)) return false;
     }
   }
   appendProgramEditAudit({type:"phase_structure",action,phase:source.title,scope,reason,calibrationAffected:containsCalibration,targets:changed}); markCurrentProgramDraft("Workout phase structure changed by coach"); closeProgramStructureEditor(); renderProgram(); showToast(source.title + " " + (action === "remove" ? "removed from" : "moved in") + " " + changed + " workout" + (changed === 1 ? "" : "s")); return true;
@@ -738,7 +739,12 @@ function applyProgramExerciseReplacement(context,exercise,scope) {
   });
   if (changed && scope === "future" && currentProgram.setup && currentProgram.setup.profileId) {
     const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === currentProgram.setup.profileId);
-    if (index >= 0) { profiles[index].exerciseSubstitutions = {...(profiles[index].exerciseSubstitutions || {}),[exerciseId(original)]:exerciseId(exercise)}; profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles); currentProgram.setup.exerciseSubstitutions = {...(currentProgram.setup.exerciseSubstitutions || {}),[exerciseId(original)]:exerciseId(exercise)}; }
+    if (index >= 0) {
+      profiles[index].exerciseSubstitutions = {...(profiles[index].exerciseSubstitutions || {}),[exerciseId(original)]:exerciseId(exercise)};
+      profiles[index].updatedAt = new Date().toISOString();
+      if (!writeProfiles(profiles)) return {changed:0,skipped,originChanged:false,saveFailed:true,message:"The future client substitution default could not be saved. Nothing was changed."};
+      currentProgram.setup.exerciseSubstitutions = {...(currentProgram.setup.exerciseSubstitutions || {}),[exerciseId(original)]:exerciseId(exercise)};
+    }
   }
   if (changed) { appendProgramEditAudit({type:"replacement",from:original.name,to:exercise.name,scope,reason:reason || "Coach replacement",overrideMode,calibrationAction,targets:changed}); markCurrentProgramDraft("Exercise replaced by coach in " + changed + " program workout" + (changed === 1 ? "" : "s")); }
   return {changed,skipped,originChanged,message:!originChanged ? "The selected exercise on this workout was not changed" : skipped ? "The replacement already exists elsewhere in part of the selected scope" : ""};
@@ -760,7 +766,12 @@ function applyProgramExerciseAddition(context,exercise,scope) {
   });
   if (changed && scope === "future" && currentProgram.setup && currentProgram.setup.profileId) {
     const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === currentProgram.setup.profileId), phaseKey = context.block && context.block.key;
-    if (index >= 0 && phaseKey) { const existing = profiles[index].programPhaseAdditions && profiles[index].programPhaseAdditions[phaseKey] || []; profiles[index].programPhaseAdditions = {...(profiles[index].programPhaseAdditions || {}),[phaseKey]:[...new Set([...existing,exerciseId(exercise)])]}; profiles[index].updatedAt = new Date().toISOString(); writeProfiles(profiles); }
+    if (index >= 0 && phaseKey) {
+      const existing = profiles[index].programPhaseAdditions && profiles[index].programPhaseAdditions[phaseKey] || [];
+      profiles[index].programPhaseAdditions = {...(profiles[index].programPhaseAdditions || {}),[phaseKey]:[...new Set([...existing,exerciseId(exercise)])]};
+      profiles[index].updatedAt = new Date().toISOString();
+      if (!writeProfiles(profiles)) return {changed:0,skipped,saveFailed:true,message:"The future client exercise default could not be saved. Nothing was changed."};
+    }
   }
   if (changed) { appendProgramEditAudit({type:"addition",exercise:exercise.name,scope,reason:reason || "Coach addition",overrideMode,targets:changed}); markCurrentProgramDraft("Exercise added by coach in " + changed + " program workout" + (changed === 1 ? "" : "s")); }
   return {changed,skipped,message:changed ? "" : "The exercise already exists in the selected workout"};
@@ -866,7 +877,8 @@ function approveCurrentProgram() {
   }
   const failed = sessions.filter((session) => !session.audit.pass); if (failed.length) { showToast("Program approval blocked: " + failed.length + " session audits need review"); renderProgram(); return false; }
   const approvedAt = new Date().toISOString(), approvedBy = currentAccountIdentity().displayName; sessions.forEach((session) => { session.approval = { ...(session.approval || {}),status:"approved",approvedAt,approvedBy,auditScore:session.audit.score }; }); currentProgram.approval = { status:"approved",approvedAt,approvedBy }; currentProgram.lifecycle = "approved"; programAssignmentNotice = "";
-  const saved = saveCurrentProgram(true) || currentProgram, synced = syncApprovedProgramToAssignments(saved);
+  const saved = saveCurrentProgram(true); if (!saved) return false;
+  const synced = syncApprovedProgramToAssignments(saved);
   renderProgram(); syncProgramActionControls(); showToast("Coach approved and saved the program" + (synced ? " · " + synced + " not-yet-started assignment" + (synced === 1 ? " was" : "s were") + " updated" : " · assignment controls are now unlocked")); return true;
 }
 function saveCurrentProgram(silent) {
@@ -884,7 +896,8 @@ function saveCurrentProgram(silent) {
   saved.versions = saved.versions.slice(0,20);
   saved.versionNumber = previous ? Number(previous.versionNumber || 1) + (changed ? 1 : 0) : Number(saved.versionNumber || 1);
   saved.savedAt = new Date().toISOString(); saved.savedBy = currentAccountIdentity().displayName; saved.lifecycle = changed || !previous ? "approved" : previous.lifecycle || "approved";
-  if (existing >= 0) programs[existing] = saved; else programs.unshift(saved); writeSavedPrograms(programs);
+  if (existing >= 0) programs[existing] = saved; else programs.unshift(saved);
+  if (!writeSavedPrograms(programs)) return null;
   currentProgram = JSON.parse(JSON.stringify(saved));
   if (wasNew) addProgressEntry({ type: "program", client: p.setup.client, profileId:saved.profileId, label: p.setup.goals.map((g) => GOALS[g].label).join(" + ") + " program", value: p.setup.weeks + " weeks · " + p.setup.days + " days/week", note: "Multi-week plan created" });
   if (!silent) showToast("Program saved. Use the assignment controls to register its workout days.");
@@ -967,7 +980,7 @@ function saveAndAssignCurrentProgram(scope) {
   }
   saved.lifecycle = "published"; saved.publishedAt = new Date().toISOString(); saved.publishedBy = currentAccountIdentity().displayName;
   const programs = loadSavedPrograms(), savedIndex = programs.findIndex((item) => item.id === saved.id);
-  if (savedIndex >= 0) { programs[savedIndex] = saved; writeSavedPrograms(programs); }
+  if (savedIndex >= 0) { programs[savedIndex] = saved; if (!writeSavedPrograms(programs)) { showToast("The workouts were assigned, but the published program status could not be saved. Keep this page open and try again."); return null; } }
   programAssignmentNotice = ""; currentProgram = JSON.parse(JSON.stringify(saved)); renderProgram();
   showToast(registered.length + " workout" + (registered.length === 1 ? "" : "s") + " registered and assigned to " + saved.setup.client);
   return registered;
