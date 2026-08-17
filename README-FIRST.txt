@@ -1,5 +1,5 @@
 FIT4LIFE — V12 IMMERSIVE HOLIDAY THEMES
-Build date: 2026-08-13
+Build date: 2026-08-13 · owner-theme connection repair: 2026-08-17
 
 THIS is the versioned upload folder. It preserves Update 3 programming, the stable
 production link, V5 owner/trainer boundaries, and the V6 Action Center/calendar.
@@ -12,6 +12,9 @@ V11 gives that sign an evenly spaced metallic-black face with a crisp blue outli
 and places the role-selection question inside a high-contrast translucent panel.
 V12 makes the F4L outline theme-aware and adds six cinematic 3D holiday scenes,
 matching ambient particles, and real scene previews in the owner picker.
+The August 17 connection repair publishes the confirmed gym membership to the
+theme controls immediately, retries the organization link once when necessary,
+and clears that context safely at sign-out.
 
 USE THE SAME PUBLIC LINK AFTER EVERY DEPLOYMENT
 Public production link:
@@ -104,6 +107,11 @@ V12 IMMERSIVE THEMES
   needed.
 - Only an authenticated owner can publish a theme. Trainers see the current theme and
   may request a change, but cannot preview or save a different theme on their device.
+- The owner theme control no longer waits for a second organization-settings read
+  before recognizing the membership's organization ID. If the browser catches the
+  connection during startup, the control retries it once before asking for a refresh.
+- The app shell uses a new August 17 cache version so an installed app or previously
+  opened browser cannot continue serving the faulty connection script.
 
 V7 CLIENT WORKSPACE
 - The client record now has six task-based tabs: Overview, Workouts, Progress,

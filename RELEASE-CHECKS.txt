@@ -1,4 +1,4 @@
-FIT4LIFE V12 RELEASE CHECKS — 2026-08-13
+FIT4LIFE V12 RELEASE CHECKS — UPDATED 2026-08-17
 
 PASSED LOCALLY
 - JavaScript syntax: every .js file passed Node syntax validation.
@@ -47,6 +47,11 @@ PASSED LOCALLY
   they cannot preview or publish theme alternatives.
 - Organization settings refresh through Supabase Realtime and also on app open,
   foreground return, reconnection, and a quiet 60-second fallback check.
+- Owner membership now exposes its organization ID before the secondary settings
+  read, and the theme publisher retries the membership connection once if necessary.
+- Sign-out clears the exported and internal organization context, preventing a later
+  account from inheriting the previous owner's publishing target.
+- The August 17 r3 cache tag is consistent across the HTML shell and service worker.
 
 REQUIRED BEFORE LIVE USE
 1. Upload this folder's contents to the same repository and Vercel project.
@@ -61,6 +66,8 @@ REQUIRED BEFORE LIVE USE
 LIVE V12 THEME CHECKS
 - [ ] Confirm the metallic-black F4L sign is visible in the center of the rock wall.
 - [ ] Sign in as an owner and open Settings > Themes, appearance & gym setup.
+- [ ] Confirm the account indicator shows Owner and no “shared gym connection”
+      warning appears when selecting the first theme after sign-in.
 - [ ] Click each preset and confirm the sign outline, top-bar badge, scene thumbnail,
       bottom 3D scene, and matching ambient particles all change together.
 - [ ] Confirm New Year, Halloween, Thanksgiving, Christmas, Valentine's, and

@@ -220,6 +220,25 @@
     window.fit4lifeCloudIdentity = cloudUser ? { id:cloudUser.id,email:cloudUser.email || "",role:cloudRole || "",displayName:accountDisplayName(cloudUser) } : null;
   }
 
+  function clearCloudOrganizationContext() {
+    cloudOrganizationId = "";
+    cloudOrganizationSlug = "";
+    lastOrganizationSettingsLoadedAt = 0;
+    window.fit4lifeCloudOrganizationId = "";
+    window.fit4lifeCloudOrganizationSlug = portalOrganizationSlug || "";
+  }
+
+  function applyMembershipContext(membership) {
+    if (!membership || !membership.organization_id || !membership.role) return false;
+    cloudRole = membership.role;
+    cloudOrganizationId = membership.organization_id;
+    window.fit4lifeCloudRole = cloudRole;
+    window.fit4lifeCloudOrganizationId = cloudOrganizationId;
+    if (portalOrganizationSlug) window.fit4lifeCloudOrganizationSlug = portalOrganizationSlug;
+    publishCloudIdentity();
+    return true;
+  }
+
   function sameClientName(a, b) {
     return Boolean(a && b) && normalizedName(a) === normalizedName(b);
   }
@@ -1235,6 +1254,7 @@
       window.fit4lifeCloudReady = false;
       window.fit4lifeCloudRole = "";
       cloudRole = "";
+      clearCloudOrganizationContext();
       publishCloudIdentity();
       if (cloudRegistrationChannel && cloudClient) cloudClient.removeChannel(cloudRegistrationChannel);
       cloudRegistrationChannel = null;
@@ -1252,6 +1272,7 @@
       window.fit4lifeCloudReady = false;
       window.fit4lifeCloudRole = "";
       cloudRole = "";
+      clearCloudOrganizationContext();
       publishCloudIdentity();
       const request = await getMyRegistrationRequest();
       updateAccountUi();
@@ -1272,8 +1293,7 @@
       return;
     }
 
-    cloudRole = membership.role;
-    cloudOrganizationId = membership.organization_id;
+    applyMembershipContext(membership);
     isolateSensitiveCacheForUser(cloudUser.id, cloudRole);
     await loadOrganizationSettings();
     if (cloudRole === "client") {
@@ -1282,7 +1302,6 @@
     if (cloudRegistrationChannel) cloudClient.removeChannel(cloudRegistrationChannel);
     cloudRegistrationChannel = null;
     writeJson("fit4life_pending_signup_v1", null);
-    window.fit4lifeCloudRole = cloudRole;
     publishCloudIdentity();
     if (cloudRole === "owner" || cloudRole === "trainer") {
       try { sessionStorage.setItem("fit4life_trainer_unlocked", "yes"); } catch (_) {}
@@ -1683,6 +1702,7 @@
     cloudReady = false;
     cloudUser = null;
     cloudRole = "";
+    clearCloudOrganizationContext();
     window.fit4lifeCloudReady = false;
     window.fit4lifeCloudRole = "";
     window.fit4lifeCloudIdentity = null;
@@ -1691,6 +1711,19 @@
     showAuthMode("signin");
     showAuthGate(true);
     cloudStatus("Signed out", "offline");
+  };
+
+  window.fit4lifeCloudEnsureOrganizationConnection = async function fit4lifeCloudEnsureOrganizationConnection() {
+    if (!cloudClient || !cloudUser) return false;
+    if (cloudOrganizationId && cloudRole) {
+      window.fit4lifeCloudOrganizationId = cloudOrganizationId;
+      window.fit4lifeCloudRole = cloudRole;
+      return true;
+    }
+    const membership = await getMembership();
+    if (!applyMembershipContext(membership)) return false;
+    await loadOrganizationSettings();
+    return Boolean(cloudOrganizationId && cloudRole);
   };
 
   window.fit4lifeCloudRetry = function fit4lifeCloudRetry() {

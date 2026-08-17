@@ -261,8 +261,11 @@ async function persistOrganizationAppearance(brand,equipment,localMessage) {
 }
 async function setPortalTheme(themeId) {
   if (!requireTrainerMutation("change the portal theme")) return false;
+  if ((!window.fit4lifeCloudOrganizationId || !window.fit4lifeCloudRole) && typeof window.fit4lifeCloudEnsureOrganizationConnection === "function") {
+    await window.fit4lifeCloudEnsureOrganizationConnection();
+  }
   if (!(typeof isFit4LifeOwner === "function" && isFit4LifeOwner()) || window.fit4lifeCloudRole !== "owner") { openOwnerRequestDialog("organization_setting","","","Change the shared holiday theme to " + portalThemePreset(themeId).label); return false; }
-  if (!window.fit4lifeCloudOrganizationId || typeof window.fit4lifeCloudSaveOrganizationSettings !== "function") { showToast("Connect to the shared gym account before publishing a theme"); return false; }
+  if (!window.fit4lifeCloudOrganizationId || typeof window.fit4lifeCloudSaveOrganizationSettings !== "function") { showToast("The shared gym connection is not ready. Refresh once or sign out and back in."); return false; }
   if (portalThemeSaveInFlight) { showToast("The previous theme is still publishing"); return false; }
   const theme = normalizedPortalTheme(themeId), brand = { ...currentGymBrand(),theme,updatedAt:new Date().toISOString() }, equipment = currentGymEquipment();
   portalThemeSaveInFlight = true;
