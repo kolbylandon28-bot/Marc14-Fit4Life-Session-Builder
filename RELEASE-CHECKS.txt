@@ -54,12 +54,17 @@ PASSED LOCALLY
 - The August 17 membership-connection repair remains included in the r4 build.
 - The August 17 r4 repair includes the owner-only organization-settings RPC, exposes
   Supabase publishing errors, and has a consistent r4 HTML/service-worker cache tag.
+- The r5 repair adds a protected direct-table fallback for a missing/stale RPC schema
+  cache plus a standalone SQL installer with an explicit verification result.
+- The r6 installer adds missing brand_config, equipment_config, and
+  public_registration_enabled columns before building the theme save path, supporting
+  the older production organization schema without replacing existing rows.
 
 REQUIRED BEFORE LIVE USE
 1. Upload this folder's contents to the same repository and Vercel project.
 2. Deploy/promote the intended commit to Production.
-3. Run the complete updated supabase-v5-role-boundaries.sql in the connected
-   Supabase SQL Editor, even if an older copy was already run.
+3. Run RUN-THIS-IN-SUPABASE-THEME-FIX.sql in the connected Supabase SQL Editor.
+   Confirm its Results row shows the function name and TRUE for all three checks.
 4. Enable Vercel Authentication + Standard Protection in Project Settings >
    Deployment Protection.
 5. Test the production URL in a private browser window as an owner, trainer, and

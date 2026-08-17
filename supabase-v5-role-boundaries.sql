@@ -4,6 +4,13 @@
 
 begin;
 
+-- Backfill shared organization settings for databases created before the white-label
+-- and holiday-theme fields were introduced. Existing rows and business data remain.
+alter table public.organizations
+  add column if not exists brand_config jsonb not null default '{}'::jsonb,
+  add column if not exists equipment_config jsonb not null default '{}'::jsonb,
+  add column if not exists public_registration_enabled boolean not null default true;
+
 create or replace function public.is_org_owner(target_organization uuid)
 returns boolean
 language sql
@@ -137,6 +144,31 @@ drop trigger if exists organizations_owner_setup_guard on public.organizations;
 create trigger organizations_owner_setup_guard
 before update of brand_config, equipment_config on public.organizations
 for each row execute function public.protect_fit4life_organization_setup();
+
+-- Active staff and clients may read their organization's published appearance.
+-- Only an active owner may update the two shared-setup columns. These policies also
+-- provide a safe direct-table fallback while PostgREST refreshes a recreated RPC.
+alter table public.organizations enable row level security;
+grant select on public.organizations to authenticated;
+grant update (brand_config, equipment_config) on public.organizations to authenticated;
+
+drop policy if exists fit4life_organizations_member_read on public.organizations;
+create policy fit4life_organizations_member_read on public.organizations
+for select to authenticated
+using (
+  exists (
+    select 1 from public.memberships membership
+    where membership.organization_id = organizations.id
+      and membership.user_id = (select auth.uid())
+      and membership.is_active
+  )
+);
+
+drop policy if exists fit4life_organizations_owner_setup_update on public.organizations;
+create policy fit4life_organizations_owner_setup_update on public.organizations
+for update to authenticated
+using ((select public.is_org_owner(id)))
+with check ((select public.is_org_owner(id)));
 
 -- Owner-only write path used by the Settings theme and shared gym setup controls.
 -- Recreate the exact signature so this upgrade is safe whether an older draft of

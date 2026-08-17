@@ -15,7 +15,10 @@ matching ambient particles, and real scene previews in the owner picker.
 The August 17 connection repair publishes the confirmed gym membership to the
 theme controls immediately, retries the organization link once when necessary,
 clears that context safely at sign-out, and installs the missing owner-only
-`update_my_organization_setup` Supabase function used to publish a theme.
+`update_my_organization_setup` Supabase function used to publish a theme. The r5
+repair also includes an owner-protected direct update fallback while Supabase's API
+schema cache is refreshing. The r6 SQL first upgrades older `organizations` tables
+with the three shared-settings columns before creating any trigger or function.
 
 USE THE SAME PUBLIC LINK AFTER EVERY DEPLOYMENT
 Public production link:
@@ -115,6 +118,12 @@ V12 IMMERSIVE THEMES
   opened browser cannot continue serving the faulty connection script.
 - The included SQL now creates the exact owner-only RPC used by the theme publisher.
   Run the complete SQL file again even if an earlier V5/V12 copy was already run.
+- For the shortest repair, run `RUN-THIS-IN-SUPABASE-THEME-FIX.sql`. Its final Results
+  row verifies the required columns, function, authenticated execution grant, and
+  Realtime publication.
+- If Supabase has not refreshed the RPC schema cache yet, r5 safely falls back to the
+  organizations table. The same SQL installs owner-only RLS and a database trigger,
+  so trainers and clients still cannot publish themes through that fallback.
 - If Supabase rejects a future publish, the app now leaves the specific database
   message visible instead of replacing it with a generic failure notice.
 

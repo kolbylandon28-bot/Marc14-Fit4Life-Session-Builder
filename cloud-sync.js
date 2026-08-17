@@ -624,7 +624,7 @@
     organizationSettingsLoad = (async () => {
       const response = await cloudClient
         .from("organizations")
-        .select("id,slug,name,brand_config,equipment_config,public_registration_enabled,status,default_timezone,default_units,plan_code")
+        .select("id,slug,name,brand_config,equipment_config,public_registration_enabled")
         .eq("id", cloudOrganizationId)
         .maybeSingle();
       if (response.error || !response.data) {
@@ -697,12 +697,22 @@
       if (typeof showToast === "function") showToast(window.fit4lifeCloudOrganizationSettingsError);
       return false;
     }
-    const response = await cloudClient.rpc("update_my_organization_setup", {
+    let response = await cloudClient.rpc("update_my_organization_setup", {
       target_organization: cloudOrganizationId,
       new_brand_config: brand,
       new_equipment_config: equipment
     });
-    const saved = !response.error && Array.isArray(response.data) ? response.data[0] : response.data;
+    const rpcMissing = Boolean(response.error && (response.error.code === "PGRST202" || /could not find the function|schema cache/i.test(String(response.error.message || ""))));
+    if (rpcMissing) {
+      response = await cloudClient
+        .from("organizations")
+        .update({ brand_config:brand,equipment_config:equipment })
+        .eq("id",cloudOrganizationId)
+        .select("id,slug,name,brand_config,equipment_config,public_registration_enabled")
+        .maybeSingle();
+    }
+    let saved = !response.error && Array.isArray(response.data) ? response.data[0] : response.data;
+    if (saved && saved.id && !saved.organization_id) saved = { ...saved,organization_id:saved.id };
     if (response.error || !saved) {
       window.fit4lifeCloudOrganizationSettingsError = response.error && response.error.message || "Gym settings could not be saved";
       if (typeof showToast === "function") showToast(window.fit4lifeCloudOrganizationSettingsError);

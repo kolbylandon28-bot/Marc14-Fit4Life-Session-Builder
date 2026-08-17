@@ -47,6 +47,11 @@ badge, scene, particles, and themed sign color.
 - A theme is not reported as published until the owner-only Supabase write succeeds.
 - A rejected publish shows the Supabase reason so configuration problems are not
   hidden behind a generic error.
+- `RUN-THIS-IN-SUPABASE-THEME-FIX.sql` is the focused repair script. It installs the
+  owner-only RPC plus an owner-only direct update policy used temporarily if the RPC
+  is still absent from Supabase's API schema cache. It safely adds the shared theme,
+  equipment, and registration-setting columns when the organization table predates
+  those features.
 
 ## Display behavior
 
