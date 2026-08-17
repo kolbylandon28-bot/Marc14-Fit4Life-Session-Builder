@@ -38,11 +38,15 @@ badge, scene, particles, and themed sign color.
 - Clients see the published result but have no theme controls.
 - The selected theme uses the existing organization `brand_config` sync. Rerun the
   included `supabase-v5-role-boundaries.sql` for the V12 owner-only database trigger
-  and immediate organization Realtime broadcast. No new Vercel variable is required.
+  owner-only `update_my_organization_setup` publishing function, and immediate
+  organization Realtime broadcast. Run the complete file again if you previously
+  ran an older copy. No new Vercel variable is required.
 - Signed-in devices listen for live organization updates. All devices also refresh
   the published theme when the app opens, returns to the foreground, reconnects, and
   during a quiet periodic check if a Realtime event is unavailable.
 - A theme is not reported as published until the owner-only Supabase write succeeds.
+- A rejected publish shows the Supabase reason so configuration problems are not
+  hidden behind a generic error.
 
 ## Display behavior
 

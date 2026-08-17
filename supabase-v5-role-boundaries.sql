@@ -138,6 +138,52 @@ create trigger organizations_owner_setup_guard
 before update of brand_config, equipment_config on public.organizations
 for each row execute function public.protect_fit4life_organization_setup();
 
+-- Owner-only write path used by the Settings theme and shared gym setup controls.
+-- Recreate the exact signature so this upgrade is safe whether an older draft of
+-- the RPC exists or the project has never installed it.
+drop function if exists public.update_my_organization_setup(uuid, jsonb, jsonb);
+create function public.update_my_organization_setup(
+  target_organization uuid,
+  new_brand_config jsonb,
+  new_equipment_config jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  saved_organization jsonb;
+begin
+  if not public.is_org_owner(target_organization) then
+    raise exception 'Only an active owner can change the shared gym theme, branding, or equipment.';
+  end if;
+
+  update public.organizations as organization
+  set brand_config = coalesce(new_brand_config, organization.brand_config, '{}'::jsonb),
+      equipment_config = coalesce(new_equipment_config, organization.equipment_config, '{}'::jsonb)
+  where organization.id = target_organization
+  returning pg_catalog.jsonb_build_object(
+    'organization_id', organization.id,
+    'slug', organization.slug,
+    'name', organization.name,
+    'brand_config', organization.brand_config,
+    'equipment_config', organization.equipment_config,
+    'public_registration_enabled', organization.public_registration_enabled
+  ) into saved_organization;
+
+  if saved_organization is null then
+    raise exception 'The shared gym organization could not be found.';
+  end if;
+
+  return saved_organization;
+end;
+$$;
+
+revoke all on function public.update_my_organization_setup(uuid, jsonb, jsonb) from public;
+revoke all on function public.update_my_organization_setup(uuid, jsonb, jsonb) from anon;
+grant execute on function public.update_my_organization_setup(uuid, jsonb, jsonb) to authenticated;
+
 -- Publish organization appearance changes to authenticated devices. RLS still
 -- controls which organization rows each signed-in user can read.
 do $$
@@ -153,5 +199,8 @@ begin
   end if;
 end;
 $$;
+
+-- Ask Supabase's API layer to discover the recreated RPC immediately after commit.
+notify pgrst, 'reload schema';
 
 commit;

@@ -84,6 +84,7 @@
   window.fit4lifeCloudRegistrationRequests = [];
   window.fit4lifeCloudOrganizationId = "";
   window.fit4lifeCloudOrganizationSlug = "";
+  window.fit4lifeCloudOrganizationSettingsError = "";
   window.fit4lifeCloudIdentity = null;
   window.fit4lifeCloudTrainers = [];
   window.fit4lifeCloudTrainerRequests = [];
@@ -685,11 +686,17 @@
   }
 
   window.fit4lifeCloudSaveOrganizationSettings = async function fit4lifeCloudSaveOrganizationSettings(brand, equipment) {
+    window.fit4lifeCloudOrganizationSettingsError = "";
     if (!cloudClient || !cloudOrganizationId || cloudRole !== "owner") {
-      if (typeof showToast === "function") showToast("Only the gym owner can change shared branding and equipment");
+      window.fit4lifeCloudOrganizationSettingsError = "Only the gym owner can change shared branding and equipment";
+      if (typeof showToast === "function") showToast(window.fit4lifeCloudOrganizationSettingsError);
       return false;
     }
-    if (!brand || typeof brand !== "object" || !equipment || typeof equipment !== "object") return false;
+    if (!brand || typeof brand !== "object" || !equipment || typeof equipment !== "object") {
+      window.fit4lifeCloudOrganizationSettingsError = "The shared gym settings were incomplete and could not be published.";
+      if (typeof showToast === "function") showToast(window.fit4lifeCloudOrganizationSettingsError);
+      return false;
+    }
     const response = await cloudClient.rpc("update_my_organization_setup", {
       target_organization: cloudOrganizationId,
       new_brand_config: brand,
@@ -697,12 +704,14 @@
     });
     const saved = !response.error && Array.isArray(response.data) ? response.data[0] : response.data;
     if (response.error || !saved) {
-      if (typeof showToast === "function") showToast(response.error && response.error.message || "Gym settings could not be saved");
+      window.fit4lifeCloudOrganizationSettingsError = response.error && response.error.message || "Gym settings could not be saved";
+      if (typeof showToast === "function") showToast(window.fit4lifeCloudOrganizationSettingsError);
       return false;
     }
     applyPortalContext(saved);
     lastOrganizationSettingsLoadedAt = Date.now();
     queueCloudSync("organization");
+    window.fit4lifeCloudOrganizationSettingsError = "";
     if (typeof showToast === "function") showToast("Gym setup saved for every device");
     return true;
   };

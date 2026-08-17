@@ -1,11 +1,11 @@
-const CACHE_NAME = "fit4life-shell-2026-08-17-v12-theme-connection-r3";
+const CACHE_NAME = "fit4life-shell-2026-08-17-v12-theme-publish-r4";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
 const SHELL = [
   "/",
   "/index.html",
-  "/cloud-sync.js?v=20260817-v12-theme-connection-r3",
-  "/js/app/role-governance.js?v=20260817-v12-theme-connection-r3",
-  "/js/app/action-calendar.js?v=20260817-v12-theme-connection-r3",
+  "/cloud-sync.js?v=20260817-v12-theme-publish-r4",
+  "/js/app/role-governance.js?v=20260817-v12-theme-publish-r4",
+  "/js/app/action-calendar.js?v=20260817-v12-theme-publish-r4",
   "/dark-rock-background-v2.jpg",
   "/theme-assets/halloween-scene.jpg",
   "/theme-assets/thanksgiving-scene.jpg",

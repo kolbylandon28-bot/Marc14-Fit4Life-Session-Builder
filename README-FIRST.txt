@@ -14,7 +14,8 @@ V12 makes the F4L outline theme-aware and adds six cinematic 3D holiday scenes,
 matching ambient particles, and real scene previews in the owner picker.
 The August 17 connection repair publishes the confirmed gym membership to the
 theme controls immediately, retries the organization link once when necessary,
-and clears that context safely at sign-out.
+clears that context safely at sign-out, and installs the missing owner-only
+`update_my_organization_setup` Supabase function used to publish a theme.
 
 USE THE SAME PUBLIC LINK AFTER EVERY DEPLOYMENT
 Public production link:
@@ -112,6 +113,10 @@ V12 IMMERSIVE THEMES
   connection during startup, the control retries it once before asking for a refresh.
 - The app shell uses a new August 17 cache version so an installed app or previously
   opened browser cannot continue serving the faulty connection script.
+- The included SQL now creates the exact owner-only RPC used by the theme publisher.
+  Run the complete SQL file again even if an earlier V5/V12 copy was already run.
+- If Supabase rejects a future publish, the app now leaves the specific database
+  message visible instead of replacing it with a generic failure notice.
 
 V7 CLIENT WORKSPACE
 - The client record now has six task-based tabs: Overview, Workouts, Progress,

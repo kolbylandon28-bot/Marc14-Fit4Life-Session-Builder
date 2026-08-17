@@ -51,12 +51,15 @@ PASSED LOCALLY
   read, and the theme publisher retries the membership connection once if necessary.
 - Sign-out clears the exported and internal organization context, preventing a later
   account from inheriting the previous owner's publishing target.
-- The August 17 r3 cache tag is consistent across the HTML shell and service worker.
+- The August 17 membership-connection repair remains included in the r4 build.
+- The August 17 r4 repair includes the owner-only organization-settings RPC, exposes
+  Supabase publishing errors, and has a consistent r4 HTML/service-worker cache tag.
 
 REQUIRED BEFORE LIVE USE
 1. Upload this folder's contents to the same repository and Vercel project.
 2. Deploy/promote the intended commit to Production.
-3. Run supabase-v5-role-boundaries.sql in the connected Supabase SQL Editor.
+3. Run the complete updated supabase-v5-role-boundaries.sql in the connected
+   Supabase SQL Editor, even if an older copy was already run.
 4. Enable Vercel Authentication + Standard Protection in Project Settings >
    Deployment Protection.
 5. Test the production URL in a private browser window as an owner, trainer, and
@@ -68,6 +71,7 @@ LIVE V12 THEME CHECKS
 - [ ] Sign in as an owner and open Settings > Themes, appearance & gym setup.
 - [ ] Confirm the account indicator shows Owner and no “shared gym connection”
       warning appears when selecting the first theme after sign-in.
+- [ ] Confirm the first theme publishes without an RPC/function-not-found error.
 - [ ] Click each preset and confirm the sign outline, top-bar badge, scene thumbnail,
       bottom 3D scene, and matching ambient particles all change together.
 - [ ] Confirm New Year, Halloween, Thanksgiving, Christmas, Valentine's, and

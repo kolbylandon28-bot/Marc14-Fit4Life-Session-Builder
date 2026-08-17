@@ -273,7 +273,8 @@ async function setPortalTheme(themeId) {
   try {
     const published = await persistOrganizationAppearance(brand,equipment);
     if (!published) {
-      showToast("Theme was not published. The shared theme is unchanged."); return false;
+      const cloudError = String(window.fit4lifeCloudOrganizationSettingsError || "").trim();
+      showToast(cloudError || "Theme was not published. The shared theme is unchanged."); return false;
     }
     return true;
   } finally {
