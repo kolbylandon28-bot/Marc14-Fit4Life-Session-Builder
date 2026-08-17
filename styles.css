@@ -42,6 +42,40 @@
     --r:12px;
 }
 
+/* ---------- V13 required Trainer Consultation ---------- */
+.consultation-view{padding:28px clamp(16px,4vw,56px) 80px;max-width:1500px;margin:0 auto}
+.consultation-shell{background:linear-gradient(145deg,rgba(19,20,27,.98),rgba(10,11,16,.98));border:1px solid rgba(86,168,255,.34);border-radius:26px;padding:clamp(18px,3vw,38px);box-shadow:0 28px 80px rgba(0,0,0,.45),inset 0 1px rgba(255,255,255,.04)}
+.consultation-head{display:flex;justify-content:space-between;align-items:flex-start;gap:28px;margin-bottom:24px}
+.consultation-head h1{font-size:clamp(42px,6vw,84px);line-height:.95;margin:8px 0 12px}
+.consultation-head p{max-width:840px;color:var(--text-muted);font-size:16px;line-height:1.6}
+.consultation-progress{height:7px;background:#242733;border-radius:999px;overflow:hidden;margin:20px 0 15px}
+.consultation-progress>div{height:100%;width:20%;background:linear-gradient(90deg,#46b2ff,#3659eb);box-shadow:0 0 20px rgba(70,178,255,.7);transition:width .25s ease}
+.consultation-steps{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:24px}
+.consultation-steps button{appearance:none;border:1px solid #303440;background:#111219;color:#777d8f;border-radius:13px;padding:10px;display:flex;align-items:center;gap:8px;text-align:left;cursor:pointer}
+.consultation-steps i{width:25px;height:25px;border-radius:50%;border:1px solid #454a59;display:grid;place-items:center;font-style:normal;font:700 11px/1 ui-monospace,monospace;flex:0 0 auto}
+.consultation-steps button.on{border-color:#4aaeff;color:#fff;background:rgba(46,107,221,.15);box-shadow:inset 0 0 24px rgba(49,148,255,.08)}
+.consultation-steps button.done{color:#72c3ff;border-color:rgba(68,169,255,.38)}
+.consultation-alert{display:none;border:1px solid rgba(72,170,255,.6);background:rgba(41,102,193,.12);padding:13px 16px;border-radius:13px;margin-bottom:16px;color:#c9e8ff;line-height:1.45}
+.consultation-alert.show{display:block}.consultation-alert.error{border-color:rgba(240,107,94,.65);background:rgba(147,39,32,.18);color:#ffd0ca}
+.consultation-panel{display:none}.consultation-panel.active{display:block;animation:consultation-in .2s ease both}
+@keyframes consultation-in{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.consultation-panel-title{border-bottom:1px solid #2b2e38;padding-bottom:18px;margin-bottom:20px}.consultation-panel-title>span{color:#5db6ff;font:700 12px/1 ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase}.consultation-panel-title h2{font-size:clamp(32px,4vw,52px);margin:7px 0}.consultation-panel-title p{color:var(--text-muted);font-size:15px;line-height:1.55;max-width:920px}
+.consultation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.consultation-grid .wide{grid-column:1/-1}
+.consultation-grid .compact-field,.consultation-fieldset{border:1px solid #30333e;background:#0d0e14;border-radius:16px;padding:16px;min-width:0}
+.consultation-grid .compact-field label,.consultation-fieldset legend{color:#a2a8ba;font:700 12px/1.3 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}
+.consultation-grid input:not([type=checkbox]):not([type=radio]):not([type=range]),.consultation-grid select,.consultation-grid textarea{width:100%;margin-top:9px;border:1px solid #343744;background:#11131a;color:#f4f7ff;border-radius:12px;padding:13px 14px;font-size:16px;line-height:1.4}
+.consultation-grid textarea{min-height:104px;resize:vertical}.consultation-grid input[readonly]{color:#c1c7d6;background:#161820;cursor:not-allowed}.consultation-grid input:focus,.consultation-grid select:focus,.consultation-grid textarea:focus{outline:2px solid rgba(77,172,255,.55);border-color:#54adff}
+.consultation-fieldset{margin:0}.consultation-fieldset legend{padding:0 7px}.consultation-fieldset legend small{font-weight:500;text-transform:none;letter-spacing:0;color:#707789}
+.consultation-option-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:9px}.consultation-option-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.consultation-option-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.consultation-option{position:relative;display:block;cursor:pointer}.consultation-option input{position:absolute;opacity:0;pointer-events:none}.consultation-option span{min-height:58px;border:1px solid #343844;background:#15171e;border-radius:12px;padding:12px 13px;display:flex;flex-direction:column;justify-content:center;color:#e8ebf4;transition:border-color .15s,background .15s,box-shadow .15s}.consultation-option b{font-size:14px;line-height:1.3}.consultation-option small{color:#858c9e;margin-top:4px;line-height:1.35}.consultation-option input:checked+span{border-color:#52afff;background:linear-gradient(145deg,rgba(48,126,236,.27),rgba(31,65,136,.16));box-shadow:inset 0 0 0 1px rgba(85,178,255,.2),0 0 18px rgba(39,136,255,.08)}.consultation-option input:focus-visible+span{outline:2px solid #fff;outline-offset:2px}
+.consultation-rpe-row{display:flex;align-items:center;gap:18px;margin-top:12px}.consultation-rpe-row input{flex:1;accent-color:#3c8fff}.consultation-rpe-row output{min-width:150px;color:#64baff;font-weight:800}.consultation-help{color:#767d8f;margin-top:8px;font-size:13px}.consultation-grid .consultation-limitations-detail{display:none!important}.consultation-grid .consultation-limitations-detail.show{display:block!important}
+.consultation-review{border:1px solid #303440;border-radius:16px;overflow:hidden;background:#0d0e13}.consultation-review-row{display:grid;grid-template-columns:minmax(130px,220px) 1fr;gap:16px;padding:14px 16px;border-bottom:1px solid #292c35}.consultation-review-row:last-child{border-bottom:0}.consultation-review-row span{color:#777e90;font:700 11px/1.4 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.consultation-review-row b{color:#f1f3f8;line-height:1.5;overflow-wrap:anywhere}
+.consultation-consents{display:grid;gap:10px;margin-top:18px}.consultation-consents label{display:flex;gap:11px;align-items:flex-start;border:1px solid #303440;background:#11131a;border-radius:12px;padding:13px;color:#c2c7d4;line-height:1.45}.consultation-consents input{margin-top:3px;accent-color:#398fff}
+.consultation-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;border-top:1px solid #292c35;margin-top:24px;padding-top:20px}
+.consultation-review-dialog{max-width:1050px}.trainer-consultation-status{display:grid;gap:5px;border-left:4px solid #55afff;background:rgba(49,127,224,.12);padding:14px 16px;margin:14px 0 18px}.trainer-consultation-status span{color:#959cad;line-height:1.5}.consultation-summary-card.needs-safety-review{border-color:rgba(232,164,72,.65);box-shadow:inset 4px 0 #e7a348}.consultation-summary-card+.client-details-panel{margin-top:14px}
+@media(max-width:850px){.consultation-head{display:block}.consultation-head>button{margin-top:16px}.consultation-steps button span{display:none}.consultation-steps button{justify-content:center}.consultation-grid{grid-template-columns:1fr}.consultation-option-grid.four,.consultation-option-grid.three{grid-template-columns:repeat(2,minmax(0,1fr))}.consultation-review-row{grid-template-columns:1fr;gap:5px}}
+@media(max-width:520px){.consultation-view{padding:12px 10px 92px}.consultation-shell{padding:15px;border-radius:18px}.consultation-option-grid,.consultation-option-grid.four,.consultation-option-grid.three{grid-template-columns:1fr}.consultation-rpe-row{align-items:flex-start;flex-direction:column}.consultation-actions{justify-content:stretch}.consultation-actions .small-btn{flex:1 1 calc(50% - 8px)}}
+
 html[data-portal-theme="halloween"]{--theme-scene:url("theme-assets/halloween-scene.jpg");--theme-scene-opacity:.66;--theme-particle:"✦";--theme-particle-opacity:.52}
 html[data-portal-theme="thanksgiving"]{--theme-scene:url("theme-assets/thanksgiving-scene.jpg");--theme-scene-opacity:.62;--theme-particle:"◆";--theme-particle-opacity:.45}
 html[data-portal-theme="christmas"]{--theme-scene:url("theme-assets/christmas-scene.jpg");--theme-scene-opacity:.64;--theme-particle:"❄";--theme-particle-opacity:.58}

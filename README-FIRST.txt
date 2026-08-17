@@ -1,5 +1,5 @@
-FIT4LIFE — V12 IMMERSIVE HOLIDAY THEMES
-Build date: 2026-08-13 · owner-theme connection repair: 2026-08-17
+FIT4LIFE — V13 REQUIRED CLIENT CONSULTATION
+Build date: 2026-08-17
 
 THIS is the versioned upload folder. It preserves Update 3 programming, the stable
 production link, V5 owner/trainer boundaries, and the V6 Action Center/calendar.
@@ -12,6 +12,9 @@ V11 gives that sign an evenly spaced metallic-black face with a crisp blue outli
 and places the role-selection question inside a high-contrast translucent panel.
 V12 makes the F4L outline theme-aware and adds six cinematic 3D holiday scenes,
 matching ambient particles, and real scene previews in the owner picker.
+V13 adds the required in-app Trainer Consultation, requires clients to register with
+a BYU-I email address, and connects every submitted response to the client profile,
+workout generator, conservative safety filters, and the trainer Action Center.
 The August 17 connection repair publishes the confirmed gym membership to the
 theme controls immediately, retries the organization link once when necessary,
 clears that context safely at sign-out, and installs the missing owner-only
@@ -30,7 +33,7 @@ https://marc14-fit4-life-session-builder.vercel.app
 4. Share the production domain above—not a generated preview/deployment URL.
 5. In Vercel Project Settings > Domains, confirm the domain above is attached to
    this project and points to the latest Production deployment.
-6. After Vercel reports Ready, open the Production link and confirm V12 appears. This
+6. After Vercel reports Ready, open the Production link and confirm V13 appears. This
    release version-tags its app files, forces shell revalidation, and updates the
    service worker without relying on its browser cache.
 7. In Project Settings > Deployment Protection, enable Vercel Authentication with
@@ -64,6 +67,31 @@ V5 ROLE RULES
 - Shared attention items can be claimed, taken over with confirmation, completed,
   or released after the 45-minute claim expires.
 - Coaching notes have explicit Team, Client feedback, or Protected safety visibility.
+
+V13 CLIENT CONSULTATION + BYU-I EMAIL RULE
+- Client sign-up accepts only a BYU-I address ending in `@byui.edu`. The sign-up field and help
+  text now say “BYU-I email address” so the requirement is clear before submission.
+- Trainer requests may use either a personal email or a BYU-I email. Owner/trainer
+  sign-in behavior is otherwise unchanged.
+- After a new client confirms their email and signs in, the app opens the internal
+  Trainer Consultation before any client workspace page. It is one view in the
+  existing app—not a separate website or URL.
+- The consultation collects age, phone, fitness level, past activity, usual RPE,
+  exercise interests, primary and secondary goals, exercise preferences, physical
+  limitations/adaptations, and requested coaching support.
+- Schedule availability, preferred workout days, and session length are deliberately
+  excluded. Those fields will come from the separate registration system later.
+- Clients can save a draft. Only a successfully cloud-synced final submission unlocks
+  their workspace, preventing a device-only answer set from appearing complete.
+- Submitted answers update the client profile, goal and experience inputs, generator
+  rationale, preferred/avoided exercise context, and conservative limitation filters.
+- A submission creates a trainer Action Center task. Reported limitations raise its
+  priority. Handle opens the exact answer review, where trainers can inspect the
+  response and mark it reviewed.
+- Client answers remain stored exactly as submitted, alongside the normalized coaching
+  fields. Revisions preserve submission and trainer-review timestamps for auditability.
+- This release uses the existing synced profile/activity JSON records. It requires no
+  new Supabase table, SQL migration, or Vercel environment variable.
 
 V10 NEON + THEME PRESETS
 - V10 introduced the large fluorescent-blue F4L sign behind the portal content on

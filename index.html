@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20260817-v12-theme-publish-r6">
+<link rel="manifest" href="manifest.webmanifest?v=20260817-v13-client-consultation-r5">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20260817-v12-theme-publish-r6">
+<link rel="stylesheet" href="styles.css?v=20260817-v13-client-consultation-r5">
 </head>
 <body>
 
@@ -58,20 +58,20 @@
           <label>Full name<input id="cloudSignUpName" type="text" autocomplete="name" placeholder="Jordan Smith" maxlength="80"></label>
           <label>Username<input id="cloudSignUpUsername" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="jordan-smith" maxlength="40"></label>
         </div>
-        <label>Email address<input id="cloudSignUpEmail" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com"></label>
+        <label>BYU-I email address<input id="cloudSignUpEmail" type="email" autocomplete="email" inputmode="email" placeholder="name@byui.edu"></label>
         <div class="cloud-auth-row">
           <label>Password<input id="cloudSignUpPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>
           <label>Confirm password<input id="cloudSignUpConfirm" type="password" autocomplete="new-password" placeholder="Repeat password" onkeydown="if(event.key==='Enter')fit4lifeCloudSignUp()"></label>
         </div>
-        <label class="cloud-auth-checkbox"><input id="cloudSignUpConsent" type="checkbox"><span>I understand that this creates a client account. I will verify the message sent to my own email before accessing the client workspace.</span></label>
+        <label class="cloud-auth-checkbox"><input id="cloudSignUpConsent" type="checkbox"><span>I understand that this creates a client account. I will verify the message sent to my BYU-I email before accessing the client workspace.</span></label>
       </div>
       <button class="cloud-auth-submit" id="cloudSignUpSubmit" onclick="fit4lifeCloudSignUp()">Create client account</button>
-      <div class="cloud-auth-note">Client accounts only. After email verification, the login connects to a matching trainer-created profile or creates one protected client profile. Trainer access can never be selected or created from this form; a separate verified trainer request must be confirmed by approved gym staff.</div>
+      <div class="cloud-auth-note">Client accounts require a BYU-I email ending in @byui.edu. After email verification, the login connects to one protected client profile and opens the required Trainer Consultation. Trainer access can use a personal or BYU-I email, but must be requested separately and approved by gym staff.</div>
     </div>
     <div class="cloud-auth-panel" id="cloudTrainerSignUpPanel">
       <div class="cloud-auth-fields">
         <label>Full name<input id="cloudTrainerSignUpName" type="text" autocomplete="name" placeholder="Jordan Smith" maxlength="80"></label>
-        <label>Work email address<input id="cloudTrainerSignUpEmail" type="email" autocomplete="email" inputmode="email" placeholder="trainer@example.com"></label>
+        <label>Trainer email address (personal or BYU-I)<input id="cloudTrainerSignUpEmail" type="email" autocomplete="email" inputmode="email" placeholder="trainer@example.com"></label>
         <div class="cloud-auth-row">
           <label>Password<input id="cloudTrainerSignUpPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>
           <label>Confirm password<input id="cloudTrainerSignUpConfirm" type="password" autocomplete="new-password" placeholder="Repeat password" onkeydown="if(event.key==='Enter')fit4lifeCloudTrainerSignUp()"></label>
@@ -202,6 +202,73 @@
     <label for="trainerClientPreviewSelect">Viewing client<select id="trainerClientPreviewSelect" onchange="switchTrainerClientPreview(this.value)"></select></label>
     <button class="small-btn" type="button" onclick="exitTrainerClientPreview()">Return to owner workspace</button>
   </aside>
+
+  <!-- REQUIRED IN-APP CLIENT CONSULTATION -->
+  <section class="view consultation-view" id="view-client-consultation">
+    <div class="consultation-shell">
+      <header class="consultation-head">
+        <div><span class="portal-question">Required client setup</span><h1>Trainer <span class="grad-text">Consultation</span></h1><p>Tell the coaching team what you want from training. Your answers update your coaching profile and help the workout generator make a safer, more useful starting plan.</p></div>
+        <button class="small-btn" type="button" onclick="saveClientConsultationAndSignOut()">Save later &amp; sign out</button>
+      </header>
+      <div class="consultation-progress" aria-label="Questionnaire progress"><div id="consultationProgressFill"></div></div>
+      <nav class="consultation-steps" id="consultationStepNav" aria-label="Consultation steps"></nav>
+      <div class="consultation-alert" id="consultationAlert" role="status" aria-live="polite"></div>
+      <form id="clientConsultationForm" onsubmit="event.preventDefault();submitClientConsultation()" novalidate>
+        <section class="consultation-panel" data-consultation-step="1">
+          <div class="consultation-panel-title"><span>1 of 5</span><h2>About you</h2><p>We use this information to connect the answers to the correct protected client profile.</p></div>
+          <div class="consultation-grid">
+            <div class="compact-field wide"><label for="consultationName">Full name</label><input id="consultationName" type="text" readonly><span class="storage-note">Connected to your verified client profile.</span></div>
+            <div class="compact-field wide"><label for="consultationEmail">Verified BYU-I email</label><input id="consultationEmail" type="email" readonly><span class="storage-note">Client accounts must use a BYU-I email. Trainers may use a personal or BYU-I email.</span></div>
+            <div class="compact-field"><label for="consultationPhone">Phone number</label><input id="consultationPhone" type="tel" autocomplete="tel" placeholder="(208) 555-0123"></div>
+            <div class="compact-field"><label for="consultationAge">Age</label><input id="consultationAge" type="number" min="13" max="100" inputmode="numeric" placeholder="Age in years"></div>
+            <fieldset class="consultation-fieldset wide"><legend>How would you describe your current fitness level?</legend><div class="consultation-option-grid three" id="consultationFitnessLevel"></div></fieldset>
+          </div>
+        </section>
+
+        <section class="consultation-panel" data-consultation-step="2">
+          <div class="consultation-panel-title"><span>2 of 5</span><h2>Your activity background</h2><p>Past experience and familiar activities help the generator choose an appropriate level and training route.</p></div>
+          <div class="consultation-grid">
+            <div class="compact-field wide"><label for="consultationPastActivities">What types of physical activity have you done in the past?</label><textarea id="consultationPastActivities" placeholder="Examples: sports, running, lifting, classes, swimming, or none yet"></textarea></div>
+            <fieldset class="consultation-fieldset wide"><legend>At what intensity do you normally exercise?</legend><div class="consultation-rpe-row"><input id="consultationRpe" type="range" min="1" max="10" step="1" value="5" oninput="renderConsultationRpe(this.value)"><output id="consultationRpeOutput" for="consultationRpe">5 · Moderate</output></div><p class="consultation-help">1 is very easy. 10 is an all-out effort you could not maintain.</p></fieldset>
+            <fieldset class="consultation-fieldset wide"><legend>What types of exercise interest you?</legend><div class="consultation-option-grid four" id="consultationInterests"></div></fieldset>
+          </div>
+        </section>
+
+        <section class="consultation-panel" data-consultation-step="3">
+          <div class="consultation-panel-title"><span>3 of 5</span><h2>Goals &amp; exercise preferences</h2><p>Your primary goal drives the session structure. Exercise preferences help the generator use familiar, motivating movements and avoid poor-fit choices.</p></div>
+          <div class="consultation-grid">
+            <div class="compact-field wide"><label for="consultationPrimaryGoal">What is your main fitness goal?</label><select id="consultationPrimaryGoal"><option value="">Choose one main goal…</option></select></div>
+            <fieldset class="consultation-fieldset wide"><legend>Any secondary goals? <small>Choose up to two</small></legend><div class="consultation-option-grid two" id="consultationSecondaryGoals"></div></fieldset>
+            <div class="compact-field wide"><label for="consultationFavorites">Favorite exercises we should include</label><textarea id="consultationFavorites" placeholder="Separate exercises with commas or new lines"></textarea></div>
+            <div class="compact-field wide"><label for="consultationDislikes">Least favorite exercises</label><textarea id="consultationDislikes" placeholder="Separate exercises with commas or new lines"></textarea></div>
+            <div class="compact-field wide"><label for="consultationUnfamiliar">Exercises or gym activities you do not know how to do yet</label><textarea id="consultationUnfamiliar" placeholder="This helps your trainer plan instruction and simpler starting options"></textarea></div>
+          </div>
+        </section>
+
+        <section class="consultation-panel" data-consultation-step="4">
+          <div class="consultation-panel-title"><span>4 of 5</span><h2>Limitations &amp; coaching support</h2><p>Client-reported limitations immediately create conservative exercise filters and a trainer-review task. This is not medical screening or diagnosis.</p></div>
+          <div class="consultation-grid">
+            <fieldset class="consultation-fieldset wide"><legend>Do you have any physical limitations or adaptations we should know about?</legend><div class="consultation-option-grid two" id="consultationHasLimitations"></div></fieldset>
+            <fieldset class="consultation-fieldset wide consultation-limitations-detail"><legend>Where does the limitation affect you?</legend><div class="consultation-option-grid four" id="consultationLimitationAreas"></div></fieldset>
+            <div class="compact-field wide consultation-limitations-detail"><label for="consultationLimitationDetails">Describe the limitation, adaptation, or movements that bother you</label><textarea id="consultationLimitationDetails" placeholder="Example: My right ankle is sprained; running and jumping are uncomfortable"></textarea></div>
+            <fieldset class="consultation-fieldset wide"><legend>What would you most like from your trainer?</legend><div class="consultation-option-grid two" id="consultationSupport"></div></fieldset>
+            <div class="compact-field wide"><label for="consultationSupportOther">Anything else you want your trainer to know?</label><textarea id="consultationSupportOther" placeholder="Optional coaching preference or concern"></textarea></div>
+          </div>
+        </section>
+
+        <section class="consultation-panel" data-consultation-step="5">
+          <div class="consultation-panel-title"><span>5 of 5</span><h2>Review &amp; submit</h2><p>Review the summary below. You can update this consultation later from More → Account &amp; profile.</p></div>
+          <div id="consultationReview" class="consultation-review"></div>
+          <div class="consultation-consents">
+            <label><input id="consultationTruth" type="checkbox"> My answers are accurate to the best of my knowledge.</label>
+            <label><input id="consultationPrivacy" type="checkbox"> I understand these answers are shared with approved Fit4Life trainers for coaching.</label>
+            <label><input id="consultationNotMedical" type="checkbox"> I understand this questionnaire and the workout generator do not provide medical diagnosis or clearance.</label>
+          </div>
+        </section>
+        <div class="consultation-actions"><button class="small-btn" id="consultationBackBtn" type="button" onclick="changeConsultationStep(-1)">Back</button><button class="small-btn" type="button" onclick="saveClientConsultationDraft()">Save draft</button><button class="small-btn primary" id="consultationNextBtn" type="button" onclick="changeConsultationStep(1)">Continue</button><button class="small-btn primary" id="consultationSubmitBtn" type="submit">Submit consultation</button></div>
+      </form>
+    </div>
+  </section>
 
   <!-- PROGRAM-LED CLIENT APP -->
   <section class="view client-app-view" id="view-client-home">
@@ -928,7 +995,7 @@
     <div class="compact-grid">
       <div class="compact-field wide"><label for="profileEditName">Client name</label><input id="profileEditName" type="text" placeholder="Client name"></div>
       <div class="compact-field wide"><label for="profileEditUsername">Username</label><input id="profileEditUsername" type="text" autocomplete="off" placeholder="name-or-member-id"></div>
-      <div class="compact-field wide"><label for="profileEditEmail">Client login email</label><input id="profileEditEmail" type="email" autocomplete="off" placeholder="Required for cross-device client access"><span class="storage-note">This must exactly match the client’s Supabase login email.</span></div>
+      <div class="compact-field wide"><label for="profileEditEmail">Client BYU-I login email</label><input id="profileEditEmail" type="email" autocomplete="off" placeholder="name@byui.edu"><span class="storage-note">Client profiles require the exact verified BYU-I login email. Trainer accounts may use personal or BYU-I email.</span></div>
       <div class="compact-field wide"><label for="profileEditTrainer">Primary coach</label><select id="profileEditTrainer"><option value="">Shared client / no primary coach</option></select><span class="storage-note">Every approved trainer can still view and coach this client. This selection identifies who leads routine follow-up.</span><button id="profileTrainerRequestBtn" data-trainer-only class="small-btn" type="button" onclick="openOwnerRequestDialog('primary_trainer',byId('profileEditId').value,'','Reassign this client’s primary coach')">Request reassignment</button></div>
       <div class="compact-field"><label for="profileEditPrimary">Primary goal</label><select id="profileEditPrimary"></select></div>
       <div class="compact-field"><label for="profileEditSecondary">Secondary goal</label><select id="profileEditSecondary"></select></div>
@@ -950,6 +1017,14 @@
     <div class="profile-editor-section"><label>Exercise preferences</label><div class="preference-editor"><div class="compact-field"><input id="profilePreferenceExercise" list="profileExerciseNames" placeholder="Exercise name"><datalist id="profileExerciseNames"></datalist></div><div class="compact-field"><select id="profilePreferenceValue"><option value="favorite">Favorite</option><option value="like">Like</option><option value="neutral">Neutral</option><option value="dislike">Dislike</option><option value="unfamiliar">Unfamiliar</option><option value="discomfort">Causes discomfort</option><option value="unavailable">Unavailable</option></select></div><button class="small-btn" type="button" onclick="setProfileExercisePreference()">Set preference</button></div><div id="profilePreferenceList" class="preference-list"></div></div>
     <div class="tool-actions"><button class="small-btn primary" id="profileEditorSaveBtn" onclick="saveProfileEditor()">Save changes</button><button class="small-btn" onclick="closeProfileEditor()">Cancel</button><button class="small-btn danger" id="profileEditorDeleteBtn" onclick="deleteProfileFromEditor()">Delete profile only</button><button class="small-btn danger" id="profileEditorDeleteAllBtn" onclick="openCompleteDeleteFromEditor()">Delete everything</button></div>
     <p class="storage-note" id="profileEditorDeleteNote">“Delete profile only” keeps completed history. “Delete everything” permanently removes every saved record for this client.</p>
+  </div>
+</div>
+
+<div id="trainerConsultationModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="trainerConsultationTitle">
+  <div class="review-dialog consultation-review-dialog">
+    <div class="modal-head"><div><span class="portal-question">Client consultation</span><h2 id="trainerConsultationTitle">Review client answers</h2></div><button class="icon-close" type="button" aria-label="Close consultation review" onclick="closeTrainerConsultationReview()">×</button></div>
+    <div id="trainerConsultationContent"></div>
+    <div class="tool-actions"><button class="small-btn primary" id="trainerConsultationReviewBtn" type="button" onclick="markTrainerConsultationReviewed()">Mark reviewed</button><button class="small-btn" type="button" onclick="openTrainerConsultationLimitations()">Review profile limitations</button><button class="small-btn" type="button" onclick="closeTrainerConsultationReview()">Close</button></div>
   </div>
 </div>
 
@@ -1162,23 +1237,24 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/engine/exercise-library.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/engine/session-engine.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/engine/session-builders.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/engine/personalization.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/app/navigation.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/app/program-app.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/app/forms.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/engine/generation.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/app/rendering.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/app/calculations-timers.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/engine/multiweek-programs.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/app/readiness-progress.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/trainer/trainer-hub.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/trainer/coaching-support.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/app/role-governance.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/app/action-calendar.js?v=20260817-v12-theme-publish-r6"></script>
-<script src="js/init.js?v=20260817-v12-theme-publish-r6"></script>
+<script src="cloud-sync.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/engine/exercise-library.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/engine/session-engine.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/engine/session-builders.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/engine/personalization.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/app/navigation.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/app/program-app.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/app/forms.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/engine/generation.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/app/rendering.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/app/calculations-timers.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/engine/multiweek-programs.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/app/readiness-progress.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/app/client-consultation.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/trainer/trainer-hub.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/trainer/coaching-support.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/app/role-governance.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/app/action-calendar.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="js/init.js?v=20260817-v13-client-consultation-r5"></script>
 </body>
 </html>

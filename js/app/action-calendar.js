@@ -102,7 +102,7 @@ function resolveCalendarNoticesForEvent(eventId) {
 function actionCategoryForKind(kind) {
   if (["pain","readiness"].includes(kind)) return "safety";
   if (["message","recognition"].includes(kind)) return "messages";
-  if (["workout","workout_request","checkin","recovery","recovery_due","program","baseline","receipt_weekly","receipt_formal"].includes(kind)) return "workouts";
+  if (["workout","workout_request","checkin","recovery","recovery_due","program","baseline","receipt_weekly","receipt_formal","consultation"].includes(kind)) return "workouts";
   if (["calendar_event","calendar_notice"].includes(kind)) return "schedule";
   if (["trainer_request","account_request"].includes(kind)) return "access";
   if (kind === "owner_request") return "approvals";
@@ -120,6 +120,11 @@ function actionSourceIsResolved(item) {
     const event = calendarEventById(item.eventId);
     if (!event || ["completed","cancelled"].includes(event.status)) return true;
     return event.source === "assignment" && event.status === "missed" && Boolean(event.scheduleHandledAt);
+  }
+  if (item.kind === "consultation") {
+    const profile = loadProfiles().find((entry) => entry.id === item.profileId), consultation = profile && profile.consultation;
+    if (!consultation || consultation.status !== "submitted") return true;
+    return Boolean(consultation.reviewedAt && new Date(consultation.reviewedAt) >= new Date(consultation.lastClientSubmittedAt || consultation.submittedAt || 0));
   }
   return false;
 }
@@ -154,6 +159,13 @@ window.trainerAttentionSnapshot = function v6TrainerAttentionSnapshot() {
   });
   (window.fit4lifeCloudRegistrationRequests || []).filter((request) => request.requested_role !== "trainer" && request.status === "pending").forEach((request) => additions.push({id:"account-request:" + request.id,profileId:"",client:request.full_name || request.email || "New client",trainer:"Coaching team",kind:"account_request",urgency:"normal",rank:3,createdAt:request.created_at,label:"Client access request",detail:"Verify and connect this client account before assigning work."}));
   loadCalendarNotices().filter((notice) => notice.requiresAction && !notice.resolvedAt).forEach((notice) => additions.push({id:"calendar-notice:" + notice.id,eventId:notice.eventId,profileId:notice.profileId || "",client:notice.client || "Workspace",trainer:"Coaching team",kind:"calendar_notice",urgency:"high",rank:1,createdAt:notice.createdAt,label:notice.label || "Schedule update",detail:notice.detail || notice.reason || "Review this schedule change."}));
+  profiles.filter((profile) => {
+    const consultation = profile.consultation;
+    return consultation && consultation.status === "submitted" && (!consultation.reviewedAt || new Date(consultation.reviewedAt) < new Date(consultation.lastClientSubmittedAt || consultation.submittedAt || 0));
+  }).forEach((profile) => {
+    const consultation = profile.consultation, limitations = consultation.limitations && consultation.limitations.hasLimitations === "yes";
+    additions.push({id:"consultation:" + profile.id + ":" + Number(consultation.revision || 1),profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"consultation",urgency:limitations ? "high" : "normal",rank:limitations ? 1 : 2,createdAt:consultation.lastClientSubmittedAt || consultation.submittedAt,label:limitations ? "Consultation limitation review" : "Trainer Consultation submitted",detail:limitations ? "Review the client-reported limitation and confirm the conservative profile filters." : "Review goals, experience, exercise preferences, and requested coaching support.",primaryCoach:Boolean(profile.assignedTrainerId && profile.assignedTrainerId === calendarIdentity().id)});
+  });
   allCoachCalendarEvents().filter((event) => event.status === "missed" || event.source === "calendar" && event.type === "followup" && ["scheduled","rescheduled"].includes(event.status) && calendarDate(event.date) <= calendarDate(calendarDateKey(new Date()))).forEach((event) => additions.push({id:"calendar-event:" + event.id,eventId:event.id,profileId:event.profileId || "",client:event.client || "Workspace",trainer:event.trainerName || "Coaching team",kind:"calendar_event",urgency:event.status === "missed" ? "high" : "normal",rank:event.status === "missed" ? 1 : 3,createdAt:event.updatedAt || event.createdAt || event.date,label:event.status === "missed" ? (event.type === "workout" ? "Missed workout follow-up" : "Missed appointment follow-up") : "Scheduled follow-up due",detail:event.title + " · " + calendarDateLabel(event.date) + (event.startTime ? " at " + calendarFormatTime(event.startTime) : "")}));
   const state = loadAttentionState(), map = new Map(), messages = loadLocalArray(CLIENT_MESSAGES_KEY);
   snapshot.items.concat(additions).filter((item) => {
@@ -173,6 +185,7 @@ window.trainerAttentionSnapshot = function v6TrainerAttentionSnapshot() {
 
 const legacyOpenCoachAttentionItem = window.openCoachAttentionItem;
 window.openCoachAttentionItem = function v6OpenCoachAttentionItem(profileId,kind,itemId) {
+  if (kind === "consultation") { openCoachDestination("clients"); setTimeout(() => openTrainerConsultationReview(profileId),30); return; }
   if (kind === "calendar_notice") { const notice = loadCalendarNotices().find((entry) => "calendar-notice:" + entry.id === itemId); openCoachDestination("calendar"); if (notice) setTimeout(() => openCalendarEventEditor(notice.eventId),30); return; }
   if (kind === "calendar_event") { openCoachDestination("calendar"); setTimeout(() => openCalendarEventEditor(String(itemId).replace(/^calendar-event:/,"")),30); return; }
   if (kind === "workout_request") {

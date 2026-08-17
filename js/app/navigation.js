@@ -19,16 +19,18 @@ function syncTrainerClientPreviewBar() {
 }
 function show(view) {
   const signedInRole = window.fit4lifeCloudRole || "";
-  const clientOnlyView = CLIENT_APP_VIEWS.includes(view) || ["client-menu","client-workout","active-workout","checkin"].includes(view);
+  const clientOnlyView = CLIENT_APP_VIEWS.includes(view) || ["client-menu","client-workout","client-consultation","active-workout","checkin"].includes(view);
+  if (signedInRole === "client" && activeClientProfile() && view !== "client-consultation" && clientOnlyView && typeof clientNeedsRequiredConsultation === "function" && clientNeedsRequiredConsultation()) { openClientConsultation(true); return; }
   if (signedInRole === "trainer" && clientOnlyView) { portalRole = "trainer"; view = "trainer-menu"; showToast("Trainer accounts use the coaching workspace only"); }
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
   const target = document.getElementById("view-" + view); if (target) target.classList.add("active");
   currentView = view;
   const home = document.getElementById("homeBtn"), context = document.getElementById("portalContext");
   const inMenu = ["trainer-menu","client-menu"].includes(view);
-  home.classList.toggle("show", view !== "home" && view !== "client-home" && (view !== "trainer-menu" || signedInTrainerCanPreview()));
+  const requiredConsultation = view === "client-consultation" && typeof clientNeedsRequiredConsultation === "function" && clientNeedsRequiredConsultation();
+  home.classList.toggle("show", !requiredConsultation && view !== "home" && view !== "client-home" && (view !== "trainer-menu" || signedInTrainerCanPreview()));
   home.textContent = view === "trainer-menu" && signedInTrainerCanPreview() ? "\u2190 Choose side" : CLIENT_APP_VIEWS.includes(view) ? "\u2190 Client home" : view === "active-workout" ? "\u2190 Leave workout" : inMenu ? "\u2190 Workspace" : portalRole ? "\u2190 " + (portalRole === "trainer" ? "Trainer" : "Client") + " workspace" : "\u2190 Home";
-  context.textContent = portalRole ? (portalRole === "trainer" ? "Trainer workspace" : trainerClientPreviewActive() ? "Owner preview · client side" : "Client workspace") : "";
+  context.textContent = portalRole ? (portalRole === "trainer" ? "Trainer workspace" : view === "client-consultation" ? "Client setup" : trainerClientPreviewActive() ? "Owner preview · client side" : "Client workspace") : "";
   context.classList.toggle("show", Boolean(portalRole) && view !== "home");
   const clientNav = document.getElementById("clientBottomNav"), showClientNav = portalRole === "client" && CLIENT_APP_VIEWS.includes(view);
   if (clientNav) { clientNav.classList.toggle("show",showClientNav); clientNav.querySelectorAll("button").forEach((button) => button.classList.toggle("on",view === "client-" + button.dataset.clientTab)); }
@@ -56,12 +58,13 @@ function routeAuthenticatedWorkspace() {
   const role = window.fit4lifeCloudRole || "";
   if (role === "owner") { portalRole = ""; show("home"); return "owner"; }
   if (role === "trainer") { portalRole = "trainer"; show("trainer-menu"); return "trainer"; }
-  if (role === "client") { portalRole = "client"; if (activeClientProfile()) openClientTab("home"); else show("client-menu"); return "client"; }
+  if (role === "client") { portalRole = "client"; if (activeClientProfile() && typeof clientNeedsRequiredConsultation === "function" && clientNeedsRequiredConsultation()) openClientConsultation(true); else if (activeClientProfile()) openClientTab("home"); else show("client-menu"); return "client"; }
   portalRole = ""; show("home"); return "";
 }
 function switchPortalRole() { routeAuthenticatedWorkspace(); }
 function returnToPortalHome() { routeAuthenticatedWorkspace(); }
 function goHome() {
+  if (currentView === "client-consultation" && typeof clientNeedsRequiredConsultation === "function" && clientNeedsRequiredConsultation()) { openClientConsultation(true); return; }
   if (currentView === "active-workout") { leaveActiveWorkout(); return; }
   if (CLIENT_APP_VIEWS.includes(currentView)) { openClientTab("home"); return; }
   if (["trainer-menu","client-menu"].includes(currentView)) { switchPortalRole(); return; }
@@ -101,6 +104,7 @@ function clearActiveClient() { try { localStorage.removeItem(ACTIVE_CLIENT_KEY);
 function openClientTab(tab) {
   if ((window.fit4lifeCloudRole || "") === "trainer") { portalRole = "trainer"; show("trainer-menu"); showToast("Trainer accounts cannot enter the client-side workspace"); return null; }
   if (!activeClientProfile()) { openClientWorkout(); return; }
+  if ((window.fit4lifeCloudRole || "") === "client" && typeof clientNeedsRequiredConsultation === "function" && clientNeedsRequiredConsultation()) { openClientConsultation(true); return null; }
   const safe = ["home","program","progress","coach","more"].includes(tab) ? tab : "home";
   portalRole = "client"; show("client-" + safe);
 }

@@ -409,6 +409,7 @@ function loadProfileIntoTarget(profile, target) {
     trainingPhase:profile.trainingPhase || "general", phaseStartedAt:profile.phaseStartedAt || "", availableDays:Number(profile.availableDays) || 3,
     sport:profile.sport || "", sportSchedule:profile.sportSchedule || "", competitionDate:profile.competitionDate || "",
     exercisePreferences:{ ...(profile.exercisePreferences || {}) }, phaseCompoundAnchors:{ ...(profile.phaseCompoundAnchors || {}) },
+    usualTrainingRpe:Number(profile.usualTrainingRpe) || null,coachingPriorities:[...(profile.coachingPriorities || [])],coachingPreferenceNote:profile.coachingPreferenceNote || "",pastPhysicalActivities:profile.pastPhysicalActivities || "",fitnessInterests:[...(profile.fitnessInterests || [])],
   });
   renderForms(); updateHint(); showToast("Loaded " + profile.name + " with saved goals and limitations"); return profile;
 }
@@ -475,4 +476,3 @@ function updateHint() {
   const activePeople = state.mode === "solo" ? [state.solo] : [state.p1,state.p2], cardioEquipmentMissing = activePeople.some((p) => ((p.goals && p.goals.length) || p.goal) && p.experience && p.minutes && resolvedTrainingRoute(p) === "cardio" && !personReady(p));
   hint.textContent = ready ? "" : cardioEquipmentMissing ? "This cardio route needs Cardio equipment selected—or Bodyweight when jump rope / any mode is appropriate." : "Pick at least one goal, experience level, and session length.";
 }
-

@@ -133,22 +133,24 @@
 
   function initializeLocalInteractionTest() {
     const today = new Date(), missedDate = new Date(today.getFullYear(),today.getMonth(),today.getDate() - 1), dateKey = [missedDate.getFullYear(),String(missedDate.getMonth() + 1).padStart(2,"0"),String(missedDate.getDate()).padStart(2,"0")].join("-");
+    let interactionRole = "owner"; try { if (new URLSearchParams(window.location.search).get("role") === "client") interactionRole = "client"; } catch (_) {}
     const profileId = "interaction-test-client", assignmentId = "interaction-test-assignment", savedStaffName = String(localStorage.getItem("fit4life_interaction_staff_name_v1") || "Interaction Test Owner").trim() || "Interaction Test Owner";
     const profiles = readJson(CLOUD_KEYS.profiles, []);
     if (!profiles.some((profile) => profile && profile.id === profileId)) {
-      profiles.push({id:profileId,name:"Interaction Test Client",username:"interaction-test",email:"interaction@example.test",age:30,experience:2,minutes:60,availableDays:3,goals:["general"],muscles:[],injuries:[],zones:[],assignedTrainerId:"interaction-test-owner",assignedTrainerName:"Interaction Test Owner",createdAt:new Date().toISOString()});
+      profiles.push({id:profileId,name:"Interaction Test Client",username:"interaction-test",email:"interaction@byui.edu",age:30,experience:2,minutes:60,availableDays:3,goals:["general"],muscles:[],injuries:[],zones:[],assignedTrainerId:"interaction-test-owner",assignedTrainerName:"Interaction Test Owner",createdAt:new Date().toISOString()});
       writeJson(CLOUD_KEYS.profiles,profiles);
     }
+    if (interactionRole === "client") { const testProfile = profiles.find((profile) => profile && profile.id === profileId); if (testProfile) { testProfile.email = "interaction@byui.edu"; testProfile.consultation = {}; writeJson(CLOUD_KEYS.profiles,profiles); } }
     const assignments = readJson(CLOUD_KEYS.assignments, []);
     if (!assignments.some((assignment) => assignment && assignment.id === assignmentId)) {
       assignments.push({id:assignmentId,profileId,client:"Interaction Test Client",status:"assigned",scheduledDate:dateKey,scheduledTime:"12:30",assignedAt:new Date().toISOString(),session:{type:"solo",data:{sessionId:"interaction-test-session",goalLabel:"Interaction Test Workout",spec:{client:"Interaction Test Client",goal:"general"},blocks:[]}}});
       writeJson(CLOUD_KEYS.assignments,assignments);
     }
     try { localStorage.setItem(CLOUD_KEYS.activeClient,profileId); } catch (_) {}
-    cloudUser = {id:"interaction-test-owner",email:"owner@interaction.test",user_metadata:{display_name:savedStaffName}};
-    cloudRole = "owner"; cloudReady = true;
-    window.fit4lifeCloudRole = "owner"; window.fit4lifeCloudReady = true;
-    window.fit4lifeCloudIdentity = {id:cloudUser.id,email:cloudUser.email,role:"owner",displayName:savedStaffName};
+    cloudUser = interactionRole === "client" ? {id:"interaction-test-client-user",email:"interaction@byui.edu",user_metadata:{display_name:"Interaction Test Client"}} : {id:"interaction-test-owner",email:"owner@interaction.test",user_metadata:{display_name:savedStaffName}};
+    cloudRole = interactionRole; cloudReady = true;
+    window.fit4lifeCloudRole = interactionRole; window.fit4lifeCloudReady = true;
+    window.fit4lifeCloudIdentity = {id:cloudUser.id,email:cloudUser.email,role:interactionRole,displayName:interactionRole === "client" ? "Interaction Test Client" : savedStaffName};
     window.fit4lifeCloudTrainers = [{user_id:cloudUser.id,display_name:savedStaffName,email:cloudUser.email,role:"owner",is_active:true}];
     showAuthGate(false); cloudStatus("Local interaction test", "offline"); authMessage("", false);
     setTimeout(() => { refreshVisibleApp(); if (typeof routeAuthenticatedWorkspace === "function") routeAuthenticatedWorkspace(); },0);
@@ -187,6 +189,10 @@
 
   function normalizedEmail(value) {
     return String(value || "").trim().toLowerCase();
+  }
+
+  function clientByuiEmail(value) {
+    return /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@byui\.edu$/i.test(normalizedEmail(value));
   }
 
   function normalizedName(value) {
@@ -463,7 +469,7 @@
     }
     const copy = {
       signin: ["Sign in to your workspace", "Access your workouts and progress from any device."],
-      signup: ["Create your client account", "Verify the message sent to your email, then sign in to the client workspace."],
+      signup: ["Create your client account", "Use your BYU-I email, verify the message, then complete the required Trainer Consultation."],
       trainer_signup: ["Request trainer access", "Create a verified login, then wait for an approved gym trainer or owner to confirm trainer permissions."],
       reset: ["Reset your password", "We will email you a secure link to choose a new password."],
       update: ["Choose a new password", "Enter a new password for your training account."],
@@ -506,7 +512,7 @@
       setText("cloudPendingTitle", "Check your email");
       setText("cloudPendingCopy", trainerRequest
         ? "Open the verification email sent to your address. After verification, an approved gym trainer or owner can confirm access from the Trainer Access center."
-        : "Open the verification email sent to your address. After verification, return here and sign in to activate your client workspace.");
+        : "Open the verification message sent to your BYU-I email. After verification, return here and sign in to complete the required Trainer Consultation.");
       setText("cloudPendingCheck", "I verified my email");
     } else if (trainerRequest) {
       setText("cloudPendingIcon", "⏳");
@@ -516,7 +522,7 @@
     } else {
       setText("cloudPendingIcon", "✓");
       setText("cloudPendingTitle", "Finish client activation");
-      setText("cloudPendingCopy", "Your email is verified. Sign in again if needed; the app will connect or create your protected client profile automatically.");
+      setText("cloudPendingCopy", "Your BYU-I email is verified. Sign in again if needed; the app will connect your protected client profile and open the required Trainer Consultation.");
       setText("cloudPendingCheck", "Open client workspace");
     }
     showAuthGate(true);
@@ -902,11 +908,22 @@
       if (key === profile.id || key.indexOf(profile.id + ":") === 0) dailyForProfile[key] = daily[key];
     });
     const activeWorkout = readJson(CLOUD_KEYS.activeWorkout, null);
+    const consultation = profile.consultation || {};
     return {
-      version: 3,
+      version: 4,
       profileId: profile.id,
       clientIntake: profile.intake || {},
       clientIntakeUpdatedAt: profile.intake && profile.intake.updatedAt || null,
+      clientConsultation: consultation,
+      clientConsultationUpdatedAt: consultation.updatedAt || consultation.submittedAt || null,
+      clientConsultationProfile: consultation.status === "submitted" ? {
+        sourceSubmittedAt:consultation.lastClientSubmittedAt || consultation.submittedAt || null,
+        phone:profile.phone || "",contactPhone:profile.contactPhone || "",age:profile.age,experience:profile.experience,goals:profile.goals || [],trainingStyle:profile.trainingStyle || "auto",
+        pastPhysicalActivities:profile.pastPhysicalActivities || "",fitnessInterests:profile.fitnessInterests || [],usualTrainingRpe:profile.usualTrainingRpe || null,coachingPriorities:profile.coachingPriorities || [],coachingPreferenceNote:profile.coachingPreferenceNote || "",
+        favoriteExerciseNotes:profile.favoriteExerciseNotes || "",leastFavoriteExerciseNotes:profile.leastFavoriteExerciseNotes || "",unfamiliarMovements:profile.unfamiliarMovements || "",
+        consultationDerivedInjuries:profile.consultationDerivedInjuries || [],manualInjuries:profile.manualInjuries || [],injuries:profile.injuries || [],limitationAssessments:profile.limitationAssessments || {},consultationLimitationDetails:profile.consultationLimitationDetails || "",limitationReviewRequired:Boolean(profile.limitationReviewRequired),
+        consultationDerivedPreferenceIds:profile.consultationDerivedPreferenceIds || [],exercisePreferences:profile.exercisePreferences || {},updatedAt:profile.updatedAt || consultation.updatedAt || null
+      } : {},
       progress: profileProgress(profile),
       checkIns: readJson(CLOUD_KEYS.checkins, []).filter((item) => itemBelongsToProfile(item, profile)),
       messages: readJson(CLOUD_KEYS.clientMessages, []).filter((item) => itemBelongsToProfile(item, profile)),
@@ -1084,6 +1101,29 @@
     return intakeTime(activityIntake,activity) >= intakeTime(planIntake,plan) ? activityIntake : planIntake;
   }
 
+  function consultationTime(consultation,bundle) {
+    const value = consultation && (consultation.updatedAt || consultation.lastClientSubmittedAt || consultation.submittedAt) || bundle && (bundle.clientConsultationUpdatedAt || bundle.savedAt) || "";
+    const parsed = Date.parse(value); return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function newestClientConsultation(plan,activity) {
+    const planValue = plan && plan.profile && plan.profile.consultation || {}, activityValue = activity && activity.clientConsultation || {};
+    const planReady = meaningfulIntake(planValue), activityReady = meaningfulIntake(activityValue);
+    if (planReady && !activityReady) return planValue;
+    if (activityReady && !planReady) return activityValue;
+    if (!planReady && !activityReady) return {};
+    return consultationTime(activityValue,activity) >= consultationTime(planValue,plan) ? activityValue : planValue;
+  }
+
+  function clientConsultationProfilePatch(plan,activity) {
+    const patch = activity && activity.clientConsultationProfile;
+    if (!patch || !meaningfulIntake(patch)) return {};
+    const planSubmission = plan && plan.profile && plan.profile.consultation && (plan.profile.consultation.lastClientSubmittedAt || plan.profile.consultation.submittedAt) || "";
+    if (planSubmission && Date.parse(planSubmission) >= Date.parse(patch.sourceSubmittedAt || 0)) return {};
+    const { sourceSubmittedAt, ...safePatch } = patch;
+    return safePatch;
+  }
+
   function applyBundles(profileRows, records) {
     const byClientAndType = new Map();
     records.forEach((record) => {
@@ -1116,13 +1156,16 @@
       remoteProfilesByExternalId.set(row.external_id, row);
       const plan = byClientAndType.get(row.id + "|client_plan") || {};
       const activity = byClientAndType.get(row.id + "|client_activity") || {};
+      const consultation = newestClientConsultation(plan,activity);
       const profile = {
         ...(plan.profile || cachedProfileFromRow(row)),
+        ...clientConsultationProfilePatch(plan,activity),
         id: row.external_id || row.id,
         name: row.full_name,
         username: row.username,
         email: row.email || (plan.profile && plan.profile.email) || "",
-        intake: newestClientIntake(plan,activity)
+        intake: newestClientIntake(plan,activity),
+        consultation
       };
       profiles.push(profile);
       const planAssignments = Array.isArray(plan.assignments) ? plan.assignments : plan.assignment ? [plan.assignment] : [];
@@ -1388,14 +1431,6 @@
   };
 
   window.fit4lifeCloudSignUp = async function fit4lifeCloudSignUp() {
-    if (!cloudClient) {
-      authMessage("The secure account service is still connecting. Try again in a moment.", true);
-      return false;
-    }
-    if (!portalPublicRegistrationEnabled) {
-      authMessage("This gym is not accepting public client account requests. Ask a trainer for an invitation.", true);
-      return false;
-    }
     const fullName = String(document.getElementById("cloudSignUpName").value || "").trim().replace(/\s+/g, " ");
     const username = String(document.getElementById("cloudSignUpUsername").value || "").trim().toLowerCase().replace(/^@/, "");
     const email = normalizedEmail(document.getElementById("cloudSignUpEmail").value);
@@ -1410,8 +1445,8 @@
       authMessage("Choose a username with 3–40 letters, numbers, periods, underscores, or hyphens.", true);
       return false;
     }
-    if (!email || !email.includes("@")) {
-      authMessage("Enter a valid email address.", true);
+    if (!clientByuiEmail(email)) {
+      authMessage("Client accounts require a BYU-I email ending in @byui.edu. Trainers may use a personal or BYU-I email from the separate trainer request form.", true);
       return false;
     }
     if (password.length < 8) {
@@ -1423,7 +1458,15 @@
       return false;
     }
     if (!consent) {
-      authMessage("Confirm that you will verify the email sent to your address.", true);
+      authMessage("Confirm that you will verify the message sent to your BYU-I email.", true);
+      return false;
+    }
+    if (!cloudClient) {
+      authMessage("The secure account service is still connecting. Try again in a moment.", true);
+      return false;
+    }
+    if (!portalPublicRegistrationEnabled) {
+      authMessage("This gym is not accepting public client account requests. Ask a trainer for an invitation.", true);
       return false;
     }
     const button = document.getElementById("cloudSignUpSubmit");
@@ -1483,7 +1526,7 @@
       return false;
     }
     if (!email || !email.includes("@")) {
-      authMessage("Enter a valid work email address.", true);
+      authMessage("Enter a valid personal or BYU-I email address for the trainer request.", true);
       return false;
     }
     if (password.length < 8) {
@@ -1619,7 +1662,7 @@
       if (pending.email) document.getElementById("cloudAuthEmail").value = pending.email;
       authMessage(pending.requested_role === "trainer"
         ? "After verifying your email, sign in to check whether an approved gym trainer or owner confirmed trainer access."
-        : "After verifying your email, sign in to activate the client workspace.", false);
+        : "After verifying your BYU-I email, sign in to complete the required Trainer Consultation.", false);
       return false;
     }
     await handleSession(sessionResponse.data.session);

@@ -6,11 +6,36 @@ backend for shared/synced data.
 
 Live: https://marc14-fit4-life-session-builder.vercel.app
 
-This V12 release keeps the V5 role boundaries, V6 Action Center/calendar, V7 six-tab
+This V13 release keeps the V5 role boundaries, V6 Action Center/calendar, V7 six-tab
 client workspace, V8 interaction system, and V9 save reliability repairs. It adds a
 permanent metallic-black F4L sign with evenly spaced letters and a theme-aware neon
 outline, plus owner-controlled holiday scenes. The role-selection heading
 stays inside a high-contrast translucent panel so background visuals cannot obscure it.
+V13 also adds a required, integrated client consultation and a BYU-I email requirement
+for client registration. Trainers may continue using personal or BYU-I email addresses.
+
+## V13 client consultation
+
+After confirming a client account and signing in, a client must submit the Trainer
+Consultation before opening the rest of the client workspace. The flow stays inside
+the existing single-page app and supports cloud-backed draft saving.
+
+The questionnaire collects age, fitness experience, activity background, usual RPE,
+exercise interests and preferences, fitness goals, limitations/adaptations, and the
+kind of trainer support the client wants. It intentionally does not ask about schedule,
+weekly attendance, or session length; those will later come from the approved external
+registration system.
+
+Submission is functional data, not an isolated survey. Exact answers remain attached
+to the client record while normalized values feed the profile, generator goal and
+experience inputs, workout rationale, preference context, and conservative safety
+filters. Trainers receive an Action Center item that opens the exact response. A
+reported limitation raises the review priority. A client revision reopens that task.
+
+Client sign-up accepts only `@byui.edu` addresses. Trainer
+requests remain unrestricted to any valid personal or BYU-I email. Existing clients
+with confirmed accounts are also gated into the consultation if they do not have a
+completed submission.
 
 ## V12 appearance controls
 
@@ -57,6 +82,7 @@ js/                         App logic, grouped by domain (loaded in this order):
     readiness-progress.js         Readiness adjustments + local progress memory
     role-governance.js             Owner requests, task claims, note visibility, owner-only guards
     action-calendar.js             Action queue, workout requests, calendar, audit history
+    client-consultation.js          Required client intake, profile/generator mapping, trainer review
   trainer/                     Trainer-only features
     trainer-hub.js                 Trainer dashboard + coaching analysis
     coaching-support.js            Connected coaching support features
@@ -95,6 +121,9 @@ Set these in the Vercel project's Environment Variables settings so
 
 (A few alternate variable names are also accepted as fallbacks — see
 `api/supabase-config.js` — but the two above are the canonical ones to set.)
+
+V13 does not add a new environment variable or Supabase schema migration. Consultation
+responses use the existing synchronized profile/activity JSON records.
 
 ## Deployment
 

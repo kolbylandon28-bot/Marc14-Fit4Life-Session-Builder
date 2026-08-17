@@ -14,6 +14,7 @@ const SECONDARY_MENU_CLOSERS = {
   marketTemplatePreviewModal:"closeProgramTemplatePreview",
   summaryEntryModal:"closeSummaryEntryEditor",
   clientIntakeModal:"closeClientIntake",
+  trainerConsultationModal:"closeTrainerConsultationReview",
   profileEditorModal:"closeProfileEditor",
   completeDeleteModal:"closeCompleteDeleteModal",
   inBodyModal:"closeInBodyModal",

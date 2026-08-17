@@ -220,6 +220,10 @@ function finalizeGeneratedSession(session) {
   normalizeSessionBlockOrder(session);
   applyBaselinePersonalization(session);
   enrichSessionMetadata(session);
+  const consultationNotes = [];
+  if (Number(session.spec && session.spec.usualTrainingRpe)) consultationNotes.push("client usually reports training near RPE " + Number(session.spec.usualTrainingRpe));
+  if (session.spec && session.spec.coachingPriorities && session.spec.coachingPriorities.length) consultationNotes.push("coach support priorities: " + session.spec.coachingPriorities.join(", ").replace(/_/g," "));
+  if (consultationNotes.length) session.rationale = "Trainer Consultation context: " + consultationNotes.join("; ") + ". " + (session.rationale || "");
   session.approval = { status:"draft", required:true, policy:PROGRAMMING_POLICY.approvalMode, generatedAt:new Date().toISOString() };
   session.audit = auditWorkout(session);
   session.internalRationale = "Goal, client fit, exercise order, duration, equipment, history, and substitution purpose were audited before coach review.";
@@ -1157,6 +1161,9 @@ function safetySpecForProfile(session,profile) {
     cardioModes,
     exercisePreferences:{ ...(original.exercisePreferences || {}),...(profile && profile.exercisePreferences || {}) },
     limitationAssessments:{ ...(original.limitationAssessments || {}),...(profile && profile.limitationAssessments || {}) },
+    usualTrainingRpe:Number(profile && profile.usualTrainingRpe || original.usualTrainingRpe) || null,
+    coachingPriorities:[...(profile && profile.coachingPriorities || original.coachingPriorities || [])],
+    coachingPreferenceNote:profile && profile.coachingPreferenceNote || original.coachingPreferenceNote || "",
   };
 }
 function currentSafetyPainAreas(profile) {
@@ -1827,4 +1834,3 @@ function buildCardioSession(spec, seed, pool) {
   };
   return finalizeGeneratedSession({ spec, goalLabel:g.label, prescription:mainRx, rationale:(goalNotes[spec.goal] || "Cardio is the primary training stimulus for this session.") + " Main mode: " + modality + ". " + architecture.description + preferenceNote, blocks, poolCount:pool.length, optionArchitecture:architecture, trainingRoute:"cardio" });
 }
-
