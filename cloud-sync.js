@@ -4,6 +4,7 @@
   const CONFIG_CACHE_KEY = "fit4life_public_cloud_config_v1";
   const PENDING_SYNC_KEY = "fit4life_cloud_pending_scopes_v1";
   const ACCOUNT_CACHE_OWNER_KEY = "fit4life_account_cache_owner_v1";
+  const REMEMBER_SIGN_IN_KEY = "fit4life_remember_sign_in_v1";
   const CLOUD_KEYS = {
     profiles: "fit4life_profiles_v1",
     assignments: "fit4life_assigned_workouts_v1",
@@ -83,6 +84,36 @@
   window.fit4lifeCloudReady = false;
   window.fit4lifeCloudRegistrationRequests = [];
   window.fit4lifeCloudOrganizationId = "";
+
+  function rememberSignInEnabled() {
+    const field = document.getElementById("cloudRememberSignIn");
+    if (field) return field.checked;
+    try { return localStorage.getItem(REMEMBER_SIGN_IN_KEY) !== "false"; } catch (_) { return true; }
+  }
+
+  function saveRememberSignInChoice() {
+    const remember = rememberSignInEnabled();
+    try { localStorage.setItem(REMEMBER_SIGN_IN_KEY,remember ? "true" : "false"); } catch (_) {}
+    return remember;
+  }
+
+  const fit4lifeAuthStorage = {
+    getItem(key) {
+      const remember = rememberSignInEnabled(), preferred = remember ? localStorage : sessionStorage, fallback = remember ? sessionStorage : localStorage;
+      try {
+        const value = preferred.getItem(key);
+        if (value != null) return value;
+        return fallback.getItem(key);
+      } catch (_) { return null; }
+    },
+    setItem(key,value) {
+      const remember = rememberSignInEnabled(), preferred = remember ? localStorage : sessionStorage, fallback = remember ? sessionStorage : localStorage;
+      try { preferred.setItem(key,value); fallback.removeItem(key); } catch (_) {}
+    },
+    removeItem(key) {
+      try { localStorage.removeItem(key); sessionStorage.removeItem(key); } catch (_) {}
+    }
+  };
   window.fit4lifeCloudOrganizationSlug = "";
   window.fit4lifeCloudOrganizationSettingsError = "";
   window.fit4lifeCloudIdentity = null;
@@ -143,7 +174,7 @@
     if (interactionRole === "client") { const testProfile = profiles.find((profile) => profile && profile.id === profileId); if (testProfile) { testProfile.email = "interaction@byui.edu"; testProfile.consultation = {}; writeJson(CLOUD_KEYS.profiles,profiles); } }
     const assignments = readJson(CLOUD_KEYS.assignments, []);
     if (!assignments.some((assignment) => assignment && assignment.id === assignmentId)) {
-      assignments.push({id:assignmentId,profileId,client:"Interaction Test Client",status:"assigned",scheduledDate:dateKey,scheduledTime:"12:30",assignedAt:new Date().toISOString(),session:{type:"solo",data:{sessionId:"interaction-test-session",goalLabel:"Interaction Test Workout",spec:{client:"Interaction Test Client",goal:"general"},blocks:[]}}});
+      assignments.push({id:assignmentId,profileId,client:"Interaction Test Client",status:"assigned",scheduledDate:dateKey,scheduledTime:"12:30",assignedAt:new Date().toISOString(),session:{type:"solo",data:{sessionId:"interaction-test-session",goalLabel:"Interaction Test Workout",spec:{client:"Interaction Test Client",profileId,goal:"general",goals:["general"],minutes:45},blocks:[{key:"strength",title:"Primary strength",rx:{sets:1,reps:"8",rest:"60 sec",tempo:"Controlled",rpe:"RPE 7"},items:[{name:"Bodyweight squat",pattern:"squat",region:"lower",zone:"bodyweight",muscles:["quads","glutes"],cue:"Keep the whole foot grounded.",rx:{sets:1,reps:"8",rest:"60 sec",tempo:"Controlled",rpe:"RPE 7"}}],groups:[]},{key:"accessory",title:"Upper-body support",rx:{sets:1,reps:"10",rest:"60 sec",tempo:"Controlled",rpe:"RPE 7"},items:[{name:"Incline push-up",pattern:"h_push",region:"upper",zone:"bodyweight",muscles:["chest","triceps"],cue:"Keep a straight line from head to heel.",rx:{sets:1,reps:"10",rest:"60 sec",tempo:"Controlled",rpe:"RPE 7"}}],groups:[]}]}}});
       writeJson(CLOUD_KEYS.assignments,assignments);
     }
     try { localStorage.setItem(CLOUD_KEYS.activeClient,profileId); } catch (_) {}
@@ -924,6 +955,14 @@
         consultationDerivedInjuries:profile.consultationDerivedInjuries || [],manualInjuries:profile.manualInjuries || [],injuries:profile.injuries || [],limitationAssessments:profile.limitationAssessments || {},consultationLimitationDetails:profile.consultationLimitationDetails || "",limitationReviewRequired:Boolean(profile.limitationReviewRequired),
         consultationDerivedPreferenceIds:profile.consultationDerivedPreferenceIds || [],exercisePreferences:profile.exercisePreferences || {},updatedAt:profile.updatedAt || consultation.updatedAt || null
       } : {},
+      clientFeedbackProfile: {
+        lastReview:profile.lastReview || null,
+        workoutFeedbackHistory:profile.workoutFeedbackHistory || [],
+        exercisePreferenceEvidence:profile.exercisePreferenceEvidence || [],
+        exercisePreferences:profile.exercisePreferences || {},
+        injuries:profile.injuries || [],
+        updatedAt:profile.updatedAt || null
+      },
       progress: profileProgress(profile),
       checkIns: readJson(CLOUD_KEYS.checkins, []).filter((item) => itemBelongsToProfile(item, profile)),
       messages: readJson(CLOUD_KEYS.clientMessages, []).filter((item) => itemBelongsToProfile(item, profile)),
@@ -1160,6 +1199,7 @@
       const profile = {
         ...(plan.profile || cachedProfileFromRow(row)),
         ...clientConsultationProfilePatch(plan,activity),
+        ...(activity.clientFeedbackProfile || {}),
         id: row.external_id || row.id,
         name: row.full_name,
         username: row.username,
@@ -1414,6 +1454,7 @@
     button.textContent = "Signing in…";
     authMessage("", false);
     try {
+      saveRememberSignInChoice();
       const response = await cloudClient.auth.signInWithPassword({ email, password });
       if (response.error) {
         authMessage(response.error.message, true);
@@ -1848,6 +1889,10 @@
 
   async function initializeCloud() {
     if (localInteractionTestMode()) { initializeLocalInteractionTest(); return; }
+    const rememberField = document.getElementById("cloudRememberSignIn");
+    if (rememberField) {
+      try { rememberField.checked = localStorage.getItem(REMEMBER_SIGN_IN_KEY) !== "false"; } catch (_) { rememberField.checked = true; }
+    }
     showAuthGate(true);
     cloudStatus("Connecting…", "syncing");
     authMessage("Connecting to your gym's secure records…", false);
@@ -1855,7 +1900,7 @@
       const config = await loadPublicConfig();
       if (!window.supabase || typeof window.supabase.createClient !== "function") throw new Error("The secure sign-in library did not load. Check the internet connection and retry.");
       cloudClient = window.supabase.createClient(config.url, config.key, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage:fit4lifeAuthStorage }
       });
       await loadPortalContext();
       startOrganizationSettingsRefresh();

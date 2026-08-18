@@ -6,13 +6,41 @@ backend for shared/synced data.
 
 Live: https://marc14-fit4-life-session-builder.vercel.app
 
-This V13 release keeps the V5 role boundaries, V6 Action Center/calendar, V7 six-tab
+This V14 release keeps the V5 role boundaries, V6 Action Center/calendar, V7 six-tab
 client workspace, V8 interaction system, and V9 save reliability repairs. It adds a
 permanent metallic-black F4L sign with evenly spaced letters and a theme-aware neon
 outline, plus owner-controlled holiday scenes. The role-selection heading
 stays inside a high-contrast translucent panel so background visuals cannot obscure it.
 V13 also adds a required, integrated client consultation and a BYU-I email requirement
 for client registration. Trainers may continue using personal or BYU-I email addresses.
+
+V14 connects the completed workout to one precise client-feedback record and one
+precise trainer decision. The final movement list—including substitutions—drives the
+liked/disliked controls, comments remain verbatim, and the resulting evidence is
+summarized on the client profile and a redesigned Reports workspace. Routine shared
+notifications can be dismissed with an audit reason; protected safety/access work
+cannot be hidden. Sign-in now also supports persistent or session-only authentication.
+
+## V14 workout feedback and coaching reports
+
+- The post-workout movement pickers are generated from the final completed session,
+  logged sets, and substitutions. A movement cannot be both liked and disliked.
+- Client notes and questions are saved verbatim on the assignment and client profile.
+  Trainers open the exact assignment from the Action Center and record a decision on
+  that same review. Clients may edit until `coachReviewedAt` is recorded.
+- Exercise preference evidence is revision-aware. Updating a review replaces that
+  review's prior evidence instead of double-counting it.
+- The Reports route now provides an evidence-backed 30-day overview with client/date
+  filters, completion/missed/reviewed metrics, open work, movement sentiment, observed
+  difficulty and energy, and a searchable chronological feedback history.
+- Routine Action Center items may be dismissed only after a reason is chosen. The
+  shared dismissal includes actor, timestamp, reason, and source fingerprint. Safety,
+  pain, access, approvals, owner requests, and limitation-related items stay protected.
+- “Stay signed in” uses Supabase's session with `localStorage`; turning it off uses
+  `sessionStorage`. The app never stores the user's password.
+
+No V14 database migration or new environment variable is required. These features use
+the synchronized assignment, profile, progress, and organization-activity records.
 
 ## V13 client consultation
 
@@ -83,6 +111,7 @@ js/                         App logic, grouped by domain (loaded in this order):
     role-governance.js             Owner requests, task claims, note visibility, owner-only guards
     action-calendar.js             Action queue, workout requests, calendar, audit history
     client-consultation.js          Required client intake, profile/generator mapping, trainer review
+    workout-feedback-reports.js     Exact feedback loop, dismissals, and coaching reports
   trainer/                     Trainer-only features
     trainer-hub.js                 Trainer dashboard + coaching analysis
     coaching-support.js            Connected coaching support features

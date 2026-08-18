@@ -1,4 +1,4 @@
-FIT4LIFE V12 RELEASE CHECKS — UPDATED 2026-08-17
+FIT4LIFE V14 RELEASE CHECKS — UPDATED 2026-08-18
 
 PASSED LOCALLY
 - JavaScript syntax: every .js file passed Node syntax validation.
@@ -59,11 +59,31 @@ PASSED LOCALLY
 - The r6 installer adds missing brand_config, equipment_config, and
   public_registration_enabled columns before building the theme save path, supporting
   the older production organization schema without replacing existing rows.
+- V14 exact-feedback browser flow completed two final workout movements, selected one
+  liked and one disliked movement, submitted verbatim comments, and surfaced the exact
+  assignment in the trainer Action Center.
+- The trainer Handle action opened the exact review. Liked/disliked movement chips,
+  typed note, and typed question matched the client submission.
+- Saving a trainer decision removed the review task and preserved the decision on the
+  client Home summary, client profile feedback record, and Reports timeline.
+- A reviewed client submission remained locked after reload. The unreviewed path now
+  exposes an explicit Edit my review action and increments the saved revision.
+- Remember Me rendered checked by default. Its storage adapter switches between local
+  and session storage and removes the inactive copy of the auth session.
+- Routine Action Center items displayed Handle, Tomorrow, and Dismiss. The dismissal
+  modal required a reason; saving hid the matching source revision without deleting
+  the underlying assignment/report evidence.
+- Reports opened as a separate workspace and displayed the exact typed client note,
+  liked/disliked movements, and coach-reviewed state.
+- The Action Center lightning-bolt decoration is absent.
+- V14 JavaScript syntax, JSON parsing, duplicate-ID, local-asset, and release-archive
+  integrity checks passed in the final package.
 
 REQUIRED BEFORE LIVE USE
 1. Upload this folder's contents to the same repository and Vercel project.
 2. Deploy/promote the intended commit to Production.
-3. Run RUN-THIS-IN-SUPABASE-THEME-FIX.sql in the connected Supabase SQL Editor.
+3. If the V12 theme SQL was never completed, run RUN-THIS-IN-SUPABASE-THEME-FIX.sql
+   in the connected Supabase SQL Editor. V14 itself adds no SQL migration.
    Confirm its Results row shows the function name and TRUE for all three checks.
 4. Enable Vercel Authentication + Standard Protection in Project Settings >
    Deployment Protection.

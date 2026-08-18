@@ -1,5 +1,5 @@
-FIT4LIFE — V13 REQUIRED CLIENT CONSULTATION
-Build date: 2026-08-17
+FIT4LIFE — V14 WORKOUT FEEDBACK + COACHING REPORTS
+Build date: 2026-08-18
 
 THIS is the versioned upload folder. It preserves Update 3 programming, the stable
 production link, V5 owner/trainer boundaries, and the V6 Action Center/calendar.
@@ -15,6 +15,9 @@ matching ambient particles, and real scene previews in the owner picker.
 V13 adds the required in-app Trainer Consultation, requires clients to register with
 a BYU-I email address, and connects every submitted response to the client profile,
 workout generator, conservative safety filters, and the trainer Action Center.
+V14 closes the client-to-coach workout feedback loop, adds a safe Remember Me option,
+adds audited shared-notification dismissal, removes the Action Center lightning icon,
+and replaces the duplicate Reports page with a focused coaching report.
 The August 17 connection repair publishes the confirmed gym membership to the
 theme controls immediately, retries the organization link once when necessary,
 clears that context safely at sign-out, and installs the missing owner-only
@@ -33,7 +36,7 @@ https://marc14-fit4-life-session-builder.vercel.app
 4. Share the production domain above—not a generated preview/deployment URL.
 5. In Vercel Project Settings > Domains, confirm the domain above is attached to
    this project and points to the latest Production deployment.
-6. After Vercel reports Ready, open the Production link and confirm V13 appears. This
+6. After Vercel reports Ready, open the Production link and confirm V14 appears. This
    release version-tags its app files, forces shell revalidation, and updates the
    service worker without relying on its browser cache.
 7. In Project Settings > Deployment Protection, enable Vercel Authentication with
@@ -67,6 +70,34 @@ V5 ROLE RULES
 - Shared attention items can be claimed, taken over with confirmation, completed,
   or released after the 45-minute claim expires.
 - Coaching notes have explicit Team, Client feedback, or Protected safety visibility.
+
+V14 WORKOUT FEEDBACK + REPORTS
+- The finish-workout review lists only movements in the final completed workout. A
+  trainer swap or client-recommended substitution therefore appears under its final
+  movement name, with the replaced movement retained as evidence.
+- Liked and disliked movements use searchable multi-select lists instead of free text.
+  The same movement cannot be selected in both lists.
+- Typed workout notes and questions are preserved exactly. They appear in the Action
+  Center, exact trainer review, client profile feedback record, and Reports history.
+- Client submissions update the assignment, progress history, profile feedback
+  history, preference evidence, and generator-facing exercise preferences.
+- A client may correct a submitted review until a coach completes it. A completed
+  coach review locks the client submission into the permanent history.
+- Coach decisions and notes are written back to the same review record, preventing a
+  trainer from reviewing a detached or stale summary.
+- Sign-in includes “Stay signed in on this device.” Checked uses browser persistent
+  storage; unchecked uses session-only storage. Passwords are never stored by the app.
+- Routine Action Center reminders now have Handle, Tomorrow, and Dismiss. Dismissal
+  requires a reason and records actor, time, reason, and a source fingerprint in the
+  shared organization activity record. New revisions may reappear automatically.
+- Safety, pain, account-access, trainer approval, owner request, limitation review,
+  and other protected items cannot be dismissed; they must be resolved at the source.
+- Reports is no longer a duplicate Clients route. It includes client/date filters,
+  assignments, completions, misses, coach-review counts, completion rate, open work,
+  liked/disliked movement trends, observed difficulty/energy, and chronological
+  client comments. No percentile or hidden composite score is invented.
+- V14 uses the existing synchronized assignment, profile, progress, and organization
+  activity records. It requires no new Supabase SQL or Vercel environment variable.
 
 V13 CLIENT CONSULTATION + BYU-I EMAIL RULE
 - Client sign-up accepts only a BYU-I address ending in `@byui.edu`. The sign-up field and help

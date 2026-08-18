@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20260817-v13-client-consultation-r5">
+<link rel="manifest" href="manifest.webmanifest?v=20260818-v14-feedback-reports-r1">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20260817-v13-client-consultation-r5">
+<link rel="stylesheet" href="styles.css?v=20260818-v14-feedback-reports-r1">
 </head>
 <body>
 
@@ -48,6 +48,7 @@
       <div class="cloud-auth-fields">
         <label>Email address<input id="cloudAuthEmail" type="email" autocomplete="username" inputmode="email" placeholder="you@example.com"></label>
         <label>Password<input id="cloudAuthPassword" type="password" autocomplete="current-password" placeholder="Your account password" onkeydown="if(event.key==='Enter')fit4lifeCloudSignIn()"></label>
+        <label class="cloud-auth-checkbox cloud-remember-choice"><input id="cloudRememberSignIn" type="checkbox" checked><span><b>Stay signed in on this device</b><small>Keep me signed in after I close the browser. Turn this off on a shared computer.</small></span></label>
       </div>
       <button class="cloud-auth-submit" id="cloudAuthSubmit" onclick="fit4lifeCloudSignIn()">Sign in securely</button>
       <div class="cloud-auth-actions"><button class="cloud-auth-link" type="button" onclick="fit4lifeCloudShowAuthMode('reset')">Forgot password?</button><button class="cloud-auth-link" type="button" onclick="fit4lifeCloudShowAuthMode('signup')">Create a client account</button><button class="cloud-auth-link" type="button" onclick="fit4lifeCloudShowAuthMode('trainer_signup')">Request trainer access</button></div>
@@ -629,7 +630,7 @@
 <aside class="coach-sidebar" id="coachSidebar" aria-label="Coach navigation">
   <h2>Coach workspace</h2>
   <button data-coach-nav="dashboard" onclick="openCoachDestination('dashboard')">⌂ Dashboard</button>
-  <button data-coach-nav="actions" onclick="openCoachDestination('actions')">⚡ Action Center<span class="coach-attention-badge" data-attention-badge="actions"></span></button>
+  <button data-coach-nav="actions" onclick="openCoachDestination('actions')">Action Center<span class="coach-attention-badge" data-attention-badge="actions"></span></button>
   <button data-coach-nav="clients" onclick="openCoachDestination('clients')">● Clients</button>
   <button data-coach-nav="programming" onclick="openCoachDestination('programming')">▤ Programming</button>
   <button data-coach-nav="calendar" onclick="openCoachDestination('calendar')">□ Calendar<span class="coach-attention-badge" data-attention-badge="schedule"></span></button>
@@ -1179,8 +1180,16 @@
         <div class="compact-field"><label for="reviewForm">Form quality</label><select id="reviewForm"><option value="strong">Strong and consistent</option><option value="mixed">Mixed / some breakdown</option><option value="poor">Poor / needed help</option></select></div>
         <div class="compact-field"><label for="reviewRange">Pain-free range of motion</label><select id="reviewRange"><option value="full">Full planned range</option><option value="limited">Had to shorten range</option><option value="stopped">Could not continue safely</option></select></div>
         <div class="compact-field full"><label for="reviewNotes">Workout notes</label><textarea id="reviewNotes" placeholder="What went well or should change next time?"></textarea></div>
-        <div class="compact-field"><label for="reviewLiked">Exercises you liked</label><input id="reviewLiked" type="text" placeholder="Optional exercise names"></div>
-        <div class="compact-field"><label for="reviewDisliked">Exercises you disliked or did not understand</label><input id="reviewDisliked" type="text" placeholder="Optional exercise names"></div>
+        <div class="compact-field movement-feedback-field">
+          <label>Exercises you liked</label>
+          <details class="movement-feedback-picker" id="reviewLikedPicker"><summary>Choose from this workout</summary><div class="movement-feedback-menu"><input type="search" placeholder="Search movements…" aria-label="Search movements you liked" oninput="filterReviewMovementPicker('liked',this.value)"><div id="reviewLikedOptions" class="movement-feedback-options"></div><button type="button" class="movement-picker-done" onclick="this.closest('details').open=false">Done</button></div></details>
+          <input id="reviewLiked" type="hidden">
+        </div>
+        <div class="compact-field movement-feedback-field">
+          <label>Exercises you disliked or did not understand</label>
+          <details class="movement-feedback-picker" id="reviewDislikedPicker"><summary>Choose from this workout</summary><div class="movement-feedback-menu"><input type="search" placeholder="Search movements…" aria-label="Search movements you disliked" oninput="filterReviewMovementPicker('disliked',this.value)"><div id="reviewDislikedOptions" class="movement-feedback-options"></div><button type="button" class="movement-picker-done" onclick="this.closest('details').open=false">Done</button></div></details>
+          <input id="reviewDisliked" type="hidden">
+        </div>
       </div>
     </details>
     <div class="tool-actions"><button class="small-btn primary" id="reviewSaveAnalysisBtn" onclick="saveWorkoutReview(true)">Save &amp; view client analysis</button><button class="small-btn" id="reviewSaveOnlyBtn" onclick="saveWorkoutReview(false)">Save only</button><button class="small-btn" onclick="closeWorkoutReview()">Cancel</button></div>
@@ -1193,6 +1202,7 @@
     <p>Close the coaching loop: review what the client completed, choose the next-session direction, and leave one clear coaching note.</p>
     <input id="coachAdjustmentProfileId" type="hidden">
     <div id="coachAdjustmentSummary" class="priority-card"></div>
+    <section id="coachAdjustmentClientFeedback" class="coach-review-feedback" aria-live="polite"></section>
     <div class="compact-grid" style="margin-top:14px">
       <div class="compact-field wide"><label for="coachAdjustmentAction">Next workout decision</label><select id="coachAdjustmentAction"><option value="repeat">Repeat the successful plan</option><option value="progress">Progress one variable</option><option value="reduce">Reduce load or volume</option><option value="pain_swap">Replace the painful pattern</option></select></div>
       <div class="compact-field wide"><label for="coachAdjustmentNote">Trainer note for the client</label><textarea id="coachAdjustmentNote" placeholder="What should the client repeat, change, or pay attention to next time?"></textarea></div>
@@ -1236,25 +1246,42 @@
   </div>
 </div>
 
+<div id="attentionDismissModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="attentionDismissTitle" aria-describedby="attentionDismissCopy">
+  <div class="review-dialog attention-dismiss-dialog">
+    <div class="client-section-label">Shared action center</div>
+    <h2 id="attentionDismissTitle">Dismiss this reminder?</h2>
+    <p id="attentionDismissCopy">This hides only the notification for the coaching team. It does not delete the source record or mark the work complete.</p>
+    <input id="attentionDismissItemId" type="hidden">
+    <div id="attentionDismissItemSummary" class="priority-card"></div>
+    <div class="compact-grid" style="margin-top:14px">
+      <div class="compact-field wide"><label for="attentionDismissReason">Reason</label><select id="attentionDismissReason"><option value="">Choose a reason…</option><option value="Duplicate reminder">Duplicate reminder</option><option value="Handled outside this notification">Handled outside this notification</option><option value="Not actionable right now">Not actionable right now</option><option value="No longer relevant">No longer relevant</option><option value="Other">Other</option></select></div>
+      <div class="compact-field wide"><label for="attentionDismissNote">Audit note <span style="font-weight:400">(required for Other)</span></label><textarea id="attentionDismissNote" placeholder="Add a short explanation for the coaching team."></textarea></div>
+    </div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="confirmDismissCoachAttention()">Dismiss for team</button><button class="small-btn" onclick="closeAttentionDismissModal()">Cancel</button></div>
+    <p class="storage-note">The actor, time, and reason are saved in the shared audit state. A genuinely new event or revised client submission can appear again.</p>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/engine/exercise-library.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/engine/session-engine.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/engine/session-builders.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/engine/personalization.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/app/navigation.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/app/program-app.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/app/forms.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/engine/generation.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/app/rendering.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/app/calculations-timers.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/engine/multiweek-programs.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/app/readiness-progress.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/app/client-consultation.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/trainer/trainer-hub.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/trainer/coaching-support.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/app/role-governance.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/app/action-calendar.js?v=20260817-v13-client-consultation-r5"></script>
-<script src="js/init.js?v=20260817-v13-client-consultation-r5"></script>
+<script src="cloud-sync.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/engine/exercise-library.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/engine/session-engine.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/engine/session-builders.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/engine/personalization.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/app/navigation.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/app/program-app.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/app/forms.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/engine/generation.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/app/rendering.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/app/calculations-timers.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/engine/multiweek-programs.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/app/readiness-progress.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/app/client-consultation.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/trainer/trainer-hub.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/trainer/coaching-support.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/app/role-governance.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/app/action-calendar.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/app/workout-feedback-reports.js?v=20260818-v14-feedback-reports-r1"></script>
+<script src="js/init.js?v=20260818-v14-feedback-reports-r1"></script>
 </body>
 </html>

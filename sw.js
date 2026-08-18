@@ -1,13 +1,14 @@
-const CACHE_NAME = "fit4life-shell-2026-08-17-v13-client-consultation-r5";
+const CACHE_NAME = "fit4life-shell-2026-08-18-v14-feedback-reports-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
 const SHELL = [
   "/",
   "/index.html",
-  "/cloud-sync.js?v=20260817-v13-client-consultation-r5",
-  "/styles.css?v=20260817-v13-client-consultation-r5",
-  "/js/app/client-consultation.js?v=20260817-v13-client-consultation-r5",
-  "/js/app/role-governance.js?v=20260817-v13-client-consultation-r5",
-  "/js/app/action-calendar.js?v=20260817-v13-client-consultation-r5",
+  "/cloud-sync.js?v=20260818-v14-feedback-reports-r1",
+  "/styles.css?v=20260818-v14-feedback-reports-r1",
+  "/js/app/client-consultation.js?v=20260818-v14-feedback-reports-r1",
+  "/js/app/role-governance.js?v=20260818-v14-feedback-reports-r1",
+  "/js/app/action-calendar.js?v=20260818-v14-feedback-reports-r1",
+  "/js/app/workout-feedback-reports.js?v=20260818-v14-feedback-reports-r1",
   "/dark-rock-background-v2.jpg",
   "/theme-assets/halloween-scene.jpg",
   "/theme-assets/thanksgiving-scene.jpg",
