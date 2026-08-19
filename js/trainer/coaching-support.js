@@ -222,6 +222,46 @@ function currentGymBrand() {
   const fallback = { name:"FIT 4 LIFE",sub:"BYU-Idaho Trainer Tools",primary:"#3E6BE0",accent:"#5AA6F0",theme:"neon" }, saved = loadLocalObject(GYM_BRAND_KEY,fallback);
   return { ...fallback,...saved,theme:normalizedPortalTheme(saved.theme) };
 }
+/* ---------- named equipment ---------- */
+// Blocking already worked by name keyword, but only through a free-text box - a trainer
+// had to guess that typing "versaclimber" was the way to say the gym has no VersaClimber.
+// These are the specific pieces the exercise library actually names, offered as
+// checkboxes. Everything is available by default; an owner unticks what they do not own.
+const GYM_KIT_OPTIONS = [
+  { keyword:"versaclimber", label:"VersaClimber" },
+  { keyword:"hiitmill",     label:"HIITMill" },
+  { keyword:"ski erg",      label:"Ski erg" },
+  { keyword:"assault bike", label:"Assault bike" },
+  { keyword:"smith",        label:"Smith machine" },
+  { keyword:"belt squat",   label:"Belt squat" },
+  { keyword:"hack squat",   label:"Hack squat" },
+  { keyword:"trap bar",     label:"Trap bar" },
+  { keyword:"landmine",     label:"Landmine" },
+  { keyword:"trx",          label:"TRX straps" },
+  { keyword:"ab wheel",     label:"Ab wheel" },
+  { keyword:"agility ladder", label:"Agility ladder" },
+  { keyword:"sled",         label:"Sled" },
+  { keyword:"battle rope",  label:"Battle ropes" },
+];
+function gymKitBlocked(keyword,blockedKeywords) {
+  const blocked = (blockedKeywords || []).map((item) => String(item).toLowerCase());
+  return blocked.includes(String(keyword).toLowerCase());
+}
+function gymKitChecklistHtml(equipment) {
+  const blocked = equipment.blockedKeywords || [];
+  return '<div class="compact-field wide"><label>Equipment this gym has</label><div class="multi-choice-grid" id="gymKitChecklist">'
+    + GYM_KIT_OPTIONS.map((option) => '<label class="chip-check"><input type="checkbox" data-kit="' + escapeHtml(option.keyword) + '"'
+        + (gymKitBlocked(option.keyword,blocked) ? '' : ' checked') + '><span>' + escapeHtml(option.label) + '</span></label>').join("")
+    + '</div><span class="storage-note">Unticked equipment is never programmed. Anything not listed here can still be blocked by keyword below.</span></div>';
+}
+// Keywords the checklist does not manage stay untouched, so a hand-typed rule survives.
+function gymKitKeywordsFromChecklist(previousBlocked) {
+  const managed = new Set(GYM_KIT_OPTIONS.map((option) => option.keyword.toLowerCase()));
+  const manual = (previousBlocked || []).map((item) => String(item).toLowerCase()).filter((item) => !managed.has(item));
+  const unchecked = [...document.querySelectorAll('#gymKitChecklist input[data-kit]')]
+    .filter((input) => !input.checked).map((input) => input.dataset.kit.toLowerCase());
+  return [...new Set(manual.concat(unchecked))];
+}
 function currentGymEquipment() { const fallback = { zones:Object.keys(ZONE_LABELS),cardioModes:Object.keys(CARDIO_MODALITIES).filter((key) => key !== "any"),blockedKeywords:["sled","battle rope"] }, saved = loadLocalObject(GYM_EQUIPMENT_KEY,fallback); return { ...fallback,...saved,zones:Array.isArray(saved.zones) ? saved.zones : fallback.zones,cardioModes:Array.isArray(saved.cardioModes) ? saved.cardioModes : fallback.cardioModes,blockedKeywords:Array.isArray(saved.blockedKeywords) ? saved.blockedKeywords : fallback.blockedKeywords }; }
 function syncPortalThemePickerState(themeId) {
   const theme = normalizedPortalTheme(themeId);
@@ -253,7 +293,7 @@ function renderBrandModule() {
   const brand = currentGymBrand(), equipment = currentGymEquipment(), cloudTenant = window.fit4lifeCloudOrganizationSlug || "fit-4-life", portalUrl = window.fit4lifePublicSiteUrl ? window.fit4lifePublicSiteUrl('/',{gym:cloudTenant}) : location.origin + "/?gym=" + encodeURIComponent(cloudTenant);
   const zoneOptions = Object.keys(ZONE_LABELS).map((key) => '<label><input class="gym-equipment-zone" type="checkbox" value="' + key + '" ' + (equipment.zones.includes(key) ? 'checked' : '') + '> ' + escapeHtml(ZONE_LABELS[key]) + '</label>').join("");
   const cardioOptions = Object.keys(CARDIO_MODALITIES).filter((key) => key !== "any").map((key) => '<label><input class="gym-cardio-mode" type="checkbox" value="' + key + '" ' + (equipment.cardioModes.includes(key) ? 'checked' : '') + '> ' + escapeHtml(CARDIO_MODALITIES[key].label) + '</label>').join("");
-  return '<div class="advanced-grid"><section class="advanced-card wide"><h3>Shared gym setup</h3><p>These settings define this gym’s white-label identity and the equipment the workout engine may use. The gym owner’s changes sync to every trainer and client device.</p>' + renderPortalThemePicker() + '<div class="compact-grid"><div class="compact-field wide"><label for="brandName">Gym name</label><input id="brandName" value="' + escapeHtml(brand.name) + '"></div><div class="compact-field wide"><label for="brandSub">Portal subtitle</label><input id="brandSub" value="' + escapeHtml(brand.sub) + '"></div><div class="compact-field"><label for="brandPrimary">Primary color</label><input id="brandPrimary" type="color" value="' + escapeHtml(brand.primary) + '"></div><div class="compact-field"><label for="brandAccent">Accent color</label><input id="brandAccent" type="color" value="' + escapeHtml(brand.accent) + '"></div><div class="compact-field wide"><label>Equipment zones available at this gym</label><div class="summary-checks">' + zoneOptions + '</div></div><div class="compact-field wide"><label>Cardio machines available</label><div class="summary-checks">' + cardioOptions + '</div></div><div class="compact-field wide"><label for="gymBlockedEquipment">Blocked equipment or movement keywords</label><textarea id="gymBlockedEquipment" placeholder="sled, battle rope">' + escapeHtml((equipment.blockedKeywords || []).join(", ")) + '</textarea><span class="storage-note">The generator excludes any exercise name containing one of these terms.</span></div></div><div class="tool-actions"><button class="small-btn primary" onclick="saveGymBrand()">Save gym setup</button><button class="small-btn" onclick="resetGymBrand()">Reset colors</button></div><div class="brand-preview" style="--brand-primary:' + escapeHtml(brand.primary) + '"><h4>' + escapeHtml(brand.name) + '</h4><p>' + escapeHtml(brand.sub) + '</p></div><div class="capability-note"><strong>Current tenant link:</strong> ' + escapeHtml(portalUrl) + '<br>Use a different gym slug—or later a verified custom domain—to load a different brand, equipment bank, staff, and client records. Only an owner can change shared gym setup.</div></section></div>';
+  return '<div class="advanced-grid"><section class="advanced-card wide"><h3>Shared gym setup</h3><p>These settings define this gym’s white-label identity and the equipment the workout engine may use. The gym owner’s changes sync to every trainer and client device.</p>' + renderPortalThemePicker() + '<div class="compact-grid"><div class="compact-field wide"><label for="brandName">Gym name</label><input id="brandName" value="' + escapeHtml(brand.name) + '"></div><div class="compact-field wide"><label for="brandSub">Portal subtitle</label><input id="brandSub" value="' + escapeHtml(brand.sub) + '"></div><div class="compact-field"><label for="brandPrimary">Primary color</label><input id="brandPrimary" type="color" value="' + escapeHtml(brand.primary) + '"></div><div class="compact-field"><label for="brandAccent">Accent color</label><input id="brandAccent" type="color" value="' + escapeHtml(brand.accent) + '"></div><div class="compact-field wide"><label>Equipment zones available at this gym</label><div class="summary-checks">' + zoneOptions + '</div></div><div class="compact-field wide"><label>Cardio machines available</label><div class="summary-checks">' + cardioOptions + '</div></div>' + gymKitChecklistHtml(equipment) + '<div class="compact-field wide"><label for="gymBlockedEquipment">Blocked equipment or movement keywords</label><textarea id="gymBlockedEquipment" placeholder="sled, battle rope">' + escapeHtml((equipment.blockedKeywords || []).join(", ")) + '</textarea><span class="storage-note">The generator excludes any exercise name containing one of these terms.</span></div></div><div class="tool-actions"><button class="small-btn primary" onclick="saveGymBrand()">Save gym setup</button><button class="small-btn" onclick="resetGymBrand()">Reset colors</button></div><div class="brand-preview" style="--brand-primary:' + escapeHtml(brand.primary) + '"><h4>' + escapeHtml(brand.name) + '</h4><p>' + escapeHtml(brand.sub) + '</p></div><div class="capability-note"><strong>Current tenant link:</strong> ' + escapeHtml(portalUrl) + '<br>Use a different gym slug—or later a verified custom domain—to load a different brand, equipment bank, staff, and client records. Only an owner can change shared gym setup.</div></section></div>';
 }
 async function persistOrganizationAppearance(brand,equipment,localMessage) {
   if (window.fit4lifeCloudOrganizationId && typeof window.fit4lifeCloudSaveOrganizationSettings === "function") return await window.fit4lifeCloudSaveOrganizationSettings(brand,equipment);
@@ -292,7 +332,12 @@ function saveGymBrand() {
   if (zones.includes("cardio") && !cardioModes.length) { showToast("Choose at least one cardio machine or turn off the Cardio zone"); return null; }
   const brand = { name:byId("brandName").value.trim() || "Training Portal",sub:byId("brandSub").value.trim() || "Trainer Tools",primary:byId("brandPrimary").value,accent:byId("brandAccent").value,theme:currentGymBrand().theme,updatedAt:new Date().toISOString() };
   const blockedField = document.getElementById("gymBlockedEquipment"), blockedValue = blockedField ? blockedField.value : currentEquipment.blockedKeywords.join(", ");
-  const equipment = { zones,cardioModes,blockedKeywords:blockedValue.split(/[,\n]/).map((item) => item.trim().toLowerCase()).filter(Boolean),updatedAt:new Date().toISOString() };
+  const typedKeywords = blockedValue.split(/[,\n]/).map((item) => item.trim().toLowerCase()).filter(Boolean);
+  // The checklist owns its own keywords; anything typed by hand is preserved alongside.
+  const blockedKeywords = document.getElementById("gymKitChecklist")
+    ? gymKitKeywordsFromChecklist(typedKeywords)
+    : typedKeywords;
+  const equipment = { zones,cardioModes,blockedKeywords,updatedAt:new Date().toISOString() };
   if (!writeLocalObject(GYM_BRAND_KEY,brand) || !writeLocalObject(GYM_EQUIPMENT_KEY,equipment)) return null; applyGymBrand(); renderAdvancedStudio();
   persistOrganizationAppearance(brand,equipment,"Gym setup saved on this device");
   return { brand,equipment };
