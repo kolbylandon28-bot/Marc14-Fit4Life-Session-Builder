@@ -1613,3 +1613,13 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
 .chip-check:has(input:checked){border-color:var(--blue);background:color-mix(in srgb,var(--blue) 10%,var(--surface))}
 .chip-check input{flex-shrink:0;margin:0}
 .chip-check span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- solo day marker ---------- */
+.chip-solo{display:inline-flex;align-items:center;padding:1px 6px;border-radius:4px;
+  font:700 8px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;
+  color:var(--text-faint);border:1px dashed var(--line)}
+
+/* ---------- follow-up draft ---------- */
+.follow-up-dialog{width:min(480px,100%)}
+.follow-up-dialog textarea{width:100%;margin-top:4px;padding:11px;border:1px solid var(--line);
+  border-radius:9px;background:var(--slate-1);color:var(--text);font:inherit;font-size:12px;line-height:1.5;resize:vertical}

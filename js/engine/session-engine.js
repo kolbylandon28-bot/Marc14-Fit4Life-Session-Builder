@@ -1122,10 +1122,99 @@ function coachingLimitationIssues(exercise,spec) {
   });
   return issues;
 }
+/* ---------- regression ladder ---------- */
+// Movements were matched by pattern but never ordered by difficulty, so "this is too
+// hard" could hand back something harder. A rank orders each pattern from easiest to
+// hardest; the step down is resolved at the time against the gym's equipment and the
+// client's limitations, because a fixed chain would point at a dumbbell the gym does
+// not own or a movement their knee rules out.
+//
+// Ranks are seeded from experience level, then adjusted for the things that actually
+// make a movement harder to run unsupervised: free weight over machine, standing over
+// supported, one limb over two, and a barbell over everything.
+function movementDifficultyRank(exercise) {
+  if (!exercise) return 99;
+  if (Number.isFinite(Number(exercise.difficultyRank))) return Number(exercise.difficultyRank);
+  let rank = (Number(exercise.exp) || 1) * 10;
+  const zone = exercise.zone, name = String(exercise.name || "").toLowerCase();
+  if (zone === "machine") rank -= 6;                       // supported path, hardest to do wrong
+  else if (zone === "cable") rank -= 4;
+  else if (zone === "crossfit" && /trx/.test(name)) rank -= 5;  // assistable by foot position
+  else if (zone === "bodyweight") rank -= 2;
+  else if (zone === "platform" || zone === "rack") rank += 4;   // barbell off a rack
+  if (exercise.unilateral) rank += 2;                      // balance demand
+  if (Number(exercise.impact) >= 2) rank += 2;
+  if (/assisted|machine|supported|box|goblet/.test(name)) rank -= 2;
+  if (/barbell|deficit|slider|bulgarian|single-arm|single-leg/.test(name)) rank += 2;
+  return rank;
+}
+// The easiest available option below where they are, respecting everything that would
+// normally rule a movement out.
+// A step on the ladder has to be the same job done more simply, not a different job.
+// Isolation work and finishers share a pattern tag with real compounds but are not
+// substitutes for them.
+function ladderComparable(candidate,exercise) {
+  if (!candidate || candidate.hidden === true || candidate.finisher === true) return false;
+  if (candidate.name === exercise.name || candidate.pattern !== exercise.pattern) return false;
+  if (ISO_NAMES.includes(candidate.name) && !ISO_NAMES.includes(exercise.name)) return false;
+  if (/calf raise|leg extension|wall sit|burnout|drop set/i.test(candidate.name)) return false;
+  return true;
+}
+function easierAlternativesFor(exercise,spec,age) {
+  if (!exercise) return [];
+  const currentRank = movementDifficultyRank(exercise);
+  return LIBRARY
+    .filter((candidate) => ladderComparable(candidate,exercise)
+      && movementDifficultyRank(candidate) < currentRank
+      && !exerciseConstraintIssues(candidate,spec,age).some((issue) => issue.hard))
+    .sort((a,b) => movementDifficultyRank(b) - movementDifficultyRank(a));
+}
+function harderAlternativesFor(exercise,spec,age) {
+  if (!exercise) return [];
+  const currentRank = movementDifficultyRank(exercise);
+  return LIBRARY
+    .filter((candidate) => ladderComparable(candidate,exercise)
+      && movementDifficultyRank(candidate) > currentRank
+      && !exerciseConstraintIssues(candidate,spec,age).some((issue) => issue.hard))
+    .sort((a,b) => movementDifficultyRank(a) - movementDifficultyRank(b));
+}
+// One rung, not a leap: the closest easier option rather than the easiest that exists.
+function regressExercise(exercise,spec,age) { return easierAlternativesFor(exercise,spec,age)[0] || null; }
+function progressExercise(exercise,spec,age) { return harderAlternativesFor(exercise,spec,age)[0] || null; }
+/* ---------- solo-day supervision ---------- */
+// A trainer day and a solo day are not the same workout. On a solo day nobody is there
+// to spot a first attempt, correct a bar path, or stop a set going wrong - so a movement
+// that genuinely needs eyes on the first exposure should not debut there.
+// This is not a difficulty cap: anything the client has already performed stays available,
+// and every movement remains available on trainer days.
+function needsSupervisionFirstTime(exercise) {
+  if (!exercise) return false;
+  if (Number(exercise.exp) >= 3) return true;
+  if (exercise.pattern === "olympic") return true;
+  // Loaded barbell compounds off a rack or platform: the failure modes are the ones a
+  // coach exists to prevent.
+  return ["rack","platform"].includes(exercise.zone) && ["squat","hinge","h_push","v_push"].includes(exercise.pattern);
+}
+function clientHasPerformed(spec,exercise) {
+  const profileId = spec && spec.profileId, client = spec && spec.client, name = String(exercise && exercise.name || "").toLowerCase();
+  if (!name || typeof loadProgress !== "function") return false;
+  return loadProgress().some((entry) => entry && entry.type === "set"
+    && String(entry.label || "").toLowerCase() === name
+    && (profileId ? entry.profileId === profileId || (entry.data && entry.data.profileId === profileId) : clientMatches(entry.client,client)));
+}
+function soloDayBlocksExercise(exercise,spec) {
+  if (!spec || !spec.soloDay) return false;
+  if (!needsSupervisionFirstTime(exercise)) return false;
+  return !clientHasPerformed(spec,exercise);
+}
 function exerciseConstraintIssues(exercise,spec,age) {
   const issues = [], zones = spec && spec.zones && spec.zones.length ? spec.zones : null, limitations = spec && spec.injuries || [], prof = ageProfile(age == null ? spec && spec.age : age), avoid = exercise && Array.isArray(exercise.avoid) ? exercise.avoid : [];
   if (!exercise || exercise.safetyReviewed === false) issues.push({ code:"safety_metadata",label:"Exercise safety classification is not trainer-reviewed",hard:true });
+  // Retired movements stay in the library with their data intact; they simply are not
+  // offered for programming until someone clears the flag.
+  if (exercise && exercise.hidden === true) issues.push({ code:"retired_movement",label:"Retired from programming",hard:true });
   if (!gymAllowsExercise(exercise)) issues.push({ code:"gym_equipment",label:"Not in this gym's equipment setup",hard:true });
+  if (soloDayBlocksExercise(exercise,spec)) issues.push({ code:"solo_day_supervision",label:"First attempt at this movement should happen on a day with a trainer",hard:true });
   if (zones && !zones.includes(exercise.zone)) issues.push({ code:"client_equipment",label:"Equipment unavailable for this client",hard:true });
   const cardioPreferences = cardioPreferencesFor(spec || {}), modality = cardioModalityFor(exercise);
   if (!cardioPreferences.includes("any") && modality !== "other" && !cardioPreferences.includes(modality)) issues.push({ code:"cardio_equipment",label:"Cardio machine not selected as available",hard:true });

@@ -173,9 +173,54 @@ const LIBRARY = [
   { name: "Zercher squat", zone: "rack", pattern: "squat", region: "lower", exp: 3, impact: 2, unilateral: false, avoid: ["knee","lowback"], muscles: ["quads","glutes","core"], cue: "Bar in the elbow crease, brace like your life depends on it." },
   { name: "Belt squat", zone: "machine", pattern: "squat", region: "lower", exp: 2, impact: 1, unilateral: false, avoid: ["knee"], muscles: ["quads","glutes"], cue: "Loads the legs with zero spinal compression." },
   { name: "Front-foot-elevated split squat", zone: "dumbbell", pattern: "lunge", region: "lower", exp: 2, impact: 1, unilateral: true, avoid: ["knee"], muscles: ["quads","glutes"], cue: "Elevate the front foot for extra depth and quad stretch." },
-  { name: "Deficit reverse lunge", zone: "dumbbell", pattern: "lunge", region: "lower", exp: 3, impact: 2, unilateral: true, avoid: ["knee","hip"], muscles: ["quads","glutes"], cue: "Step off a plate — bigger range, bigger glute stretch." },
+  { name: "Deficit reverse lunge", zone: "dumbbell", pattern: "lunge", region: "lower", exp: 3, impact: 2, unilateral: true, avoid: ["knee","hip"], muscles: ["quads","glutes"], cue: "Step off a plate — bigger range, bigger glute stretch." , hidden: true },
   { name: "Cyclist squat", zone: "dumbbell", pattern: "squat", region: "lower", exp: 2, impact: 1, unilateral: false, avoid: ["knee"], muscles: ["quads"], cue: "Heels elevated, upright torso — quad-dominant squat." },
   { name: "Sissy squat", zone: "bodyweight", pattern: "squat", region: "lower", exp: 3, impact: 2, unilateral: false, avoid: ["knee"], muscles: ["quads"], cue: "Knees travel forward, hips stay extended — advanced quad isolation." },
+
+  /* ---------------- ADDED: SINGLE-LEG depth ----------------
+     The lunge family had seven movements, all dumbbell or bodyweight, only three at
+     level 1, and nothing in the frontal plane. Single-leg work is foundational for
+     beginners and the main tool for clients with knee limitations. */
+  { name: "Split squat", zone: "dumbbell", pattern: "lunge", region: "lower", exp: 1, impact: 1, unilateral: true, avoid: ["knee"], muscles: ["quads","glutes"], cue: "Both feet stay planted. Drop the back knee straight down, stand back up." },
+  { name: "Lateral lunge", zone: "bodyweight", pattern: "lunge", region: "lower", exp: 1, impact: 1, unilateral: true, avoid: ["knee","hip"], muscles: ["quads","glutes"], cue: "Step wide to one side, sit into that hip, push back to the middle." },
+  { name: "Box step-down", zone: "bodyweight", pattern: "lunge", region: "lower", exp: 1, impact: 1, unilateral: true, avoid: ["knee"], muscles: ["quads","glutes"], cue: "Stand on the box, lower the other foot slowly to tap the floor, stand back up." },
+  { name: "TRX-assisted split squat", zone: "crossfit", pattern: "lunge", region: "lower", exp: 1, impact: 0, unilateral: true, avoid: [], muscles: ["quads","glutes"], cue: "Hold the straps for balance and take as much weight through your arms as you need." },
+  { name: "Goblet reverse lunge", zone: "dumbbell", pattern: "lunge", region: "lower", exp: 1, impact: 1, unilateral: true, avoid: ["knee"], muscles: ["quads","glutes"], cue: "Hold one weight at your chest, step back, drop the back knee, step in." },
+  { name: "Landmine reverse lunge", zone: "platform", pattern: "lunge", region: "lower", exp: 2, impact: 1, unilateral: true, avoid: ["knee"], muscles: ["quads","glutes"], cue: "Hold the bar end at your chest and step straight back under control." },
+  { name: "Trap bar split squat", zone: "platform", pattern: "lunge", region: "lower", exp: 2, impact: 1, unilateral: true, avoid: ["knee"], muscles: ["quads","glutes"], cue: "Stand inside the bar, one foot back, lower the back knee toward the floor." },
+  { name: "Curtsy lunge", zone: "dumbbell", pattern: "lunge", region: "lower", exp: 2, impact: 1, unilateral: true, avoid: ["knee","hip"], muscles: ["glutes","quads"], cue: "Step one foot behind and across, lower, then return. Hips stay square." },
+  { name: "Front-rack reverse lunge", zone: "dumbbell", pattern: "lunge", region: "lower", exp: 2, impact: 1, unilateral: true, avoid: ["knee"], muscles: ["quads","glutes"], cue: "Weights at the shoulders, step back, stay tall through the chest." },
+  { name: "Slider reverse lunge", zone: "bodyweight", pattern: "lunge", region: "lower", exp: 3, impact: 1, unilateral: true, avoid: ["knee"], muscles: ["quads","glutes"], cue: "Slide one foot back slowly, keep the weight in the front leg, pull it back in." },
+
+  /* ---------------- ADDED: TRX depth ----------------
+     The gym owns TRX and the library used it once. It is the best beginner tool here
+     because it makes hard movements assistable rather than impossible. */
+  { name: "TRX-assisted squat", zone: "crossfit", pattern: "squat", region: "lower", exp: 1, impact: 0, unilateral: false, avoid: [], muscles: ["quads","glutes"], cue: "Hold the handles, sit back into a squat, use your arms for as much help as you need." },
+  { name: "TRX chest press", zone: "crossfit", pattern: "h_push", region: "push", exp: 1, impact: 0, unilateral: false, avoid: ["shoulder","wrist"], muscles: ["chest","arms"], cue: "Lean into the straps, lower your chest to your hands, press back. Walk your feet back to make it harder." },
+  { name: "TRX Y-raise", zone: "crossfit", pattern: "v_pull", region: "pull", exp: 1, impact: 0, unilateral: false, avoid: ["shoulder"], muscles: ["shoulders","back"], cue: "Lean back slightly and raise your arms into a Y. Light and controlled." },
+  { name: "TRX hamstring curl", zone: "crossfit", pattern: "hinge", region: "lower", exp: 2, impact: 0, unilateral: false, avoid: ["lowback"], muscles: ["hamstrings","glutes"], cue: "Heels in the straps, lift your hips, pull your heels toward you." },
+  { name: "TRX assisted row", zone: "crossfit", pattern: "h_pull", region: "pull", exp: 1, impact: 0, unilateral: false, avoid: [], muscles: ["back","arms"], cue: "Walk your feet forward to make it harder, back to make it easier. Pull your chest to your hands." },
+
+  /* ---------------- ADDED: CARRY depth ---------------- */
+  { name: "Front-rack carry", zone: "dumbbell", pattern: "carry", region: "full", exp: 1, impact: 0, unilateral: false, avoid: ["shoulder"], muscles: ["core","shoulders"], cue: "Weights at the shoulders, ribs down, walk tall and steady." },
+  { name: "Trap bar carry", zone: "platform", pattern: "carry", region: "full", exp: 1, impact: 0, unilateral: false, avoid: [], muscles: ["core","back"], cue: "Stand tall inside the bar, grip hard, walk with short controlled steps." },
+  { name: "Waiter carry", zone: "dumbbell", pattern: "carry", region: "full", exp: 2, impact: 0, unilateral: true, avoid: ["shoulder"], muscles: ["shoulders","core"], cue: "One weight straight overhead, elbow locked, walk without leaning." },
+
+  /* ---------------- ADDED: ROTATION depth ----------------
+     One level-1 option existed in the whole library. */
+  { name: "Dead bug with reach", zone: "bodyweight", pattern: "rotation", region: "core", exp: 1, impact: 0, unilateral: true, avoid: [], muscles: ["core"], cue: "On your back, lower one arm and the opposite leg, keep your low back flat on the floor." },
+  { name: "Half-kneeling band chop", zone: "cable", pattern: "rotation", region: "core", exp: 1, impact: 0, unilateral: true, avoid: [], muscles: ["core"], cue: "One knee down, pull the band across your body from high to low. Hips stay still." },
+  { name: "Half-kneeling band lift", zone: "cable", pattern: "rotation", region: "core", exp: 2, impact: 0, unilateral: true, avoid: [], muscles: ["core"], cue: "Same position, drive the band from low to high. The movement comes from your trunk." },
+  { name: "Bird dog row", zone: "dumbbell", pattern: "rotation", region: "core", exp: 2, impact: 0, unilateral: true, avoid: ["lowback"], muscles: ["core","back"], cue: "On all fours or braced on a bench, row one weight without letting your hips twist." },
+
+  /* ---------------- ADDED: MACHINE on-ramps ----------------
+     For the client who is intimidated by barbells. A legitimate first few weeks. */
+  { name: "Machine chest press", zone: "machine", pattern: "h_push", region: "push", exp: 1, impact: 0, unilateral: false, avoid: ["shoulder"], muscles: ["chest","arms"], cue: "Set the seat so the handles line up with your chest. Press smoothly, don't lock hard." },
+  { name: "Machine shoulder press", zone: "machine", pattern: "v_push", region: "push", exp: 1, impact: 0, unilateral: false, avoid: ["shoulder"], muscles: ["shoulders","arms"], cue: "Press straight up, stop just short of locking out." },
+  { name: "Machine leg press", zone: "machine", pattern: "squat", region: "lower", exp: 1, impact: 0, unilateral: false, avoid: ["knee"], muscles: ["quads","glutes"], cue: "Feet flat and about hip width. Lower until your knees are near 90 degrees." },
+  { name: "Machine seated row", zone: "machine", pattern: "h_pull", region: "pull", exp: 1, impact: 0, unilateral: false, avoid: [], muscles: ["back","arms"], cue: "Sit tall, pull the handles to your stomach, let your shoulder blades move." },
+  { name: "Machine lat pulldown", zone: "machine", pattern: "v_pull", region: "pull", exp: 1, impact: 0, unilateral: false, avoid: ["shoulder"], muscles: ["back","arms"], cue: "Pull the bar to your collarbone, lean back only slightly." },
+  { name: "Machine hamstring curl", zone: "machine", pattern: "hinge", region: "lower", exp: 1, impact: 0, unilateral: false, avoid: [], muscles: ["hamstrings"], cue: "Curl smoothly, lower slower than you lift." },
 
   /* ---------------- ADDED: HINGE depth ---------------- */
   { name: "Deficit deadlift", zone: "platform", pattern: "hinge", region: "lower", exp: 3, impact: 2, unilateral: false, avoid: ["lowback"], muscles: ["hamstrings","glutes","back"], cue: "Stand on a plate — longer pull, stronger off the floor." },
@@ -231,16 +276,16 @@ const LIBRARY = [
   { name: "Weighted plank", zone: "bodyweight", pattern: "core", region: "core", exp: 2, impact: 0, unilateral: false, avoid: ["shoulder","wrist"], muscles: ["core"], cue: "Plate on the back, ribs down, squeeze everything." },
   { name: "Copenhagen plank", zone: "bodyweight", pattern: "core", region: "core", exp: 3, impact: 0, unilateral: true, avoid: ["hip"], muscles: ["core"], cue: "Top leg on the bench — elite adductor and core work." },
   { name: "Landmine rotation", zone: "platform", pattern: "rotation", region: "core", exp: 2, impact: 0, unilateral: false, avoid: ["lowback"], muscles: ["core"], cue: "Rotate from the hips, arms long, control the arc." },
-  { name: "Turkish get-up", zone: "crossfit", pattern: "carry", region: "full", exp: 3, impact: 1, unilateral: true, avoid: ["shoulder","wrist"], muscles: ["core","shoulders","glutes"], cue: "Slow, deliberate, eyes on the bell — total-body control." },
+  { name: "Turkish get-up", zone: "crossfit", pattern: "carry", region: "full", exp: 3, impact: 1, unilateral: true, avoid: ["shoulder","wrist"], muscles: ["core","shoulders","glutes"], cue: "Slow, deliberate, eyes on the bell — total-body control." , hidden: true },
   { name: "Overhead carry", zone: "dumbbell", pattern: "carry", region: "core", exp: 2, impact: 1, unilateral: true, avoid: ["shoulder"], muscles: ["core","shoulders"], cue: "Lock the elbow, ribs down, walk tall." },
   { name: "Cable crunch", zone: "cable", pattern: "core", region: "core", exp: 1, impact: 0, unilateral: false, avoid: [], muscles: ["core"], cue: "Curl the spine down, hips stay put — loadable ab work." },
 
   /* ---------------- ADDED: OLYMPIC / POWER depth ---------------- */
-  { name: "Power snatch", zone: "platform", pattern: "olympic", region: "full", exp: 3, impact: 2, unilateral: false, avoid: ["lowback","shoulder","wrist"], muscles: ["back","glutes","shoulders","hamstrings"], cue: "Aggressive hip extension, punch under the bar — coach it or skip it." },
-  { name: "Hang power snatch", zone: "platform", pattern: "olympic", region: "full", exp: 3, impact: 2, unilateral: false, avoid: ["lowback","shoulder"], muscles: ["back","glutes","shoulders"], cue: "From the hip, violent extension, catch overhead in a quarter squat." },
-  { name: "Clean pull", zone: "platform", pattern: "olympic", region: "full", exp: 2, impact: 2, unilateral: false, avoid: ["lowback"], muscles: ["back","glutes","hamstrings"], cue: "Deadlift into a shrug and full extension — no catch, all power." },
+  { name: "Power snatch", zone: "platform", pattern: "olympic", region: "full", exp: 3, impact: 2, unilateral: false, avoid: ["lowback","shoulder","wrist"], muscles: ["back","glutes","shoulders","hamstrings"], cue: "Aggressive hip extension, punch under the bar — coach it or skip it." , hidden: true },
+  { name: "Hang power snatch", zone: "platform", pattern: "olympic", region: "full", exp: 3, impact: 2, unilateral: false, avoid: ["lowback","shoulder"], muscles: ["back","glutes","shoulders"], cue: "From the hip, violent extension, catch overhead in a quarter squat." , hidden: true },
+  { name: "Clean pull", zone: "platform", pattern: "olympic", region: "full", exp: 2, impact: 2, unilateral: false, avoid: ["lowback"], muscles: ["back","glutes","hamstrings"], cue: "Deadlift into a shrug and full extension — no catch, all power." , hidden: true },
   { name: "Push jerk", zone: "platform", pattern: "v_push", region: "full", exp: 3, impact: 1, unilateral: false, avoid: ["shoulder","lowback"], muscles: ["shoulders","glutes","arms"], cue: "Dip, drive, re-dip under the bar, lock it out overhead." },
-  { name: "Barbell high pull", zone: "platform", pattern: "olympic", region: "full", exp: 2, impact: 1, unilateral: false, avoid: ["lowback","shoulder"], muscles: ["back","shoulders","glutes"], cue: "Explode the hips, elbows high and outside." },
+  { name: "Barbell high pull", zone: "platform", pattern: "olympic", region: "full", exp: 2, impact: 1, unilateral: false, avoid: ["lowback","shoulder"], muscles: ["back","shoulders","glutes"], cue: "Explode the hips, elbows high and outside." , hidden: true },
 
   /* ---------------- ADDED: PLYO / ATHLETIC depth ---------------- */
   { name: "Depth jump", zone: "crossfit", pattern: "plyo", region: "lower", exp: 3, impact: 3, unilateral: false, avoid: ["knee","hip","ankle"], muscles: ["quads","glutes"], cue: "Step off, land, rebound instantly — advanced reactive strength only." },
@@ -253,7 +298,7 @@ const LIBRARY = [
   /* ---------------- ADDED: CONDITIONING depth ---------------- */
   { name: "Assault bike sprints", zone: "cardio", pattern: "conditioning", region: "cardio", exp: 2, impact: 0, unilateral: false, avoid: [], muscles: [], cue: "10–20s all-out, long recovery — brutal, joint-friendly." },
   { name: "Farmer carry medley", zone: "crossfit", pattern: "conditioning", region: "full", exp: 2, impact: 1, unilateral: false, avoid: [], muscles: ["core","back"], cue: "Heavy carries back to back — grip, core, and engine." },
-  { name: "Kettlebell snatch", zone: "crossfit", pattern: "conditioning", region: "full", exp: 3, impact: 1, unilateral: true, avoid: ["shoulder","lowback","wrist"], muscles: ["glutes","shoulders","back"], cue: "Hips drive it, punch through at the top — no banging the wrist." },
+  { name: "Kettlebell snatch", zone: "crossfit", pattern: "conditioning", region: "full", exp: 3, impact: 1, unilateral: true, avoid: ["shoulder","lowback","wrist"], muscles: ["glutes","shoulders","back"], cue: "Hips drive it, punch through at the top — no banging the wrist." , hidden: true },
   { name: "Devil's press", zone: "crossfit", pattern: "conditioning", region: "full", exp: 3, impact: 2, unilateral: false, avoid: ["shoulder","lowback","wrist","knee"], muscles: ["shoulders","glutes","core"], cue: "Burpee into a double-dumbbell snatch — pace it or die." },
   { name: "Rowing sprints", zone: "cardio", pattern: "conditioning", region: "cardio", exp: 2, impact: 0, unilateral: false, avoid: ["lowback"], muscles: ["back","hamstrings"], cue: "250m repeats, legs-drive first, strong finish." },
   { name: "Jump rope intervals", zone: "bodyweight", pattern: "conditioning", region: "cardio", exp: 1, impact: 2, unilateral: false, avoid: ["ankle","knee"], muscles: ["calves"], cue: "Stay on the balls of the feet, relaxed shoulders." },

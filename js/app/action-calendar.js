@@ -127,6 +127,7 @@ function actionCategoryForKind(kind) {
   if (["message","recognition"].includes(kind)) return "messages";
   if (["workout","workout_request","checkin","recovery","recovery_due","program","baseline","receipt_weekly","receipt_formal","consultation"].includes(kind)) return "workouts";
   if (["calendar_event","calendar_notice","session_unprepared","consult_questionnaire"].includes(kind)) return "schedule";
+  if (kind === "follow_up") return "followup";
   if (["trainer_request","account_request"].includes(kind)) return "access";
   if (kind === "owner_request") return "approvals";
   return "followup";
@@ -302,7 +303,7 @@ function ensureCalendarEventDialog() {
       <div class="calendar-event-form">
         <div class="compact-field wide" data-calendar-assignment hidden><label for="calendarAssignmentAction">What are you doing?</label><select id="calendarAssignmentAction" onchange="syncCalendarAssignmentAction()"><option value="reschedule">Reschedule this workout</option><option value="followup">Record missed-workout follow-up</option><option value="cancel">Cancel assigned workout</option></select><span id="calendarAssignmentActionHelp" class="calendar-field-help"></span></div>
         <div class="compact-field" data-calendar-custom><label for="calendarEventType">Type</label><select id="calendarEventType"><option value="appointment">Training session</option><option value="consultation">Consultation</option><option value="followup">Follow-up</option><option value="admin">Team task</option></select></div>
-        <div class="compact-field" data-calendar-custom><label for="calendarEventStatus">Status</label><select id="calendarEventStatus"><option value="scheduled">Scheduled</option><option value="rescheduled">Rescheduled</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="missed">Missed</option></select></div>
+        <div class="compact-field" data-calendar-custom><label for="calendarEventStatus">Status</label><select id="calendarEventStatus" onchange="syncCalendarCancelFields()"><option value="scheduled">Scheduled</option><option value="rescheduled">Rescheduled</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="missed">Missed</option></select></div><div class="compact-field" data-calendar-custom id="calendarCancelWrap" style="display:none"><label for="calendarEventCancelledBy">Who cancelled?</label><select id="calendarEventCancelledBy" onchange="syncCalendarCancelFields()"><option value="client">The client</option><option value="trainer">The gym or trainer</option></select><span class="storage-note" id="calendarCancelOutcome"></span></div>
         <div class="compact-field wide" data-calendar-custom><label for="calendarEventTitleInput">Title</label><input id="calendarEventTitleInput" maxlength="100" placeholder="Training appointment or follow-up"></div>
         <div class="compact-field" data-calendar-custom><label for="calendarEventClient">Client</label><select id="calendarEventClient" onchange="calendarEventClientChanged()"></select></div><div class="compact-field" data-calendar-custom><label for="calendarEventPartner">Partner client <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><select id="calendarEventPartner"></select></div>
         <div class="compact-field" data-calendar-custom><label for="calendarEventTrainer">Trainer</label><select id="calendarEventTrainer"></select></div>
@@ -387,6 +388,8 @@ function openCalendarEventEditor(eventId,dateKey,type) {
   byId("calendarEventTitleInput").value = event && event.title || (type === "followup" ? "Client follow-up" : "Training appointment"); byId("calendarEventTitleInput").disabled = false;
   byId("calendarEventClient").value = event && event.profileId || ""; byId("calendarEventClient").disabled = false;
   if (byId("calendarEventPartner")) byId("calendarEventPartner").value = event && event.partnerProfileId || "";
+  if (byId("calendarEventCancelledBy")) byId("calendarEventCancelledBy").value = event && event.cancelledBy || "client";
+  syncCalendarCancelFields();
   byId("calendarEventTrainer").value = event && event.trainerId || identity.id || ""; byId("calendarEventTrainer").disabled = false;
   byId("calendarEventDate").value = event && event.date || dateKey || coachCalendarState.anchor; byId("calendarEventStart").value = event && event.startTime || ""; byId("calendarEventEnd").value = event && event.endTime || "";
   byId("calendarEventStart").disabled = false; byId("calendarEventEnd").disabled = false;
@@ -405,6 +408,36 @@ function calendarOverlap(event,events) {
   if (!event.trainerId || !event.startTime || ["cancelled","completed"].includes(event.status)) return null;
   const start = calendarDate(event.date,event.startTime).getTime(), end = calendarDate(event.date,event.endTime || event.startTime).getTime() + (event.endTime ? 0 : 60 * 60000);
   return events.find((candidate) => candidate.id !== event.id && candidate.date === event.date && candidate.trainerId === event.trainerId && candidate.startTime && !["cancelled","completed"].includes(candidate.status) && calendarDate(candidate.date,candidate.startTime).getTime() < end && (calendarDate(candidate.date,candidate.endTime || candidate.startTime).getTime() + (candidate.endTime ? 0 : 60 * 60000)) > start) || null;
+}
+// When the gym cancels, the client is owed that session back. Offering the rebooking
+// immediately is the difference between a session that gets replaced and one that
+// quietly disappears from the week.
+function offerCancellationReschedule(event,outcome) {
+  if (!outcome || !outcome.offerReschedule || !event || !event.profileId) return;
+  const client = event.client || "this client";
+  if (!window.confirm("That session is returned to " + client + ". Rebook their trainer day now?")) return;
+  window.setTimeout(() => {
+    openCalendarEventEditor("", event.date, event.type || "appointment");
+    const clientSelect = byId("calendarEventClient");
+    if (clientSelect) { clientSelect.value = event.profileId; calendarEventClientChanged(); }
+    const title = byId("calendarEventTitleInput");
+    if (title && !title.value) title.value = event.title || "Training session";
+    const start = byId("calendarEventStart");
+    if (start && event.startTime) start.value = event.startTime;
+    calendarSetFeedback("Rebooking the session cancelled on " + calendarDateLabel(event.date,{month:"short",day:"numeric"}) + ". Choose the new date and time.","info");
+  },0);
+}
+function syncCalendarCancelFields() {
+  const wrap = byId("calendarCancelWrap"), status = byId("calendarEventStatus");
+  if (!wrap || !status) return;
+  const cancelled = status.value === "cancelled";
+  wrap.style.display = cancelled ? "" : "none";
+  if (!cancelled) return;
+  const note = byId("calendarCancelOutcome"), by = byId("calendarEventCancelledBy");
+  if (!note || !by) return;
+  // Show the consequence before it is saved, so nobody has to remember the rule.
+  const draft = { profileId:byId("calendarEventClient").value, date:byId("calendarEventDate").value, startTime:byId("calendarEventStart").value };
+  note.textContent = cancellationSummaryText(draft, by.value);
 }
 function saveCalendarEvent() {
   if (!isFit4LifeStaff()) { calendarSetFeedback("Only approved Fit4Life staff can save calendar changes.","error"); return false; }
@@ -441,8 +474,11 @@ function saveCalendarEvent() {
   }
   if (!date) { calendarSetFeedback("Choose a calendar date.","error"); return false; }
   const profileId = byId("calendarEventClient").value, profile = calendarProfile(profileId), trainerSelect = byId("calendarEventTrainer"), trainerOption = trainerSelect.options[trainerSelect.selectedIndex];
+  const statusValue = byId("calendarEventStatus").value;
+  const cancelledBy = statusValue === "cancelled" ? (byId("calendarEventCancelledBy") ? byId("calendarEventCancelledBy").value : "client") : "";
+  const cancelOutcome = cancelledBy ? cancellationOutcome({ profileId, date, startTime:byId("calendarEventStart").value }, cancelledBy) : null;
   const partnerSelect = byId("calendarEventPartner"), partnerProfile = partnerSelect && partnerSelect.value ? loadProfiles().find((item) => item.id === partnerSelect.value) : null;
-  const next = {id:eventId || "calendar-event-" + Date.now() + "-" + Math.random().toString(16).slice(2),source:"calendar",type:byId("calendarEventType").value,title:byId("calendarEventTitleInput").value.trim(),profileId,client:profile && profile.name || "",trainerId:trainerSelect.value,trainerName:trainerOption && trainerOption.dataset.name || trainerOption && trainerOption.textContent || "Coaching team",date,startTime:byId("calendarEventStart").value,endTime:byId("calendarEventEnd").value,status:byId("calendarEventStatus").value,location:byId("calendarEventLocation").value.trim(),notes:byId("calendarEventNotes").value.trim(),partnerProfileId:partnerProfile && partnerProfile.id || "",partnerClient:partnerProfile && partnerProfile.name || "",assignmentId:existing && existing.assignmentId || "",createdAt:existing && existing.createdAt || new Date().toISOString(),updatedAt:new Date().toISOString(),updatedBy:calendarIdentity().name};
+  const next = {id:eventId || "calendar-event-" + Date.now() + "-" + Math.random().toString(16).slice(2),source:"calendar",type:byId("calendarEventType").value,title:byId("calendarEventTitleInput").value.trim(),profileId,client:profile && profile.name || "",trainerId:trainerSelect.value,trainerName:trainerOption && trainerOption.dataset.name || trainerOption && trainerOption.textContent || "Coaching team",date,startTime:byId("calendarEventStart").value,endTime:byId("calendarEventEnd").value,status:byId("calendarEventStatus").value,location:byId("calendarEventLocation").value.trim(),notes:byId("calendarEventNotes").value.trim(),cancelledBy:cancelledBy,cancelRollsOver:cancelOutcome ? cancelOutcome.rollsOver : undefined,partnerProfileId:partnerProfile && partnerProfile.id || "",partnerClient:partnerProfile && partnerProfile.name || "",assignmentId:existing && existing.assignmentId || "",createdAt:existing && existing.createdAt || new Date().toISOString(),updatedAt:new Date().toISOString(),updatedBy:calendarIdentity().name};
   if (!next.title) { calendarSetFeedback("Add a clear calendar title.","error"); return false; }
   if (next.startTime && next.endTime && calendarDate(next.date,next.endTime) <= calendarDate(next.date,next.startTime)) { calendarSetFeedback("End time must be after start time.","error"); return false; }
   const changed = existing && ["date","startTime","endTime","status","trainerId","profileId"].some((key) => String(existing[key] || "") !== String(next[key] || ""));
@@ -458,7 +494,7 @@ function saveCalendarEvent() {
   if (next.status === "completed") {
     const notices = loadCalendarNotices(); notices.forEach((notice) => { if (notice.eventId === next.id && !notice.resolvedAt) notice.resolvedAt = new Date().toISOString(); }); writeLocalArray(CALENDAR_NOTICES_KEY,notices,1000);
   }
-  closeCalendarEventEditor(); coachCalendarState.anchor = next.date; renderCoachCalendarModule(); renderTrainerAttention(); showToast(action === "Created" ? "Calendar item created" : "Calendar change saved with history"); return true;
+  closeCalendarEventEditor(); coachCalendarState.anchor = next.date; offerCancellationReschedule(next,cancelOutcome); renderCoachCalendarModule(); renderTrainerAttention(); showToast(action === "Created" ? "Calendar item created" : "Calendar change saved with history"); return true;
 }
 
 function calendarEventMatches(event) {
@@ -471,6 +507,177 @@ function calendarEventMatches(event) {
     && (!coachCalendarState.status || event.status === coachCalendarState.status)
     && (!coachCalendarState.tier || calendarTier(profile) === coachCalendarState.tier)
     && timeMatches;
+}
+/* ---------- solo-day follow-up ---------- */
+// Trainers already know they should check in; writing thirty personal messages is what
+// does not happen. So the app does the remembering AND the first draft, built from the
+// client's own logged data, and the trainer sends it in one tap after a glance.
+//
+// Triggered by exception, never by the calendar. A task per solo day would be sixty
+// items a week for a full roster, which is how a queue stops being read.
+const FOLLOW_UP_SILENCE_DAYS = 5;
+function lastCoachContactAt(profileId) {
+  const messages = loadLocalArray(CLIENT_MESSAGES_KEY)
+    .filter((message) => message.profileId === profileId && messageSenderRole(message) !== "client")
+    .sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  return messages.length ? messages[0].createdAt : "";
+}
+function soloWorkoutsAwaitingFollowUp(profile) {
+  if (!profile) return [];
+  const lastContact = lastCoachContactAt(profile.id);
+  return assignmentsForClient(profile.id).filter((assignment) => {
+    if (!["completed","reviewed"].includes(assignmentStatus(assignment)) || !assignment.completedAt) return false;
+    if (assignment.followUpSentAt) return false;
+    // Only sessions the client ran alone; a trainer day was already a conversation.
+    if (assignment.scheduledDate && isTrainerDay(profile.id,assignment.scheduledDate)) return false;
+    return !lastContact || new Date(assignment.completedAt) > new Date(lastContact);
+  }).sort((a,b) => String(b.completedAt).localeCompare(String(a.completedAt)));
+}
+// Why this client, right now. Returns null when nothing warrants contact.
+function followUpReasonFor(profile) {
+  const pending = soloWorkoutsAwaitingFollowUp(profile);
+  if (!pending.length) return null;
+  const latest = pending[0], review = latest.clientReview || {};
+  const painful = painLevelInfo(review.painLevel || review.pain,review.movementChanged).rank > PAIN_LEVELS.green.rank;
+  if (painful) return { key:"pain", urgency:"urgent", rank:1, assignment:latest, label:"Reported discomfort training alone" };
+  if (Number(review.difficulty) >= 9) return { key:"hard", urgency:"high", rank:2, assignment:latest, label:"Found their solo session very hard" };
+  if (Number(review.energy) <= 2) return { key:"flat", urgency:"high", rank:2, assignment:latest, label:"Low energy on their solo session" };
+  if (review.completion === "stopped") return { key:"stopped", urgency:"high", rank:2, assignment:latest, label:"Stopped their solo session early" };
+  const lastContact = lastCoachContactAt(profile.id);
+  const quietDays = lastContact ? (Date.now() - new Date(lastContact).getTime()) / 86400000 : Infinity;
+  if (quietDays >= FOLLOW_UP_SILENCE_DAYS) return { key:"quiet", urgency:"normal", rank:4, assignment:latest, label:"Trained alone and has not heard from a coach" };
+  return null;
+}
+// The draft is the whole point: specific enough that sending it unedited is reasonable.
+function draftFollowUpMessage(profile,reason) {
+  if (!profile || !reason) return "";
+  const first = String(profile.name || "there").trim().split(/\s+/)[0];
+  const assignment = reason.assignment || {}, review = assignment.clientReview || {};
+  const data = assignment.session && assignment.session.data;
+  const title = (data && data.goalLabel) || "your last workout";
+  const when = assignment.completedAt ? new Date(assignment.completedAt).toLocaleDateString([], {weekday:"long"}) : "recently";
+  // Name something they actually did, so it reads as a coach who was paying attention.
+  const logged = loadProgress()
+    .filter((entry) => entry && entry.type === "set" && entry.sessionId && assignment.session && entry.sessionId === assignment.session.sessionId)
+    .map((entry) => entry.label).filter(Boolean);
+  const movement = logged[0] || (data && data.blocks && data.blocks[0] && data.blocks[0].items && data.blocks[0].items[0] && data.blocks[0].items[0].name) || "";
+  const did = movement ? " Nice work getting through the " + String(movement).toLowerCase() + "." : "";
+  const bodies = {
+    pain: "Hi " + first + " — I saw you flagged some discomfort during " + title + " on " + when + ". Before your next session, can you tell me where it was and whether it changed how the movement felt? We'll adjust the plan around it.",
+    hard: "Hi " + first + " — " + title + " on " + when + " looked like a tough one." + did + " Was it the load, the pace, or just a rough day? I can dial it in either way.",
+    flat: "Hi " + first + " — you logged low energy on " + when + "." + did + " How's sleep and food been this week? Worth adjusting the next one if you're running on empty.",
+    stopped: "Hi " + first + " — looks like " + title + " on " + when + " got cut short. No problem at all; tell me what happened and we'll pick it back up.",
+    quiet: "Hi " + first + " — checking in after your solo session on " + when + "." + did + " How did it feel, and is anything getting in the way this week?"
+  };
+  return bodies[reason.key] || bodies.quiet;
+}
+function followUpCandidates() {
+  return loadProfiles().map((profile) => {
+    const reason = followUpReasonFor(profile);
+    return reason ? { profile, reason, draft:draftFollowUpMessage(profile,reason) } : null;
+  }).filter(Boolean).sort((a,b) => (a.reason.rank || 9) - (b.reason.rank || 9));
+}
+// Surfaced through the Action Center like every other piece of coaching work.
+function followUpAttentionItems() {
+  return followUpCandidates().map((item) => ({
+    id:"follow_up:" + item.reason.key + ":" + (item.reason.assignment && item.reason.assignment.id || item.profile.id),
+    profileId:item.profile.id, client:item.profile.name,
+    trainer:item.profile.assignedTrainerName || "Coaching team",
+    kind:"follow_up", urgency:item.reason.urgency, rank:item.reason.rank,
+    createdAt:(item.reason.assignment && item.reason.assignment.completedAt) || new Date().toISOString(),
+    label:item.reason.label, detail:"A message is drafted and ready to send."
+  }));
+}
+function sendDraftedFollowUp(profileId) {
+  if (!requireTrainerMutation("message a client")) return null;
+  const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) return null;
+  const reason = followUpReasonFor(profile); if (!reason) { showToast("Nothing needs a follow-up for " + profile.name); return null; }
+  const box = byId("followUpDraftBody");
+  const body = (box && box.value.trim()) || draftFollowUpMessage(profile,reason);
+  if (!body) return null;
+  const identity = currentAccountIdentity(), messages = loadLocalArray(CLIENT_MESSAGES_KEY);
+  messages.unshift({ id:"message-" + Date.now(), profileId:profile.id, client:profile.name, from:"coach",
+    senderRole:identity.role === "owner" ? "owner" : "trainer", senderUserId:identity.id || "",
+    senderName:identity.displayName, recipientRole:"client", recipientName:profile.name,
+    body, createdAt:new Date().toISOString(), followUpReason:reason.key });
+  if (!writeLocalArray(CLIENT_MESSAGES_KEY,messages,1000)) return null;
+  // Mark the workout so the same session never prompts twice.
+  if (reason.assignment && reason.assignment.id) {
+    const assignments = loadAssignedWorkouts(), index = assignments.findIndex((item) => item.id === reason.assignment.id);
+    if (index >= 0) { assignments[index] = { ...assignments[index],followUpSentAt:new Date().toISOString() }; writeAssignedWorkouts(assignments); }
+  }
+  closeFollowUpDraft(); renderTrainerAttention();
+  showToast("Follow-up sent to " + profile.name);
+  return true;
+}
+function openFollowUpDraft(profileId) {
+  const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) return;
+  const reason = followUpReasonFor(profile); if (!reason) { showToast("Nothing needs a follow-up for " + profile.name); return; }
+  let modal = byId("followUpModal");
+  if (!modal) {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = '<div id="followUpModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="followUpTitle" aria-hidden="true">'
+      + '<div class="review-dialog follow-up-dialog"><h2 id="followUpTitle">Follow-up</h2>'
+      + '<p id="followUpWhy" class="calendar-summary-when"></p>'
+      + '<textarea id="followUpDraftBody" rows="6"></textarea>'
+      + '<span class="storage-note">Edit anything before sending. It arrives in the client\'s messages.</span>'
+      + '<div class="tool-actions"><button class="small-btn primary" id="followUpSendBtn">Send</button>'
+      + '<button class="small-btn" onclick="closeFollowUpDraft()">Cancel</button></div></div></div>';
+    modal = wrapper.firstElementChild; document.body.appendChild(modal);
+  }
+  byId("followUpTitle").textContent = profile.name;
+  byId("followUpWhy").textContent = reason.label;
+  byId("followUpDraftBody").value = draftFollowUpMessage(profile,reason);
+  const send = byId("followUpSendBtn");
+  send.onclick = () => sendDraftedFollowUp(profile.id);
+  modal.classList.add("open"); modal.setAttribute("aria-hidden","false");
+}
+function closeFollowUpDraft() {
+  const modal = byId("followUpModal");
+  if (modal) { modal.classList.remove("open"); modal.setAttribute("aria-hidden","true"); }
+}
+/* ---------- trainer days vs solo days ---------- */
+// A trainer day is simply a day the client has a booked session. Everything else they
+// have been programmed is a day they train alone - which is a different workout, not
+// just a different label.
+function isTrainerDay(profileId,dateKey,events) {
+  if (!profileId || !dateKey) return false;
+  const source = Array.isArray(events) ? events : allCoachCalendarEvents();
+  return source.some((event) => (event.profileId === profileId || event.partnerProfileId === profileId)
+    && event.date === dateKey && BILLABLE_CALENDAR_TYPES.includes(event.type) && event.status !== "cancelled");
+}
+/* ---------- cancellations ---------- */
+// Whether a cancelled session returns to the client's weekly balance depends on who
+// cancelled and how much notice there was. Getting this wrong costs a client a session
+// they paid for, so the rules are explicit rather than inferred.
+const CANCEL_NOTICE_HOURS = 12;
+function cancellationHoursNotice(event) {
+  if (!event || !event.date) return null;
+  const when = calendarDate(event.date, event.startTime || "23:59");
+  if (Number.isNaN(when.getTime())) return null;
+  return (when.getTime() - Date.now()) / 3600000;
+}
+// Returns whether the session rolls over (returns to the balance) and why.
+function cancellationOutcome(event, cancelledBy) {
+  const meta = membershipTierMeta(loadProfiles().find((item) => item.id === (event && event.profileId)));
+  const hours = cancellationHoursNotice(event);
+  if (cancelledBy === "trainer") {
+    // Flex clients are not assigned a fixed trainer - their coach is whoever is on the
+    // floor - so "the trainer cancelled" is not a thing that can happen to them.
+    if (meta.id === "flex") {
+      return { rollsOver:hours == null || hours >= CANCEL_NOTICE_HOURS, reason:"Flex sessions follow the client-notice rule; there is no assigned trainer to cancel.", offerReschedule:false };
+    }
+    return { rollsOver:true, reason:"Cancelled by the gym, so the session is returned to the client.", offerReschedule:true };
+  }
+  if (hours == null) return { rollsOver:true, reason:"No session time recorded, so the client keeps the session.", offerReschedule:false };
+  if (hours >= CANCEL_NOTICE_HOURS) {
+    return { rollsOver:true, reason:"Cancelled with more than " + CANCEL_NOTICE_HOURS + " hours' notice.", offerReschedule:false };
+  }
+  return { rollsOver:false, reason:"Cancelled inside " + CANCEL_NOTICE_HOURS + " hours, so the session is used.", offerReschedule:false };
+}
+function cancellationSummaryText(event, cancelledBy) {
+  const outcome = cancellationOutcome(event, cancelledBy);
+  return (outcome.rollsOver ? "Session returns to their week. " : "Session counts as used. ") + outcome.reason;
 }
 /* ---------- weekly session balance (booked vs owed) ---------- */
 // The calendar's real job is not "what is booked" but "what is booked versus what
@@ -485,7 +692,9 @@ function sessionsBookedForWeek(profileId,weekStartKey,events) {
     // permanently showing as unbooked.
     if (event.profileId !== profileId && event.partnerProfileId !== profileId) return false;
     if (!BILLABLE_CALENDAR_TYPES.includes(event.type)) return false;
-    if (event.status === "cancelled") return false;
+    // A cancellation only frees the session up if it rolled over. A late client
+    // cancellation is a session the gym held open, so it still counts against the week.
+    if (event.status === "cancelled" && event.cancelRollsOver !== false) return false;
     return membershipWeekStartKey(event.date) === weekStartKey;
   }).length;
 }
@@ -662,6 +871,7 @@ function openCalendarSessionSummary(eventId) {
   }
 
   if (profile) {
+    if (WORKOUT_BEARING_TYPES.includes(event.type)) body += calendarSummaryRow("Session type","With a trainer","");
     const baseline = baselineStateForProfile(profile);
     if (baseline.missing && baseline.missing.length) {
       body += calendarSummaryRow("Still needs baseline",baseline.missing.map((domain) => BASELINE_DOMAIN_LABELS[domain] || domain).join(" · "),"");
@@ -692,6 +902,8 @@ function calendarBuildWorkoutFor(eventId) {
   const event = calendarEventById(eventId); if (!event || !event.profileId) return;
   const profile = loadProfiles().find((item) => item.id === event.profileId); if (!profile) return;
   pendingCalendarAppointment = { eventId:event.id, profileId:profile.id, date:event.date };
+  // Built from a booked session, so a coach is present for it.
+  if (state && state.solo) state.solo.soloDay = false;
   closeCalendarSummary();
   selectedTrainerClient = profile.name;
   if (typeof openSelectedClientSession === "function") openSelectedClientSession();
@@ -714,10 +926,13 @@ function calendarEventChip(event) {
   // Only a session that can carry a workout reports whether one is attached. A
   // consultation showing "no workout" would be noise, not a warning.
   const carries = WORKOUT_BEARING_TYPES.includes(event.type);
+  // An unanchored workout is one the client runs on their own.
+  const soloTag = event.source === "assignment" && event.profileId && !isTrainerDay(event.profileId,event.date)
+    ? '<span class="chip-solo">On their own</span>' : '';
   const workoutTag = !carries ? ''
     : event.workout ? '<span class="chip-workout ready">' + escapeHtml(event.workout.title) + '</span>'
     : '<span class="chip-workout missing">No workout yet</span>';
-  return '<button class="calendar-event-chip ' + escapeHtml(event.type) + ' ' + escapeHtml(event.status) + ' tier-' + escapeHtml(tier) + (carries && !event.workout ? ' needs-workout' : '') + '" onclick="openCalendarSessionSummary(\'' + escapeHtml(event.id) + '\')"><span>' + escapeHtml(event.startTime ? calendarFormatTime(event.startTime) : event.type === "workout" ? "Workout" : "All day") + '</span><b>' + escapeHtml(heading) + '</b><em class="chip-foot"><span class="tier-badge tier-' + escapeHtml(tier) + '">' + escapeHtml(calendarTierShort(event.tier)) + '</span>' + workoutTag + escapeHtml(event.trainerName || "Shared team") + '</em></button>';
+  return '<button class="calendar-event-chip ' + escapeHtml(event.type) + ' ' + escapeHtml(event.status) + ' tier-' + escapeHtml(tier) + (carries && !event.workout ? ' needs-workout' : '') + '" onclick="openCalendarSessionSummary(\'' + escapeHtml(event.id) + '\')"><span>' + escapeHtml(event.startTime ? calendarFormatTime(event.startTime) : event.type === "workout" ? "Workout" : "All day") + '</span><b>' + escapeHtml(heading) + '</b><em class="chip-foot"><span class="tier-badge tier-' + escapeHtml(tier) + '">' + escapeHtml(calendarTierShort(event.tier)) + '</span>' + workoutTag + soloTag + escapeHtml(event.trainerName || "Shared team") + '</em></button>';
 }
 function calendarRangeLabel() {
   const anchor = calendarDate(coachCalendarState.anchor);

@@ -174,6 +174,7 @@
     if (assignmentIndex >= 0) {
       const completedAt = assignments[assignmentIndex].completedAt || now;
       assignments[assignmentIndex] = {...assignments[assignmentIndex],status:"completed",completedAt,updatedAt:now,clientReview:review};
+      applyReviewPreferencesToProfile(assignments[assignmentIndex].profileId,review);
       if (!writeAssignedWorkouts(assignments)) { showToast("The review saved locally, but the assignment status did not update. Try again before leaving this page."); return null; }
       completed = assignments[assignmentIndex];
     }
@@ -265,6 +266,25 @@
     if (saved && saved.status === "dismissed" && saved.sourceFingerprint === attentionFingerprint(item)) return false;
     return v6AttentionItemIsVisible(item,state);
   };
+  // A client saying they liked or disliked a movement is only useful if it changes what
+  // they get next. The profile already carries exercisePreferences and the generator
+  // already weights them, so review feedback is written straight into that rather than
+  // becoming a second, parallel preference system.
+  function applyReviewPreferencesToProfile(profileId,review) {
+    if (!profileId || !review) return false;
+    const liked = Array.isArray(review.likedExercises) ? review.likedExercises : [];
+    const disliked = Array.isArray(review.dislikedExercises) ? review.dislikedExercises : [];
+    if (!liked.length && !disliked.length) return false;
+    const profiles = loadProfiles(), index = profiles.findIndex((item) => item.id === profileId);
+    if (index < 0) return false;
+    const preferences = { ...(profiles[index].exercisePreferences || {}) };
+    // Disliked wins on a conflict: a movement someone dislikes is the one worth avoiding,
+    // and a trainer can always override in the profile editor.
+    liked.forEach((name) => { const key = exerciseId({ name }); if (key) preferences[key] = "liked"; });
+    disliked.forEach((name) => { const key = exerciseId({ name }); if (key) preferences[key] = "disliked"; });
+    profiles[index] = { ...profiles[index],exercisePreferences:preferences,updatedAt:new Date().toISOString() };
+    return writeProfiles(profiles);
+  }
   window.openDismissCoachAttention = function openDismissCoachAttention(itemId) {
     const item = trainerAttentionSnapshot().items.find((entry) => entry.id === itemId);
     if (!item) { showToast("That notification is no longer active"); renderTrainerAttention(); return false; }

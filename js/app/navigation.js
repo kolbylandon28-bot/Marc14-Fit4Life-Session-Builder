@@ -126,6 +126,56 @@ function openScratchWorkoutBuilder() {
   showToast("Choose or load a client, then use Build from scratch");
   return true;
 }
+const STARRED_WORKOUTS_KEY = "fit4life_starred_workouts_v1";
+/* ---------- starred workouts ---------- */
+// Two audiences, two meanings. A trainer starring a workout is a judgement about
+// programming quality, so it can go to their reusable library, to one client's
+// suggestions, or both. A client starring a workout is a statement about enjoyment -
+// an adherence signal - so it stays on their own profile and never silently becomes
+// gym-wide programming advice.
+function loadStarredWorkouts() { return loadLocalArray(STARRED_WORKOUTS_KEY); }
+function writeStarredWorkouts(list) { return writeLocalArray(STARRED_WORKOUTS_KEY,list,2000); }
+function starredWorkoutSnapshot(session) {
+  const data = session && session.data ? session.data : session;
+  const names = [];
+  (data && data.blocks || []).forEach((block) => (block.items || []).forEach((item) => { if (item && item.name) names.push(item.name); }));
+  return { title:(data && data.goalLabel) || "Workout", movements:names.slice(0,12), minutes:(data && data.spec && data.spec.minutes) || null,
+           goal:(data && data.spec && data.spec.goal) || "", session:JSON.parse(JSON.stringify(data || {})) };
+}
+function starWorkout(session,options) {
+  const opts = options || {}, snapshot = starredWorkoutSnapshot(session);
+  const record = { id:"starred-" + Date.now() + "-" + Math.random().toString(16).slice(2),
+    starredBy:opts.starredBy === "client" ? "client" : "trainer",
+    scope:opts.scope || "library", profileId:opts.profileId || "", client:opts.client || "",
+    starredByName:opts.starredByName || "", createdAt:new Date().toISOString(), ...snapshot };
+  const list = loadStarredWorkouts();
+  list.unshift(record);
+  return writeStarredWorkouts(list) ? record : null;
+}
+// scope: "library" = the trainer's reusable set · "client" = suggested to one client ·
+// "both" = written to each, so removing one does not remove the other.
+function starWorkoutForTrainer(session,scope,profile,identityName) {
+  const results = [];
+  if (scope === "library" || scope === "both") results.push(starWorkout(session,{ starredBy:"trainer",scope:"library",starredByName:identityName }));
+  if ((scope === "client" || scope === "both") && profile) {
+    results.push(starWorkout(session,{ starredBy:"trainer",scope:"client",profileId:profile.id,client:profile.name,starredByName:identityName }));
+  }
+  return results.filter(Boolean);
+}
+function starWorkoutForClient(session,profile) {
+  if (!profile) return null;
+  return starWorkout(session,{ starredBy:"client",scope:"client",profileId:profile.id,client:profile.name });
+}
+function starredWorkoutsForProfile(profileId) {
+  return loadStarredWorkouts().filter((item) => item.scope === "client" && item.profileId === profileId);
+}
+function trainerWorkoutLibrary() {
+  return loadStarredWorkouts().filter((item) => item.scope === "library");
+}
+function unstarWorkout(id) {
+  const list = loadStarredWorkouts().filter((item) => item.id !== id);
+  return writeStarredWorkouts(list);
+}
 const ASSIGNED_WORKOUTS_KEY = "fit4life_assigned_workouts_v1";
 const SAVED_PROGRAMS_KEY = "fit4life_saved_programs_v1";
 const CLIENT_DAILY_KEY = "fit4life_client_daily_v1";
@@ -375,14 +425,21 @@ function assignmentForSession(sessionId) { return loadAssignedWorkouts().find((i
 // The catalog supplies the default count for a tier, but profile.sessionsPerWeek
 // stays editable for exceptions. This mirrors how the booking export was specified,
 // so imported rows land without anyone parsing display text like "Flex - 2 / week".
+// sessionsPerWeek = days WITH a trainer. programmedDays = total workouts written for
+// the week, trainer days included; the remainder are solo days the client runs alone.
+// Flex 1 and Starter are deliberately identical in structure (3 programmed, 1 trainer) -
+// the difference between them is floor hours versus a dedicated private session, which
+// is a real distinction the price reflects but the program does not see.
 const MEMBERSHIP_TIERS = {
-  flex:     { label:"Flex",          short:"FLEX", sessionsPerWeek:1, kind:"individual" },
-  starter:  { label:"Starter",       short:"STRT", sessionsPerWeek:1, kind:"individual" },
-  standard: { label:"Standard",      short:"STND", sessionsPerWeek:2, kind:"individual" },
-  premium:  { label:"Premium",       short:"PREM", sessionsPerWeek:3, kind:"individual" },
-  partner:  { label:"Partner",       short:"PAIR", sessionsPerWeek:1, kind:"partner"    },
-  group:    { label:"Group class",   short:"GRP",  sessionsPerWeek:2, kind:"group"      },
-  one_time: { label:"Pay as you go", short:"PAYG", sessionsPerWeek:0, kind:"one_time"   }
+  flex:     { label:"Flex",          short:"FLEX", sessionsPerWeek:1, programmedDays:3, kind:"individual" },
+  starter:  { label:"Starter",       short:"STRT", sessionsPerWeek:1, programmedDays:3, kind:"individual" },
+  standard: { label:"Standard",      short:"STND", sessionsPerWeek:2, programmedDays:4, kind:"individual" },
+  premium:  { label:"Premium",       short:"PREM", sessionsPerWeek:3, programmedDays:6, kind:"individual" },
+  // Partner and Group programmed-day counts are deliberately unresolved and parked.
+  // They fall back to their trainer-day count so nothing over-programs in the meantime.
+  partner:  { label:"Partner",       short:"PAIR", sessionsPerWeek:1, programmedDays:0, kind:"partner"    },
+  group:    { label:"Group class",   short:"GRP",  sessionsPerWeek:2, programmedDays:0, kind:"group"      },
+  one_time: { label:"Pay as you go", short:"PAYG", sessionsPerWeek:0, programmedDays:0, kind:"one_time"   }
 };
 const MEMBERSHIP_TIER_FALLBACK = { label:"No tier set", short:"—", sessionsPerWeek:0, kind:"unset" };
 function normalizeMembershipTier(value) {
@@ -405,6 +462,19 @@ function entitledSessionsPerWeek(profile) {
   const explicit = Number(profile && profile.sessionsPerWeek);
   if (Number.isFinite(explicit) && explicit > 0) return explicit;
   return membershipTierMeta(profile).sessionsPerWeek || 0;
+}
+// Total workouts written for the week. An explicit per-client number wins, then the
+// tier default, then the trainer-day count as a floor so a client is never programmed
+// fewer days than they are actually coming in.
+function programmedDaysPerWeek(profile) {
+  const explicit = Number(profile && profile.programmedDays);
+  if (Number.isFinite(explicit) && explicit > 0) return explicit;
+  const meta = membershipTierMeta(profile);
+  return meta.programmedDays || entitledSessionsPerWeek(profile) || 0;
+}
+// Days the client trains alone: programmed days that are not trainer days.
+function soloDaysPerWeek(profile) {
+  return Math.max(0, programmedDaysPerWeek(profile) - entitledSessionsPerWeek(profile));
 }
 function membershipWeekStartKey(value) {
   const date = value instanceof Date ? new Date(value) : new Date(String(value) + "T12:00:00");

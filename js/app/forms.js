@@ -414,6 +414,25 @@ function loadProfileIntoTarget(profile, target) {
   renderForms(); updateHint(); showToast("Loaded " + profile.name + " with saved goals and limitations"); return profile;
 }
 
+// Whether this workout runs with a coach present changes what may safely appear in it,
+// so it is asked directly rather than guessed. Defaults to a trainer day, because
+// building alongside a client is the common case and a wrong "solo" would silently
+// strip movements the trainer expected to see.
+function supervisionField(target) {
+  const wrap = document.createElement("div");
+  wrap.className = "compact-field";
+  const id = "specSupervision";
+  wrap.innerHTML = '<label for="' + id + '">Who is running this workout?</label>'
+    + '<select id="' + id + '">'
+    + '<option value="trainer">With a trainer</option>'
+    + '<option value="solo">Client on their own</option>'
+    + '</select>'
+    + '<span class="storage-note">On a solo day the generator will not introduce a movement this client has never performed that needs supervision the first time.</span>';
+  const select = wrap.querySelector("select");
+  select.value = target.soloDay ? "solo" : "trainer";
+  select.addEventListener("change", () => { target.soloDay = select.value === "solo"; updateHint(); });
+  return wrap;
+}
 function buildPersonFields(target, container) {
   container.innerHTML = "";
   const grid = document.createElement("div");
@@ -425,6 +444,7 @@ function buildPersonFields(target, container) {
   grid.appendChild(selectField("Experience", "experience", EXP_OPTIONS, target, target.experience));
   grid.appendChild(ageField(target));
   grid.appendChild(selectField("Session length", "minutes", TIME_OPTIONS, target, target.minutes));
+  grid.appendChild(supervisionField(target));
   grid.appendChild(muscleField(target));
   grid.appendChild(chipMulti("Injury limitations", "injuries", COMMON_LIMITATIONS, INJURY_LABELS, target, true));
   grid.appendChild(chipMulti("Equipment available", "zones", ALL_ZONES, ZONE_LABELS, target, false));
