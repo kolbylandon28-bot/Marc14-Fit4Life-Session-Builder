@@ -698,18 +698,6 @@ function openCalendarClient(profileId,tab) {
   const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) return;
   selectedTrainerClient = profile.name; selectedInBodyScanId = ""; trainerSummaryState = newTrainerSummaryState(); trainerSummaryState.tab = tab === "workout" ? "program" : "overview"; show("trainer"); renderTrainerHub(profile.name);
 }
-function attendanceCalendarHtml() {
-  const profiles = loadProfiles(), assignments = loadAssignedWorkouts(), todayKey = new Date().toISOString().slice(0,10);
-  const days = coachCalendarWeek().map((day) => {
-    const clients = profiles.filter((profile) => inferredTrainingDays(profile,profile.availableDays || 3).includes(day.weekday)).sort((a,b) => a.name.localeCompare(b.name));
-    const rows = clients.map((profile) => {
-      const assignment = assignments.find((item) => item.profileId === profile.id && item.scheduledDate === day.dateKey) || assignmentForClient(profile.id), status = assignment ? assignmentStatusLabel(assignment) : "Profile scheduled · workout not assigned";
-      return '<div class="attendance-client"><button type="button" onclick="openCalendarClient(\'' + escapeHtml(profile.id) + '\',\'profile\')">' + escapeHtml(profile.name) + '<span>' + escapeHtml(status) + '</span></button><button class="tiny-btn" type="button" onclick="openCalendarClient(\'' + escapeHtml(profile.id) + '\',\'workout\')">Workout</button></div>';
-    }).join("");
-    return '<section class="attendance-day' + (day.dateKey === todayKey ? ' today' : '') + '"><div class="attendance-day-head"><b>' + day.label + '</b><span>' + day.date.toLocaleDateString([],{month:"short",day:"numeric"}) + '</span></div>' + (rows || '<div class="attendance-empty">No clients scheduled.</div>') + '</section>';
-  }).join("");
-  return '<section class="attendance-calendar"><div class="attendance-head"><div><h3>Monday–Saturday client calendar</h3><p>Training days come from each client profile. Open a name for the full record or Workout for the assigned phase.</p></div><button class="small-btn" onclick="openCoachDestination(\'clients\')">Edit client days</button></div><div class="attendance-grid">' + days + '</div></section>';
-}
 function installCoachMessageSearch() {
   const out = byId('coachModuleContent'), list = out && out.querySelector('.advanced-list'); if (!out || !list || byId('coachMessageSearch')) return;
   const field = document.createElement('input'); field.id = 'coachMessageSearch'; field.className = 'swap-search'; field.placeholder = 'Search clients or trainer names…'; field.setAttribute('aria-label','Search client conversations');
@@ -723,9 +711,9 @@ function renderCoachModule(destination) {
   }[destination] || ['Coach workspace','Open the coaching capability you need.']; title.textContent = details[0]; eyebrow.textContent = 'Coach workspace'; copy.textContent = details[1];
   if (destination === 'approvals') { renderOwnerApprovalsModule(); return; }
   if (destination === 'calendar') {
-    const assignments = loadAssignedWorkouts().slice().sort((a,b) => String(b.assignedAt).localeCompare(String(a.assignedAt))), attention = trainerAttentionSnapshot();
-    const followups = attention.assignmentReviews.map((item) => ({client:item.client,label:'Workout review ready'})).concat(attention.checkinReviews.map((item) => ({client:item.client,label:item.reviewType === 'recovery_24_48' ? '24–48h recovery pulse ready' : item.reviewType === 'starter_week_1' ? 'First-week review ready' : 'Weekly check-in ready'}))).concat(attention.recoveryOverdue.map((item) => ({client:item.profile.name,label:'Recovery pulse overdue'}))).concat(attention.receiptRequests.map((item) => ({client:item.profile.name,label:item.status.type === 'formal' ? 'Formal progress receipt requested' : 'Weekly progress receipt requested'}))).concat(attention.recognition.map((profile) => ({client:profile.name,label:'Positive recognition due'})));
-    out.innerHTML = attendanceCalendarHtml() + '<section class="coach-module-card"><h3>Assigned sessions</h3><div class="advanced-list">' + (assignments.slice(0,20).map((item) => '<div class="advanced-list-item"><b>' + escapeHtml(item.client) + (item.programWeek ? ' · Week ' + item.programWeek + ' Day ' + item.programDay : '') + '</b><span>' + escapeHtml(item.scheduledDate ? new Date(item.scheduledDate + 'T12:00:00').toLocaleDateString() : new Date(item.assignedAt).toLocaleDateString()) + ' · ' + escapeHtml(assignmentStatusLabel(item)) + '</span></div>').join('') || '<div class="empty-state">No sessions assigned.</div>') + '</div></section><section class="coach-module-card"><h3>Coaching follow-ups</h3><div class="advanced-list">' + (followups.map((item) => '<div class="advanced-list-item"><b>' + escapeHtml(item.client) + '</b><span>' + escapeHtml(item.label) + '</span></div>').join('') || '<div class="empty-state">No client is waiting on feedback.</div>') + '</div><div class="tool-actions"><button class="small-btn primary" onclick="openCoachDestination(\'clients\')">Review clients</button></div></section>';
+    // Superseded by renderCoachCalendarModule() in action-calendar.js, which intercepts
+    // this destination before the router runs. Kept as an explicit no-op so the branch
+    // is not mistaken for missing behaviour.
   } else if (destination === 'messages') {
     const messages = loadLocalArray(CLIENT_MESSAGES_KEY);
     const profiles = loadProfiles(), threads = profiles.map((profile) => { const items = messages.filter((message) => message.profileId === profile.id).sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt))); return {profile,items,needsReply:items.length && messageSenderRole(items[0]) === 'client'}; }).filter((thread) => thread.items.length).sort((a,b) => Number(b.needsReply) - Number(a.needsReply) || String(b.items[0].createdAt).localeCompare(String(a.items[0].createdAt)));

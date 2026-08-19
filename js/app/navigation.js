@@ -370,6 +370,50 @@ function assignmentSessionIds(assignment) {
   return workoutPlans(assignment.session).map((plan) => plan.session.sessionId).filter(Boolean);
 }
 function assignmentForSession(sessionId) { return loadAssignedWorkouts().find((item) => assignmentSessionIds(item).includes(sessionId)) || null; }
+/* ---------- membership tiers ---------- */
+// Tier name and weekly session count are stored as SEPARATE fields on the profile.
+// The catalog supplies the default count for a tier, but profile.sessionsPerWeek
+// stays editable for exceptions. This mirrors how the booking export was specified,
+// so imported rows land without anyone parsing display text like "Flex - 2 / week".
+const MEMBERSHIP_TIERS = {
+  flex:     { label:"Flex",          short:"FLEX", sessionsPerWeek:1, kind:"individual" },
+  starter:  { label:"Starter",       short:"STRT", sessionsPerWeek:1, kind:"individual" },
+  standard: { label:"Standard",      short:"STND", sessionsPerWeek:2, kind:"individual" },
+  premium:  { label:"Premium",       short:"PREM", sessionsPerWeek:3, kind:"individual" },
+  partner:  { label:"Partner",       short:"PAIR", sessionsPerWeek:1, kind:"partner"    },
+  group:    { label:"Group class",   short:"GRP",  sessionsPerWeek:2, kind:"group"      },
+  one_time: { label:"Pay as you go", short:"PAYG", sessionsPerWeek:0, kind:"one_time"   }
+};
+const MEMBERSHIP_TIER_FALLBACK = { label:"No tier set", short:"—", sessionsPerWeek:0, kind:"unset" };
+function normalizeMembershipTier(value) {
+  const key = String(value == null ? "" : value).trim().toLowerCase().replace(/[\s-]+/g,"_");
+  if (Object.prototype.hasOwnProperty.call(MEMBERSHIP_TIERS,key)) return key;
+  // Tolerate labels arriving from an import or an older free-text profile field.
+  const match = Object.keys(MEMBERSHIP_TIERS).find((id) => MEMBERSHIP_TIERS[id].label.toLowerCase() === key.replace(/_/g," "));
+  return match || "";
+}
+function membershipTierId(profile) {
+  return normalizeMembershipTier(profile && (profile.membershipTier || profile.serviceTier || profile.tier));
+}
+function membershipTierMeta(profile) {
+  const id = membershipTierId(profile);
+  return id ? { id, ...MEMBERSHIP_TIERS[id] } : { id:"", ...MEMBERSHIP_TIER_FALLBACK };
+}
+// What the client is owed each week. An explicit per-client number always wins over
+// the tier default, so a negotiated arrangement survives a tier change.
+function entitledSessionsPerWeek(profile) {
+  const explicit = Number(profile && profile.sessionsPerWeek);
+  if (Number.isFinite(explicit) && explicit > 0) return explicit;
+  return membershipTierMeta(profile).sessionsPerWeek || 0;
+}
+function membershipWeekStartKey(value) {
+  const date = value instanceof Date ? new Date(value) : new Date(String(value) + "T12:00:00");
+  if (Number.isNaN(date.getTime())) return "";
+  date.setHours(12,0,0,0);
+  date.setDate(date.getDate() - (date.getDay() === 0 ? 6 : date.getDay() - 1));
+  return date.toISOString().slice(0,10);
+}
+
 function assignmentsForClient(clientOrProfileId) {
   const rank = { in_progress:0, assigned:1, completed:2, reviewed:3 };
   return loadAssignedWorkouts().filter((item) => item.profileId === clientOrProfileId || clientMatches(item.client,clientOrProfileId)).sort((a,b) => {

@@ -9,7 +9,7 @@ let selectedHumanSegment = "trunk";
 let humanScanMode = "lean";
 let selectedInBodyScanId = "";
 function newTrainerSummaryState() {
-  return { tab: "overview", range: "all", from: "", to: "", category: "all", exercise: "all", goal: "all", session: "all", flag: "all", trainer: "all", view: "chart", compare: [] };
+  return { tab: "overview", range: "all", from: "", to: "", category: "all", exercise: "all", goal: "all", session: "all", flag: "all", trainer: "all", view: "chart", inbodyFocus: false, compare: [] };
 }
 function loadSummaryMeta() {
   try { const data = JSON.parse(localStorage.getItem(SUMMARY_META_KEY) || "{}"); return data && typeof data === "object" && !Array.isArray(data) ? data : {}; }
@@ -290,15 +290,15 @@ function setTrainerSummaryFilter(key, value) {
   trainerSummaryState[key] = value; trainerSummaryState.compare = []; renderTrainerAnalysis(selectedTrainerClient);
 }
 function resetTrainerSummaryFilters() {
-  const tab = trainerSummaryState.tab, view = trainerSummaryState.view;
-  trainerSummaryState = newTrainerSummaryState(); trainerSummaryState.tab = tab; trainerSummaryState.view = view; renderTrainerAnalysis(selectedTrainerClient);
+  const tab = trainerSummaryState.tab, view = trainerSummaryState.view, inbodyFocus = trainerSummaryState.inbodyFocus;
+  trainerSummaryState = newTrainerSummaryState(); trainerSummaryState.tab = tab; trainerSummaryState.view = view; trainerSummaryState.inbodyFocus = inbodyFocus; renderTrainerAnalysis(selectedTrainerClient);
 }
 function normalizeTrainerSummaryTab(tab) {
   const aliases = {coaching:"overview",program:"workouts",history:"workouts",strength:"progress",assessments:"details",safety:"details",inbody:"progress",nutrition:"details",notes:"details",documents:"details"};
   const normalized = aliases[tab] || tab;
   return ["overview","workouts","progress","checkins","messages","details"].includes(normalized) ? normalized : "overview";
 }
-function setTrainerSummaryTab(tab) { trainerSummaryState.tab = normalizeTrainerSummaryTab(tab); renderTrainerAnalysis(selectedTrainerClient); }
+function setTrainerSummaryTab(tab) { if (normalizeTrainerSummaryTab(tab) !== "progress") trainerSummaryState.inbodyFocus = false; trainerSummaryState.tab = normalizeTrainerSummaryTab(tab); renderTrainerAnalysis(selectedTrainerClient); }
 function setTrainerSummaryView(view) { trainerSummaryState.view = view; renderTrainerAnalysis(selectedTrainerClient); }
 function chooseSummaryCategory(category) { trainerSummaryState.category = trainerSummaryState.category === category ? "all" : category; trainerSummaryState.tab = "progress"; renderTrainerAnalysis(selectedTrainerClient); }
 function trainerFilterPanel(analysis, filtered) {
@@ -579,7 +579,7 @@ function saveBodyCompositionGoal() {
   const goal = { id: existing && existing.id || "body-goal-" + Date.now(), client: selectedTrainerClient, enabled, goalType: byId("bodyGoalType").value, unit: byId("bodyGoalUnit").value, targetWeight, targetPbf, targetDate: byId("bodyGoalTargetDate").value, muscleIntention: byId("bodyGoalMuscle").value, baselineScanId: byId("bodyGoalBaseline").value, why: byId("bodyGoalWhy").value.trim(), updatedAt: new Date().toISOString() };
   if (index >= 0) goals[index] = goal; else goals.push(goal);
   if (!writeBodyGoals(goals)) return null;
-  closeBodyGoalModal(); trainerSummaryState.tab = "inbody"; renderTrainerAnalysis(selectedTrainerClient); showToast(enabled ? "Optional body-composition goals saved" : "Body-composition goals turned off"); return goal;
+  closeBodyGoalModal(); trainerSummaryState.tab = "progress"; trainerSummaryState.inbodyFocus = true; renderTrainerAnalysis(selectedTrainerClient); showToast(enabled ? "Optional body-composition goals saved" : "Body-composition goals turned off"); return goal;
 }
 const INBODY_NUMERIC_IDS = ["inBodyWeight","inBodySmm","inBodyFatMass","inBodyPbf","inBodyVisceral","inBodyEcw","inBodyScore","inBodyBmi","inBodyAge","inBodyIcw","inBodyExtracellularWater","inBodyTotalBodyWater","inBodyDryLeanMass","inBodyLeanBodyMass","inBodyRightArmMass","inBodyRightArm","inBodyLeftArmMass","inBodyLeftArm","inBodyTrunkMass","inBodyTrunk","inBodyRightLegMass","inBodyRightLeg","inBodyLeftLegMass","inBodyLeftLeg","inBodyFatRightArmMass","inBodyFatRightArmPercent","inBodyFatLeftArmMass","inBodyFatLeftArmPercent","inBodyFatTrunkMass","inBodyFatTrunkPercent","inBodyFatRightLegMass","inBodyFatRightLegPercent","inBodyFatLeftLegMass","inBodyFatLeftLegPercent","inBodyFatControl","inBodyLeanControl","inBodyBmr","inBodyArmCircumference","inBodySmi","inBodyZ5Ra","inBodyZ5La","inBodyZ5Tr","inBodyZ5Rl","inBodyZ5Ll","inBodyZ50Ra","inBodyZ50La","inBodyZ50Tr","inBodyZ50Rl","inBodyZ50Ll","inBodyZ500Ra","inBodyZ500La","inBodyZ500Tr","inBodyZ500Rl","inBodyZ500Ll"];
 const INBODY_TEXT_IDS = ["inBodyClientId","inBodyHeight","inBodyTime","inBodyNotes"];
@@ -845,7 +845,10 @@ function downloadTextFile(name, textValue, type) {
 function exportFilteredClientSummary() {
   const analysis = trainerAnalysisData(selectedTrainerClient), filtered = filteredTrainerSummary(analysis);
   let rows = [["type","date","client","workout","category","exercise","value","trainer","pinned","excluded","trainer note"]];
-  if (trainerSummaryState.tab === "inbody") {
+  // renderTrainerAnalysis() normalises "inbody" to "progress" on every render, so this
+  // branch could never be reached and the InBody view silently exported generic workout
+  // columns. Detect the InBody sub-view explicitly instead of relying on the tab name.
+  if (trainerSummaryState.tab === "inbody" || trainerSummaryState.inbodyFocus) {
     const goal = bodyGoalFor(selectedTrainerClient) || {};
     rows = [["type","date","client","InBody ID","height","age","sex","test time","weight","unit","skeletal muscle mass","body fat mass","percent body fat","BMI","intracellular water","extracellular water","total body water","dry lean mass","lean body mass","visceral fat level","ECW/TBW","InBody score","right arm lean mass","left arm lean mass","trunk lean mass","right leg lean mass","left leg lean mass","right arm lean %","left arm lean %","trunk lean %","right leg lean %","left leg lean %","right arm fat mass","left arm fat mass","trunk fat mass","right leg fat mass","left leg fat mass","right arm fat %","left arm fat %","trunk fat %","right leg fat %","left leg fat %","body fat mass control","lean body mass control","basal metabolic rate","arm circumference","SMI","5 kHz right arm","5 kHz left arm","5 kHz trunk","5 kHz right leg","5 kHz left leg","50 kHz right arm","50 kHz left arm","50 kHz trunk","50 kHz right leg","50 kHz left leg","500 kHz right arm","500 kHz left arm","500 kHz trunk","500 kHz right leg","500 kHz left leg","similar time","usual hydration","restroom first","no recent exercise","goal enabled","goal weight","goal body fat %","goal date","notes","original file"]];
     inBodyScansFor(selectedTrainerClient).filter((scan) => summaryDateMatches(scan.date)).forEach((scan) => {

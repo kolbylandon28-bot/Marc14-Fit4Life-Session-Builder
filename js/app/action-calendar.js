@@ -8,7 +8,9 @@ const ACTION_CATEGORY_LABELS = {
   all:"All actions", safety:"Safety", messages:"Messages", workouts:"Workouts",
   schedule:"Schedule", access:"Access", approvals:"Owner approval", followup:"Follow-up"
 };
-const CALENDAR_TYPE_LABELS = { appointment:"Appointment", workout:"Workout", followup:"Follow-up", admin:"Team task" };
+const CALENDAR_TYPE_LABELS = { appointment:"Training session", consultation:"Consultation", workout:"Workout", followup:"Follow-up", admin:"Team task" }
+// Types that draw down a client's weekly session entitlement.
+const BILLABLE_CALENDAR_TYPES = ["appointment"];
 const CALENDAR_STATUS_LABELS = { scheduled:"Scheduled", in_progress:"In progress", completed:"Completed", cancelled:"Cancelled", missed:"Missed", rescheduled:"Rescheduled" };
 const coachActionCenterState = { category:"all", ownership:"all", query:"" };
 const coachCalendarState = { view:"week", anchor:calendarDateKey(new Date()), client:"", trainer:"", type:"", status:"", tier:"", time:"" };
@@ -45,7 +47,9 @@ function loadCalendarAudit() { return loadLocalArray(CALENDAR_AUDIT_KEY); }
 function loadCalendarNotices() { return loadLocalArray(CALENDAR_NOTICES_KEY); }
 function loadWorkoutRequests() { return loadLocalArray(WORKOUT_REQUESTS_KEY); }
 function calendarProfile(profileId) { return loadProfiles().find((profile) => profile.id === profileId) || null; }
-function calendarTier(profile) { return String(profile && (profile.serviceTier || profile.membershipTier || profile.tier) || "General"); }
+function calendarTier(profile) { return membershipTierId(profile) || "unset"; }
+function calendarTierLabel(tierId) { return tierId && MEMBERSHIP_TIERS[tierId] ? MEMBERSHIP_TIERS[tierId].label : "No tier set"; }
+function calendarTierShort(tierId) { return tierId && MEMBERSHIP_TIERS[tierId] ? MEMBERSHIP_TIERS[tierId].short : "\u2014"; }
 function calendarIdentity() { const identity = currentAccountIdentity(); return {id:identity.id || "",name:identity.displayName || identity.email || "Staff",role:identity.role || window.fit4lifeCloudRole || "trainer"}; }
 
 function calendarTrainerOptions() {
@@ -446,8 +450,51 @@ function calendarEventMatches(event) {
     && (!coachCalendarState.tier || calendarTier(profile) === coachCalendarState.tier)
     && timeMatches;
 }
+/* ---------- weekly session balance (booked vs owed) ---------- */
+// The calendar's real job is not "what is booked" but "what is booked versus what
+// this client paid for". A Premium client at 2 of 3 booked is a session the gym owes
+// and has not delivered, which is invisible on an ordinary calendar.
+function sessionsBookedForWeek(profileId,weekStartKey,events) {
+  if (!profileId || !weekStartKey) return 0;
+  const source = Array.isArray(events) ? events : allCoachCalendarEvents();
+  return source.filter((event) => {
+    if (event.profileId !== profileId) return false;
+    if (!BILLABLE_CALENDAR_TYPES.includes(event.type)) return false;
+    if (event.status === "cancelled") return false;
+    return membershipWeekStartKey(event.date) === weekStartKey;
+  }).length;
+}
+function weeklySessionBalance(profile,weekStartKey,events) {
+  const entitled = entitledSessionsPerWeek(profile);
+  const booked = sessionsBookedForWeek(profile && profile.id,weekStartKey,events);
+  const gap = Math.max(0,entitled - booked);
+  const meta = membershipTierMeta(profile);
+  // Pay-as-you-go and unset tiers have no weekly cadence, so they cannot be short.
+  const tracked = entitled > 0;
+  return { profileId:profile && profile.id || "", client:profile && profile.name || "", tier:meta.id, tierLabel:meta.label, tierShort:meta.short,
+           entitled, booked, gap, tracked, status: !tracked ? "untracked" : gap === 0 ? "met" : booked === 0 ? "none" : "short" };
+}
+function weeklySessionBalances(weekStartKey,events) {
+  const source = Array.isArray(events) ? events : allCoachCalendarEvents();
+  return loadProfiles().map((profile) => weeklySessionBalance(profile,weekStartKey,source))
+    .filter((row) => row.tracked)
+    .sort((a,b) => (b.gap - a.gap) || String(a.client).localeCompare(String(b.client)));
+}
+function weeklyBalancePanelHtml(weekStartKey,events) {
+  const rows = weeklySessionBalances(weekStartKey,events), owed = rows.filter((row) => row.gap > 0);
+  const total = owed.reduce((sum,row) => sum + row.gap,0);
+  const head = '<div class="balance-head"><b>Sessions owed this week</b><span>' + (total ? total + ' unbooked across ' + owed.length + ' client' + (owed.length === 1 ? '' : 's') : 'Every tracked client is fully booked') + '</span></div>';
+  if (!owed.length) return '<section class="coach-module-card weekly-balance good">' + head + '</section>';
+  const list = owed.slice(0,12).map((row) => '<button type="button" class="balance-row" onclick="openCalendarClient(' + calendarJsArg(row.profileId) + ',\'workout\')">'
+    + '<span class="tier-badge tier-' + escapeHtml(row.tier || 'unset') + '">' + escapeHtml(row.tierShort) + '</span>'
+    + '<b>' + escapeHtml(row.client) + '</b>'
+    + '<span class="balance-count' + (row.booked === 0 ? ' none' : '') + '">' + row.booked + ' of ' + row.entitled + '</span></button>').join("");
+  return '<section class="coach-module-card weekly-balance">' + head + '<div class="balance-list">' + list + '</div>'
+    + (owed.length > 12 ? '<p class="storage-note">' + (owed.length - 12) + ' more not shown.</p>' : '') + '</section>';
+}
 function calendarEventChip(event) {
-  return '<button class="calendar-event-chip ' + escapeHtml(event.type) + ' ' + escapeHtml(event.status) + '" onclick="openCalendarEventEditor(\'' + escapeHtml(event.id) + '\')"><span>' + escapeHtml(event.startTime ? calendarFormatTime(event.startTime) : event.type === "workout" ? "Workout" : "All day") + '</span><b>' + escapeHtml(event.client ? event.client + " · " + event.title : event.title) + '</b><em>' + escapeHtml(event.trainerName || "Shared team") + '</em></button>';
+  const tier = event.tier || "unset";
+  return '<button class="calendar-event-chip ' + escapeHtml(event.type) + ' ' + escapeHtml(event.status) + ' tier-' + escapeHtml(tier) + '" onclick="openCalendarEventEditor(\'' + escapeHtml(event.id) + '\')"><span>' + escapeHtml(event.startTime ? calendarFormatTime(event.startTime) : event.type === "workout" ? "Workout" : "All day") + '</span><b>' + escapeHtml(event.client ? event.client + " · " + event.title : event.title) + '</b><em class="chip-foot"><span class="tier-badge tier-' + escapeHtml(tier) + '">' + escapeHtml(calendarTierShort(event.tier)) + '</span>' + escapeHtml(event.trainerName || "Shared team") + '</em></button>';
 }
 function calendarRangeLabel() {
   const anchor = calendarDate(coachCalendarState.anchor);
@@ -485,10 +532,10 @@ function setCalendarFilter(key,value) { coachCalendarState[key] = value; renderC
 function calendarFilterSelect(id,label,key,options) { return '<label class="calendar-filter"><span>' + escapeHtml(label) + '</span><select id="' + id + '" onchange="setCalendarFilter(\'' + key + '\',this.value)"><option value="">All ' + escapeHtml(label.toLowerCase()) + '</option>' + options.map(([value,text]) => '<option value="' + escapeHtml(value) + '"' + (coachCalendarState[key] === value ? ' selected' : '') + '>' + escapeHtml(text) + '</option>').join("") + '</select></label>'; }
 function renderCoachCalendarModule() {
   const out = byId("coachModuleContent"); if (!out) return;
-  const profiles = loadProfiles(), trainers = calendarTrainerOptions(), tiers = [...new Set(profiles.map(calendarTier))].sort(), events = allCoachCalendarEvents().filter(calendarEventMatches);
+  const profiles = loadProfiles(), trainers = calendarTrainerOptions(), tiers = [...new Set(profiles.map(calendarTier))].filter(Boolean).sort((a,b) => calendarTierLabel(a).localeCompare(calendarTierLabel(b))), allEvents = allCoachCalendarEvents(), events = allEvents.filter(calendarEventMatches);
   const upcoming = events.filter((event) => calendarDate(event.date) >= calendarDate(calendarDateKey(new Date())) && !["cancelled","completed"].includes(event.status)).length, missed = events.filter((event) => event.status === "missed").length;
   const views = ["day","week","month","agenda"].map((view) => '<button class="calendar-view-btn ' + (coachCalendarState.view === view ? "on" : "") + '" onclick="setCoachCalendarView(\'' + view + '\')">' + view[0].toUpperCase() + view.slice(1) + '</button>').join("");
-  out.innerHTML = '<section class="coach-module-card operational-calendar"><div class="calendar-topbar"><div><span class="client-section-label">Operational calendar</span><h3>' + escapeHtml(calendarRangeLabel()) + '</h3><p>Appointments, assigned workouts, and coaching follow-ups share one schedule. Shared clients remain visible to every approved trainer.</p></div><div class="tool-actions"><button class="small-btn" onclick="setCoachCalendarAnchor(\'' + calendarDateKey(new Date()) + '\')">Today</button><button class="small-btn primary" onclick="openCalendarEventEditor()">+ Schedule</button></div></div><div class="calendar-policy-note"><b>Rescheduling policy is still a management draft.</b> V6 requires a reason and records the actor and time for every schedule change, but it does not enforce a fee or notice cutoff yet.</div><div class="calendar-stats"><div><b>' + upcoming + '</b><span>Upcoming</span></div><div><b>' + missed + '</b><span>Missed / follow-up</span></div><div><b>' + events.filter((event) => event.type === "workout").length + '</b><span>Assigned workouts</span></div><div><b>' + events.filter((event) => event.type === "appointment").length + '</b><span>Appointments</span></div></div><div class="calendar-controls"><div class="calendar-range-controls"><button onclick="moveCoachCalendar(-1)" aria-label="Previous">‹</button><button onclick="moveCoachCalendar(1)" aria-label="Next">›</button><strong>' + escapeHtml(calendarRangeLabel()) + '</strong></div><div class="calendar-view-toggle">' + views + '</div></div><div class="calendar-filters">' + calendarFilterSelect("calendarClientFilter","Clients","client",profiles.map((profile) => [profile.id,profile.name])) + calendarFilterSelect("calendarTrainerFilter","Trainers","trainer",[["__shared","Coaching team / unassigned"],...trainers.map((trainer) => [trainer.id,trainer.name])]) + calendarFilterSelect("calendarTypeFilter","Types","type",Object.entries(CALENDAR_TYPE_LABELS)) + calendarFilterSelect("calendarStatusFilter","Statuses","status",Object.entries(CALENDAR_STATUS_LABELS)) + calendarFilterSelect("calendarTierFilter","Tiers","tier",tiers.map((tier) => [tier,tier])) + calendarFilterSelect("calendarTimeFilter","Times","time",[["all_day","All-day items"],["morning","Morning · before noon"],["afternoon","Afternoon · noon–5 PM"],["evening","Evening · after 5 PM"]]) + '</div><div class="calendar-canvas">' + calendarGridHtml(events) + '</div></section>';
+  out.innerHTML = '<section class="coach-module-card operational-calendar"><div class="calendar-topbar"><div><span class="client-section-label">Operational calendar</span><h3>' + escapeHtml(calendarRangeLabel()) + '</h3><p>Appointments, assigned workouts, and coaching follow-ups share one schedule. Shared clients remain visible to every approved trainer.</p></div><div class="tool-actions"><button class="small-btn" onclick="setCoachCalendarAnchor(\'' + calendarDateKey(new Date()) + '\')">Today</button><button class="small-btn primary" onclick="openCalendarEventEditor()">+ Schedule</button></div></div><div class="calendar-policy-note"><b>Rescheduling policy is still a management draft.</b> V6 requires a reason and records the actor and time for every schedule change, but it does not enforce a fee or notice cutoff yet.</div><div class="calendar-stats"><div><b>' + upcoming + '</b><span>Upcoming</span></div><div><b>' + missed + '</b><span>Missed / follow-up</span></div><div><b>' + events.filter((event) => event.type === "workout").length + '</b><span>Assigned workouts</span></div><div><b>' + events.filter((event) => event.type === "appointment").length + '</b><span>Appointments</span></div></div><div class="calendar-controls"><div class="calendar-range-controls"><button onclick="moveCoachCalendar(-1)" aria-label="Previous">‹</button><button onclick="moveCoachCalendar(1)" aria-label="Next">›</button><strong>' + escapeHtml(calendarRangeLabel()) + '</strong></div><div class="calendar-view-toggle">' + views + '</div></div><div class="calendar-filters">' + calendarFilterSelect("calendarClientFilter","Clients","client",profiles.map((profile) => [profile.id,profile.name])) + calendarFilterSelect("calendarTrainerFilter","Trainers","trainer",[["__shared","Coaching team / unassigned"],...trainers.map((trainer) => [trainer.id,trainer.name])]) + calendarFilterSelect("calendarTypeFilter","Types","type",Object.entries(CALENDAR_TYPE_LABELS)) + calendarFilterSelect("calendarStatusFilter","Statuses","status",Object.entries(CALENDAR_STATUS_LABELS)) + calendarFilterSelect("calendarTierFilter","Tiers","tier",tiers.map((tier) => [tier,calendarTierLabel(tier)])) + calendarFilterSelect("calendarTimeFilter","Times","time",[["all_day","All-day items"],["morning","Morning · before noon"],["afternoon","Afternoon · noon–5 PM"],["evening","Evening · after 5 PM"]]) + '</div><div class="calendar-canvas">' + weeklyBalancePanelHtml(membershipWeekStartKey(coachCalendarState.anchor),allEvents) + calendarGridHtml(events) + '</div></section>';
 }
 
 function enhanceClientSchedule(profile) {

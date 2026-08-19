@@ -795,6 +795,14 @@ function applyProfileImpactUpdates() {
   if (problems.length) { byId("profileImpactSummary").innerHTML = '<b>Some selected work could not be changed safely.</b><br>' + escapeHtml(problems.join(" · ")); showToast("Profile saved, but some workout updates need manual coach review"); return false; }
   closeProfileImpactModal(); showToast(applied.length ? "Updated " + applied.length + " unfinished programming item" + (applied.length === 1 ? "" : "s") : "Profile saved; existing workouts kept unchanged"); return true;
 }
+function syncProfileEditorTierDefault() {
+  // Choosing a tier fills in its standard weekly session count. The number stays
+  // editable afterwards so a negotiated arrangement can differ from the tier.
+  const tierSelect = byId("profileEditTier"), sessions = byId("profileEditSessionsPerWeek");
+  if (!tierSelect || !sessions) return;
+  const meta = MEMBERSHIP_TIERS[normalizeMembershipTier(tierSelect.value)];
+  sessions.value = meta && meta.sessionsPerWeek ? String(meta.sessionsPerWeek) : "";
+}
 function saveProfileEditor() {
   if (!requireTrainerMutation("edit client profiles")) return null;
   const profileId = byId("profileEditId").value, goals = [byId("profileEditPrimary").value,byId("profileEditSecondary").value].filter(Boolean);

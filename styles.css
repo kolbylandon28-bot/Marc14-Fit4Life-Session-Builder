@@ -1457,3 +1457,49 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
 @media(max-width:620px){.movement-feedback-menu{position:fixed;left:12px;right:12px;top:18%;max-height:64vh}.review-record-status{align-items:flex-start;flex-direction:column}.coach-feedback-metrics,.coach-feedback-movements,.report-movement-columns,.profile-feedback-voice,.report-trend-grid{grid-template-columns:1fr 1fr}.report-metrics{grid-template-columns:1fr 1fr}.report-filter-bar{grid-template-columns:1fr}.report-filter-bar label:first-child{grid-column:auto}.report-timeline>article{grid-template-columns:1fr}.report-timeline-feedback,.report-timeline article>.tool-actions{grid-column:1}.report-panel-head{flex-direction:column}.report-panel-head .swap-search{max-width:none;width:100%}}
 
 .install-banner{position:fixed;left:12px;right:12px;bottom:12px;z-index:900;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:13px 15px;border:1px solid rgba(90,166,240,.3);border-radius:14px;background:linear-gradient(150deg,rgba(27,28,34,.98),rgba(11,12,16,.99));box-shadow:0 18px 50px rgba(0,0,0,.6)}.install-banner-copy{display:flex;flex-direction:column;gap:3px;min-width:0}.install-banner-copy b{color:var(--text);font-size:13px}.install-banner-copy span{color:var(--text-faint);font-size:11px;line-height:1.4}.install-banner-actions{display:flex;gap:8px;flex-shrink:0}@media(max-width:430px){.install-banner{flex-direction:column;align-items:stretch}.install-banner-actions{justify-content:stretch}.install-banner-actions .small-btn{flex:1}}
+
+/* ---------- membership tiers ---------- */
+/* Colour never carries meaning on its own: every tier colour is paired with a short
+   text badge, so the calendar stays readable for colourblind trainers and on a phone
+   screen washed out by gym lighting. */
+:root{
+  --tier-flex:#4FB3A9; --tier-starter:#5AA6F0; --tier-standard:#3E6BE0; --tier-premium:#9B7BE8;
+  --tier-partner:#E0A23E; --tier-group:#6BA33E; --tier-one_time:#8A9099; --tier-unset:#5C616B;
+}
+.tier-badge{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+  min-width:38px;padding:2px 6px;border-radius:5px;border:1px solid currentColor;
+  font:800 8px/1.5 var(--mono);letter-spacing:.08em;text-transform:uppercase;background:rgba(0,0,0,.28)}
+.tier-badge.tier-flex{color:var(--tier-flex)} .tier-badge.tier-starter{color:var(--tier-starter)}
+.tier-badge.tier-standard{color:var(--tier-standard)} .tier-badge.tier-premium{color:var(--tier-premium)}
+.tier-badge.tier-partner{color:var(--tier-partner)} .tier-badge.tier-group{color:var(--tier-group)}
+.tier-badge.tier-one_time{color:var(--tier-one_time)} .tier-badge.tier-unset{color:var(--tier-unset)}
+/* A left edge stripe tints the chip by tier without drowning the status colours
+   that already tell a trainer whether something is done, missed, or cancelled. */
+.calendar-event-chip.tier-flex{border-left:3px solid var(--tier-flex)}
+.calendar-event-chip.tier-starter{border-left:3px solid var(--tier-starter)}
+.calendar-event-chip.tier-standard{border-left:3px solid var(--tier-standard)}
+.calendar-event-chip.tier-premium{border-left:3px solid var(--tier-premium)}
+.calendar-event-chip.tier-partner{border-left:3px solid var(--tier-partner)}
+.calendar-event-chip.tier-group{border-left:3px solid var(--tier-group)}
+.calendar-event-chip.tier-one_time{border-left:3px solid var(--tier-one_time)}
+.calendar-event-chip.tier-unset{border-left:3px solid var(--tier-unset)}
+.calendar-event-chip .chip-foot{display:flex;align-items:center;gap:6px;min-width:0}
+
+/* ---------- sessions owed this week ---------- */
+.weekly-balance{grid-column:1/-1}
+.weekly-balance .balance-head{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.weekly-balance .balance-head b{color:var(--text);font-size:13px}
+.weekly-balance .balance-head span{color:var(--text-faint);font-size:11px}
+.weekly-balance.good .balance-head span{color:var(--tier-group)}
+.balance-list{display:grid;gap:6px}
+.balance-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;width:100%;
+  padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);
+  color:var(--text);font-size:12px;text-align:left;cursor:pointer}
+.balance-row:hover{border-color:var(--blue)}
+.balance-row b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.balance-count{font:800 11px var(--mono);color:var(--tier-partner)}
+.balance-count.none{color:#E05A5A}
+@media(max-width:430px){
+  .balance-row{grid-template-columns:auto 1fr;grid-template-areas:"badge name" "count count";gap:6px 10px}
+  .balance-row .tier-badge{grid-area:badge} .balance-row b{grid-area:name} .balance-count{grid-area:count}
+}
