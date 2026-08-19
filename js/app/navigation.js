@@ -147,7 +147,7 @@ function starWorkout(session,options) {
   const record = { id:"starred-" + Date.now() + "-" + Math.random().toString(16).slice(2),
     starredBy:opts.starredBy === "client" ? "client" : "trainer",
     scope:opts.scope || "library", profileId:opts.profileId || "", client:opts.client || "",
-    starredByName:opts.starredByName || "", createdAt:new Date().toISOString(), ...snapshot };
+    starredByName:opts.starredByName || "", starredByUserId:opts.starredByUserId || (typeof currentAccountIdentity === "function" ? (currentAccountIdentity().id || "") : ""), createdAt:new Date().toISOString(), ...snapshot };
   const list = loadStarredWorkouts();
   list.unshift(record);
   return writeStarredWorkouts(list) ? record : null;

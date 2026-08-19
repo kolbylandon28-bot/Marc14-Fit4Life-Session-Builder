@@ -26,6 +26,130 @@ function loadCoachTaskClaims() { return loadLocalArray(COACH_TASK_CLAIMS_KEY); }
 function loadCoachNotes() { return loadLocalArray(COACH_NOTES_KEY); }
 function ownerRequestLabel(type) { return OWNER_REQUEST_LABELS[type] || "Owner review"; }
 
+/* ---------- team view ---------- */
+function teamLibraryCardHtml(record,editable) {
+  const movements = (record.movements || []).slice(0,4).join(" · ");
+  return '<article class="team-workout"><div><b>' + escapeHtml(record.title || "Workout") + '</b>'
+    + '<span>' + escapeHtml(movements || "No movements recorded") + '</span></div>'
+    + '<div class="team-workout-actions">'
+    + '<button class="tiny-btn" onclick="useTeamWorkout(' + JSON.stringify(record.id) + ')">Use</button>'
+    + (editable ? '<button class="tiny-btn" onclick="removeTeamWorkout(' + JSON.stringify(record.id) + ')">Remove</button>'
+                : '<span class="team-readonly">View only</span>')
+    + '</div></article>';
+}
+function renderTeamModule() {
+  const out = byId("coachModuleContent"); if (!out) return;
+  if (!canViewTeamLibrary()) { out.innerHTML = '<div class="empty-state">Trainer access is required to view the team.</div>'; return; }
+  const team = teamSnapshot(), owner = isFit4LifeOwner(), meId = currentStaffId();
+  if (!team.length) {
+    out.innerHTML = '<section class="coach-module-card"><h3>No trainers yet</h3><p>Trainer accounts appear here once they have been granted access.</p></section>';
+    return;
+  }
+  out.innerHTML = team.map((member) => {
+    const mine = member.id === meId;
+    const canEdit = canEditTrainerProfile(member.id);
+    // A roster is staff-only, and even then a trainer sees counts for colleagues rather
+    // than a browsable list of someone else's clients.
+    const roster = canViewTrainerRoster()
+      ? (owner || mine
+          ? '<div class="team-clients">' + (member.clients.length
+              ? member.clients.slice(0,8).map((profile) => '<button type="button" class="team-client" onclick="openCalendarClient(' + JSON.stringify(profile.id) + ',\'overview\')">' + escapeHtml(profile.name) + '</button>').join("")
+              : '<span class="storage-note">No clients assigned.</span>')
+            + (member.clients.length > 8 ? '<span class="storage-note">+' + (member.clients.length - 8) + ' more</span>' : '')
+            + '</div>'
+          : '<p class="storage-note">' + member.clientCount + ' assigned client' + (member.clientCount === 1 ? '' : 's') + '. Open a client from the Clients tab.</p>')
+      : '';
+    const stats = '<div class="team-stats">'
+      + '<div><b>' + member.clientCount + '</b><span>clients</span></div>'
+      + '<div><b class="' + (member.owed ? 'warn' : '') + '">' + member.owed + '</b><span>sessions owed</span></div>'
+      + '<div><b class="' + (member.followUps ? 'warn' : '') + '">' + member.followUps + '</b><span>follow-ups</span></div>'
+      + '<div><b>' + member.library.length + '</b><span>saved workouts</span></div></div>';
+    const library = member.library.length
+      ? '<div class="team-library">' + member.library.slice(0,6).map((record) => teamLibraryCardHtml(record,canEditStarredWorkout(record))).join("") + '</div>'
+      : '<p class="storage-note">No saved workouts yet.</p>';
+    return '<section class="coach-module-card team-card">'
+      + '<div class="team-head"><div><h3>' + escapeHtml(member.name) + (mine ? ' <span class="team-you">you</span>' : '') + '</h3>'
+      + '<p>' + escapeHtml(member.role === "owner" ? "Owner" : "Trainer") + (member.email ? ' · ' + escapeHtml(member.email) : '') + '</p></div>'
+      + (canEdit ? '' : '<span class="team-readonly">Read only</span>') + '</div>'
+      + stats + roster
+      + '<h4 class="analysis-section-title" style="margin-top:14px">Saved workouts</h4>' + library
+      + '</section>';
+  }).join("");
+}
+// Anyone on staff may start from a colleague's workout; it loads into the builder as a
+// new draft rather than modifying the original.
+function useTeamWorkout(id) {
+  const record = loadStarredWorkouts().find((item) => item.id === id);
+  if (!record) { showToast("That saved workout is no longer available"); return; }
+  if (!isFit4LifeStaff()) { showToast("Trainer access is required"); return; }
+  state.session = { type:"solo", data:JSON.parse(JSON.stringify(record.session || {})), edits:{} };
+  state.sessionOptions = [];
+  portalRole = "trainer";
+  show("builder");
+  if (typeof renderSession === "function") renderSession();
+  showToast("Loaded “" + (record.title || "workout") + "” as a new draft");
+}
+function removeTeamWorkout(id) {
+  const record = loadStarredWorkouts().find((item) => item.id === id);
+  if (!record) return;
+  if (!canEditStarredWorkout(record)) { showToast("Only the trainer who saved this, or an owner, can remove it"); return; }
+  if (!window.confirm("Remove “" + (record.title || "this workout") + "” from the library?")) return;
+  if (unstarWorkout(id)) { renderTeamModule(); showToast("Removed from the library"); }
+}
+/* ---------- team visibility ---------- */
+// Trainers can read each other's saved workouts, because a student trainer learning how
+// an experienced one programs is the whole point. Editing stays with the author, and an
+// owner can do both. Clients never reach any of this.
+function currentStaffId() { const identity = currentAccountIdentity(); return identity && identity.id || ""; }
+function canEditStarredWorkout(record) {
+  if (!record) return false;
+  if (isFit4LifeOwner()) return true;
+  if (!isFit4LifeTrainer()) return false;
+  // A trainer owns what they starred. Records written before authorship was tracked have
+  // no owner, so they stay owner-only rather than becoming editable by everyone.
+  return Boolean(record.starredByUserId) && record.starredByUserId === currentStaffId();
+}
+function canViewTeamLibrary() { return isFit4LifeStaff(); }
+function canEditTrainerProfile(trainerId) {
+  if (isFit4LifeOwner()) return true;
+  return isFit4LifeTrainer() && trainerId && trainerId === currentStaffId();
+}
+// Client rosters are staff-only. Showing one client the names of a trainer's other
+// clients would leak who trains here, which at a university is a real problem rather
+// than a theoretical one.
+function canViewTrainerRoster() { return isFit4LifeStaff(); }
+function teamMembers() {
+  const cloud = Array.isArray(window.fit4lifeCloudTrainers) ? window.fit4lifeCloudTrainers : [];
+  const fromCloud = cloud.map((trainer) => ({
+    id:trainer.user_id || trainer.id || "", name:trainer.display_name || trainer.email || "Trainer",
+    email:trainer.email || "", role:trainer.role || "trainer", active:trainer.is_active !== false }));
+  if (fromCloud.length) return fromCloud;
+  // Before the trainer-account sync has run, fall back to whoever is named on client
+  // records so the view is never simply empty.
+  const seen = new Map();
+  loadProfiles().forEach((profile) => {
+    if (!profile.assignedTrainerId || seen.has(profile.assignedTrainerId)) return;
+    seen.set(profile.assignedTrainerId,{ id:profile.assignedTrainerId,name:profile.assignedTrainerName || "Trainer",
+      email:profile.assignedTrainerEmail || "", role:"trainer", active:true });
+  });
+  return [...seen.values()];
+}
+function teamMemberSnapshot(trainer) {
+  const clients = loadProfiles().filter((profile) => profile.assignedTrainerId === trainer.id);
+  const weekStart = typeof membershipWeekStartKey === "function" ? membershipWeekStartKey(new Date()) : "";
+  let owed = 0;
+  if (weekStart && typeof weeklySessionBalance === "function") {
+    clients.forEach((profile) => { try { owed += weeklySessionBalance(profile,weekStart).gap || 0; } catch (error) {} });
+  }
+  let followUps = 0;
+  if (typeof followUpReasonFor === "function") {
+    clients.forEach((profile) => { try { if (followUpReasonFor(profile)) followUps += 1; } catch (error) {} });
+  }
+  const library = typeof loadStarredWorkouts === "function"
+    ? loadStarredWorkouts().filter((item) => item.scope === "library" && item.starredByUserId === trainer.id) : [];
+  return { ...trainer, clients, clientCount:clients.length, owed, followUps, library };
+}
+function teamSnapshot() { return teamMembers().map(teamMemberSnapshot).sort((a,b) => b.clientCount - a.clientCount); }
 function syncRoleGovernanceControls() {
   document.querySelectorAll("[data-owner-only]").forEach((node) => { node.hidden = !isFit4LifeOwner(); });
   document.querySelectorAll("[data-trainer-only]").forEach((node) => { node.hidden = !isFit4LifeTrainer(); });

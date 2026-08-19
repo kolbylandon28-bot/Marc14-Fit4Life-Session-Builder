@@ -1011,6 +1011,7 @@ const legacyRenderCoachModule = window.renderCoachModule;
 window.renderCoachModule = function v6RenderCoachModule(destination) {
   const title = byId("coachModuleTitle"), eyebrow = byId("coachModuleEyebrow"), copy = byId("coachModuleCopy");
   if (destination === "actions") { if (title) title.textContent = "Action Center"; if (eyebrow) eyebrow.textContent = "Coach workspace"; if (copy) copy.textContent = "One shared queue that opens the exact source and closes only when the work is complete."; renderActionCenterModule(); return; }
+  if (destination === "team") { if (title) title.textContent = "Team"; if (eyebrow) eyebrow.textContent = "Coach workspace"; if (copy) copy.textContent = "Who is coaching whom, how the work is spread, and the workouts your colleagues have saved."; renderTeamModule(); return; }
   if (destination === "calendar") { if (title) title.textContent = "Calendar"; if (eyebrow) eyebrow.textContent = "Coach workspace"; if (copy) copy.textContent = "Appointments, workouts, and follow-ups with clear ownership, status, and history."; renderCoachCalendarModule(); return; }
   legacyRenderCoachModule(destination);
 };
