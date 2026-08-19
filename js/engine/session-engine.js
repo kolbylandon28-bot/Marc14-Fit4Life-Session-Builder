@@ -1417,33 +1417,68 @@ function buildBlocks(spec, fullPool, rng, slotBudget) {
     return sc;
   };
 
+  // Every warm-up has the same shape, and each step has exactly one job:
+  //   Raise (get warm) -> Open (range for today) -> Activate (switch on) -> Rehearse (the lift).
+  // Rehearse is appended later, once the primary lift is actually chosen.
+  //
+  // The shape never changes, only the contents. A client learns it once and then always
+  // knows where they are, which is what makes a warm-up easy to follow - far more than
+  // any individual drill being simple.
+  //
+  // A slot is left EMPTY rather than filled with something irrelevant. Padding a lower-body
+  // warm-up with a shoulder drill is how a warm-up stops meaning anything, and it was the
+  // main reason these did not feel connected to the workout.
   const warmup = [];
-  // 1) one general temperature raiser, preferring one that also serves the area
-  const generals = shuffle(warmupPool.filter((e) => e.preps.includes("general")), rng)
-    .sort((a, b) => wScore(b) - wScore(a));
-  if (generals.length) warmup.push(warmupExercise(generals[0],"raise"));
-
-  // 2) specific prep: only movements that genuinely serve today's area,
-  //    highest-relevance first, and never a pure temp-raiser again.
   const chosenWarmupNames = () => new Set(warmup.map((item) => item.name));
-  const specific = shuffle(warmupPool.filter((e) => !chosenWarmupNames().has(e.name) && e.region !== "cardio" && wScore(e) > 0), rng)
-    .sort((a, b) => wScore(b) - wScore(a));
-  const rangePrep = specific.find((e) => e.region === "mobility");
-  if (rangePrep && warmup.length < warmupCount) warmup.push(warmupExercise(rangePrep,"open"));
-  const activationPrep = specific.find((e) => !chosenWarmupNames().has(e.name) && e.region !== "mobility");
-  if (activationPrep && warmup.length < warmupCount) warmup.push(warmupExercise(activationPrep,"activate"));
-  specific.forEach((e) => {
-    if (warmup.length >= warmupCount || chosenWarmupNames().has(e.name)) return;
-    warmup.push(warmupExercise(e,e.region === "mobility" ? "open" : "activate"));
-  });
+  const relevant = (candidates) => candidates.filter((e) => !chosenWarmupNames().has(e.name) && wScore(e) > 0);
 
-  // 3) backfill with anything left if we're short
-  shuffle(warmupPool.filter((e) => e.region !== "cardio"), rng).forEach((e) => {
-    if (warmup.length < warmupCount && !chosenWarmupNames().has(e.name)) warmup.push(warmupExercise(e,e.region === "mobility" ? "open" : "activate"));
-  });
+  // 1 · Raise. Prefer a temperature raiser that also serves today's area.
+  // Raise means raise temperature, so it has to be something you can actually do for
+  // several easy minutes. Sorting all "general" prep by relevance let a shoulder stretch
+  // win this slot on upper-body days and told the client to hold it for 3-5 minutes.
+  // Real temperature raisers first; only fall back to other general prep if the gym
+  // filters leave no cardio option at all.
+  const raisers = warmupPool.filter((e) => e.preps.includes("general") && e.region === "cardio");
+  const generalFallback = warmupPool.filter((e) => e.preps.includes("general") && e.region !== "cardio");
+  const generals = (raisers.length ? shuffle(raisers, rng) : shuffle(generalFallback, rng))
+    .sort((a, b) => wScore(b) - wScore(a));
+  if (generals.length) {
+    const raiseItem = warmupExercise(generals[0],"raise");
+    // A 3-5 minute raise eats a fifth of a 30 minute session. Scale it to the time
+    // the client actually has, rather than spending their session getting warm.
+    const shortSession = Number(spec.minutes) && Number(spec.minutes) < 45;
+    if (shortSession) raiseItem.warmupRx = { ...raiseItem.warmupRx, reps:"2–3 min easy" };
+    warmup.push(raiseItem);
+  }
+
+  const specific = shuffle(warmupPool.filter((e) => e.region !== "cardio"), rng)
+    .sort((a, b) => wScore(b) - wScore(a));
+
+  // 2 · Open. Controlled range for the patterns today actually uses.
+  const rangePrep = relevant(specific).find((e) => e.region === "mobility");
+  if (rangePrep) warmup.push(warmupExercise(rangePrep,"open"));
+
+  // 3 · Activate. Dropped first when the session is short: the ramp sets in Rehearse
+  // already switch on the working muscles for the pattern being trained.
+  if (warmup.length < warmupCount) {
+    const activationPrep = relevant(specific).find((e) => e.region !== "mobility");
+    if (activationPrep) warmup.push(warmupExercise(activationPrep,"activate"));
+  }
+
+  // Keep the printed order matching the promised sequence no matter what was available.
+  const stageOrder = { raise:0, open:1, activate:2, rehearse:3 };
+  warmup.sort((a, b) => (stageOrder[a.warmupStage] ?? 9) - (stageOrder[b.warmupStage] ?? 9));
 
   warmup.forEach((e) => used.add(e.name));
-  if (warmup.length) blocks.push({ key: "warmup", title: "Warm-up · prepare, don’t fatigue", note: "~" + (6 + prof.warmupBonus * 2) + " min · Raise → Open → Activate → Rehearse", items: warmup });
+  if (warmup.length) {
+    const steps = warmup.map((item) => WARMUP_STAGE_DETAILS[item.warmupStage] && WARMUP_STAGE_DETAILS[item.warmupStage].label.replace(/^\d+ · /,"")).filter(Boolean).concat("Rehearse");
+    // Minutes follow the steps actually present, so the header never promises a
+    // four-step warm-up when only three were built.
+    const stageMinutes = { raise:(Number(spec.minutes) && Number(spec.minutes) < 45) ? 3 : 4, open:1, activate:2 };
+    const estimate = warmup.reduce((total,item) => total + (stageMinutes[item.warmupStage] || 1),0) + 3 + prof.warmupBonus;
+    blocks.push({ key: "warmup", title: "Warm-up · prepare, don’t fatigue",
+      note: "~" + estimate + " min · " + steps.join(" → "), items: warmup });
+  }
 
   // Walk the goal's structure, consuming slots
   let slots = slotBudget;
