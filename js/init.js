@@ -21,7 +21,8 @@ const SECONDARY_MENU_CLOSERS = {
   bodyGoalModal:"closeBodyGoalModal",
   clientPainModal:"closeClientPainReport",
   ownerRequestModal:"closeOwnerRequestDialog",
-  calendarEventModal:"closeCalendarEventEditor"
+  calendarEventModal:"closeCalendarEventEditor",
+  calendarSummaryModal:"closeCalendarSummary"
 };
 function prepareSecondaryMenu(modal) {
   if (!modal || !modal.classList || !modal.classList.contains("modal-backdrop")) return;

@@ -1503,3 +1503,106 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   .balance-row{grid-template-columns:auto 1fr;grid-template-areas:"badge name" "count count";gap:6px 10px}
   .balance-row .tier-badge{grid-area:badge} .balance-row b{grid-area:name} .balance-count{grid-area:count}
 }
+
+/* ---------- calendar: narrow screens ---------- */
+/* The week grid asks for 1085px and the month grid for 945px, so every phone and most
+   tablets were scrolling sideways through a layout that never fit. Rather than shrink
+   the columns into unreadability, each view takes the shape that suits the width. */
+
+@media(max-width:1024px){
+  /* Week view stacks into full-width day cards. Each cell already renders its own
+     weekday heading, so nothing is orphaned by dropping the column layout. */
+  .calendar-week-grid{grid-template-columns:1fr;min-width:0}
+  .calendar-week-day{min-height:0;border-right:0;border-bottom:1px solid var(--line)}
+  .calendar-week-day:last-child{border-bottom:0}
+  .calendar-week-day .calendar-week-head{position:sticky;top:0;z-index:1;background:var(--surface)}
+}
+
+@media(max-width:820px){
+  /* A 7-column month at phone width gives ~50px cells - too small for event chips,
+     but fine as a date picker. Show the day number and a dot when something is on,
+     and let a tap open that day. */
+  .calendar-month-head,.calendar-month-grid{grid-template-columns:repeat(7,minmax(0,1fr));min-width:0}
+  .calendar-month-day{min-height:0;padding:4px 2px;text-align:center}
+  .calendar-month-day .calendar-event-chip{display:none}
+  .calendar-month-day .calendar-more{display:none}
+  /* Marked server-side rather than with :has(), which older phone browsers lack. */
+  .calendar-month-day.has-events::after{content:"";display:block;width:5px;height:5px;
+    margin:2px auto 0;border-radius:50%;background:var(--blue)}
+  .calendar-month-day .calendar-day-number{width:26px;height:26px;margin:0 auto}
+  .calendar-month-head span{padding:6px 0;font-size:8px}
+}
+
+@media(max-width:560px){
+  /* Chips carry fixed 3-column internals (120px 1fr 180px and similar). Stack them so
+     the client name gets the full width instead of being squeezed to a few characters. */
+  .calendar-day-events .calendar-event-chip,
+  .calendar-agenda-day .calendar-event-chip{grid-template-columns:1fr;gap:3px}
+  .calendar-agenda-day{grid-template-columns:1fr;gap:8px}
+  .calendar-event-chip{padding:10px 11px}
+  .calendar-event-chip b{white-space:normal;overflow-wrap:anywhere}
+  .calendar-event-chip .chip-foot{flex-wrap:wrap}
+  /* Filters become a single scrollable row rather than a cramped grid. */
+  .calendar-filters{grid-template-columns:1fr;gap:8px}
+  .calendar-topbar{flex-direction:column;align-items:stretch;gap:10px}
+  .calendar-view-btn{flex:1}
+  /* The Action Center row has the same fixed-column problem. */
+  .action-center-row{grid-template-columns:1fr;gap:8px}
+  .action-center-actions{grid-column:1;justify-content:stretch;flex-wrap:wrap}
+  .action-search-row{grid-template-columns:1fr}
+}
+
+/* ---------- workout state on a session chip ---------- */
+.chip-workout{display:inline-flex;align-items:center;padding:1px 6px;border-radius:4px;
+  font:700 8px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.chip-workout.ready{color:var(--tier-group);background:color-mix(in srgb,var(--tier-group) 14%,transparent)}
+.chip-workout.missing{color:var(--tier-partner);background:color-mix(in srgb,var(--tier-partner) 16%,transparent)}
+/* A booked session with nothing built is the one state a coach must not miss. */
+.calendar-event-chip.needs-workout{border-left-style:dashed}
+
+/* ---------- session summary popover ---------- */
+.calendar-summary-dialog{width:min(430px,100%)}
+.calendar-summary-when{margin:2px 0 14px;color:var(--text-faint);font:700 10px var(--mono);
+  letter-spacing:.08em;text-transform:uppercase}
+.calendar-summary-dialog .summary-row{display:flex;justify-content:space-between;gap:14px;align-items:baseline;
+  padding:9px 0;border-bottom:1px solid var(--line)}
+.calendar-summary-dialog .summary-row:last-child{border-bottom:0}
+.calendar-summary-dialog .summary-row span{flex-shrink:0;color:var(--text-faint);font:700 9px var(--mono);
+  letter-spacing:.09em;text-transform:uppercase}
+.calendar-summary-dialog .summary-row b{text-align:right;color:var(--text);font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+.calendar-summary-dialog .summary-row.warn b{color:var(--tier-partner)}
+/* Safety is the one thing that must not read like the rest of the list. */
+.summary-alert{margin-bottom:12px;padding:10px 12px;border:1px solid #E05A5A;border-radius:9px;
+  background:color-mix(in srgb,#E05A5A 12%,transparent);color:#F3B4B4;font-size:11px;line-height:1.45}
+.summary-alert.soft{border-color:var(--tier-partner);background:color-mix(in srgb,var(--tier-partner) 12%,transparent);color:#EBCB92}
+@media(max-width:430px){
+  .calendar-summary-dialog .summary-row{flex-direction:column;gap:3px}
+  .calendar-summary-dialog .summary-row b{text-align:left}
+  .calendar-summary-dialog .tool-actions .small-btn{flex:1 1 calc(50% - 8px)}
+}
+
+/* ---------- daily prep ---------- */
+.daily-prep{grid-column:1/-1}
+.prep-list{display:grid;gap:7px}
+.prep-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;width:100%;
+  padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);
+  color:var(--text);text-align:left;cursor:pointer}
+.prep-row:hover{border-color:var(--blue)}
+.prep-row b{font:800 11px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.prep-row span{color:var(--text-faint);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prep-row em{font:800 10px var(--mono);font-style:normal;color:var(--tier-partner);white-space:nowrap}
+.prep-row em.ready{color:var(--tier-group)}
+.prep-row.needs{border-color:color-mix(in srgb,var(--tier-partner) 45%,var(--line))}
+.prep-row.quiet b,.prep-row.quiet span{opacity:.6}
+
+/* ---------- one badge per client ---------- */
+.client-alert-badge{display:inline-block;margin-top:6px;padding:3px 8px;border-radius:5px;
+  border:1px solid currentColor;font:700 9px/1.5 var(--mono);letter-spacing:.06em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.client-alert-badge.urgent{color:#E05A5A;background:color-mix(in srgb,#E05A5A 12%,transparent)}
+.client-alert-badge.soon{color:var(--tier-partner);background:color-mix(in srgb,var(--tier-partner) 12%,transparent)}
+.client-alert-badge.info{color:var(--text-faint)}
+@media(max-width:430px){
+  .prep-row{grid-template-columns:1fr;gap:4px}
+  .prep-row span{white-space:normal}
+}

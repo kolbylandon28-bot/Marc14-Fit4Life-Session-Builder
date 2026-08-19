@@ -279,6 +279,9 @@ function trainerAttentionSnapshot() {
   });
   trainerRequests.forEach((request) => push({id:"trainer-request:" + request.id,profileId:"",client:request.full_name || request.email || "Trainer request",trainer:"Owner confirmation",kind:"trainer_request",urgency:"normal",rank:3,createdAt:request.created_at,label:"Trainer access request",detail:"Owner approval is required before this account can see client records."}));
   ownerRequests.forEach((request) => push({id:"owner-request:" + request.id,profileId:request.profileId || "",client:request.client || "Workspace",trainer:request.requestedByName || "Trainer",kind:"owner_request",urgency:"normal",rank:3,createdAt:request.createdAt,label:ownerRequestLabel(request.type),detail:request.summary}));
+  // Session-readiness signals come from the calendar layer, which loads later. Guarded
+  // so the snapshot still works if that file is absent.
+  if (typeof upcomingSessionAttentionItems === "function") { try { upcomingSessionAttentionItems().forEach(push); } catch (error) {} }
   const attentionState = loadAttentionState(), visibleItems = items.filter((item) => attentionItemIsVisible(item,attentionState)).sort((a,b) => Number(a.rank || 9) - Number(b.rank || 9) || Number(b.primaryCoach) - Number(a.primaryCoach) || new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
   return {unanswered,assignmentReviews,checkinReviews,intakeReviews,recoveryOverdue,formalReviews,receiptRequests,recognition,trainerRequests,ownerRequests,automationAlerts,reviews:intakeReviews.length + assignmentReviews.length + checkinReviews.length + receiptRequests.length,items:visibleItems};
 }
@@ -643,6 +646,8 @@ function assignCurrentWorkout() {
     const conflicts = sessionSafetyConflictsForProfile(plan.session,profile);
     if (conflicts.length) { blocked.push(profile.name + ": " + conflicts.join("; ")); return; }
     const session = { type:"solo", data:JSON.parse(JSON.stringify(plan.session)), edits:JSON.parse(JSON.stringify(state.session.edits || {})) }, assignment = { id:"assignment-" + Date.now() + "-" + Math.random().toString(16).slice(2), profileId:profile.id, client:profile.name, assignedAt:new Date().toISOString(), status:"assigned", session };
+    // Built from a calendar session: land it on that date and link it back to the booking.
+    if (typeof linkPendingAppointment === "function") linkPendingAppointment(assignment);
     const existing = assignments.findIndex((item) => item.profileId === profile.id && !item.programId && assignmentStatus(item) === "assigned");
     if (existing >= 0) assignments[existing] = assignment; else assignments.unshift(assignment);
     saved.push(assignment);

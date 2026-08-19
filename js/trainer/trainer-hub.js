@@ -178,6 +178,10 @@ function renderTrainerDirectory() {
     const rowStatus = waiting ? "Awaiting trainer review" : lastReview && ["changed", "stopped"].includes(lastReview.data.pain) ? "Safety flag · " + (lastReview.data.injuryArea ? INJURY_LABELS[lastReview.data.injuryArea] : "pain reported") : active ? assignmentStatusLabel(assignment) : last ? "Last activity " + new Date(last.date).toLocaleDateString() : "Profile only";
     const ownership = profile && profile.assignedTrainerId ? (profile.assignedTrainerId === identity.id ? "Primary coach · you" : "Primary coach · " + (profile.assignedTrainerName || "assigned")) : "Shared client";
     button.append(el("strong", "", name), el("span", "", ownership + " · " + (profile ? "@" + profileUsername(profile) + " · " : "") + goals), el("span", waiting || (lastReview && ["changed", "stopped"].includes(lastReview.data.pain)) ? "client-alert" : "", rowStatus));
+    // One badge per client showing their single highest-priority open item. A cluster of
+    // indicators would just recreate the noise problem on a smaller surface.
+    const badge = typeof clientAttentionBadge === "function" && profile ? clientAttentionBadge(profile.id) : null;
+    if (badge) { const chip = el("span", "client-alert-badge " + badge.tone, badge.label); chip.title = badge.count > 1 ? badge.count + " open items · showing the most urgent" : badge.label; button.append(chip); }
     button.onclick = () => selectTrainerClient(name); container.appendChild(button);
   });
 }
