@@ -64,6 +64,60 @@ function installSecondaryMenuInteractions() {
   })).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["class"]});
 }
 
+/* ---------- install to home screen ---------- */
+// FIT4LIFE has been installable since it became a PWA, but nothing ever told anyone,
+// so almost nobody discovered it. Chrome and Android fire beforeinstallprompt and get
+// a real install button; iOS Safari never fires it, so those users get the manual
+// Share -> Add to Home Screen instructions instead. Sits below the auth gate on
+// purpose (z-index 900 vs 1000) so it appears once someone is actually signed in.
+const INSTALL_DISMISS_KEY = "fit4life-install-dismissed";
+let deferredInstallPrompt = null;
+function appAlreadyInstalled() {
+  return window.matchMedia && window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+function installBannerDismissed() {
+  try { return localStorage.getItem(INSTALL_DISMISS_KEY) === "1"; } catch (error) { return false; }
+}
+function dismissInstallBanner() {
+  try { localStorage.setItem(INSTALL_DISMISS_KEY,"1"); } catch (error) {}
+  const banner = document.getElementById("installBanner"); if (banner) banner.remove();
+}
+function isIosSafari() {
+  const ua = window.navigator.userAgent || "";
+  return /iPad|iPhone|iPod/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+}
+function showInstallBanner(mode) {
+  if (document.getElementById("installBanner") || appAlreadyInstalled() || installBannerDismissed()) return;
+  const banner = document.createElement("div");
+  banner.id = "installBanner";
+  banner.className = "install-banner";
+  banner.setAttribute("role","complementary");
+  banner.innerHTML = mode === "ios"
+    ? '<div class="install-banner-copy"><b>Add FIT4LIFE to your home screen</b><span>Tap the Share button, then <b>Add to Home Screen</b>.</span></div>'
+      + '<div class="install-banner-actions"><button type="button" class="small-btn" id="installDismissBtn">Got it</button></div>'
+    : '<div class="install-banner-copy"><b>Install FIT4LIFE</b><span>Get an app icon and a full-screen workout view.</span></div>'
+      + '<div class="install-banner-actions"><button type="button" class="small-btn primary" id="installAcceptBtn">Install</button><button type="button" class="small-btn" id="installDismissBtn">Not now</button></div>';
+  document.body.appendChild(banner);
+  const dismiss = document.getElementById("installDismissBtn");
+  if (dismiss) dismiss.addEventListener("click",dismissInstallBanner);
+  const accept = document.getElementById("installAcceptBtn");
+  if (accept) accept.addEventListener("click",async () => {
+    if (!deferredInstallPrompt) { dismissInstallBanner(); return; }
+    const prompt = deferredInstallPrompt; deferredInstallPrompt = null;
+    try { prompt.prompt(); await prompt.userChoice; } catch (error) {}
+    dismissInstallBanner();
+  });
+}
+function installPromptInteractions() {
+  if (appAlreadyInstalled() || installBannerDismissed()) return;
+  window.addEventListener("beforeinstallprompt",(event) => {
+    event.preventDefault(); deferredInstallPrompt = event; showInstallBanner("prompt");
+  });
+  window.addEventListener("appinstalled",dismissInstallBanner);
+  // iOS never fires beforeinstallprompt, so offer the manual route after a short delay.
+  if (isIosSafari()) window.setTimeout(() => showInstallBanner("ios"),4000);
+}
+
 /* ---------- init ---------- */
 if (document.getElementById) {
   if ("serviceWorker" in navigator && /^https?:$/.test(window.location.protocol)) {
@@ -71,6 +125,7 @@ if (document.getElementById) {
       .then((registration) => registration.update())
       .catch((error) => console.warn("FIT4LIFE offline shell could not start",error));
   }
+  cleanupLegacyCalibrationAssignments();
   renderForms();
   setMode("solo");
   updateHint();
@@ -80,4 +135,5 @@ if (document.getElementById) {
   applyGymBrand();
   updateNetworkStatus();
   installSecondaryMenuInteractions();
+  installPromptInteractions();
 }

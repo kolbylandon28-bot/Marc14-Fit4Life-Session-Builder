@@ -18,7 +18,7 @@ function buildSessionStateAtSeed(seed, optionIndex) {
   const built = state.mode === "solo"
     ? { type: "solo", data: buildBlendedSession(withOption(state.solo), seed), edits: {} }
     : { type: "group", data: buildGroupSession(withOption(state.p1), withOption(state.p2), seed), edits: {} };
-  workoutPlans(built).forEach((plan) => { applyCoachAdjustmentToSession(plan.session); applyReadinessTrendToSession(plan.session); applyCompoundAnchorContinuity(plan.session); finalizeGeneratedSession(plan.session); }); return built;
+  workoutPlans(built).forEach((plan) => { applyCoachAdjustmentToSession(plan.session); applyReadinessTrendToSession(plan.session); applyCompoundAnchorContinuity(plan.session); applyPendingCalibrationAnchors(plan.session); finalizeGeneratedSession(plan.session); }); return built;
 }
 function applyCoachAdjustmentToSession(session) {
   const adjustment = session && session.spec && session.spec.coachAdjustment; if (!adjustment || !adjustment.action) return session;
@@ -230,7 +230,7 @@ function reshuffle() {
     const candidate = state.mode === "solo"
       ? { type: "solo", data: buildBlendedSession(cloneSpec(state.solo), seed), edits: {} }
       : { type: "group", data: buildGroupSession(cloneSpec(state.p1), cloneSpec(state.p2), seed) };
-    workoutPlans(candidate).forEach((plan) => { applyCoachAdjustmentToSession(plan.session); applyReadinessTrendToSession(plan.session); applyCompoundAnchorContinuity(plan.session); finalizeGeneratedSession(plan.session); });
+    workoutPlans(candidate).forEach((plan) => { applyCoachAdjustmentToSession(plan.session); applyReadinessTrendToSession(plan.session); applyCompoundAnchorContinuity(plan.session); applyPendingCalibrationAnchors(plan.session); finalizeGeneratedSession(plan.session); });
     const ratio = changeRatio(before, sessionExerciseNames(candidate));
     if (ratio > bestRatio) { best = candidate; bestSeed = seed; bestRatio = ratio; }
     if (ratio >= 0.35) break;

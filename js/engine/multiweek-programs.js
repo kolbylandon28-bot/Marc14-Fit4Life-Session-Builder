@@ -278,6 +278,60 @@ function attachCalibrationDomain(session,domain,planId,sessionNumber) {
   const protocol = calibrationProtocolFor(domain,exercise); exercise.baselineDomains = domains; exercise.baselinePlanId = planId; exercise.baselineSessionNumber = sessionNumber; exercise.baselineRequired = true; exercise.baselineProtocol = protocol.instruction; exercise.rx = {...(exercise.rx || block.rx || {}),sets:protocol.sets,reps:protocol.reps,rest:protocol.rest,tempo:protocol.tempo,rpe:protocol.rpe};
   return true;
 }
+// Calibration is delivered one workout at a time. Rather than pre-scheduling a
+// multi-day block, the client's outstanding baseline domains are attached to the
+// next workout a coach builds, until every required domain has usable evidence.
+function nextCalibrationDomains(profile,limit) {
+  if (!profile) return [];
+  const state = baselineStateForProfile(profile);
+  if (state.status === "established" && !state.goalChanged) return [];
+  const missing = Array.isArray(state.missing) ? state.missing : [];
+  return missing.slice(0,Math.max(1,Number(limit) || 1));
+}
+function calibrationPlanIdFor(profile) {
+  return profile && profile.baseline && profile.baseline.planId || "baseline-" + (profile && profile.id || "client");
+}
+// Accounts created before calibration became a single workout still carry days 2+
+// from an old pre-scheduled block. No coach screen ever surfaced those rows, so the
+// client saw a workout they could never start and the trainer saw nothing at all.
+// They are cancelled rather than deleted, so the history of what happened survives.
+function cleanupLegacyCalibrationAssignments() {
+  let assignments = [];
+  try { assignments = loadAssignedWorkouts() || []; } catch (error) { return 0; }
+  if (!assignments.length) return 0;
+  let programs = [];
+  try { programs = loadSavedPrograms() || []; } catch (error) { return 0; }
+  const calibrationProgramIds = new Set(programs.filter((program) => program && program.calibration && program.id).map((program) => program.id));
+  if (!calibrationProgramIds.size) return 0;
+  let cleaned = 0;
+  assignments.forEach((item) => {
+    if (!item || !calibrationProgramIds.has(item.programId) || Number(item.programDay) <= 1) return;
+    if ((item.status || "assigned") !== "assigned") return;
+    item.status = "cancelled";
+    item.cancelledAt = new Date().toISOString();
+    item.cancelledReason = "Calibration now runs one workout at a time. This pre-scheduled day was retired automatically.";
+    cleaned++;
+  });
+  if (!cleaned) return 0;
+  try { writeAssignedWorkouts(assignments); } catch (error) { return 0; }
+  try { showToast(cleaned + " leftover calibration day" + (cleaned === 1 ? "" : "s") + " retired · calibration now runs one workout at a time"); } catch (error) {}
+  return cleaned;
+}
+// Attaches the next outstanding baseline anchor to an ordinary generated workout so
+// a coach never has to remember which measure is still missing. Sessions built by
+// the calibration generator already carry their anchors and are left alone.
+function applyPendingCalibrationAnchors(session) {
+  if (!session || !session.spec || session.spec.baselineMode) return session;
+  const spec = session.spec, profiles = loadProfiles();
+  const profile = profiles.find((item) => item.id === spec.profileId) || profiles.find((item) => clientMatches(item.name,spec.client));
+  if (!profile) return session;
+  const domains = nextCalibrationDomains(profile,1);
+  if (!domains.length) return session;
+  const planId = calibrationPlanIdFor(profile), attached = domains.filter((domain) => attachCalibrationDomain(session,domain,planId,null));
+  if (!attached.length) return session;
+  session.calibration = {...(session.calibration || {}),planId,domains:attached,autoAttached:true,goalSpecific:true};
+  return session;
+}
 function calibrationDomainSchedule(required,sessionCount) {
   if (sessionCount <= 1) return [required];
   const first = required.filter((domain) => ["movement","strength","power"].includes(domain)), second = required.filter((domain) => !first.includes(domain));
@@ -315,7 +369,7 @@ function ensureMajorCalibrationAnchor(day,pattern,planId,sessionNumber) {
   markMajorCalibrationExercise(exercise,planId,sessionNumber,(pattern === "h_push" ? "Bench press" : pattern === "squat" ? "Squat" : "Deadlift") + " anchor");
   rebuildBlockGroups(block); normalizeSessionBlockOrder(session); return true;
 }
-function attachMajorLiftCalibration(days,setup,planId) {
+function attachMajorLiftCalibration(days,setup,planId,limit) {
   if (!(setup.goals || []).includes("strength") || !(days || []).length) return 0;
   const anchors = [
     {pattern:"h_push",match:(day) => /push|upper|full body/i.test(day.name) || (day.session.spec.muscles || []).includes("chest")},
@@ -324,6 +378,7 @@ function attachMajorLiftCalibration(days,setup,planId) {
   ];
   let count = 0, usedDays = new Set();
   anchors.forEach((anchor) => {
+    if (limit && count >= limit) return;
     let index = days.findIndex((day,dayIndex) => !usedDays.has(dayIndex) && anchor.match(day));
     if (index < 0) index = days.findIndex((day,dayIndex) => !usedDays.has(dayIndex));
     /* A client may train only once or twice. Once every evidence day has an
@@ -348,7 +403,13 @@ function applyProgramDayDefaults(program,profile) {
 function generateCalibrationProgram() {
   if (!requireTrainerMutation("build client calibration workouts")) return null;
   const profiles = loadProfiles(), profileIndex = profiles.findIndex((profile) => profile.id === byId("programProfile").value), profile = profiles[profileIndex]; if (!profile) { showToast("Select a saved client profile first"); return null; }
-  const setup = programSetupSnapshot(profile), required = baselineRequiredDomains({...profile,goals:setup.goals}), weeklyDays = Math.max(1,Math.min(5,Number(setup.days || profile.availableDays || 1))), anchorSessionCount = Math.min(2,weeklyDays), schedule = calibrationDomainSchedule(required,anchorSessionCount), split = routeProgramSplit({...setup,days:weeklyDays}), planId = "baseline-" + profile.id + "-" + Date.now(), seed = Math.floor(Date.now() / 1000) % 100000;
+  // Coaching runs one workout at a time: build a single calibration session that
+  // carries the client's next outstanding baseline anchors. Clients training once,
+  // twice, or three times a week simply reach a complete baseline over more or
+  // fewer visits — no multi-day block is scheduled ahead of them.
+  const setup = programSetupSnapshot(profile), required = baselineRequiredDomains({...profile,goals:setup.goals});
+  const outstanding = nextCalibrationDomains({...profile,goals:setup.goals},2), sessionDomains = outstanding.length ? outstanding : required.slice(0,2);
+  const weeklyDays = 1, schedule = [sessionDomains], split = routeProgramSplit({...setup,days:1}), planId = "baseline-" + profile.id + "-" + Date.now(), seed = Math.floor(Date.now() / 1000) % 100000;
   const calibrationPhase = {setDelta:-1,rpe:"RPE 6–7 · leave 3–4 reps",deload:false};
   const days = split.map((day,index) => {
     const domains = schedule[index] || [], supportSession = domains.length === 0;
@@ -360,14 +421,14 @@ function generateCalibrationProgram() {
     session.rationale = (supportSession ? "This session fills the client’s selected weekly schedule while keeping first-week effort conservative. It does not add unnecessary testing. " : "Calibration is embedded in normal training. Only the marked anchors collect baseline evidence; the remaining movements build skill, fitness, and confidence. ") + session.rationale; finalizeGeneratedSession(session);
     return {name:supportSession ? (day.name || "Foundation practice " + (index + 1)) : schedule.length > 1 ? "Calibration " + String.fromCharCode(65 + index) + " · " + (day.name || "Training") : "Goal-specific calibration · " + (day.name || "Training"),session};
   });
-  const majorLiftAnchors = attachMajorLiftCalibration(days,setup,planId);
+  const majorLiftAnchors = attachMajorLiftCalibration(days,setup,planId,1);
   days.forEach((day) => { finalizeGeneratedSession(day.session); });
-  const phase = {name:"Establish starting points",setDelta:-1,rpe:"Submaximal · leave 3–4 reps",directive:"Complete the full first-week schedule at conservative effort. Only the clearly marked anchors collect baseline evidence; the other days build familiarity without extra testing.",reviewRequired:true,reviewTitle:"Coach baseline verification",reviewPrompt:"After the marked anchors are logged, review the required domains, pain response, confidence, effort, and equipment fit before generating the tailored phase."};
+  const phase = {name:"Establish starting points",setDelta:-1,rpe:"Submaximal · leave 3–4 reps",directive:"Run this workout at conservative effort. Only the clearly marked anchors collect baseline evidence; everything else builds familiarity without extra testing. Build the next workout once this one has been completed and reviewed."};
   setup.days = weeklyDays; setup.weeks = 1; setup.programMode = "calibration"; setup.starter = false; setup.baselineRequiredDomains = required; setup.baselinePlanId = planId; setup.calibrationAnchorSessions = Math.max(schedule.length,majorLiftAnchors ? Math.min(weeklyDays,2) : 0); setup.majorLiftCalibrationAnchors = majorLiftAnchors;
-  currentProgram = applyProgramDayDefaults({setup,weeks:[{number:1,phase,reviewRequired:true,reviewType:"baseline_verification",days}],calibration:true,baselinePlanId:planId,createdAt:new Date().toISOString(),lifecycle:"draft",versionNumber:1,versions:[],approval:{status:"draft",required:true}},profile);
+  currentProgram = applyProgramDayDefaults({setup,weeks:[{number:1,phase,reviewRequired:false,days}],calibration:true,baselinePlanId:planId,createdAt:new Date().toISOString(),lifecycle:"draft",versionNumber:1,versions:[],approval:{status:"draft",required:true}},profile);
   profile.baseline = {...(profile.baseline || {}),version:BASELINE_VERSION,status:"planned",planId,goals:setup.goals,requiredDomains:required,plannedSessions:schedule.length,plannedWeekDays:weeklyDays,plannedAt:new Date().toISOString()}; profile.updatedAt = new Date().toISOString();
   if (!writeProfiles(profiles)) { currentProgram = null; showToast("The calibration plan could not be saved to the client profile. Try again before assigning it."); return null; }
-  renderProgram(); renderProgramBaselineGate(); byId("programPrintBtn").disabled = false; byId("programApproveBtn").disabled = false; byId("programSaveBtn").disabled = true; byId("programSaveOnlyBtn").disabled = true; showToast(weeklyDays + " first-week workout" + (weeklyDays === 1 ? "" : "s") + " built · " + schedule.length + " contain calibration anchors"); return currentProgram;
+  renderProgram(); renderProgramBaselineGate(); byId("programPrintBtn").disabled = false; byId("programApproveBtn").disabled = false; byId("programSaveBtn").disabled = true; byId("programSaveOnlyBtn").disabled = true; showToast("Calibration workout built · " + sessionDomains.length + " baseline anchor" + (sessionDomains.length === 1 ? "" : "s") + (outstanding.length > sessionDomains.length ? " · the rest follow in later workouts" : "")); return currentProgram;
 }
 function generateProgram() {
   const selectedProfile = loadProfiles().find((profile) => profile.id === byId("programProfile").value);
@@ -842,7 +903,7 @@ function renderProgram() {
     ? '<div class="program-assignment-actions"><button class="small-btn primary" onclick="saveAndAssignCurrentProgram(\'all\')">Assign calibration week (' + p.setup.days + ' workout' + (p.setup.days === 1 ? '' : 's') + ')</button>' + (savedAssignments.length ? '<span class="program-assignment-state">' + savedAssignments.length + ' of ' + p.setup.days + ' workouts registered</span>' : '') + '</div>'
     : '<div class="program-assignment-actions"><button class="small-btn primary" onclick="saveAndAssignCurrentProgram(\'all\')">Assign full program</button><button class="small-btn" onclick="saveAndAssignCurrentProgram(\'week1\')">Assign Week 1 only</button>' + (p.weeks.length > 1 ? '<button class="small-btn" onclick="saveAndAssignCurrentProgram(\'remaining\')">Assign Weeks 2–' + p.weeks.length + '</button>' : '') + (savedAssignments.length ? '<span class="program-assignment-state">' + savedAssignments.length + ' workout' + (savedAssignments.length === 1 ? '' : 's') + ' registered</span>' : '') + '</div>' : '';
   const assignmentNotice = programAssignmentNotice ? '<div class="program-assignment-notice" role="alert"><b>Assignment needs attention</b>' + escapeHtml(programAssignmentNotice) + '</div>' : '';
-  const calibrationNextStep = p.calibration ? '<section class="program-calibration-summary"><b>' + (tailoredUnlocked ? 'Baseline verified · full program is ready to build' : 'What happens after this week') + '</b>' + (tailoredUnlocked ? 'The coach-verified baseline is available. The selected schedule remains ' + p.setup.days + ' days per week; build the tailored multi-week phase now.<div class="tool-actions" style="margin-top:10px"><button class="small-btn primary" onclick="generateProgram()">Build tailored ' + p.setup.days + '-day program</button></div>' : 'Assign all ' + p.setup.days + ' first-week workouts. Only ' + Number(p.setup.calibrationAnchorSessions || Math.min(2,p.setup.days)) + ' contain required anchors. After those are completed and reviewed, the trainer verifies the baseline and builds the tailored multi-week program.') + '</section>' : '';
+  const calibrationNextStep = p.calibration ? '<section class="program-calibration-summary"><b>' + (tailoredUnlocked ? 'Baseline verified · tailored programming unlocked' : 'What happens next') + '</b>' + (tailoredUnlocked ? 'The coach-verified baseline is available. Keep building one workout at a time, now fully tailored to this client.' : 'Assign this workout. Once the client completes it and a coach reviews it, build the next one — any remaining baseline anchors are added automatically until the baseline is complete.') + '</section>' : '';
   out.innerHTML = '<article class="utility-card"><div class="utility-head"><div><h3 class="utility-title">' + escapeHtml(p.setup.client) + ' · ' + escapeHtml(p.setup.goals.map((g) => GOALS[g].label).join(" + ")) + '</h3><div class="program-summary"><span><b>' + p.setup.weeks + '</b> week' + (p.setup.weeks === 1 ? '' : 's') + '</span><span><b>' + p.setup.days + '</b> day' + (p.setup.days === 1 ? '' : 's') + '/week</span><span><b>' + EXP_LABEL(p.setup.experience) + '</b> experience</span><span><b>' + escapeHtml(TRAINING_ROUTES[resolvedTrainingRoute(p.setup)].title) + '</b> route</span><span><b>' + p.setup.minutes + ' min</b> sessions</span><span><b>' + escapeHtml(versionLabel) + '</b></span></div>' + (p.calibration ? '<div class="program-calibration-summary"><b>Embedded calibration · useful training first</b>The marked anchors collect ' + escapeHtml((p.setup.baselineRequiredDomains || []).map((domain) => BASELINE_DOMAIN_LABELS[domain] || domain).join(' · ')) + '. Once those sets are logged, a trainer verifies the evidence and unlocks the tailored phase.</div>' : '') + '<div class="draft-status ' + (approved ? 'approved' : 'draft') + '"><b>' + (approved ? 'Coach approved ' + (p.calibration ? 'calibration' : 'program') : (p.calibration ? 'Calibration draft' : 'Program draft') + ' · approval required') + '</b><span>' + escapeHtml(continuityCopy) + '</span></div></div><span class="wave-badge">' + (p.calibration ? 'Baseline' : 'Program') + '</span></div></article>'
     + assignmentNotice + assignmentActions + calibrationNextStep
     + focusedProgramWorkspaceHtml(p,savedAssignments,approved,starter);
