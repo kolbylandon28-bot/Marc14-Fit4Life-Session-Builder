@@ -917,13 +917,24 @@ async function refreshTrainerAccountManager() {
   if (byId('myTrainerDisplayName')) byId('myTrainerDisplayName').value = currentAccountIdentity().displayName;
   out.innerHTML = trainers.map((trainer) => '<div class="trainer-account-row"><div><b>' + escapeHtml(trainer.display_name || trainer.email || 'Trainer') + '</b><span>' + escapeHtml(trainer.email || '') + ' · ' + escapeHtml(trainer.role || 'trainer') + (trainer.is_active === false ? ' · inactive' : ' · active') + '</span></div>' + (window.fit4lifeCloudRole === 'owner' && trainer.role !== 'owner' && trainer.is_active !== false ? '<button class="small-btn danger" onclick="deactivateTrainerAccount(\'' + escapeHtml(trainer.user_id) + '\')">Deactivate</button>' : '') + '</div>').join('') || '<div class="empty-state">No trainer accounts found.</div>';
 }
+// Declining uses the same reject RPC the client-request path already had; only the
+// trainer queue was missing a way to reach it.
+async function declineTrainerRequest(requestId,who) {
+  if (window.fit4lifeCloudRole !== "owner") { showToast("Only an owner can decline a trainer request"); return false; }
+  if (!requestId) { showToast("That request is missing its id and cannot be declined here"); return false; }
+  if (!window.confirm("Decline the trainer request from " + (who || "this person") + "? They keep their login but do not get trainer access.")) return false;
+  if (typeof window.fit4lifeCloudRejectRegistration !== "function") { showToast("The secure connection is not ready yet"); return false; }
+  const done = await window.fit4lifeCloudRejectRegistration(requestId);
+  if (done) { await refreshTrainerAccessManager(); renderTrainerAttention(); }
+  return done;
+}
 async function refreshTrainerAccessManager() {
   if (window.fit4lifeCloudRefreshRegistrationRequests) await window.fit4lifeCloudRefreshRegistrationRequests();
   const history = window.fit4lifeCloudListTrainerRequests ? await window.fit4lifeCloudListTrainerRequests() : window.fit4lifeCloudRegistrationRequests || [];
   await refreshTrainerAccountManager();
   const trainerRequests = Array.isArray(history) ? history : [], requests = trainerRequests.filter((request) => request.requested_role === 'trainer' && request.status === 'pending'), out = byId('trainerRequestList');
   const canConfirm = window.fit4lifeCloudRole === 'owner';
-  if (out) out.innerHTML = requests.map((request) => '<div class="trainer-account-row pending"><div><b>' + escapeHtml(request.full_name || request.email || 'Trainer request') + '</b><span>' + escapeHtml(request.email || '') + ' · requested ' + new Date(request.created_at).toLocaleString() + ' · confirm identity and verified email before approval</span></div>' + (canConfirm ? '<button class="small-btn primary" onclick="approveTrainerRequest(\'' + escapeHtml(request.email || '') + '\',\'' + escapeHtml(request.full_name || '') + '\')">Confirm trainer access</button>' : '') + '</div>').join('') || '<div class="empty-state">No trainer requests are waiting.' + (window.fit4lifeCloudRole === 'owner' ? ' The owner may still grant access manually above.' : '') + '</div>';
+  if (out) out.innerHTML = requests.map((request) => '<div class="trainer-account-row pending"><div><b>' + escapeHtml(request.full_name || request.email || 'Trainer request') + '</b><span>' + escapeHtml(request.email || '') + ' · requested ' + new Date(request.created_at).toLocaleString() + ' · confirm identity and verified email before approval</span></div>' + (canConfirm ? '<div class="tool-actions"><button class="small-btn primary" onclick="approveTrainerRequest(\'' + escapeHtml(request.email || '') + '\',\'' + escapeHtml(request.full_name || '') + '\')">Confirm trainer access</button><button class="small-btn" onclick="declineTrainerRequest(\'' + escapeHtml(request.id || '') + '\',\'' + escapeHtml(request.full_name || request.email || '') + '\')">Decline</button></div>' : '') + '</div>').join('') || '<div class="empty-state">No trainer requests are waiting.' + (window.fit4lifeCloudRole === 'owner' ? ' The owner may still grant access manually above.' : '') + '</div>';
   const decisions = trainerRequests.filter((request) => request.status !== 'pending').slice(0,20), decisionOut = byId('trainerApprovalHistory'), trainers = window.fit4lifeCloudTrainers || [];
   if (decisionOut) decisionOut.innerHTML = decisions.map((request) => {
     const reviewer = trainers.find((trainer) => trainer.user_id === request.reviewed_by), reviewerName = reviewer && (reviewer.display_name || reviewer.email) || (request.reviewed_by ? 'Approved staff member' : 'Automated client flow');

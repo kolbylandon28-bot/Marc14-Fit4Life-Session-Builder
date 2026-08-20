@@ -47,8 +47,11 @@
         substitutedFrom:swap && swap.data.from || "",snapshotAt:new Date().toISOString()
       });
     }));
-    const anyLogged = movements.some((item) => item.loggedSets > 0);
-    return movements.filter((item) => !item.skipped && (!anyLogged || item.loggedSets > 0));
+    // Every movement the client was given is offered, not only the ones they logged.
+    // The column asking what they "disliked or did not understand" is answered mostly by
+    // the movements they skipped or never started - filtering those out removed the most
+    // useful feedback in the form, and often left the picker completely empty.
+    return movements;
   }
   function pickerSelectionLabel(side) {
     const selected = reviewPickerState[side];
@@ -67,7 +70,7 @@
   function renderReviewMovementPicker(side) {
     const target = byId(side === "liked" ? "reviewLikedOptions" : "reviewDislikedOptions"); if (!target) return;
     const opposite = side === "liked" ? "disliked" : "liked";
-    target.innerHTML = reviewPickerState.movements.map((item) => '<label class="movement-feedback-option" data-movement-search="' + escapeHtml(item.name.toLowerCase()) + '"><input type="checkbox" value="' + escapeHtml(item.id) + '"' + (reviewPickerState[side].has(item.id) ? ' checked' : '') + ' onchange="toggleReviewMovementFeedback(\'' + side + '\',this.value,this.checked)"><span><b>' + escapeHtml(item.name) + '</b><small>' + escapeHtml(item.substitutedFrom ? "Replaced " + item.substitutedFrom + " · final workout movement" : (item.block || "Workout movement")) + (item.loggedSets ? " · " + item.loggedSets + " logged set" + (item.loggedSets === 1 ? "" : "s") : "") + '</small></span>' + (reviewPickerState[opposite].has(item.id) ? '<em>Selected in the other list</em>' : '') + '</label>').join("") || '<div class="movement-feedback-empty">No completed movements were found for this workout.</div>';
+    target.innerHTML = reviewPickerState.movements.map((item) => '<label class="movement-feedback-option" data-movement-search="' + escapeHtml(item.name.toLowerCase()) + '"><input type="checkbox" value="' + escapeHtml(item.id) + '"' + (reviewPickerState[side].has(item.id) ? ' checked' : '') + ' onchange="toggleReviewMovementFeedback(\'' + side + '\',this.value,this.checked)"><span><b>' + escapeHtml(item.name) + '</b><small>' + escapeHtml(item.substitutedFrom ? "Replaced " + item.substitutedFrom + " · final workout movement" : (item.block || "Workout movement")) + (item.loggedSets ? " · " + item.loggedSets + " logged set" + (item.loggedSets === 1 ? "" : "s") : item.skipped ? " · skipped" : " · not started") + '</small></span>' + (reviewPickerState[opposite].has(item.id) ? '<em>Selected in the other list</em>' : '') + '</label>').join("") || '<div class="movement-feedback-empty">No completed movements were found for this workout.</div>';
     syncReviewPickerHiddenFields();
   }
   window.toggleReviewMovementFeedback = function toggleReviewMovementFeedback(side,id,checked) {
@@ -192,14 +195,69 @@
   function movementChips(items,tone) {
     return items && items.length ? '<div class="coach-feedback-chips ' + tone + '">' + items.map((item) => '<span>' + escapeHtml(item.name || item) + (item.substitutedFrom ? '<small>replaced ' + escapeHtml(item.substitutedFrom) + '</small>' : '') + '</span>').join("") + '</div>' : '<div class="coach-feedback-empty">None selected</div>';
   }
+  // The client submits far more than the panel used to show: which exercise hurt, form
+  // quality, range of motion, reps in reserve, whether the session fitted their time, how
+  // long it actually took, and any personal records. A trainer deciding what to do next
+  // needs all of it, so none of it is dropped now.
+  function coachDetailRow(label,value) {
+    if (value == null || value === "" || value === "—") return "";
+    return '<div><b>' + escapeHtml(String(value)) + '</b><span>' + escapeHtml(label) + '</span></div>';
+  }
+  function coachMovementChips(items,tone,performed) {
+    if (!items || !items.length) return '<div class="coach-feedback-empty-inline">None selected</div>';
+    const lookup = new Map((performed || []).map((item) => [item.id || item.name,item]));
+    return '<div class="coach-feedback-chips ' + tone + '">' + items.map((item) => {
+      const name = item.name || item;
+      const detail = lookup.get(item.id) || lookup.get(name) || {};
+      // Whether they actually performed a movement changes what the feedback means: a
+      // disliked lift they never started is a different conversation from one they did.
+      const context = detail.loggedSets ? detail.loggedSets + " set" + (detail.loggedSets === 1 ? "" : "s")
+        : detail.skipped ? "skipped" : "not started";
+      return '<span><b>' + escapeHtml(name) + '</b><small>' + escapeHtml(context)
+        + (item.substitutedFrom ? " · replaced " + item.substitutedFrom : "") + '</small></span>';
+    }).join("") + '</div>';
+  }
   function coachFeedbackHtml(assignment) {
     const review = assignment && assignment.clientReview || {};
     if (!assignment || !assignment.clientReview) return '<div class="coach-feedback-empty">The client has not submitted a finish review for this workout.</div>';
-    return '<div class="coach-feedback-head"><div><span class="client-section-label">Client submission · revision ' + Number(review.revision || 1) + '</span><h3>What the client actually reported</h3><p>Submitted ' + escapeHtml(displayDate(review.updatedAt || review.submittedAt || assignment.completedAt,true)) + '. Comments below are shown exactly as entered.</p></div><span class="assignment-pill ' + escapeHtml(assignmentStatus(assignment)) + '">' + escapeHtml(assignment.coachReviewedAt ? "Coach reviewed" : "Awaiting coach review") + '</span></div>' +
-      '<div class="coach-feedback-metrics"><div><b>' + escapeHtml(completionLabel(review.completion)) + '</b><span>completed</span></div><div><b>' + (review.difficulty || "—") + '/10</b><span>difficulty</span></div><div><b>' + (review.energy || "—") + '/5</b><span>energy after</span></div><div><b>' + (review.loggedSets == null ? assignmentProgressStats(assignment).logged : review.loggedSets) + '</b><span>sets logged</span></div></div>' +
-      '<div class="coach-feedback-movements"><section><h4>Liked movements</h4>' + movementChips(reviewArray(review,"likedExercises"),"positive") + '</section><section><h4>Disliked / unclear movements</h4>' + movementChips(reviewArray(review,"dislikedExercises"),"negative") + '</section></div>' +
-      '<div class="coach-feedback-comments">' + feedbackTextBlock("Question for coach",review.questions,"No question entered") + feedbackTextBlock("Workout notes",review.notes,"No workout note entered") + (review.pain && review.pain !== "none" ? feedbackTextBlock("Pain / movement change",[review.injuryArea && (INJURY_LABELS[review.injuryArea] || review.injuryArea),review.painExercise,review.injuryDetails].filter(Boolean).join(" · "),"Pain was selected without a note") : feedbackTextBlock("Pain / movement change","No pain reported")) + '</div>';
+    const performed = reviewArray(review,"performedExercises");
+    const head = '<div class="coach-feedback-head"><div><span class="client-section-label">Client submission · revision ' + Number(review.revision || 1) + '</span><h3>What the client actually reported</h3><p>Submitted ' + escapeHtml(displayDate(review.updatedAt || review.submittedAt || assignment.completedAt)) + '</p></div></div>';
+    const metrics = '<div class="coach-feedback-metrics">'
+      + coachDetailRow("completed",completionLabel(review.completion))
+      + coachDetailRow("difficulty",(review.difficulty || "—") + "/10")
+      + coachDetailRow("energy after",(review.energy || "—") + "/5")
+      + coachDetailRow("reps in reserve",review.rir || "")
+      + coachDetailRow("form",review.formQuality || "")
+      + coachDetailRow("range of motion",review.rangeOfMotion || "")
+      + coachDetailRow("time fit",review.timeFit || "")
+      + coachDetailRow("logged efforts",review.loggedSets != null ? review.loggedSets : "")
+      + (review.actualDuration && review.duration && Number(review.actualDuration) !== Number(review.duration)
+          ? coachDetailRow("actual vs planned",review.actualDuration + " / " + review.duration + " min") : "")
+      + '</div>';
+    // Pain gets its own band, including the movement that caused it, which the panel
+    // never surfaced even though the client is asked for it directly.
+    const painful = review.pain && review.pain !== "none";
+    const painBand = painful
+      ? '<div class="coach-feedback-pain"><b>Discomfort reported</b><div>'
+        + [review.painLevel || review.pain, review.painScore != null ? review.painScore + "/10" : "",
+           review.injuryArea ? (INJURY_LABELS[review.injuryArea] || review.injuryArea) : "",
+           review.painExercise ? "during " + review.painExercise : "",
+           review.movementChanged ? "movement changed" : ""].filter(Boolean).map(escapeHtml).join(" · ")
+        + '</div>' + (review.injuryDetails ? '<p>' + escapeHtml(review.injuryDetails) + '</p>' : '') + '</div>'
+      : "";
+    const records = Array.isArray(review.personalRecords) && review.personalRecords.length
+      ? '<div class="coach-feedback-records"><b>Personal records</b><div>' + review.personalRecords.map((record) => escapeHtml(record.label || record.name || String(record))).join(" · ") + '</div></div>'
+      : "";
+    const movements = '<div class="coach-feedback-movements"><section><h4>Liked movements</h4>'
+      + coachMovementChips(reviewArray(review,"likedExercises"),"positive",performed)
+      + '</section><section><h4>Disliked / unclear movements</h4>'
+      + coachMovementChips(reviewArray(review,"dislikedExercises"),"negative",performed) + '</section></div>';
+    const comments = '<div class="coach-feedback-comments">'
+      + feedbackTextBlock("Question for coach",review.questions,"No question entered")
+      + feedbackTextBlock("Workout notes",review.notes,"No workout note entered") + '</div>';
+    return head + metrics + painBand + records + movements + comments;
   }
+
   const legacyOpenCoachAdjustment = window.openCoachAdjustment;
   window.openCoachAdjustment = function openCoachAdjustmentV14(profileId,assignmentId) {
     const profile = loadProfiles().find((item) => item.id === profileId), assignments = assignmentsForClient(profileId);

@@ -1688,3 +1688,20 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   letter-spacing:.09em;text-transform:uppercase}
 #inviteLinkField{width:100%;padding:10px;border:1px solid var(--blue);border-radius:8px;
   background:var(--slate-1);color:var(--text);font:600 11px var(--mono)}
+
+/* ---------- richer client feedback for the trainer ---------- */
+.coach-feedback-chips span small{display:block;margin-top:2px;font:600 9px var(--mono);color:var(--text-faint);letter-spacing:.04em}
+.coach-feedback-empty-inline{color:var(--text-faint);font-size:11px;padding:6px 0}
+/* Discomfort is the one band that must not read like another metric tile. */
+.coach-feedback-pain{margin:12px 0;padding:11px 13px;border:1px solid #E05A5A;border-radius:10px;
+  background:color-mix(in srgb,#E05A5A 12%,transparent)}
+.coach-feedback-pain b{display:block;color:#F3B4B4;font-size:12px;margin-bottom:4px}
+.coach-feedback-pain div{color:#EBC9C9;font:700 11px var(--mono);letter-spacing:.03em}
+.coach-feedback-pain p{margin:7px 0 0;color:#E8CFCF;font-size:11px;line-height:1.45}
+.coach-feedback-records{margin:10px 0;padding:9px 12px;border:1px solid var(--tier-group);border-radius:9px;
+  background:color-mix(in srgb,var(--tier-group) 10%,transparent)}
+.coach-feedback-records b{display:block;color:var(--tier-group);font-size:11px;margin-bottom:3px}
+.coach-feedback-records div{color:var(--text);font-size:11px}
+@media(max-width:560px){
+  .coach-feedback-metrics{grid-template-columns:repeat(auto-fit,minmax(84px,1fr))}
+}
