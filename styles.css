@@ -1678,3 +1678,13 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   .active-set-row.superset-round-actions{flex-direction:column}
   .active-set-row.superset-round-actions .small-btn{width:100%}
 }
+
+/* ---------- invite a client ---------- */
+.invite-client-dialog{width:min(470px,100%)}
+.invite-client-dialog input,.invite-client-dialog select{width:100%;padding:10px;border:1px solid var(--line);
+  border-radius:8px;background:var(--slate-1);color:var(--text);font:inherit;font-size:12px}
+#inviteLinkRow{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+#inviteLinkRow label{display:block;margin-bottom:5px;color:var(--text-faint);font:700 9px var(--mono);
+  letter-spacing:.09em;text-transform:uppercase}
+#inviteLinkField{width:100%;padding:10px;border:1px solid var(--blue);border-radius:8px;
+  background:var(--slate-1);color:var(--text);font:600 11px var(--mono)}

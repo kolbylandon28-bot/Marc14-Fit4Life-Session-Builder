@@ -1102,7 +1102,7 @@ function finishPendingTrainerDestination() {
   const destination = pendingTrainerDestination || "trainer-menu", client = pendingTrainerClient;
   pendingTrainerDestination = "trainer-menu"; pendingTrainerClient = ""; portalRole = "trainer";
   if (destination === "trainer") { show("trainer"); renderTrainerHub(client); return; }
-  if (destination === "new-client-profile") { show("trainer"); renderTrainerHub(); openCreateProfileEditor(); return; }
+  if (destination === "new-client-profile") { show("trainer"); renderTrainerHub(); openInviteClientDialog(); return; }
   if (destination === "new-client") { show("trainer"); renderTrainerHub(); startNewClient(); return; }
   if (destination === "programs") { show("programs"); refreshProfileSelects(); syncTrainerOnlyControls(); return; }
   if (destination === "readiness") { show("readiness"); openReadiness(); return; }

@@ -669,6 +669,122 @@ function setProfileEditorDeleteControls(visible) {
   const ownerVisible = visible && window.fit4lifeCloudRole === 'owner';
   ["profileEditorDeleteBtn","profileEditorDeleteAllBtn","profileEditorDeleteNote"].forEach((id) => { const element = byId(id); if (element) element.style.display = ownerVisible ? "" : "none"; });
 }
+/* ---------- invite a client ---------- */
+// Creating a client used to mean filling in the whole ~20-field profile editor before
+// the person had even been contacted. A trainer only knows three things at that point:
+// who they are, their BYU-I email, and possibly what they signed up for. Everything else
+// is the client's to answer in the questionnaire.
+function openInviteClientDialog() {
+  if (!requireTrainerMutation("create client profiles")) return null;
+  let modal = byId("inviteClientModal");
+  if (!modal) {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = '<div id="inviteClientModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="inviteClientTitle" aria-hidden="true">'
+      + '<div class="review-dialog invite-client-dialog"><h2 id="inviteClientTitle">Invite a client</h2>'
+      + '<p class="calendar-summary-when">They fill in the rest themselves</p>'
+      + '<div class="compact-grid">'
+      + '<div class="compact-field"><label for="inviteFirstName">First name</label><input id="inviteFirstName" maxlength="40" autocomplete="off"></div>'
+      + '<div class="compact-field"><label for="inviteLastName">Last name</label><input id="inviteLastName" maxlength="40" autocomplete="off"></div>'
+      + '<div class="compact-field wide"><label for="inviteEmail">BYU-I email</label><input id="inviteEmail" type="email" autocomplete="off" placeholder="name@byui.edu"><span class="storage-note">This is how their account links to this profile, so it must match the address they sign up with.</span></div>'
+      + '<div class="compact-field"><label for="inviteTier">Membership tier <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><select id="inviteTier" onchange="syncInviteTierDefault()"></select></div>'
+      + '<div class="compact-field"><label for="inviteProgrammedDays">Programmed days / week <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><select id="inviteProgrammedDays"><option value="">From their tier</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>'
+      + '</div>'
+      + '<div id="inviteClientFeedback" class="storage-note"></div>'
+      + '<div class="tool-actions"><button class="small-btn primary" id="inviteClientCreate">Create &amp; get invite link</button>'
+      + '<button class="small-btn" onclick="closeInviteClientDialog()">Cancel</button></div>'
+      + '<div id="inviteLinkRow" style="display:none"><label for="inviteLinkField">Send them this link</label>'
+      + '<input id="inviteLinkField" readonly>'
+      + '<div class="tool-actions"><button class="small-btn primary" onclick="copyInviteLink()">Copy link</button>'
+      + '<button class="small-btn" onclick="closeInviteClientDialog()">Done</button></div></div>'
+      + '</div></div>';
+    modal = wrapper.firstElementChild;
+    document.body.appendChild(modal);
+  }
+  const tier = byId("inviteTier");
+  tier.innerHTML = '<option value="">Not set yet</option>' + Object.keys(MEMBERSHIP_TIERS)
+    .map((id) => '<option value="' + id + '">' + escapeHtml(MEMBERSHIP_TIERS[id].label) + '</option>').join("");
+  ["inviteFirstName","inviteLastName","inviteEmail"].forEach((id) => { byId(id).value = ""; });
+  byId("inviteProgrammedDays").value = ""; byId("inviteClientFeedback").textContent = "";
+  byId("inviteLinkRow").style.display = "none";
+  byId("inviteClientCreate").disabled = false;
+  byId("inviteClientCreate").onclick = () => createInvitedClient();
+  modal.classList.add("open"); modal.setAttribute("aria-hidden","false");
+  window.setTimeout(() => { const first = byId("inviteFirstName"); if (first) first.focus(); },0);
+  return modal;
+}
+function closeInviteClientDialog() {
+  const modal = byId("inviteClientModal");
+  if (modal) { modal.classList.remove("open"); modal.setAttribute("aria-hidden","true"); }
+}
+function syncInviteTierDefault() {
+  const tier = byId("inviteTier"), days = byId("inviteProgrammedDays");
+  if (!tier || !days || days.value) return;
+  const meta = MEMBERSHIP_TIERS[normalizeMembershipTier(tier.value)];
+  byId("inviteClientFeedback").textContent = meta && meta.programmedDays
+    ? meta.label + " normally means " + meta.programmedDays + " programmed days, " + meta.sessionsPerWeek + " with a trainer."
+    : "";
+}
+function inviteClientLink() {
+  try { return window.location.origin + window.location.pathname; } catch (error) { return ""; }
+}
+function copyInviteLink() {
+  const field = byId("inviteLinkField"); if (!field) return;
+  field.select();
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(field.value);
+    else document.execCommand("copy");
+    showToast("Invite link copied");
+  } catch (error) { showToast("Select the link and copy it manually"); }
+}
+function createInvitedClient() {
+  if (!requireTrainerMutation("create client profiles")) return null;
+  const first = byId("inviteFirstName").value.trim(), last = byId("inviteLastName").value.trim();
+  const email = byId("inviteEmail").value.trim().toLowerCase();
+  const feedback = byId("inviteClientFeedback");
+  const name = [first,last].filter(Boolean).join(" ");
+  if (name.length < 2) { feedback.textContent = "Enter their first and last name."; return null; }
+  // The email is the link between the invite and the account they create, so it has to
+  // be right. A personal address here means their sign-up never finds this profile.
+  if (!isByuiEmail(email)) { feedback.textContent = "Use their BYU-I email address, ending in @byui.edu."; return null; }
+  if (loadProfiles().some((profile) => String(profile.email || "").toLowerCase() === email)) {
+    feedback.textContent = "A client with that email already exists."; return null;
+  }
+  const tierId = normalizeMembershipTier(byId("inviteTier").value);
+  const explicitDays = Number(byId("inviteProgrammedDays").value) || 0;
+  const created = createClientProfile({
+    name, email,
+    username: (first + "-" + last).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"") || email.split("@")[0],
+    membershipTier: tierId,
+    sessionsPerWeek: tierId && MEMBERSHIP_TIERS[tierId] ? MEMBERSHIP_TIERS[tierId].sessionsPerWeek : 0,
+    programmedDays: explicitDays,
+    invitedAt: new Date().toISOString(),
+    onboardingStatus: "invited",
+    goals: ["general"], experience: 1, age: 30, minutes: 60,
+    muscles: [], injuries: [], zones: [], preferences: {}, cardioModes: ["any"], trainingDays: [1,3,5], limitationAssessments: {},
+  });
+  if (!created) return null;
+  // createClientProfile rebuilds the record from a fixed field list, so the invite-only
+  // fields have to be written back afterwards or the tier picker silently does nothing.
+  const profiles = loadProfiles(), index = profiles.findIndex((item) => item.id === created.id);
+  if (index >= 0) {
+    profiles[index] = { ...profiles[index],
+      email,
+      membershipTier: tierId,
+      sessionsPerWeek: tierId && MEMBERSHIP_TIERS[tierId] ? MEMBERSHIP_TIERS[tierId].sessionsPerWeek : 0,
+      programmedDays: explicitDays,
+      invitedAt: new Date().toISOString(),
+      onboardingStatus: "invited",
+      updatedAt: new Date().toISOString() };
+    writeProfiles(profiles);
+  }
+  byId("inviteClientCreate").disabled = true;
+  byId("inviteLinkField").value = inviteClientLink();
+  byId("inviteLinkRow").style.display = "";
+  feedback.textContent = created.name + " is ready. Send them the link; they confirm their email and complete the questionnaire themselves.";
+  refreshProfileSelects();
+  if (typeof renderTrainerHub === "function") renderTrainerHub(created.name);
+  return created;
+}
 function openCreateProfileEditor() {
   if (!requireTrainerMutation("create client profiles")) return null;
   profileEditorTarget = null; profileEditorDraft = { muscles:[],injuries:[],zones:[],preferences:{},cardioModes:["any"],trainingDays:[1,3,5],limitationAssessments:{} };

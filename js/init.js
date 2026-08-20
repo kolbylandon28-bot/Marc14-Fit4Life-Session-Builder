@@ -24,7 +24,8 @@ const SECONDARY_MENU_CLOSERS = {
   calendarEventModal:"closeCalendarEventEditor",
   calendarSummaryModal:"closeCalendarSummary",
   followUpModal:"closeFollowUpDraft",
-  saveWorkoutModal:"closeSaveWorkoutDialog"
+  saveWorkoutModal:"closeSaveWorkoutDialog",
+  inviteClientModal:"closeInviteClientDialog"
 };
 function prepareSecondaryMenu(modal) {
   if (!modal || !modal.classList || !modal.classList.contains("modal-backdrop")) return;
