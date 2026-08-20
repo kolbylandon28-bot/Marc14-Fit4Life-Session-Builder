@@ -122,6 +122,11 @@ function sessionActions(isGroup) {
   print.onclick = () => window.print();
   bar.appendChild(print);
   if (portalRole === "trainer" && trainerIsUnlocked()) {
+    // Saving is separate from assigning: a workout worth keeping is not always one this
+    // client is doing next, and the library only had a way to remove until now.
+    const save = el("button","mini-btn","\u2606 Save workout");
+    save.onclick = () => openSaveWorkoutDialog();
+    bar.appendChild(save);
     const approved = workoutPlans(state.session).every((plan) => plan.session.approval && plan.session.approval.status === "approved");
     if (!approved) { const approve = el("button","mini-btn primary",isGroup ? "Coach approve both drafts" : "Coach approve draft"); approve.onclick = () => approveCurrentWorkoutDraft(); bar.appendChild(approve); }
     else { const assign = el("button","mini-btn primary",isGroup ? "Assign both workouts" : "Assign to client"); assign.onclick = () => assignCurrentWorkout(); bar.appendChild(assign); }

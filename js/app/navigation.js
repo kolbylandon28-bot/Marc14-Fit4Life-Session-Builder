@@ -166,6 +166,94 @@ function starWorkoutForClient(session,profile) {
   if (!profile) return null;
   return starWorkout(session,{ starredBy:"client",scope:"client",profileId:profile.id,client:profile.name });
 }
+/* ---------- save workout dialog ---------- */
+// Trainers choose where a saved workout goes, because the two destinations mean
+// different things: the library is reusable programming, a client's suggestions are
+// aimed at one person. Both writes are independent records, so removing it from one
+// never removes it from the other.
+function currentBuilderSession() {
+  if (!state || !state.session) return null;
+  const plans = typeof workoutPlans === "function" ? workoutPlans(state.session) : [];
+  return plans.length ? plans[0].session : (state.session.data || null);
+}
+// Accepts an explicit session so a completed workout from a client's history can be
+// saved as readily as the one currently in the builder.
+let saveWorkoutSource = null;
+let saveWorkoutProfileId = "";
+function openSaveWorkoutDialog(session,profileOverride) {
+  const resolved = session || currentBuilderSession();
+  if (!resolved) { showToast("Build a workout before saving it"); return; }
+  saveWorkoutSource = session ? JSON.parse(JSON.stringify(session)) : null;
+  saveWorkoutProfileId = profileOverride ? profileOverride.id : "";
+  const spec = resolved.spec || {};
+  const profile = profileOverride || (spec.profileId ? loadProfiles().find((item) => item.id === spec.profileId) : null);
+  let modal = byId("saveWorkoutModal");
+  if (!modal) {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = '<div id="saveWorkoutModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="saveWorkoutTitle" aria-hidden="true">'
+      + '<div class="review-dialog save-workout-dialog"><h2 id="saveWorkoutTitle">Save workout</h2>'
+      + '<p id="saveWorkoutSummary" class="calendar-summary-when"></p>'
+      + '<div class="compact-field"><label for="saveWorkoutName">Name it</label>'
+      + '<input id="saveWorkoutName" maxlength="80" placeholder="Lower body strength"></div>'
+      + '<div class="compact-field"><label for="saveWorkoutScope">Save to</label>'
+      + '<select id="saveWorkoutScope"></select>'
+      + '<span class="storage-note" id="saveWorkoutHint"></span></div>'
+      + '<div class="tool-actions"><button class="small-btn primary" id="saveWorkoutConfirm">Save</button>'
+      + '<button class="small-btn" onclick="closeSaveWorkoutDialog()">Cancel</button></div></div></div>';
+    modal = wrapper.firstElementChild;
+    document.body.appendChild(modal);
+  }
+  const movements = [];
+  (resolved.blocks || []).forEach((block) => (block.items || []).forEach((item) => { if (item && item.name) movements.push(item.name); }));
+  byId("saveWorkoutSummary").textContent = movements.slice(0,4).join(" · ") || "No movements yet";
+  byId("saveWorkoutName").value = resolved.goalLabel || "Workout";
+  const scope = byId("saveWorkoutScope");
+  // Only offer the client option when the builder actually has one loaded.
+  scope.innerHTML = '<option value="library">My workout library</option>'
+    + (profile ? '<option value="client">Suggested for ' + escapeHtml(profile.name) + '</option>'
+               + '<option value="both">Both</option>' : '');
+  const hint = byId("saveWorkoutHint");
+  const syncHint = () => {
+    hint.textContent = scope.value === "library"
+      ? "Visible to every trainer on the Team page. Only you and an owner can edit or remove it."
+      : scope.value === "client" ? "Appears on this client's record as a suggested session."
+      : "Saved twice, as independent records.";
+  };
+  scope.onchange = syncHint; syncHint();
+  byId("saveWorkoutConfirm").onclick = () => confirmSaveWorkout();
+  modal.classList.add("open"); modal.setAttribute("aria-hidden","false");
+  window.setTimeout(() => { const name = byId("saveWorkoutName"); if (name) name.select(); },0);
+}
+function closeSaveWorkoutDialog() {
+  saveWorkoutSource = null; saveWorkoutProfileId = "";
+  const modal = byId("saveWorkoutModal");
+  if (modal) { modal.classList.remove("open"); modal.setAttribute("aria-hidden","true"); }
+}
+function confirmSaveWorkout() {
+  if (typeof requireTrainerMutation === "function" && !requireTrainerMutation("save workouts")) return null;
+  const session = saveWorkoutSource || currentBuilderSession();
+  if (!session) { showToast("Build a workout before saving it"); return null; }
+  const scope = byId("saveWorkoutScope").value || "library";
+  const name = byId("saveWorkoutName").value.trim();
+  const spec = session.spec || {};
+  const profile = (saveWorkoutProfileId ? loadProfiles().find((item) => item.id === saveWorkoutProfileId) : null)
+    || (spec.profileId ? loadProfiles().find((item) => item.id === spec.profileId) : null);
+  if ((scope === "client" || scope === "both") && !profile) { showToast("Load a saved client before saving to their record"); return null; }
+  const identity = typeof currentAccountIdentity === "function" ? currentAccountIdentity() : { displayName:"Trainer" };
+  const saved = starWorkoutForTrainer({ data:session },scope,profile,identity.displayName);
+  if (!saved.length) { showToast("The workout could not be saved. Try again."); return null; }
+  // Apply the trainer's title to whatever was just written.
+  if (name) {
+    const list = loadStarredWorkouts();
+    saved.forEach((record) => { const index = list.findIndex((item) => item.id === record.id); if (index >= 0) list[index] = { ...list[index],title:name }; });
+    writeStarredWorkouts(list);
+  }
+  closeSaveWorkoutDialog();
+  showToast(scope === "library" ? "Saved to your library"
+    : scope === "client" ? "Suggested to " + profile.name
+    : "Saved to your library and suggested to " + profile.name);
+  return saved;
+}
 function starredWorkoutsForProfile(profileId) {
   return loadStarredWorkouts().filter((item) => item.scope === "client" && item.profileId === profileId);
 }

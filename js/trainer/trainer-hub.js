@@ -400,6 +400,55 @@ function summaryOverviewContent(analysis, filtered) {
     + '<h4 class="analysis-section-title">Training balance</h4>' + summaryCategoryCards(filtered) + renderPinnedSummary(filtered)
     + '<div class="analysis-grid"><section class="analysis-panel"><h4 class="analysis-section-title">Recent workout days</h4>' + sessionTimelineHtml(filtered.sessions, 3) + '</section><aside class="analysis-panel"><h4 class="analysis-section-title">Coach priority</h4><div class="priority-card">' + escapeHtml(analysis.priority) + '</div><h4 class="analysis-section-title" style="margin-top:16px">Current filter</h4><div class="analysis-history-item"><b>' + filtered.strengthSets.length + ' strength sets included</b><span>' + filtered.sets.filter((entry) => summaryMetaFor(entry).excluded).length + ' excluded from calculations · ' + filtered.sessions.length + ' workout days</span></div><div class="priority-card" style="margin-top:12px">No percentile, diagnosis, or hidden composite score is used. A lift trend appears only after the same exercise is logged in separate sessions.</div></aside></div>';
 }
+function clientPastWorkoutsHtml(profile) {
+  if (!profile) return "";
+  // The history tabs are analytics - metrics, comparisons, timelines - with no way to act
+  // on an individual session. A workout that went well is exactly the one worth keeping.
+  const done = assignmentsForClient(profile.id)
+    .filter((item) => ["completed","reviewed"].includes(assignmentStatus(item)))
+    .sort((a,b) => String(b.completedAt || b.assignedAt).localeCompare(String(a.completedAt || a.assignedAt)));
+  if (!done.length) return '<section class="analysis-panel"><h4 class="analysis-section-title">Past workouts</h4><div class="empty-state">No completed workouts yet.</div></section>';
+  const rows = done.slice(0,15).map((assignment) => {
+    const data = assignment.session && assignment.session.data;
+    const title = (data && data.goalLabel) || assignment.programDayName || "Workout";
+    const when = assignment.completedAt ? new Date(assignment.completedAt).toLocaleDateString() : "";
+    const review = assignment.clientReview || {};
+    const movements = data ? clientSessionExercises(data).map((entry) => entry.exercise.name) : [];
+    const detail = [movements.slice(0,3).join(" · "), review.difficulty ? "difficulty " + review.difficulty + "/10" : ""].filter(Boolean).join(" · ");
+    return '<article class="past-workout"><div class="past-workout-copy"><b>' + escapeHtml(title) + '</b>'
+      + '<span>' + escapeHtml([when, detail].filter(Boolean).join(" · ")) + '</span></div>'
+      + '<div class="past-workout-actions">'
+      + '<button class="tiny-btn" onclick="saveWorkoutFromHistory(' + JSON.stringify(assignment.id) + ')">\u2606 Save</button>'
+      + '<button class="tiny-btn" onclick="reuseWorkoutFromHistory(' + JSON.stringify(assignment.id) + ')">Use again</button>'
+      + '</div></article>';
+  }).join("");
+  return '<section class="analysis-panel"><h4 class="analysis-section-title">Past workouts</h4>'
+    + '<p class="storage-note" style="margin-bottom:10px">Save one to your library or suggest it back to this client. Use again loads it into the builder as a fresh draft.</p>'
+    + '<div class="past-workout-list">' + rows + '</div>'
+    + (done.length > 15 ? '<p class="storage-note">Showing the 15 most recent of ' + done.length + '.</p>' : '') + '</section>';
+}
+function assignmentSessionData(assignmentId) {
+  const assignment = loadAssignedWorkouts().find((item) => item.id === assignmentId);
+  return assignment && assignment.session && assignment.session.data ? { assignment, data:assignment.session.data } : null;
+}
+function saveWorkoutFromHistory(assignmentId) {
+  const found = assignmentSessionData(assignmentId);
+  if (!found) { showToast("That workout is no longer available"); return; }
+  const profile = loadProfiles().find((item) => item.id === found.assignment.profileId);
+  openSaveWorkoutDialog(found.data, profile || null);
+}
+function reuseWorkoutFromHistory(assignmentId) {
+  const found = assignmentSessionData(assignmentId);
+  if (!found) { showToast("That workout is no longer available"); return; }
+  if (typeof requireTrainerMutation === "function" && !requireTrainerMutation("build workouts")) return;
+  // Loads as a new draft; the completed record is never altered.
+  state.session = { type:"solo", data:JSON.parse(JSON.stringify(found.data)), edits:{} };
+  state.sessionOptions = [];
+  portalRole = "trainer";
+  show("builder");
+  if (typeof renderSession === "function") renderSession();
+  showToast("Loaded as a new draft");
+}
 function summaryHistoryContent(filtered) { return summaryMetricsHtml(filtered) + '<section class="analysis-panel"><h4 class="analysis-section-title">Compare workout days</h4>' + comparisonHtml(filtered.allSessions) + '</section><section class="analysis-panel" style="margin-top:14px"><h4 class="analysis-section-title">Workout timeline</h4><p style="font-size:9px;color:#737780;margin-top:4px">Open any day to review every logged set, workout result, trainer note, category, and exclusion.</p>' + sessionTimelineHtml(filtered.sessions) + '</section>'; }
 function summarySafetyContent(filtered) {
   const reviews = filtered.workouts, readiness = filtered.readiness;
@@ -531,7 +580,7 @@ function renderTrainerAnalysis(client) {
   trainerSummaryState.tab = normalizeTrainerSummaryTab(trainerSummaryState.tab);
   const tabs = [["overview","Overview"],["workouts","Workouts"],["progress","Progress"],["checkins","Check-ins"],["messages","Messages"],["details","Client details"]];
   let content = trainerClientOverviewContent(analysis,filtered);
-  if (trainerSummaryState.tab === "workouts") content = trainerFilterDrawer(analysis,filtered) + summaryHistoryContent(filtered);
+  if (trainerSummaryState.tab === "workouts") content = trainerFilterDrawer(analysis,filtered) + clientPastWorkoutsHtml(profile) + summaryHistoryContent(filtered);
   else if (trainerSummaryState.tab === "progress") content = trainerFilterDrawer(analysis,filtered) + trainerProgressReceiptsHtml(profile) + summaryStrengthContent(filtered) + '<details class="formal-review-box"><summary>Body composition &amp; InBody progress</summary>' + renderInBodyContent(analysis) + '</details>';
   else if (trainerSummaryState.tab === "checkins") content = trainerCheckInsTab(profile);
   else if (trainerSummaryState.tab === "messages") content = trainerMessagesTab(profile);
