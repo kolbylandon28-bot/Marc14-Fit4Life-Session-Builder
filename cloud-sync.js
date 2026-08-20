@@ -252,6 +252,32 @@
     return publicSiteUrl("/", gym ? { gym } : {});
   }
 
+  async function sendClientInvite(email, fullName) {
+    const address = String(email || "").trim().toLowerCase();
+    if (!address) return { ok:false, error:"No email address was provided" };
+    if (!cloudClient) return { ok:false, error:"The secure connection is not ready yet. Try again in a moment." };
+    try {
+      const response = await cloudClient.auth.signInWithOtp({
+        email: address,
+        options: {
+          emailRedirectTo: authRedirectUrl(),
+          shouldCreateUser: true,
+          data: {
+            full_name: fullName || "",
+            requested_role: "client",
+            registration_source: "fit4life_trainer_invite",
+            organization_slug: portalOrganizationSlug || "fit-4-life"
+          }
+        }
+      });
+      if (response && response.error) return { ok:false, error:response.error.message || "The invite could not be sent" };
+      return { ok:true };
+    } catch (error) {
+      return { ok:false, error:(error && error.message) || "The invite could not be sent" };
+    }
+  }
+  window.fit4lifeCloudSendClientInvite = sendClientInvite;
+
   window.fit4lifePublicSiteUrl = publicSiteUrl;
 
   function publishCloudIdentity() {

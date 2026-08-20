@@ -66,12 +66,45 @@ function selectProgramProfile(profileId) {
   byId("programProfile").value = profile.id; byId("programProfileLookup").value = profile.name + " · @" + profileUsername(profile); byId("programProfileLookupResults").innerHTML = "";
   loadProgramProfile(); renderProgramBaselineGate(); return profile;
 }
+// A client's programme should match what their tier covers. availableDays is what they
+// told us about their schedule; programmedDays is what the gym owes them.
+function syncProgramDaysToTier(profile) {
+  const select = byId("programDays"); if (!select || !profile) return 0;
+  const cap = typeof programmedDaysPerWeek === "function" ? programmedDaysPerWeek(profile) : 0;
+  const previous = Number(select.value) || 0;
+  const max = cap || 6;
+  const meta = typeof membershipTierMeta === "function" ? membershipTierMeta(profile) : null;
+  select.innerHTML = Array.from({length:max},(_,index) => index + 1)
+    .map((n) => '<option value="' + n + '">' + n + (n === 1 ? " day" : " days") + (cap && n === cap ? " · their plan" : "") + "</option>").join("");
+  select.value = String(previous && previous <= max ? previous : (cap || Math.min(3,max)));
+  const note = byId("programTierNote");
+  if (note) {
+    const tierCap = typeof tierProgrammedDayCap === "function" ? tierProgrammedDayCap(profile) : 0;
+    note.textContent = !meta || !meta.id
+      ? "No membership tier set for this client, so the full range is available."
+      : !tierCap
+        // Pay-as-you-go buys sessions rather than a weekly cadence, so there is nothing
+        // to cap against - but the tier IS set, and saying otherwise would be wrong.
+        ? meta.label + " has no weekly session count, so the full range is available."
+      : cap !== tierCap
+        // State a per-client override as an override, rather than attributing it to the
+        // tier and telling the trainer something untrue about the plan.
+        ? meta.label + " covers " + tierCap + " day" + (tierCap === 1 ? "" : "s") + " a week; this client is set to " + cap + "."
+        : meta.label + " covers " + cap + " programmed day" + (cap === 1 ? "" : "s") + " a week, " + entitledSessionsPerWeek(profile) + " with a trainer.";
+  }
+  return cap;
+}
 function syncProgramMode(preserveDays) {
   const mode = byId("programMode") && byId("programMode").value || "starter", weeks = byId("programWeeks"), days = byId("programDays"), note = byId("programModeNote");
   if (!weeks) return mode;
   if (mode === "starter") {
     weeks.value = "3"; weeks.disabled = true;
-    if (!preserveDays && days) days.value = "2";
+    if (!preserveDays && days) {
+      // The tier cap may not include 2, in which case forcing it blanks the select and
+      // setup.days becomes 0 further down.
+      const hasTwo = days.querySelector('option[value="2"]');
+      days.value = hasTwo ? "2" : (days.options.length ? days.options[days.options.length - 1].value : "1");
+    }
     if (note) note.innerHTML = "<b>Starter rhythm · recommended for new clients</b>Two recognizable workouts repeat for three weeks. Week 1 learns the plan, Week 2 repeats it with a small progression, and Week 3 builds confidence without swapping the exercise menu. A client review follows Week 1.";
   } else {
     weeks.disabled = false; if (weeks.value === "3") weeks.value = "8";
@@ -87,7 +120,17 @@ function loadProgramProfile() {
   byId("programSecondaryGoal").value = profile.goals[1] || ""; byId("programExp").value = profile.experience;
   byId("programStyle").value = profile.trainingStyle || "auto"; programCardioModes = normalizeCardioPreferences(profile.cardioModes || profile.cardioMode); renderProgramCardioChoices();
   byId("programAge").value = profile.age; byId("programMinutes").value = profile.minutes || 60;
-  byId("programMode").value = mode; byId("programDays").value = String(existingProgram && existingProgram.setup && existingProgram.setup.days || (mode === "starter" ? 2 : profile.availableDays || 3));
+  byId("programMode").value = mode;
+  const tierCap = syncProgramDaysToTier(profile);
+  const requestedDays = existingProgram && existingProgram.setup && existingProgram.setup.days
+    || (mode === "starter" ? 2 : tierCap || profile.availableDays || 3);
+  const appliedDays = tierCap ? Math.min(requestedDays,tierCap) : requestedDays;
+  byId("programDays").value = String(appliedDays);
+  // Reducing a saved programme to fit a changed tier is a real change to the client's
+  // week, so it is stated rather than applied quietly.
+  if (appliedDays < requestedDays) {
+    showToast("Their saved programme was " + requestedDays + " days; their current plan covers " + appliedDays + ".");
+  }
   if (mode === "progressive") byId("programWeeks").value = String(existingProgram && existingProgram.setup && existingProgram.setup.weeks || 8);
   syncProgramMode(true);
   programFilters.injuries = [...(profile.injuries || [])]; programFilters.zones = [...(profile.zones || [])];
@@ -104,6 +147,7 @@ function programSplit(days) {
     3: [{ name: "Push", muscles: ["chest", "shoulders", "arms"] }, { name: "Pull", muscles: ["back", "arms"] }, { name: "Legs", muscles: ["quads", "glutes", "hamstrings", "calves"] }],
     4: [{ name: "Upper push", muscles: ["chest", "shoulders", "arms"] }, { name: "Lower · squat", muscles: ["quads", "glutes"] }, { name: "Upper pull", muscles: ["back", "arms"] }, { name: "Lower · hinge", muscles: ["hamstrings", "glutes"] }],
     5: [{ name: "Push", muscles: ["chest", "shoulders", "arms"] }, { name: "Pull", muscles: ["back", "arms"] }, { name: "Legs", muscles: ["quads", "glutes", "hamstrings", "calves"] }, { name: "Upper", muscles: ["chest", "back", "shoulders"] }, { name: "Posterior", muscles: ["hamstrings", "glutes", "back"] }],
+    6: [{ name: "Push A", muscles: ["chest", "shoulders", "arms"] }, { name: "Pull A", muscles: ["back", "arms"] }, { name: "Legs A", muscles: ["quads", "glutes"] }, { name: "Push B", muscles: ["shoulders", "chest", "arms"] }, { name: "Pull B", muscles: ["back", "arms"] }, { name: "Legs B", muscles: ["hamstrings", "glutes", "calves"] }]
   };
   return splits[days] || splits[3];
 }
@@ -129,6 +173,7 @@ function routeProgramSplit(setup) {
       3:[{name:"Aerobic base",optionIndex:0},{name:"Tempo",optionIndex:1},{name:"Intervals",optionIndex:2}],
       4:[{name:"Aerobic base",optionIndex:0},{name:"Intervals",optionIndex:2},{name:"Easy aerobic",optionIndex:0},{name:"Tempo",optionIndex:1}],
       5:[{name:"Aerobic base",optionIndex:0},{name:"Intervals",optionIndex:2},{name:"Easy aerobic",optionIndex:0},{name:"Tempo",optionIndex:1},{name:"Long aerobic",optionIndex:0}],
+      6:[{name:"Aerobic base",optionIndex:0},{name:"Intervals",optionIndex:2},{name:"Easy aerobic",optionIndex:0},{name:"Tempo",optionIndex:1},{name:"Long aerobic",optionIndex:0},{name:"Recovery spin",optionIndex:0}],
     };
     return (cardioDays[setup.days] || cardioDays[3]).map((day) => ({ ...day, muscles:[] }));
   }

@@ -470,7 +470,15 @@ function loadMarketTemplateForClient() {
   byId("programMode").value = weeks === 3 ? "starter" : "progressive";
   syncProgramMode(true);
   byId("programWeeks").value = String(weeks);
-  byId("programDays").value = String(days);
+  // The select is capped to the client's tier, so a template asking for more days than
+  // the plan covers would otherwise blank the field and produce a zero-day programme.
+  const daysSelect = byId("programDays");
+  const allowed = [...daysSelect.options].map((option) => Number(option.value)).filter(Boolean);
+  const cappedDays = allowed.length && !allowed.includes(Number(days))
+    ? Math.max.apply(null,allowed.filter((n) => n <= Number(days)).concat(Math.min.apply(null,allowed)))
+    : Number(days);
+  daysSelect.value = String(cappedDays);
+  if (cappedDays !== Number(days)) showToast("Template asks for " + days + " days; this client's plan covers " + cappedDays + ".");
   byId("programMinutes").value = String(minutes);
   loadedProgramTemplate = { id:item.templateId || item.id,title:item.title,sessions:item.sessions,progression:item.progression };
   const context = byId("programTemplateContext");

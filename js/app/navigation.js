@@ -556,9 +556,19 @@ function entitledSessionsPerWeek(profile) {
 // fewer days than they are actually coming in.
 function programmedDaysPerWeek(profile) {
   const explicit = Number(profile && profile.programmedDays);
-  if (Number.isFinite(explicit) && explicit > 0) return explicit;
+  const cap = tierProgrammedDayCap(profile);
+  // An explicit per-client number is honoured, but never above what the tier covers -
+  // otherwise a tier downgrade leaves the old, larger number in force forever.
+  if (Number.isFinite(explicit) && explicit > 0) return cap ? Math.min(explicit,cap) : explicit;
+  return cap;
+}
+// What the tier itself covers, independent of any per-client override. Tiers without a
+// programmed-day figure of their own fall back to their trainer-day count so they are
+// capped at something real rather than left unlimited.
+function tierProgrammedDayCap(profile) {
   const meta = membershipTierMeta(profile);
-  return meta.programmedDays || entitledSessionsPerWeek(profile) || 0;
+  if (!meta.id) return 0;
+  return meta.programmedDays || meta.sessionsPerWeek || 0;
 }
 // Days the client trains alone: programmed days that are not trainer days.
 function soloDaysPerWeek(profile) {

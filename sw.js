@@ -1,4 +1,4 @@
-const CACHE_NAME = "fit4life-shell-2026-08-20-v33-client-invite-r1";
+const CACHE_NAME = "fit4life-shell-2026-08-20-v34-tier-caps-auto-invite-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
 const SHELL = [
   "/",

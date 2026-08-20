@@ -670,6 +670,9 @@ function setProfileEditorDeleteControls(visible) {
   ["profileEditorDeleteBtn","profileEditorDeleteAllBtn","profileEditorDeleteNote"].forEach((id) => { const element = byId(id); if (element) element.style.display = ownerVisible ? "" : "none"; });
 }
 /* ---------- invite a client ---------- */
+// Guards against a slow invite writing its result into a dialog that has since been
+// closed or reopened for a different client.
+let inviteRequestToken = 0;
 // Creating a client used to mean filling in the whole ~20-field profile editor before
 // the person had even been contacted. A trainer only knows three things at that point:
 // who they are, their BYU-I email, and possibly what they signed up for. Everything else
@@ -705,27 +708,50 @@ function openInviteClientDialog() {
     .map((id) => '<option value="' + id + '">' + escapeHtml(MEMBERSHIP_TIERS[id].label) + '</option>').join("");
   ["inviteFirstName","inviteLastName","inviteEmail"].forEach((id) => { byId(id).value = ""; });
   byId("inviteProgrammedDays").value = ""; byId("inviteClientFeedback").textContent = "";
+  syncInviteTierDefault();
   byId("inviteLinkRow").style.display = "none";
+  inviteRequestToken += 1;
   byId("inviteClientCreate").disabled = false;
+  byId("inviteClientCreate").textContent = "Create & get invite link";
+  const linkLabel = byId("inviteLinkRow") && byId("inviteLinkRow").querySelector("label");
+  if (linkLabel) linkLabel.textContent = "Send them this link";
   byId("inviteClientCreate").onclick = () => createInvitedClient();
   modal.classList.add("open"); modal.setAttribute("aria-hidden","false");
   window.setTimeout(() => { const first = byId("inviteFirstName"); if (first) first.focus(); },0);
   return modal;
 }
 function closeInviteClientDialog() {
+  inviteRequestToken += 1;
   const modal = byId("inviteClientModal");
   if (modal) { modal.classList.remove("open"); modal.setAttribute("aria-hidden","true"); }
 }
 function syncInviteTierDefault() {
   const tier = byId("inviteTier"), days = byId("inviteProgrammedDays");
-  if (!tier || !days || days.value) return;
+  if (!tier || !days) return;
   const meta = MEMBERSHIP_TIERS[normalizeMembershipTier(tier.value)];
-  byId("inviteClientFeedback").textContent = meta && meta.programmedDays
-    ? meta.label + " normally means " + meta.programmedDays + " programmed days, " + meta.sessionsPerWeek + " with a trainer."
-    : "";
+  const cap = meta && meta.programmedDays ? meta.programmedDays : 0;
+  const previous = days.value;
+  // Only offer what the tier actually covers. With no tier chosen the full range stays
+  // available, because the trainer may be setting the days before the tier is known.
+  const max = cap || 6;
+  days.innerHTML = '<option value="">' + (cap ? "From their tier (" + cap + ")" : "From their tier") + "</option>"
+    + Array.from({length:max},(_,index) => index + 1)
+        .map((n) => '<option value="' + n + '">' + n + (n === cap ? " · tier maximum" : "") + "</option>").join("");
+  // Keep the trainer's choice if the new tier still allows it, otherwise fall back to
+  // the tier default rather than silently leaving an impossible number selected.
+  days.value = previous && Number(previous) <= max ? previous : "";
+  byId("inviteClientFeedback").textContent = !meta ? ""
+    : cap ? meta.label + " covers " + cap + " programmed day" + (cap === 1 ? "" : "s") + " a week, " + meta.sessionsPerWeek + " of them with a trainer."
+    : meta.label + " has no weekly session count, so any number of days can be programmed.";
 }
 function inviteClientLink() {
-  try { return window.location.origin + window.location.pathname; } catch (error) { return ""; }
+  try {
+    if (typeof window.fit4lifePublicSiteUrl === "function") {
+      const gym = window.fit4lifeCloudOrganizationSlug || "";
+      return window.fit4lifePublicSiteUrl("/", gym ? { gym } : {});
+    }
+    return window.location.origin + window.location.pathname;
+  } catch (error) { return ""; }
 }
 function copyInviteLink() {
   const field = byId("inviteLinkField"); if (!field) return;
@@ -735,6 +761,30 @@ function copyInviteLink() {
     else document.execCommand("copy");
     showToast("Invite link copied");
   } catch (error) { showToast("Select the link and copy it manually"); }
+}
+// A failed invite must be recoverable in place. Without this the profile exists, the
+// create button is disabled, and deleting the client is owner-only - a dead end.
+function offerInviteRetry(email,fullName) {
+  const button = byId("inviteClientCreate"); if (!button) return;
+  button.disabled = false;
+  button.textContent = "Retry invite email";
+  button.onclick = () => {
+    const note = byId("inviteClientFeedback");
+    if (note) note.textContent = "Resending to " + email + "…";
+    button.disabled = true;
+    const token = inviteRequestToken;
+    window.fit4lifeCloudSendClientInvite(email,fullName).then((result) => {
+      if (token !== inviteRequestToken) return;
+      const current = byId("inviteClientFeedback");
+      if (result && result.ok) {
+        if (current) current.textContent = "Invite emailed to " + email + ".";
+        button.textContent = "Sent";
+      } else {
+        if (current) current.textContent = "Still could not send: " + ((result && result.error) || "unknown error") + ". Use the link below.";
+        button.disabled = false;
+      }
+    }).catch(() => { if (token === inviteRequestToken) button.disabled = false; });
+  };
 }
 function createInvitedClient() {
   if (!requireTrainerMutation("create client profiles")) return null;
@@ -750,7 +800,9 @@ function createInvitedClient() {
     feedback.textContent = "A client with that email already exists."; return null;
   }
   const tierId = normalizeMembershipTier(byId("inviteTier").value);
-  const explicitDays = Number(byId("inviteProgrammedDays").value) || 0;
+  const tierCap = tierId && MEMBERSHIP_TIERS[tierId] ? MEMBERSHIP_TIERS[tierId].programmedDays : 0;
+  let explicitDays = Number(byId("inviteProgrammedDays").value) || 0;
+  if (tierCap && explicitDays > tierCap) explicitDays = tierCap;
   const created = createClientProfile({
     name, email,
     username: (first + "-" + last).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"") || email.split("@")[0],
@@ -779,10 +831,40 @@ function createInvitedClient() {
   }
   byId("inviteClientCreate").disabled = true;
   byId("inviteLinkField").value = inviteClientLink();
-  byId("inviteLinkRow").style.display = "";
-  feedback.textContent = created.name + " is ready. Send them the link; they confirm their email and complete the questionnaire themselves.";
   refreshProfileSelects();
   if (typeof renderTrainerHub === "function") renderTrainerHub(created.name);
+  // Send the invite automatically. The link stays available as a fallback, because email
+  // can be rate-limited or filtered and a trainer standing with a client should not be
+  // stuck waiting on a mail server.
+  feedback.textContent = "Profile created. Sending the invite to " + email + "…";
+  const token = inviteRequestToken;
+  if (typeof window.fit4lifeCloudSendClientInvite === "function") {
+    window.fit4lifeCloudSendClientInvite(email,created.name).then((result) => {
+      // The dialog was closed or reopened for someone else while this was in flight.
+      if (token !== inviteRequestToken) return;
+      const row = byId("inviteLinkRow"), note = byId("inviteClientFeedback");
+      if (!row || !note) return;
+      if (result && result.ok) {
+        note.textContent = "Invite emailed to " + email + ". They open it, confirm, and complete the questionnaire themselves.";
+        row.style.display = "";
+        const label = row.querySelector("label");
+        if (label) label.textContent = "Backup link, in case the email does not arrive";
+      } else {
+        note.textContent = "Profile created, but the invite email failed: " + ((result && result.error) || "unknown error") + ". Send them the link below, or press Retry.";
+        row.style.display = "";
+        offerInviteRetry(email,created.name);
+      }
+    }).catch(() => {
+      if (token !== inviteRequestToken) return;
+      const row = byId("inviteLinkRow"), note = byId("inviteClientFeedback");
+      if (note) note.textContent = "Profile created, but the invite email could not be sent. Send them the link below, or press Retry.";
+      if (row) row.style.display = "";
+      offerInviteRetry(email,created.name);
+    });
+  } else {
+    feedback.textContent = created.name + " is ready. Send them this link to get started.";
+    byId("inviteLinkRow").style.display = "";
+  }
   return created;
 }
 function openCreateProfileEditor() {
@@ -926,7 +1008,13 @@ function saveProfileEditor() {
   const trainerSelect = byId('profileEditTrainer'), trainerOption = trainerSelect && trainerSelect.selectedOptions[0];
   const creating = !profileId, previous = creating ? null : loadProfiles().find((item) => item.id === profileId);
   const selectedAssignment = window.fit4lifeCloudRole === 'trainer' ? {id:previous && previous.assignedTrainerId || '',name:previous && previous.assignedTrainerName || '',email:previous && previous.assignedTrainerEmail || ''} : {id:trainerSelect ? trainerSelect.value : '',name:trainerOption && trainerSelect.value ? trainerOption.dataset.name || trainerOption.textContent.split(' · ')[0] : '',email:trainerOption && trainerSelect.value ? trainerOption.dataset.email || '' : ''};
-  const updates = { membershipTier: byId("profileEditTier").value, sessionsPerWeek: Number(byId("profileEditSessionsPerWeek").value) || 0, name: byId("profileEditName").value, username: byId("profileEditUsername").value, email:byId("profileEditEmail").value.trim().toLowerCase(), goals, trainingStyle:byId("profileEditStyle").value, cardioMode:cardioModes[0], cardioModes, experience: Number(byId("profileEditExperience").value), age: Number(byId("profileEditAge").value), minutes: Number(byId("profileEditMinutes").value), muscles: [...profileEditorDraft.muscles], injuries: [...profileEditorDraft.injuries], limitationAssessments:JSON.parse(JSON.stringify(profileEditorDraft.limitationAssessments || {})), zones: [...profileEditorDraft.zones], trainingPhase:byId("profileEditPhase").value, availableDays:Number(byId("profileEditDays").value), trainingDays:[...(profileEditorDraft.trainingDays || [])], sport:byId("profileEditSport").value, sportSchedule:byId("profileEditSchedule").value, competitionDate:byId("profileEditCompetition").value, exercisePreferences:{ ...profileEditorDraft.preferences }, assignedTrainerId:selectedAssignment.id, assignedTrainerName:selectedAssignment.name, assignedTrainerEmail:selectedAssignment.email };
+  const nextTier = byId("profileEditTier").value;
+  const previousProfile = loadProfiles().find((item) => item.id === byId("profileEditId").value) || {};
+  // A tier change resets the per-client day count, otherwise a downgrade keeps the old,
+  // larger number in force with no way to correct it.
+  const tierChanged = String(previousProfile.membershipTier || "") !== String(nextTier || "");
+  const updates = { membershipTier: nextTier, sessionsPerWeek: Number(byId("profileEditSessionsPerWeek").value) || 0,
+    programmedDays: tierChanged ? 0 : (Number(previousProfile.programmedDays) || 0), name: byId("profileEditName").value, username: byId("profileEditUsername").value, email:byId("profileEditEmail").value.trim().toLowerCase(), goals, trainingStyle:byId("profileEditStyle").value, cardioMode:cardioModes[0], cardioModes, experience: Number(byId("profileEditExperience").value), age: Number(byId("profileEditAge").value), minutes: Number(byId("profileEditMinutes").value), muscles: [...profileEditorDraft.muscles], injuries: [...profileEditorDraft.injuries], limitationAssessments:JSON.parse(JSON.stringify(profileEditorDraft.limitationAssessments || {})), zones: [...profileEditorDraft.zones], trainingPhase:byId("profileEditPhase").value, availableDays:Number(byId("profileEditDays").value), trainingDays:[...(profileEditorDraft.trainingDays || [])], sport:byId("profileEditSport").value, sportSchedule:byId("profileEditSchedule").value, competitionDate:byId("profileEditCompetition").value, exercisePreferences:{ ...profileEditorDraft.preferences }, assignedTrainerId:selectedAssignment.id, assignedTrainerName:selectedAssignment.name, assignedTrainerEmail:selectedAssignment.email };
   if (updates.email && !(typeof window.fit4lifeIsByuiEmail === "function" ? window.fit4lifeIsByuiEmail(updates.email) : /@byui\.edu$/i.test(updates.email))) { showToast("Client login email must be a BYU-I email ending in @byui.edu"); byId("profileEditEmail").focus(); return null; }
   if (window.fit4lifeCloudRole === 'trainer' && previous) {
     const protectedLimitations = (previous.injuries || []).filter((tag) => { const item = normalizedLimitationAssessment(previous.limitationAssessments && previous.limitationAssessments[tag]); return tag === 'medicalhold' || item.severity === 'severe' || item.ability === 'cannot' || item.decision === 'hold'; });
