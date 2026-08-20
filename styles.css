@@ -1669,3 +1669,12 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   .past-workout{flex-direction:column;align-items:stretch;gap:8px}
   .past-workout-actions{justify-content:flex-end}
 }
+
+/* ---------- superset round logging ---------- */
+/* Both movements sit together as one round rather than two pages to switch between. */
+.active-set-row.superset-partner{border-top:1px dashed var(--line);margin-top:-2px}
+.active-set-row.superset-round-actions{display:flex;gap:8px;justify-content:flex-end;border-top:0}
+@media(max-width:560px){
+  .active-set-row.superset-round-actions{flex-direction:column}
+  .active-set-row.superset-round-actions .small-btn{width:100%}
+}

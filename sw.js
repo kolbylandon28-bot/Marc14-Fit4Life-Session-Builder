@@ -1,4 +1,4 @@
-const CACHE_NAME = "fit4life-shell-2026-08-19-v29-save-from-history-r1";
+const CACHE_NAME = "fit4life-shell-2026-08-20-v32-superset-hardening-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
 const SHELL = [
   "/",

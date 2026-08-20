@@ -40,7 +40,8 @@ function setClientCheckInMode() {
   if (byId("checkInSubmitBtn")) byId("checkInSubmitBtn").textContent = recovery ? "Send recovery pulse" : "Send weekly check-in";
 }
 function openClientCheckIn(reviewType,assignmentId) {
-  selectedCheckInReviewType = ["starter_week_1","recovery_24_48"].includes(reviewType) ? reviewType : "weekly";
+  // Recovery pulse retired: any request for one falls back to the weekly check-in.
+  selectedCheckInReviewType = reviewType === "starter_week_1" ? reviewType : "weekly";
   selectedRecoveryAssignmentId = selectedCheckInReviewType === "recovery_24_48" ? String(assignmentId || "") : "";
   portalRole = "client"; show("checkin"); selectedCheckInProfileId = ""; byId("checkInLookup").value = ""; byId("checkInProfileId").value = ""; byId("checkInLookupResults").innerHTML = ""; byId("checkInForm").classList.remove("show"); byId("checkInConfirmation").style.display = "none";
   setClientCheckInMode();

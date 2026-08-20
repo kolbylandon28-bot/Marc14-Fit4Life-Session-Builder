@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20260819-v29-save-from-history-r1">
+<link rel="manifest" href="manifest.webmanifest?v=20260820-v32-superset-hardening-r1">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20260819-v29-save-from-history-r1">
+<link rel="stylesheet" href="styles.css?v=20260820-v32-superset-hardening-r1">
 </head>
 <body>
 
@@ -568,14 +568,7 @@
       <div class="panel checkin-form" id="checkInForm">
         <div class="utility-head"><div><h3 class="utility-title" id="checkInClientTitle">Weekly check-in</h3><p class="utility-sub" id="checkInFormIntro">Use the last seven days. There are no perfect answers—accuracy helps the trainer.</p></div><span class="wave-badge">Client</span></div>
         <div class="compact-grid">
-          <div class="recovery-pulse-fields compact-grid" id="checkInRecoveryFields">
-            <p class="recovery-pulse-intro">Four quick taps about how your body responded after the workout. This is separate from your weekly check-in.</p>
-            <div class="compact-field"><label for="checkInRecovery">How recovered do you feel?</label><select id="checkInRecovery"><option value="5">Ready and recovered</option><option value="4" selected>Mostly recovered</option><option value="3">Some fatigue remains</option><option value="2">Poorly recovered</option><option value="1">Not recovered</option></select></div>
-            <div class="compact-field"><label for="checkInRecoverySoreness">Muscle soreness today</label><select id="checkInRecoverySoreness"><option value="1">None</option><option value="2" selected>Light · normal activity is easy</option><option value="3">Moderate · noticeable but manageable</option><option value="4">High · changes normal activity</option><option value="5">Severe · normal activity is difficult</option></select></div>
-            <div class="compact-field"><label for="checkInNextReadiness">Ready for the next planned session?</label><select id="checkInNextReadiness"><option value="yes" selected>Yes</option><option value="adjust">Yes, with a small adjustment</option><option value="unsure">Not sure</option><option value="no">No</option></select></div>
-            <div class="compact-field"><label for="checkInPainTrend">If you reported discomfort after training</label><select id="checkInPainTrend"><option value="none" selected>No discomfort was reported</option><option value="resolved">It resolved</option><option value="improving">It is improving</option><option value="same">It is about the same</option><option value="worse">It is worse</option></select></div>
-            <div class="compact-field wide"><label for="checkInRecoveryNote">Anything your trainer should know? <span style="text-transform:none;letter-spacing:0">(optional)</span></label><textarea id="checkInRecoveryNote" placeholder="A short note or question is enough."></textarea></div>
-          </div>
+          
           <div class="compact-field weekly-checkin-field"><label for="checkInAdherence">Planned workouts completed</label><select id="checkInAdherence"><option value="100">All</option><option value="75">Most</option><option value="50">About half</option><option value="25">One or very few</option><option value="0">None</option></select></div>
           <div class="compact-field weekly-checkin-field"><label for="checkInSleep">Sleep quality</label><select id="checkInSleep"><option value="1">1 · Very poor</option><option value="2">2 · Poor</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · Excellent</option></select></div>
           <div class="compact-field weekly-checkin-field"><label for="checkInStress">Life stress</label><select id="checkInStress"><option value="1">1 · Low</option><option value="2">2 · Light</option><option value="3" selected>3 · Moderate</option><option value="4">4 · High</option><option value="5">5 · Extreme</option></select></div>
@@ -620,7 +613,7 @@
 </main>
 
 <nav class="client-bottom-nav" id="clientBottomNav" aria-label="Client navigation">
-  <button data-client-tab="home" onclick="openClientTab('home')"><span class="nav-icon">⌂</span>Home<span class="client-nav-badge" data-client-recovery-badge>1</span></button>
+  <button data-client-tab="home" onclick="openClientTab('home')"><span class="nav-icon">⌂</span>Home</button>
   <button data-client-tab="program" onclick="openClientTab('program')"><span class="nav-icon">▶</span>Workout</button>
   <button data-client-tab="progress" onclick="openClientTab('progress')"><span class="nav-icon">↗</span>Progress</button>
   <button data-client-tab="coach" onclick="openClientTab('coach')"><span class="nav-icon">●</span>Coach</button>
@@ -1265,25 +1258,25 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/engine/exercise-library.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/engine/session-engine.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/engine/session-builders.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/engine/personalization.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/app/navigation.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/app/program-app.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/app/forms.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/engine/generation.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/app/rendering.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/app/calculations-timers.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/engine/multiweek-programs.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/app/readiness-progress.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/app/client-consultation.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/trainer/trainer-hub.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/trainer/coaching-support.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/app/role-governance.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/app/action-calendar.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/app/workout-feedback-reports.js?v=20260819-v29-save-from-history-r1"></script>
-<script src="js/init.js?v=20260819-v29-save-from-history-r1"></script>
+<script src="cloud-sync.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/engine/exercise-library.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/engine/session-engine.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/engine/session-builders.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/engine/personalization.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/app/navigation.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/app/program-app.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/app/forms.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/engine/generation.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/app/rendering.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/app/calculations-timers.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/engine/multiweek-programs.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/app/readiness-progress.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/app/client-consultation.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/trainer/trainer-hub.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/trainer/coaching-support.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/app/role-governance.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/app/action-calendar.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/app/workout-feedback-reports.js?v=20260820-v32-superset-hardening-r1"></script>
+<script src="js/init.js?v=20260820-v32-superset-hardening-r1"></script>
 </body>
 </html>

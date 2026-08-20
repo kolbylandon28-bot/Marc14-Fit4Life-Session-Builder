@@ -1778,8 +1778,14 @@ function buildBlocks(spec, fullPool, rng, slotBudget) {
         };
 
         // pick finisher TYPE by goal, then find a dedicated finisher of that type
+        // Finisher type follows the goal the client actually came for. Previously only
+        // fat loss, conditioning and recovery were named, so hypertrophy and strength
+        // both fell through to whatever the muscle-target heuristic produced - usually
+        // trunk work, on nearly every session.
         const wantType = (spec.goal === "fatloss" || spec.goal === "conditioning") ? "metcon"
           : (spec.goal === "recovery") ? "gentle"
+          : (spec.goal === "hypertrophy") ? "pump"
+          : (spec.goal === "strength") ? "core"
           : (targets.length && !trainedCore) ? "pump" : "core";
 
         // Recovery days end with easy trunk control, never a burnout.
@@ -1790,7 +1796,10 @@ function buildBlocks(spec, fullPool, rng, slotBudget) {
 
         // 1) dedicated finisher of the desired type that fits the muscles
         chosen = pickAny(fullPool, (e) => e.finisher === true && e.ftype === wantType && fits(e), used, rng, wantMuscles, xp, emphF, false);
-        // 2) any dedicated finisher that fits
+        // 2) a non-dedicated movement of the right type, before widening to any finisher
+        if (!chosen && wantType === "core") chosen = pickAny(fullPool, (e) => e.region === "core" && fits(e), used, rng, wantMuscles, xp, emphF, false);
+        if (!chosen && wantType === "pump") chosen = pickAny(fullPool, (e) => ISO_NAMES.includes(e.name) && fits(e), used, rng, wantMuscles, xp, emphF, false);
+        // 3) any dedicated finisher that fits
         if (!chosen) chosen = pickAny(fullPool, (e) => e.finisher === true && fits(e), used, rng, wantMuscles, xp, emphF, false);
         // 3) allow a REPEAT dedicated finisher (they're one-off burnouts; reuse is fine)
         if (!chosen) {
@@ -1853,9 +1862,28 @@ function buildBlocks(spec, fullPool, rng, slotBudget) {
       if (!ex) ex = pickAny(pool, baseFilter, used, rng, targets, xp, emph);
       if (ex) { accessoryBlock.items.push(ex); slots--; continue; }
     }
-    if (!coreBlock.items.length && spec.minutes >= 60) {
-      const core = pickAny(pool,(e) => ["core","rotation","carry"].includes(e.pattern) && e.impact <= 1,used,rng,[],xp,null,false);
-      if (core) { coreBlock.items.push(core); slots--; continue; }
+    // The spare slot on a longer session used to go to trunk work every single time,
+    // which is why almost every workout ended with a trunk block no matter what the
+    // client came for. Spend it on whatever actually serves their goal.
+    if (spec.minutes >= 60) {
+      const goalTopUp = {
+        fatloss:      { block:conditioningBlock, title:"Optional cardio finish", test:(e) => e.pattern === "conditioning" && e.impact <= 2 },
+        conditioning: { block:conditioningBlock, title:"Conditioning finish",    test:(e) => e.pattern === "conditioning" && e.impact <= 2 },
+        hypertrophy:  { block:isoBlock,          title:"Pump work",              test:(e) => ISO_NAMES.includes(e.name) || e.region === "push" || e.region === "pull" },
+        recovery:     { block:mobilityBlock,     title:"Mobility finish",        test:(e) => e.pattern === "mobility" && e.impact === 0 },
+        athletic:     { block:coreBlock,         title:"Trunk support",          test:(e) => ["core","rotation","carry"].includes(e.pattern) && e.impact <= 1 },
+        strength:     { block:coreBlock,         title:"Trunk support",          test:(e) => ["core","rotation","carry"].includes(e.pattern) && e.impact <= 1 },
+        general:      { block:coreBlock,         title:"Trunk support",          test:(e) => ["core","rotation","carry"].includes(e.pattern) && e.impact <= 1 },
+      }[spec.goal] || { block:coreBlock, title:"Trunk support", test:(e) => ["core","rotation","carry"].includes(e.pattern) && e.impact <= 1 };
+      if (!goalTopUp.block.items.length) {
+        const pick = pickAny(pool,goalTopUp.test,used,rng,[],xp,null,false);
+        if (pick) { goalTopUp.block.items.push(pick); goalTopUp.block.title = goalTopUp.title; slots--; continue; }
+      }
+      // Trunk work remains the fallback: better a useful block than an unused slot.
+      if (!coreBlock.items.length) {
+        const core = pickAny(pool,(e) => ["core","rotation","carry"].includes(e.pattern) && e.impact <= 1,used,rng,[],xp,null,false);
+        if (core) { coreBlock.items.push(core); slots--; continue; }
+      }
     }
     if (architecture.id === "athletic" && (spec.goals || []).includes("athletic") && !conditioningBlock.items.length) {
       const conditioning = pickAny(pool,(e) => e.pattern === "conditioning" && e.impact <= 1,used,rng,[],xp,null,false);

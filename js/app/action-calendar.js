@@ -125,7 +125,7 @@ function resolveCalendarNoticesForEvent(eventId) {
 function actionCategoryForKind(kind) {
   if (["pain","readiness"].includes(kind)) return "safety";
   if (["message","recognition"].includes(kind)) return "messages";
-  if (["workout","workout_request","checkin","recovery","recovery_due","program","baseline","receipt_weekly","receipt_formal","consultation"].includes(kind)) return "workouts";
+  if (["workout","workout_request","checkin","program","baseline","receipt_weekly","receipt_formal","consultation"].includes(kind)) return "workouts";
   if (["calendar_event","calendar_notice","session_unprepared","consult_questionnaire"].includes(kind)) return "schedule";
   if (kind === "follow_up") return "followup";
   if (["trainer_request","account_request"].includes(kind)) return "access";

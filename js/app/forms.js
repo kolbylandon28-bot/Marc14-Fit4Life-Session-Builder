@@ -373,7 +373,7 @@ function readinessTrendContext(profile) {
     ? "Repeated low recovery signals across " + (severe + moderate) + " recent records; reduce the next draft and require coach review."
     : level === "adjust"
       ? "Repeated moderate recovery signals across " + (severe + moderate) + " recent records; keep compound continuity and trim secondary demand."
-      : evidenceCount ? "Recent records do not establish a repeated concern. One isolated low day does not rewrite the program." : "No recent readiness, workout-review, or recovery-pulse trend is available.";
+      : evidenceCount ? "Recent records do not establish a repeated concern. One isolated low day does not rewrite the program." : "No recent readiness or workout-review evidence is available.";
   return {level,evidenceCount,severe,moderate,summary,causes,windowDays:14};
 }
 function applyReadinessTrendToSession(session) {

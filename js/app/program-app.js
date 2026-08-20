@@ -52,32 +52,19 @@ function recoveryFollowUpRequired(profile,assignment,completedAssignments) {
   const weekEnd = new Date(weekStart.getTime() + 7 * 86400000);
   return !earlier.some((item) => { const time = new Date(item.completedAt || 0).getTime(); return time >= weekStart.getTime() && time < weekEnd.getTime(); });
 }
+// The 24-48h recovery pulse was retired at the user's request: check-ins now happen in
+// person. Historical submissions are deliberately left in storage rather than deleted,
+// and weeklyCheckInsForProfile still filters them out so old entries never resurface as
+// weekly check-ins. Every consumer branches on status.active, so reporting permanently
+// inactive removes the prompts, cards, badges and queue entries in one place. Restoring
+// the feature later means restoring this function, not rebuilding the wiring.
 function recoveryFollowUpStatus(profile) {
-  if (!profile) return {active:false};
-  const completed = assignmentsForClient(profile.id).filter((item) => ["completed","reviewed"].includes(assignmentStatus(item)) && item.completedAt).sort((a,b) => String(b.completedAt).localeCompare(String(a.completedAt)));
-  const submitted = recoveryFollowUpsForProfile(profile.id), now = Date.now(), candidates = [];
-  for (const assignment of completed) {
-    if (submitted.some((item) => item.assignmentId === assignment.id)) continue;
-    if (!recoveryFollowUpRequired(profile,assignment,completed)) continue;
-    const completedAt = new Date(assignment.completedAt), age = now - completedAt.getTime();
-    if (!Number.isFinite(age) || age < 0 || age > 7 * 86400000) continue;
-    const dueAt = new Date(completedAt.getTime() + 24 * 60 * 60 * 1000), targetEnd = new Date(completedAt.getTime() + 48 * 60 * 60 * 1000);
-    candidates.push({active:true,assignment,completedAt,dueAt,targetEnd,due:now >= dueAt.getTime(),overdue:now > targetEnd.getTime()});
-  }
-  return candidates.sort((a,b) => Number(b.overdue) - Number(a.overdue) || Number(b.due) - Number(a.due) || b.completedAt - a.completedAt)[0] || {active:false,latest:submitted[0] || null};
+  return { active:false, retired:true, latest:null };
 }
 function updateClientRecoveryReminder(profile) {
-  const status = recoveryFollowUpStatus(profile);
-  document.querySelectorAll("[data-client-recovery-badge]").forEach((badge) => badge.classList.toggle("show",Boolean(status.active && status.due)));
-  if (currentView !== "client-home" || !status.active || !status.due) return status;
-  const reminderKey = "fit4life-recovery-reminder:" + status.assignment.id + ":" + new Date().toISOString().slice(0,10);
-  try {
-    if (!sessionStorage.getItem(reminderKey)) {
-      sessionStorage.setItem(reminderKey,"shown");
-      setTimeout(() => showToast(status.overdue ? "Your quick recovery pulse is overdue — it takes less than a minute" : "Your 24–48 hour recovery pulse is ready"),40);
-    }
-  } catch (_) {}
-  return status;
+  // Retired with the recovery pulse; kept as a no-op because several screens call it.
+  document.querySelectorAll("[data-client-recovery-badge]").forEach((badge) => badge.classList.remove("show"));
+  return { active:false };
 }
 function renderClientAppView(view) {
   const profile = activeClientProfile(); if (!profile) { openClientWorkout(); return; }
@@ -111,7 +98,10 @@ function renderClientHome(profile) {
     + receiptCard + recoveryCard + completionSummary + checkInCard + competition;
 }
 function openClientCheckInForActive(reviewType) { const profile = activeClientProfile(); openClientCheckIn(reviewType); if (profile) selectCheckInProfile(profile.id); }
-function openClientRecoveryFollowUp(assignmentId) { const profile = activeClientProfile(); openClientCheckIn("recovery_24_48",assignmentId); if (profile) selectCheckInProfile(profile.id); }
+function openClientRecoveryFollowUp() {
+  // Retired. Kept so any lingering markup cannot call an undefined function.
+  showToast("Recovery check-ins now happen in person with your trainer");
+}
 function clientProgramSource(profile) {
   const saved = savedProgramFor(profile); if (saved && saved.weeks && saved.weeks.length) return saved;
   const assignment = assignmentForClient(profile.id), session = clientAssignedSession(assignment,profile); if (!session) return null;
@@ -479,7 +469,14 @@ function persistActiveSession(session) {
   saveActiveWorkoutState();
   return true;
 }
-function plannedSetsForActive(exercise,block) { const rx = exercise.rx || block && block.rx || {}; return Math.max(1,Math.min(12,(parseInt(rx.sets,10) || 1) + Number(activeWorkout.extraSets[exercise.name] || 0))); }
+function prescribedSetCount(value) {
+  // Take the top of a prescribed range, not the bottom. "1-2" means up to two sets, and
+  // the client can always skip the last one; capping at one silently removes it.
+  const numbers = String(value == null ? "" : value).match(/\d+/g);
+  if (!numbers || !numbers.length) return 1;
+  return Math.max.apply(null,numbers.map(Number));
+}
+function plannedSetsForActive(exercise,block) { const rx = exercise.rx || block && block.rx || {}; return Math.max(1,Math.min(12,prescribedSetCount(rx.sets) + Number(activeWorkout.extraSets[exercise.name] || 0))); }
 function parseRestSeconds(value) { const text = String(value || '60'); const values = (text.match(/\d+/g) || ['60']).map(Number); const base = Math.max.apply(null,values); return /min/i.test(text) ? base * 60 : base; }
 function startActiveRest(exercise,block) { const rx = exercise.rx || block && block.rx || {}; setRestTimer(parseRestSeconds(rx.rest)); toggleRestTimer(); }
 function restartCurrentActiveRest() { const data = activeAssignmentAndSession(), unit = activeWorkoutUnits(data.session,activeWorkout.shortened)[activeWorkout.unitIndex]; if (!unit) return; const exercise = unit.items[activeWorkout.pairIndex] || unit.items[0]; startActiveRest(exercise,unit.block); }
@@ -534,6 +531,121 @@ function selectActiveUnit(index) {
   activeWorkout.unitIndex = target; activeWorkout.pairIndex = 0; saveActiveWorkoutState(); renderActiveWorkout();
 }
 function setActiveSupersetMode(enabled) { activeWorkout.supersetMode[activeWorkout.unitIndex] = Boolean(enabled); activeWorkout.pairIndex = 0; saveActiveWorkoutState(); renderActiveWorkout(); showToast(enabled ? "Optional superset turned on" : "Using straight sets"); }
+/* ---------- superset: both movements at once ---------- */
+// A superset is one round of A1 and A2, not two separate exercises to page between.
+// This builds the partner's logging row so both appear together, each with its own
+// weight, reps and effort, and one action logs the whole round.
+function buildSupersetPartnerRow(data,unit,partner,roundNumber) {
+  const rx = partner.rx || unit.block.rx || {};
+  const bodyweightOnly = partner.zone === 'bodyweight' && !/^Weighted\b/i.test(partner.name);
+  const cardioOnly = partner.zone === 'cardio' || partner.region === 'cardio';
+  const sets = getSessionSets(data.session.sessionId,partner.name);
+  // The round number comes from the round, not from each movement independently:
+  // per-exercise counts diverge after a skip or an added working set.
+  const nextUnset = roundNumber != null ? roundNumber : nextActiveSetNumber(data.session,activeWorkout.unitIndex,partner,unit.block);
+  const saved = sets.find((entry) => Number(entry.data && entry.data.setNumber) === nextUnset);
+  const previous = latestSetFor(data.profile.name,partner.name);
+  const recommendation = !bodyweightOnly && !cardioOnly ? recommendedLoadFor(data.profile.name,partner,rx) : null;
+
+  const load = document.createElement('input');
+  load.id = 'activeSetLoadB'; load.type = 'number'; load.step = '0.5'; load.inputMode = 'decimal';
+  load.placeholder = recommendation && recommendation.load ? recommendation.load : 'Weight';
+  const reps = document.createElement('input');
+  reps.id = 'activeSetRepsB'; reps.type = 'number'; reps.inputMode = 'numeric';
+  reps.placeholder = cardioOnly ? 'Minutes' : plannedRepTarget(rx) || 'Reps';
+  const effort = effortSelect(partner.name + ' effort',(saved && saved.data && saved.data.rpe) || (activeSetDraft(partner.name,nextUnset) || {}).rpe);
+  effort.id = 'activeSetEffortB'; effort.classList.add('active-effort');
+
+  const draft = activeSetDraft(partner.name,nextUnset);
+  if (saved && saved.data) { if (saved.data.load != null) load.value = saved.data.load; if (saved.data.reps != null) reps.value = saved.data.reps; }
+  else if (draft) { load.value = draft.load || ''; reps.value = draft.reps || ''; }
+  else { if (recommendation && recommendation.load) load.value = recommendation.load; const target = plannedRepTarget(rx); if (target) reps.value = target; }
+
+  const row = el('div','active-set-row superset-partner' + (saved ? ' saved' : ''));
+  row.append(el('div','active-set-number','A2 · set ' + nextUnset));
+  if (!bodyweightOnly && !cardioOnly) row.append(activeSetField('Weight',load));
+  row.append(activeSetField(cardioOnly ? 'Minutes / distance' : bodyweightOnly ? 'Reps / seconds' : 'Reps',reps),activeSetField('Effort',effort,'active-effort'));
+  return { row, partner, nextUnset, saved, bodyweightOnly, cardioOnly,
+           unitValue:(recommendation && recommendation.unit) || (previous && previous.unit) || 'lb' };
+}
+// Logs A1 and A2 as one round, then advances once rather than twice.
+function saveSupersetRound(primary,primaryContext,partnerContext) {
+  const data = activeAssignmentAndSession(); if (!data || !data.session || !data.profile) return;
+  const unit = activeWorkoutUnits(data.session,activeWorkout.shortened)[activeWorkout.unitIndex]; if (!unit) return;
+  const readRow = (suffix) => ({
+    load: byId('activeSetLoad' + suffix) || { value:'' },
+    reps: byId('activeSetReps' + suffix) || { value:'' },
+    effort: byId('activeSetEffort' + suffix) || { value:'' },
+  });
+  const a = readRow(''), b = readRow('B');
+  // A round is all-or-nothing. Validate both movements BEFORE writing either, so a blank
+  // entry on one cannot leave the other saved, the drafts cleared and the client advanced.
+  const missing = [];
+  if (a.load.value === '' && a.reps.value === '') missing.push(primary.name);
+  if (partnerContext && b.load.value === '' && b.reps.value === '') missing.push(partnerContext.partner.name);
+  if (missing.length) { showToast('Enter your numbers for ' + missing.join(' and ') + ' before logging the round'); return; }
+
+  const primaryOk = logExerciseSet(data.session,primary,a.load,a.reps,{value:primaryContext.cardioOnly ? 'session' : primaryContext.bodyweightOnly ? 'bodyweight' : primaryContext.unitValue},a.effort,primaryContext.nextUnset,primaryContext.saved && primaryContext.saved.id,unit.block);
+  if (primaryOk === false) return;
+  let partnerOk = true;
+  if (partnerContext) {
+    partnerOk = logExerciseSet(data.session,partnerContext.partner,b.load,b.reps,{value:partnerContext.cardioOnly ? 'session' : partnerContext.bodyweightOnly ? 'bodyweight' : partnerContext.unitValue},b.effort,partnerContext.nextUnset,partnerContext.saved && partnerContext.saved.id,unit.block);
+    if (partnerOk === false) {
+      // The first movement is saved and stays saved; the round simply is not complete.
+      showToast('Saved ' + primary.name + '. Add ' + partnerContext.partner.name + ' to finish the round.');
+      saveActiveWorkoutState(); renderActiveWorkout(); return;
+    }
+    clearActiveSetDraft(partnerContext.partner.name,partnerContext.nextUnset);
+  }
+  clearActiveSetDraft(primary.name,primaryContext.nextUnset);
+  delete activeWorkout.editingSetByExercise[primary.name];
+  if (partnerContext) delete activeWorkout.editingSetByExercise[partnerContext.partner.name];
+
+  // Correcting an already-logged round must not restart rest or move the client on,
+  // matching the straight-set path.
+  const editingExisting = Boolean(primaryContext.saved || (partnerContext && partnerContext.saved));
+  if (!editingExisting) {
+    const planned = plannedSetsForActive(primary,unit.block);
+    activeWorkout.setByExercise[primary.name] = Math.min(planned,primaryContext.nextUnset + 1);
+    if (partnerContext) {
+      const partnerPlanned = plannedSetsForActive(partnerContext.partner,unit.block);
+      activeWorkout.setByExercise[partnerContext.partner.name] = Math.min(partnerPlanned,partnerContext.nextUnset + 1);
+    }
+    activeWorkout.pairIndex = 0;
+    startActiveRest(primary,unit.block);
+    const refreshed = activeAssignmentAndSession();
+    if (activeUnitIsDone(refreshed.session,unit,activeWorkout.unitIndex)
+        && activeWorkout.unitIndex < activeWorkoutUnits(refreshed.session,activeWorkout.shortened).length - 1) {
+      activeWorkout.unitIndex += 1;
+    }
+  }
+  saveActiveWorkoutState(); renderActiveWorkout();
+}
+// Skipping a round must skip BOTH movements. Skipping only the first left the partner
+// unskipped, so the unit never completed and the next render swapped the A1/A2 labels.
+function skipCurrentActiveRound() {
+  const data = activeAssignmentAndSession(); if (!data || !data.session || !data.profile) return;
+  const unit = activeWorkoutUnits(data.session,activeWorkout.shortened)[activeWorkout.unitIndex]; if (!unit) return;
+  const round = nextActiveSetNumber(data.session,activeWorkout.unitIndex,unit.items[0],unit.block);
+  if (!window.confirm('Skip round ' + round + ' of this superset? Both movements are skipped and your trainer will see it.')) return;
+  unit.items.forEach((item) => {
+    const setNumber = nextActiveSetNumber(data.session,activeWorkout.unitIndex,item,unit.block);
+    activeWorkout.skippedSets[activeSkipKey(activeWorkout.unitIndex,item.name,setNumber)] = {at:new Date().toISOString()};
+    delete activeWorkout.editingSetByExercise[item.name];
+    clearActiveSetDraft(item.name,setNumber);
+    addProgressEntry({type:'skipped_set',client:data.profile.name,profileId:data.profile.id,sessionId:data.session.sessionId,
+      label:item.name,value:'Round ' + setNumber + ' skipped',data:{setNumber,coachNotice:true}});
+    activeWorkout.setByExercise[item.name] = Math.min(plannedSetsForActive(item,unit.block),setNumber + 1);
+  });
+  activeWorkout.pairIndex = 0;
+  const refreshed = activeAssignmentAndSession();
+  if (activeUnitIsDone(refreshed.session,unit,activeWorkout.unitIndex)
+      && activeWorkout.unitIndex < activeWorkoutUnits(refreshed.session,activeWorkout.shortened).length - 1) {
+    activeWorkout.unitIndex += 1;
+  }
+  saveActiveWorkoutState(); renderActiveWorkout();
+}
+
 function renderActiveWorkout() {
   const out = byId('activeWorkoutContent'), data = activeAssignmentAndSession(); if (!out || !data.session || !data.profile) { if (out) out.innerHTML = '<div class="empty-state-polished"><b>Workout unavailable</b><p>Return to Workout and reopen the current assignment.</p></div>'; return; }
   const units = activeWorkoutUnits(data.session,activeWorkout.shortened); if (!units.length) return; activeWorkout.unitIndex = Math.max(0,Math.min(activeWorkout.unitIndex,units.length - 1)); const unit = units[activeWorkout.unitIndex]; activeWorkout.pairIndex = Math.max(0,Math.min(activeWorkout.pairIndex,unit.items.length - 1)); const exercise = unit.items[activeWorkout.pairIndex], rx = exercise.rx || unit.block.rx || {}, bodyweightOnly = exercise.zone === 'bodyweight' && !/^Weighted\b/i.test(exercise.name), cardioOnly = exercise.zone === 'cardio' || exercise.region === 'cardio';
@@ -546,8 +658,11 @@ function renderActiveWorkout() {
   const calibrationDomains = Array.isArray(exercise.baselineDomains) ? exercise.baselineDomains : [], calibrationCapture = calibrationDomains.length ? '<div class="baseline-capture"><div class="baseline-capture-head"><b>Calibration anchor</b><span>' + escapeHtml(calibrationDomains.map((domain) => BASELINE_DOMAIN_LABELS[domain] || domain).join(' · ')) + '</span></div><p>' + escapeHtml(exercise.baselineProtocol || 'Use a comfortable, pain-free effort. This is not a max test.') + '</p><div class="baseline-capture-grid"><label>Confidence<select id="activeBaselineConfidence"><option value="1">1 · Not confident</option><option value="2">2 · Unsure</option><option value="3" selected>3 · Okay</option><option value="4">4 · Confident</option><option value="5">5 · Very confident</option></select></label><label>Pain response<select id="activeBaselinePain"><option value="0" selected>Green · No pain</option><option value="1">Yellow · Mild awareness, movement normal</option><option value="2">Orange · Changed range or technique</option><option value="3">Red · Stopped the set</option></select></label></div></div>' : '';
   const load = document.createElement('input'); load.id = 'activeSetLoad'; load.type = 'number'; load.step = '0.5'; load.inputMode = 'decimal'; load.placeholder = recommendation && recommendation.load ? recommendation.load : 'Weight';
   const reps = document.createElement('input'); reps.id = 'activeSetReps'; reps.type = 'number'; reps.inputMode = 'numeric'; reps.placeholder = cardioOnly ? 'Minutes' : plannedRepTarget(rx) || 'Reps';
-  const effort = effortSelect(exercise.name + ' effort',saved && saved.data && saved.data.rpe); effort.id = 'activeSetEffort'; effort.classList.add('active-effort');
-  if (saved && saved.data) { if (saved.data.load != null) load.value = saved.data.load; if (saved.data.reps != null) reps.value = saved.data.reps; } else { if (recommendation && recommendation.load) load.value = recommendation.load; const target = plannedRepTarget(rx); if (target) reps.value = target; }
+  const effort = effortSelect(exercise.name + ' effort',(saved && saved.data && saved.data.rpe) || (activeSetDraft(exercise.name,nextUnset) || {}).rpe); effort.id = 'activeSetEffort'; effort.classList.add('active-effort');
+  const draft = activeSetDraft(exercise.name,nextUnset);
+  if (saved && saved.data) { if (saved.data.load != null) load.value = saved.data.load; if (saved.data.reps != null) reps.value = saved.data.reps; }
+  else if (draft) { load.value = draft.load || ""; reps.value = draft.reps || ""; }
+  else { if (recommendation && recommendation.load) load.value = recommendation.load; const target = plannedRepTarget(rx); if (target) reps.value = target; }
   const row = el('div','active-set-row' + (saved ? ' saved' : '')); row.append(el('div','active-set-number','Set ' + nextUnset)); if (!bodyweightOnly && !cardioOnly) row.append(activeSetField('Weight',load)); row.append(activeSetField(cardioOnly ? 'Minutes / distance' : bodyweightOnly ? 'Reps / seconds' : 'Reps',reps),activeSetField('Effort',effort,'active-effort')); const save = el('button','small-btn primary',saved ? 'Update result' : 'Log & continue'); save.onclick = () => saveActiveSet(exercise,nextUnset,saved && saved.id,bodyweightOnly,cardioOnly,recommendation && recommendation.unit || previous && previous.unit || 'lb'); const skip = el('button','small-btn',saved ? 'Saved' : 'Skip set'); skip.disabled = Boolean(saved); skip.onclick = () => skipCurrentActiveSet(); row.append(save,skip);
   const demoBlock = exercise.video ? '<div class="active-demo"><div><div style="font-size:34px">▶</div><b>Demonstration video</b><span>Tap to play</span></div></div>' : '';
   const card = '<article class="active-exercise-card"><header class="active-exercise-head"><div class="client-section-label">' + escapeHtml(unit.block.title) + '</div><h1>' + escapeHtml(exercise.name) + '</h1><p>' + escapeHtml(ZONE_LABELS[exercise.zone] || exercise.zone) + ' · ' + escapeHtml(unit.type === 'superset' ? 'Optional paired block' : 'Straight sets') + '</p></header>' + demoBlock + pair + calibrationCapture + '<div class="active-cue"><b>Coaching cue</b><p>' + escapeHtml(exercise.cue || 'Use controlled technique and stop if pain changes the movement.') + '</p></div><div class="active-prescription"><div><span>Sets</span><b>' + planned + '</b></div><div><span>Reps</span><b>' + escapeHtml(rx.reps || 'Coach set') + '</b></div><div><span>Tempo</span><b>' + escapeHtml(rx.tempo || 'Controlled') + '</b></div><div><span>RPE / RIR</span><b>' + escapeHtml(rx.rpe || 'Coach set') + '</b></div><div><span>Rest</span><b>' + escapeHtml(rx.rest || 'As needed') + '</b></div></div><div class="active-previous">Previous performance · ' + escapeHtml(previous ? (previous.load == null ? previous.unit === 'bodyweight' ? 'Bodyweight' : 'Completed' : previous.load + ' ' + previous.unit) + (previous.reps == null ? '' : ' × ' + previous.reps) : 'No previous result') + '</div>' + history + setSelector + '<div class="active-set-list" id="activeSetMount"></div><div class="active-tools"><button class="small-btn" onclick="addActiveWarmupSet()">+ Warm-up set</button><button class="small-btn" onclick="addActiveWorkingSet()">+ Working set</button><button class="small-btn" onclick="replaceActiveExercise()">Replace exercise</button><button class="small-btn" onclick="recordActiveNote()">Record note</button><button class="small-btn danger" onclick="openClientPainReport()">Report pain</button><button class="small-btn" onclick="skipCurrentActiveExercise()">Skip exercise</button></div>' + (!unitDone ? '<div class="active-progress-lock">The next exercise stays locked until every current set is logged or intentionally skipped. Skips are saved for your trainer instead of disappearing.</div>' : '') + '<div class="tool-actions" style="padding:0 20px 20px;justify-content:space-between"><button class="small-btn" onclick="moveActiveUnit(-1)" ' + (activeWorkout.unitIndex === 0 ? 'disabled' : '') + '>Previous</button><button class="small-btn primary" onclick="moveActiveUnit(1)" ' + (!unitDone ? 'disabled' : '') + '>' + (activeWorkout.unitIndex === units.length - 1 ? 'Finish workout' : 'Continue') + '</button></div></article>';
@@ -556,7 +671,30 @@ function renderActiveWorkout() {
   const goalReminder = activeGoal.deeperReason ? '<section class="active-goal-reminder"><span>Why you came today</span><p>' + escapeHtml(activeGoal.deeperReason) + '</p></section>' : '';
   const calibrationBanner = data.session.calibration ? '<section class="baseline-session-banner"><div><b>' + (data.session.calibration.supportSession ? 'First-week foundation workout' : 'Useful workout + embedded calibration') + '</b><p>' + (data.session.calibration.supportSession ? 'No extra testing is required today. Practice the plan at conservative effort and report anything that changes comfort or technique.' : 'Only the clearly marked anchors collect starting evidence. Train normally, avoid max effort, and report any pain that changes the movement.') + '</p></div><span>' + (data.session.calibration.supportSession ? 'Day ' + data.session.calibration.weeklySession + ' of ' + data.session.calibration.weeklySessions : 'Evidence session ' + data.session.calibration.sessionNumber + ' of ' + data.session.calibration.totalSessions) + '</span></section>' : '';
   out.innerHTML = calibrationBanner + goalReminder + readinessBanner + '<div class="active-workout-shell">' + activeQueueHtml(units,data.session) + '<div class="active-current-stage"><div class="active-current-stage-label"><b>Current exercise</b><span>' + escapeHtml(unit.block.title) + ' · ' + (activeWorkout.unitIndex + 1) + ' of ' + units.length + '</span></div>' + card + '</div></div><div class="active-rest-dock"><div><span>Rest timer · ' + escapeHtml(rx.rest || 'as needed') + '</span><b id="activeRestDisplay">' + formatClock(restTimer.remaining) + '</b></div><div class="tool-actions"><button class="small-btn" id="activeRestToggle" onclick="toggleRestTimer()">' + (restTimer.running ? 'Pause' : 'Start') + '</button><button class="small-btn" onclick="resetRestTimer()">Reset</button></div></div>';
-  byId('activeSetMount').appendChild(row);
+  // In superset mode both movements are logged together, so the partner's row sits
+  // directly beneath and a single action records the round.
+  const partnerExercise = supersetOn && unit.items.length > 1
+    ? unit.items.find((item) => item.name !== exercise.name) : null;
+  if (partnerExercise) {
+    const partnerContext = buildSupersetPartnerRow(data,unit,partnerExercise,nextUnset);
+    const primaryContext = { nextUnset, saved, bodyweightOnly, cardioOnly,
+      unitValue:(recommendation && recommendation.unit) || (previous && previous.unit) || 'lb' };
+    row.querySelectorAll('button').forEach((button) => button.remove());
+    const number = row.querySelector('.active-set-number');
+    if (number) number.textContent = 'A1 · set ' + nextUnset;
+    byId('activeSetMount').appendChild(row);
+    byId('activeSetMount').appendChild(partnerContext.row);
+    const roundActions = el('div','active-set-row superset-round-actions');
+    const roundSaved = Boolean(saved || partnerContext.saved);
+    const logRound = el('button','small-btn primary',roundSaved ? 'Update round ' + nextUnset : 'Log round ' + nextUnset + ' & continue');
+    logRound.onclick = () => saveSupersetRound(exercise,primaryContext,partnerContext);
+    const skipRound = el('button','small-btn','Skip round');
+    skipRound.onclick = () => skipCurrentActiveRound();
+    roundActions.append(logRound,skipRound);
+    byId('activeSetMount').appendChild(roundActions);
+  } else {
+    byId('activeSetMount').appendChild(row);
+  }
   if (calibrationDomains.length && saved && saved.data) {
     if (byId('activeBaselineConfidence') && saved.data.baselineConfidence != null) byId('activeBaselineConfidence').value = String(saved.data.baselineConfidence);
     if (byId('activeBaselinePain') && saved.data.baselinePain != null) byId('activeBaselinePain').value = String(saved.data.baselinePain);
@@ -574,11 +712,42 @@ function renderActiveWorkout() {
   }
   saveActiveWorkoutState();
 }
-function setActivePair(index) { activeWorkout.pairIndex = Number(index) || 0; saveActiveWorkoutState(); renderActiveWorkout(); }
-function selectActiveSet(exerciseName,setNumber) { activeWorkout.editingSetByExercise[exerciseName] = Number(setNumber) || 1; saveActiveWorkoutState(); renderActiveWorkout(); }
+function setActivePair(index) { stashActiveSetDraft(); activeWorkout.pairIndex = Number(index) || 0; saveActiveWorkoutState(); renderActiveWorkout(); }
+function stashActiveSetDraft() {
+  const data = activeAssignmentAndSession(); if (!data || !data.session) return;
+  const units = activeWorkoutUnits(data.session,activeWorkout.shortened), unit = units[activeWorkout.unitIndex];
+  if (!unit) return;
+  const exercise = unit.items[activeWorkout.pairIndex]; if (!exercise) return;
+  const load = byId("activeSetLoad"), reps = byId("activeSetReps"), effort = byId("activeSetEffort");
+  const setNumber = nextActiveSetNumber(data.session,activeWorkout.unitIndex,exercise,unit.block);
+  const stash = (name,number,l,r,e) => {
+    const draft = { load:l ? l.value : "", reps:r ? r.value : "", rpe:e ? e.value : "" };
+    if (!draft.load && !draft.reps && !draft.rpe) return;
+    activeWorkout.draftSets = activeWorkout.draftSets || {};
+    activeWorkout.draftSets[name] = activeWorkout.draftSets[name] || {};
+    activeWorkout.draftSets[name][number] = draft;
+  };
+  stash(exercise.name,setNumber,load,reps,effort);
+  // In round mode the partner has its own inputs, which were being dropped on re-render.
+  const partner = unit.items.length > 1 ? unit.items.find((item) => item.name !== exercise.name) : null;
+  if (partner && byId("activeSetLoadB")) {
+    stash(partner.name,setNumber,byId("activeSetLoadB"),byId("activeSetRepsB"),byId("activeSetEffortB"));
+  }
+}
+function activeSetDraft(exerciseName,setNumber) {
+  return activeWorkout.draftSets && activeWorkout.draftSets[exerciseName] && activeWorkout.draftSets[exerciseName][setNumber] || null;
+}
+function clearActiveSetDraft(exerciseName,setNumber) {
+  if (activeWorkout.draftSets && activeWorkout.draftSets[exerciseName]) delete activeWorkout.draftSets[exerciseName][setNumber];
+}
+function selectActiveSet(exerciseName,setNumber) {
+  stashActiveSetDraft();
+  activeWorkout.editingSetByExercise[exerciseName] = Number(setNumber) || 1;
+  saveActiveWorkoutState(); renderActiveWorkout();
+}
 function saveActiveSet(exercise,setNumber,existingId,bodyweightOnly,cardioOnly,unitValue) {
   const load = byId('activeSetLoad') || {value:''}, reps = byId('activeSetReps'), effort = byId('activeSetEffort'), unit = {value:cardioOnly ? 'session' : bodyweightOnly ? 'bodyweight' : unitValue || 'lb'}, data = activeAssignmentAndSession(); const saved = logExerciseSet(data.session,exercise,load,reps,unit,effort,setNumber,existingId); if (!saved) return;
-  delete activeWorkout.editingSetByExercise[exercise.name]; const currentUnit = activeWorkoutUnits(data.session,activeWorkout.shortened)[activeWorkout.unitIndex]; if (!existingId) { startActiveRest(exercise,currentUnit.block); advanceActiveAfterSet(data.session,currentUnit,exercise,setNumber); } saveActiveWorkoutState(); renderActiveWorkout();
+  delete activeWorkout.editingSetByExercise[exercise.name]; clearActiveSetDraft(exercise.name,setNumber); const currentUnit = activeWorkoutUnits(data.session,activeWorkout.shortened)[activeWorkout.unitIndex]; if (!existingId) { startActiveRest(exercise,currentUnit.block); advanceActiveAfterSet(data.session,currentUnit,exercise,setNumber); } saveActiveWorkoutState(); renderActiveWorkout();
 }
 function advanceActiveAfterSet(session,unit,exercise,setNumber) {
   const unitIndex = activeWorkout.unitIndex, supersetOn = unit.type === 'superset' && Boolean(activeWorkout.supersetMode[unitIndex]), planned = plannedSetsForActive(exercise,unit.block);
