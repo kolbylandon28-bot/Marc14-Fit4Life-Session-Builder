@@ -1705,3 +1705,11 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
 @media(max-width:560px){
   .coach-feedback-metrics{grid-template-columns:repeat(auto-fit,minmax(84px,1fr))}
 }
+
+/* ---------- invite self-test ---------- */
+.invite-check{padding:6px 0;font-size:11px;line-height:1.45}
+.invite-check.ok{color:var(--tier-group)}
+.invite-check.bad{color:#E8A0A0}
+.invite-check small{display:block;color:var(--text-faint);font-size:10px;margin-top:2px;overflow-wrap:anywhere}
+#inviteTestEmail{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;
+  background:var(--slate-1);color:var(--text);font:inherit;font-size:12px}

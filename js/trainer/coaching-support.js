@@ -127,6 +127,48 @@ function openAdvancedForClient(profileId,tab) { openAdvancedStudio(tab || "revie
 function selectedAdvancedProfile() { return loadProfiles().find((item) => item.id === advancedState.profileId) || null; }
 function selectAdvancedClient(profileId) { advancedState.profileId = profileId; currentAiCoachDraft = null; renderAdvancedStudio(); }
 function setAdvancedTab(tab) { advancedState.tab = normalizedAdvancedTab(tab); renderAdvancedStudio(); }
+/* ---------- invite email self-test ---------- */
+// Delivery cannot be proved by reading code, so it is proved in place: the same call the
+// client invite makes, sent to the trainer's own address, with the precise Supabase error
+// reported rather than a generic failure.
+function inviteEmailTestPanelHtml() {
+  const identity = typeof currentAccountIdentity === "function" ? currentAccountIdentity() : {};
+  return '<section class="advanced-card wide"><h3>Invite email self-test</h3>'
+    + '<p>Confirms the invite email actually sends, using the identical path a real client invite uses. Send it to yourself first, before inviting anyone.</p>'
+    + '<div class="compact-field wide"><label for="inviteTestEmail">Send a test invite to</label>'
+    + '<input id="inviteTestEmail" type="email" value="' + escapeHtml(identity.email || "") + '" placeholder="you@byui.edu"></div>'
+    + '<div class="tool-actions"><button class="small-btn" onclick="runInviteDiagnostics()">Check setup</button>'
+    + '<button class="small-btn primary" onclick="sendTestInvite()">Send test email</button></div>'
+    + '<div id="inviteTestResult" class="storage-note"></div></section>';
+}
+async function runInviteDiagnostics() {
+  const out = byId("inviteTestResult"); if (!out) return;
+  if (typeof window.fit4lifeCloudInviteDiagnostics !== "function") { out.textContent = "Diagnostics are unavailable — the secure connection has not loaded."; return; }
+  const report = await window.fit4lifeCloudInviteDiagnostics();
+  out.innerHTML = report.checks.map((check) => '<div class="invite-check ' + (check.ok ? "ok" : "bad") + '">'
+    + (check.ok ? "\u2713 " : "\u2717 ") + escapeHtml(check.label)
+    + (check.detail ? ' <small>' + escapeHtml(check.detail) + '</small>' : '') + '</div>').join("")
+    + '<div class="invite-check ' + (report.ready ? "ok" : "bad") + '">' + (report.ready
+      ? "\u2713 Ready to send. A failure now would come from Supabase itself \u2014 send a test to be certain."
+      : "\u2717 Fix the items above before sending.") + '</div>';
+}
+async function sendTestInvite() {
+  const field = byId("inviteTestEmail"), out = byId("inviteTestResult");
+  if (!field || !out) return;
+  const email = field.value.trim().toLowerCase();
+  if (!email) { out.textContent = "Enter an address to send the test to."; return; }
+  if (typeof window.fit4lifeCloudSendClientInvite !== "function") { out.textContent = "The secure connection is not ready yet."; return; }
+  out.textContent = "Sending to " + email + "…";
+  const result = await window.fit4lifeCloudSendClientInvite(email,"Invite self-test");
+  if (result && result.ok) {
+    out.innerHTML = '<div class="invite-check ok">\u2713 Supabase accepted the request. Check that inbox, and the junk folder \u2014 '
+      + 'if nothing arrives within a few minutes the mail was accepted but not delivered, which is an email-provider problem rather than an app one.</div>';
+  } else {
+    out.innerHTML = '<div class="invite-check bad">\u2717 ' + escapeHtml((result && result.error) || "Unknown error")
+      + '</div><div class="storage-note">That message comes straight from Supabase. "rate limit" means too many sent this hour; '
+      + '"redirect" or "not allowed" means the site URL is missing from Authentication \u2192 URL Configuration \u2192 Redirect URLs.</div>';
+  }
+}
 function renderAdvancedStudio() {
   if (!trainerIsUnlocked()) return false;
   advancedState.tab = normalizedAdvancedTab(advancedState.tab);
@@ -294,7 +336,7 @@ function renderBrandModule() {
   const brand = currentGymBrand(), equipment = currentGymEquipment(), cloudTenant = window.fit4lifeCloudOrganizationSlug || "fit-4-life", portalUrl = window.fit4lifePublicSiteUrl ? window.fit4lifePublicSiteUrl('/',{gym:cloudTenant}) : location.origin + "/?gym=" + encodeURIComponent(cloudTenant);
   const zoneOptions = Object.keys(ZONE_LABELS).map((key) => '<label><input class="gym-equipment-zone" type="checkbox" value="' + key + '" ' + (equipment.zones.includes(key) ? 'checked' : '') + '> ' + escapeHtml(ZONE_LABELS[key]) + '</label>').join("");
   const cardioOptions = Object.keys(CARDIO_MODALITIES).filter((key) => key !== "any").map((key) => '<label><input class="gym-cardio-mode" type="checkbox" value="' + key + '" ' + (equipment.cardioModes.includes(key) ? 'checked' : '') + '> ' + escapeHtml(CARDIO_MODALITIES[key].label) + '</label>').join("");
-  return '<div class="advanced-grid"><section class="advanced-card wide"><h3>Shared gym setup</h3><p>These settings define this gym’s white-label identity and the equipment the workout engine may use. The gym owner’s changes sync to every trainer and client device.</p>' + renderPortalThemePicker() + '<div class="compact-grid"><div class="compact-field wide"><label for="brandName">Gym name</label><input id="brandName" value="' + escapeHtml(brand.name) + '"></div><div class="compact-field wide"><label for="brandSub">Portal subtitle</label><input id="brandSub" value="' + escapeHtml(brand.sub) + '"></div><div class="compact-field"><label for="brandPrimary">Primary color</label><input id="brandPrimary" type="color" value="' + escapeHtml(brand.primary) + '"></div><div class="compact-field"><label for="brandAccent">Accent color</label><input id="brandAccent" type="color" value="' + escapeHtml(brand.accent) + '"></div><div class="compact-field wide"><label>Equipment zones available at this gym</label><div class="summary-checks">' + zoneOptions + '</div></div><div class="compact-field wide"><label>Cardio machines available</label><div class="summary-checks">' + cardioOptions + '</div></div>' + gymKitChecklistHtml(equipment) + '<div class="compact-field wide"><label for="gymBlockedEquipment">Blocked equipment or movement keywords</label><textarea id="gymBlockedEquipment" placeholder="sled, battle rope">' + escapeHtml((equipment.blockedKeywords || []).join(", ")) + '</textarea><span class="storage-note">The generator excludes any exercise name containing one of these terms.</span></div></div><div class="tool-actions"><button class="small-btn primary" onclick="saveGymBrand()">Save gym setup</button><button class="small-btn" onclick="resetGymBrand()">Reset colors</button></div><div class="brand-preview" style="--brand-primary:' + escapeHtml(brand.primary) + '"><h4>' + escapeHtml(brand.name) + '</h4><p>' + escapeHtml(brand.sub) + '</p></div><div class="capability-note"><strong>Current tenant link:</strong> ' + escapeHtml(portalUrl) + '<br>Use a different gym slug—or later a verified custom domain—to load a different brand, equipment bank, staff, and client records. Only an owner can change shared gym setup.</div></section></div>';
+  return '<div class="advanced-grid">' + inviteEmailTestPanelHtml() + '<section class="advanced-card wide"><h3>Shared gym setup</h3><p>These settings define this gym’s white-label identity and the equipment the workout engine may use. The gym owner’s changes sync to every trainer and client device.</p>' + renderPortalThemePicker() + '<div class="compact-grid"><div class="compact-field wide"><label for="brandName">Gym name</label><input id="brandName" value="' + escapeHtml(brand.name) + '"></div><div class="compact-field wide"><label for="brandSub">Portal subtitle</label><input id="brandSub" value="' + escapeHtml(brand.sub) + '"></div><div class="compact-field"><label for="brandPrimary">Primary color</label><input id="brandPrimary" type="color" value="' + escapeHtml(brand.primary) + '"></div><div class="compact-field"><label for="brandAccent">Accent color</label><input id="brandAccent" type="color" value="' + escapeHtml(brand.accent) + '"></div><div class="compact-field wide"><label>Equipment zones available at this gym</label><div class="summary-checks">' + zoneOptions + '</div></div><div class="compact-field wide"><label>Cardio machines available</label><div class="summary-checks">' + cardioOptions + '</div></div>' + gymKitChecklistHtml(equipment) + '<div class="compact-field wide"><label for="gymBlockedEquipment">Blocked equipment or movement keywords</label><textarea id="gymBlockedEquipment" placeholder="sled, battle rope">' + escapeHtml((equipment.blockedKeywords || []).join(", ")) + '</textarea><span class="storage-note">The generator excludes any exercise name containing one of these terms.</span></div></div><div class="tool-actions"><button class="small-btn primary" onclick="saveGymBrand()">Save gym setup</button><button class="small-btn" onclick="resetGymBrand()">Reset colors</button></div><div class="brand-preview" style="--brand-primary:' + escapeHtml(brand.primary) + '"><h4>' + escapeHtml(brand.name) + '</h4><p>' + escapeHtml(brand.sub) + '</p></div><div class="capability-note"><strong>Current tenant link:</strong> ' + escapeHtml(portalUrl) + '<br>Use a different gym slug—or later a verified custom domain—to load a different brand, equipment bank, staff, and client records. Only an owner can change shared gym setup.</div></section></div>';
 }
 async function persistOrganizationAppearance(brand,equipment,localMessage) {
   if (window.fit4lifeCloudOrganizationId && typeof window.fit4lifeCloudSaveOrganizationSettings === "function") return await window.fit4lifeCloudSaveOrganizationSettings(brand,equipment);

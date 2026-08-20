@@ -252,6 +252,20 @@
     return publicSiteUrl("/", gym ? { gym } : {});
   }
 
+  async function inviteDiagnostics() {
+    const checks = [];
+    const push = (label,ok,detail) => checks.push({ label, ok, detail: detail || "" });
+    push("Secure connection ready", Boolean(cloudClient), cloudClient ? "" : "Supabase client not created - check /api/supabase-config returns url and key");
+    push("Signed in as staff", ["owner","trainer"].includes(cloudRole), "Current role: " + (cloudRole || "none"));
+    const redirect = (function () { try { return authRedirectUrl(); } catch (error) { return ""; } })();
+    push("Redirect URL resolves", Boolean(redirect), redirect || "authRedirectUrl() returned nothing");
+    push("Redirect URL is not localhost", Boolean(redirect) && !/localhost|127\.0\.0\.1/.test(redirect),
+      /localhost|127\.0\.0\.1/.test(redirect || "") ? "Supabase will refuse a localhost redirect unless it is allowlisted" : redirect);
+    push("Invite function available", typeof window.fit4lifeCloudSendClientInvite === "function", "");
+    return { redirect, checks, ready: checks.every((item) => item.ok) };
+  }
+  window.fit4lifeCloudInviteDiagnostics = inviteDiagnostics;
+
   async function sendClientInvite(email, fullName) {
     const address = String(email || "").trim().toLowerCase();
     if (!address) return { ok:false, error:"No email address was provided" };
