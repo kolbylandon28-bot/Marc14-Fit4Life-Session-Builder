@@ -154,7 +154,7 @@ function renderCard(session, sessionRef, partnerKey, partnerLabel) {
     "<span><b>" + EXP_LABEL(sp.experience) + "</b></span>" +
     "<span>Age <b>" + sp.age + "</b></span>" +
     "<span><b>" + sp.minutes + " min</b></span>" +
-    (sp.muscles && sp.muscles.length ? "<span>Target: <b>" + sp.muscles.map((m) => MUSCLE_LABELS[m]).join(", ") + "</b></span>" : "") +
+    (sp.muscles && sp.muscles.length ? "<span>Target: <b>" + sp.muscles.map((m) => MUSCLE_LABELS[m] || m).join(", ") + "</b></span>" : "") +
     (sp.injuries.length ? "<span>Limits: <b>" + sp.injuries.map((t) => INJURY_LABELS[t]).join(", ") + "</b></span>" : "") +
     (sp.zones.length ? "<span>Zones: <b>" + sp.zones.map((z) => ZONE_LABELS[z]).join(", ") + "</b></span>" : "");
   head.appendChild(meta);

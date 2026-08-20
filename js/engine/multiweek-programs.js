@@ -117,7 +117,7 @@ function focusProgramSplit(split, focus) {
   }
   if (index < 0) index = 0;
   if (!copy[index].muscles.includes(focus)) copy[index].muscles.push(focus);
-  copy[index].name += " · " + MUSCLE_LABELS[focus] + " emphasis";
+  copy[index].name += " · " + (MUSCLE_LABELS[focus] || focus) + " emphasis";
   return copy;
 }
 function routeProgramSplit(setup) {

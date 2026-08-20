@@ -215,8 +215,6 @@ const LIBRARY = [
 
   /* ---------------- ADDED: MACHINE on-ramps ----------------
      For the client who is intimidated by barbells. A legitimate first few weeks. */
-  { name: "Machine chest press", zone: "machine", pattern: "h_push", region: "push", exp: 1, impact: 0, unilateral: false, avoid: ["shoulder"], muscles: ["chest","arms"], cue: "Set the seat so the handles line up with your chest. Press smoothly, don't lock hard." },
-  { name: "Machine shoulder press", zone: "machine", pattern: "v_push", region: "push", exp: 1, impact: 0, unilateral: false, avoid: ["shoulder"], muscles: ["shoulders","arms"], cue: "Press straight up, stop just short of locking out." },
   { name: "Machine leg press", zone: "machine", pattern: "squat", region: "lower", exp: 1, impact: 0, unilateral: false, avoid: ["knee"], muscles: ["quads","glutes"], cue: "Feet flat and about hip width. Lower until your knees are near 90 degrees." },
   { name: "Machine seated row", zone: "machine", pattern: "h_pull", region: "pull", exp: 1, impact: 0, unilateral: false, avoid: [], muscles: ["back","arms"], cue: "Sit tall, pull the handles to your stomach, let your shoulder blades move." },
   { name: "Machine lat pulldown", zone: "machine", pattern: "v_pull", region: "pull", exp: 1, impact: 0, unilateral: false, avoid: ["shoulder"], muscles: ["back","arms"], cue: "Pull the bar to your collarbone, lean back only slightly." },

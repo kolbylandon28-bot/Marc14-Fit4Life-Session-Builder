@@ -96,7 +96,7 @@ function buildSession(spec, seed) {
     const covered = targets.filter((m) => hit.has(m));
     const missed = targets.filter((m) => !hit.has(m));
     if (covered.length) {
-      focusNote = " Every working set targets " + covered.map((m) => MUSCLE_LABELS[m].toLowerCase()).join(", ")
+      focusNote = " Every working set targets " + covered.map((m) => String(MUSCLE_LABELS[m] || m).toLowerCase()).join(", ")
         + " \u2014 the accessories reinforce the main lifts rather than scattering across the body.";
     }
     if (missed.length) focusNote += " (Limited options for " + missed.map((m) => String(MUSCLE_LABELS[m] || m).toLowerCase()).join(", ") + " given the filters \u2014 add manually if needed.)";

@@ -142,7 +142,7 @@ function muscleField(target) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "chip muscle-chip";
-    btn.textContent = MUSCLE_LABELS[m];
+    btn.textContent = MUSCLE_LABELS[m] || m;
     btn.dataset.muscle = m;
     btn.addEventListener("click", () => {
       const i = target.muscles.indexOf(m);
