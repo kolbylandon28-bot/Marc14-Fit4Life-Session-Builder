@@ -535,7 +535,7 @@ function requestProfileCreation(name, username) {
 function profileRecordFromTarget(target, name, username) {
   target = target || {};
   const cardioModes = normalizeCardioPreferences(target.cardioModes || target.cardioMode);
-  return {
+  const record = {
     name: String(name || target.client || "").trim(), username: normalizeUsername(username || target.username || usernameFromName(name || target.client)), email:String(target.email || "").trim().toLowerCase(),
     goals: [...new Set(((target.goals && target.goals.length ? target.goals : [target.goal || "general"]).filter(Boolean)))].slice(0,2),
     trainingStyle: target.trainingStyle || "auto", cardioMode: cardioModes[0], cardioModes,
@@ -550,6 +550,19 @@ function profileRecordFromTarget(target, name, username) {
     limitationAssessments:JSON.parse(JSON.stringify(target.limitationAssessments || {})),
     phaseCompoundAnchors:{ ...(target.phaseCompoundAnchors || {}) },
   };
+  // Membership and booking fields are carried ONLY when the caller actually supplies them.
+  // The whitelist above silently dropped them, so the invite screen asked a trainer for a
+  // tier and programmed days and saved neither. They cannot be given defaults here: the
+  // workout builder saves through this same function without them, and a default would
+  // blank an existing client's tier every time a workout was saved.
+  const CARRIED = ["membershipTier","sessionsPerWeek","programmedDays","phone","bookingEmail",
+    "bookingStatus","assignedTrainerId","assignedTrainerName","assignedTrainerEmail",
+    "onboardingStatus","invitedAt","importedAt"];
+  CARRIED.forEach((key) => {
+    if (target[key] === undefined || target[key] === null) return;
+    record[key] = key === "membershipTier" ? normalizeMembershipTier(target[key]) : target[key];
+  });
+  return record;
 }
 function createClientProfile(record) {
   if (!requireTrainerMutation("create client profiles")) return null;

@@ -1736,6 +1736,19 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
 .invite-check{padding:6px 0;font-size:11px;line-height:1.45}
 .invite-check.ok{color:var(--tier-group)}
 .invite-check.bad{color:#E8A0A0}
+.booking-import-preview{margin-top:12px}
+.booking-import-group{margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
+.booking-import-group.warn{border-color:color-mix(in srgb,var(--tier-partner) 45%,var(--line));
+  background:color-mix(in srgb,var(--tier-partner) 7%,transparent)}
+.booking-import-group>b{display:block;font:800 10px var(--mono);letter-spacing:.05em;text-transform:uppercase;
+  color:var(--text-faint);margin-bottom:7px}
+.booking-import-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;
+  padding:6px 0;border-top:1px solid var(--line)}
+.booking-import-row:first-of-type{border-top:0}
+.booking-import-row>span{font:700 11px var(--mono);color:var(--text)}
+.booking-import-row>em{font:700 9px var(--mono);font-style:normal;color:var(--tier-flex);text-align:right}
+.booking-import-row>small{grid-column:1/-1;color:var(--text-faint);font-size:10px;line-height:1.45;overflow-wrap:anywhere}
+.booking-import-row>button{grid-row:1;grid-column:2}
 .invite-check small{display:block;color:var(--text-faint);font-size:10px;margin-top:2px;overflow-wrap:anywhere}
 #inviteTestEmail{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;
   background:var(--slate-1);color:var(--text);font:inherit;font-size:12px}
