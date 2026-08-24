@@ -274,6 +274,7 @@ function renderActionCenterList() { const out = byId("actionCenterList"); if (ou
 
 window.renderTrainerAttention = function v6RenderTrainerAttention() {
   const attention = trainerAttentionSnapshot(), panel = byId("trainerAttentionPanel");
+  if (typeof syncCoachMoreBadge === "function") setTimeout(syncCoachMoreBadge,0);
   document.querySelectorAll("[data-attention-badge]").forEach((badge) => {
     const key = badge.dataset.attentionBadge, count = key === "messages" ? attention.categoryCounts.messages : key === "schedule" ? attention.categoryCounts.schedule : key === "actions" ? attention.items.length : key === "access" ? attention.categoryCounts.access : attention.categoryCounts.workouts;
     badge.textContent = count > 99 ? "99+" : String(count); badge.classList.toggle("show",count > 0);
@@ -664,7 +665,7 @@ function cancellationOutcome(event, cancelledBy) {
   if (cancelledBy === "trainer") {
     // Flex clients are not assigned a fixed trainer - their coach is whoever is on the
     // floor - so "the trainer cancelled" is not a thing that can happen to them.
-    if (meta.id === "flex") {
+    if (meta.family === "flex") {
       return { rollsOver:hours == null || hours >= CANCEL_NOTICE_HOURS, reason:"Flex sessions follow the client-notice rule; there is no assigned trainer to cancel.", offerReschedule:false };
     }
     return { rollsOver:true, reason:"Cancelled by the gym, so the session is returned to the client.", offerReschedule:true };

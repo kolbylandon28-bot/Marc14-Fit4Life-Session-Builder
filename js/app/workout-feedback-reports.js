@@ -31,7 +31,10 @@
     return loadAssignedWorkouts().find((item) => assignmentSessionIds(item).includes(session.sessionId)) || null;
   }
   function sessionMovementSnapshot(session,existingReview) {
-    if (existingReview && Array.isArray(existingReview.performedExercises) && existingReview.performedExercises.length) return existingReview.performedExercises.map((item) => ({...item}));
+    // A review saved before every-movement was offered stored only the filtered subset.
+    // Reusing it wholesale carried that old gap into every later revision, so the session is
+    // always recomputed and the stored entries are merged over it for their saved flags.
+    const stored = existingReview && Array.isArray(existingReview.performedExercises) ? existingReview.performedExercises : [];
     const sets = getSessionSets(session.sessionId), counts = new Map();
     sets.forEach((entry) => counts.set(entry.label,Number(counts.get(entry.label) || 0) + 1));
     const substitutions = loadProgress().filter((entry) => entry.type === "substitution" && entry.sessionId === session.sessionId && entry.data);
@@ -51,7 +54,14 @@
     // The column asking what they "disliked or did not understand" is answered mostly by
     // the movements they skipped or never started - filtering those out removed the most
     // useful feedback in the form, and often left the picker completely empty.
-    return movements;
+    const merged = movements.map((movement) => {
+      const saved = stored.find((item) => item && (item.id === movement.id || item.name === movement.name));
+      return saved ? {...movement,skipped:movement.skipped || Boolean(saved.skipped),loggedSets:Math.max(movement.loggedSets,Number(saved.loggedSets) || 0),substitutedFrom:movement.substitutedFrom || saved.substitutedFrom || ""} : movement;
+    });
+    // A movement the client reviewed before but that is no longer in the session is kept,
+    // otherwise editing an older review would silently drop feedback they already gave.
+    stored.forEach((saved) => { if (saved && saved.name && !merged.some((item) => item.id === saved.id || item.name === saved.name)) merged.push({...saved}); });
+    return merged;
   }
   function pickerSelectionLabel(side) {
     const selected = reviewPickerState[side];
@@ -133,7 +143,13 @@
     const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === session.spec.profileId) >= 0 ? profiles.findIndex((profile) => profile.id === session.spec.profileId) : profiles.findIndex((profile) => clientMatches(profile.name,session.spec.client));
     if (index < 0) return null;
     const profile = profiles[index], history = Array.isArray(profile.workoutFeedbackHistory) ? profile.workoutFeedbackHistory.slice() : [], historyIndex = history.findIndex((item) => item.id === review.id);
-    const feedbackRecord = {id:review.id,assignmentId:assignment && assignment.id || "",sessionId:session.sessionId,workoutName:session.goalLabel || "Workout",submittedAt:review.submittedAt,updatedAt:review.updatedAt,revision:review.revision,completion:review.completion,difficulty:review.difficulty,energy:review.energy,pain:review.pain,painLevel:review.painLevel,likedExercises:review.likedExercises,dislikedExercises:review.dislikedExercises,performedExercises:review.performedExercises,notes:review.notes,questions:review.questions};
+    const feedbackRecord = {id:review.id,assignmentId:assignment && assignment.id || "",sessionId:session.sessionId,workoutName:session.goalLabel || "Workout",submittedAt:review.submittedAt,updatedAt:review.updatedAt,revision:review.revision,completion:review.completion,difficulty:review.difficulty,energy:review.energy,pain:review.pain,painLevel:review.painLevel,likedExercises:review.likedExercises,dislikedExercises:review.dislikedExercises,performedExercises:review.performedExercises,notes:review.notes,questions:review.questions,
+      // The client's own history is the record that outlives the assignment. It dropped every
+      // field the coach panel had just started showing - including which movement caused pain.
+      rir:review.rir,formQuality:review.formQuality,rangeOfMotion:review.rangeOfMotion,timeFit:review.timeFit,
+      painScore:review.painScore,painExercise:review.painExercise,injuryArea:review.injuryArea,injuryDetails:review.injuryDetails,
+      movementChanged:review.movementChanged,loggedSets:review.loggedSets,prescribedExercises:review.prescribedExercises,
+      duration:review.duration,actualDuration:review.actualDuration,personalRecords:review.personalRecords};
     if (historyIndex >= 0) history[historyIndex] = {...history[historyIndex],...feedbackRecord}; else history.unshift(feedbackRecord);
     const evidence = (Array.isArray(profile.exercisePreferenceEvidence) ? profile.exercisePreferenceEvidence : []).filter((item) => item.reviewId !== review.id);
     review.likedExercises.forEach((movement) => evidence.push({id:review.id + ":like:" + movement.id,reviewId:review.id,assignmentId:assignment && assignment.id || "",sessionId:session.sessionId,exerciseId:movement.id,exerciseName:movement.name,preference:"like",source:"client_workout_review",recordedAt:review.updatedAt,revision:review.revision}));
@@ -192,44 +208,62 @@
   function feedbackTextBlock(label,value,emptyCopy) {
     return '<article><span>' + escapeHtml(label) + '</span><div>' + (value ? escapeHtml(value) : '<em>' + escapeHtml(emptyCopy || "Not entered") + '</em>') + '</div></article>';
   }
-  function movementChips(items,tone) {
-    return items && items.length ? '<div class="coach-feedback-chips ' + tone + '">' + items.map((item) => '<span>' + escapeHtml(item.name || item) + (item.substitutedFrom ? '<small>replaced ' + escapeHtml(item.substitutedFrom) + '</small>' : '') + '</span>').join("") + '</div>' : '<div class="coach-feedback-empty">None selected</div>';
+  // Whether they actually performed a movement changes what the feedback means: a disliked
+  // lift they never started is a different conversation from one they did. Every chip in the
+  // app now carries that context, not only the ones in the coach review panel.
+  function movementContextLabel(detail) {
+    if (!detail) return "";
+    if (detail.loggedSets) return detail.loggedSets + " set" + (detail.loggedSets === 1 ? "" : "s");
+    return detail.skipped ? "skipped" : "not started";
+  }
+  function movementChips(items,tone,performed,emptyClass) {
+    if (!items || !items.length) return '<div class="' + (emptyClass || "coach-feedback-empty") + '">None selected</div>';
+    const lookup = new Map((performed || []).map((item) => [item.id || item.name,item]));
+    return '<div class="coach-feedback-chips ' + tone + '">' + items.map((item) => {
+      const name = item.name || item, detail = lookup.get(item.id) || lookup.get(name) || null;
+      const note = [movementContextLabel(detail),item.substitutedFrom ? "replaced " + item.substitutedFrom : ""].filter(Boolean).join(" · ");
+      return '<span><b>' + escapeHtml(name) + '</b>' + (note ? '<small>' + escapeHtml(note) + '</small>' : '') + '</span>';
+    }).join("") + '</div>';
   }
   // The client submits far more than the panel used to show: which exercise hurt, form
   // quality, range of motion, reps in reserve, whether the session fitted their time, how
   // long it actually took, and any personal records. A trainer deciding what to do next
   // needs all of it, so none of it is dropped now.
-  function coachDetailRow(label,value) {
+  // The stored values are machine words. "time fit: long" reads as a duration rather than
+  // "ran over", so each one is shown with the wording the client actually chose.
+  const REVIEW_VALUE_LABELS = {
+    timeFit:{ yes:"Fit the plan", short:"Finished early", long:"Ran over time", unfinished:"Could not finish in time" },
+    formQuality:{ strong:"Strong and consistent", mixed:"Some breakdown", poor:"Needed help" },
+    rangeOfMotion:{ full:"Full planned range", limited:"Shortened range", stopped:"Stopped for safety" }
+  };
+  function reviewValueLabel(field,value) {
+    if (value == null || value === "") return "";
+    const table = REVIEW_VALUE_LABELS[field];
+    return table && table[value] ? table[value] : String(value);
+  }
+  // The unit is appended after the guard. Previously the suffix was already attached, so
+  // the "missing value" test could never fire and an unanswered field rendered as "-/10".
+  function coachDetailRow(label,value,suffix) {
     if (value == null || value === "" || value === "—") return "";
-    return '<div><b>' + escapeHtml(String(value)) + '</b><span>' + escapeHtml(label) + '</span></div>';
+    return '<div><b>' + escapeHtml(String(value) + (suffix || "")) + '</b><span>' + escapeHtml(label) + '</span></div>';
   }
-  function coachMovementChips(items,tone,performed) {
-    if (!items || !items.length) return '<div class="coach-feedback-empty-inline">None selected</div>';
-    const lookup = new Map((performed || []).map((item) => [item.id || item.name,item]));
-    return '<div class="coach-feedback-chips ' + tone + '">' + items.map((item) => {
-      const name = item.name || item;
-      const detail = lookup.get(item.id) || lookup.get(name) || {};
-      // Whether they actually performed a movement changes what the feedback means: a
-      // disliked lift they never started is a different conversation from one they did.
-      const context = detail.loggedSets ? detail.loggedSets + " set" + (detail.loggedSets === 1 ? "" : "s")
-        : detail.skipped ? "skipped" : "not started";
-      return '<span><b>' + escapeHtml(name) + '</b><small>' + escapeHtml(context)
-        + (item.substitutedFrom ? " · replaced " + item.substitutedFrom : "") + '</small></span>';
-    }).join("") + '</div>';
-  }
+  function coachMovementChips(items,tone,performed) { return movementChips(items,tone,performed,"coach-feedback-empty-inline"); }
   function coachFeedbackHtml(assignment) {
     const review = assignment && assignment.clientReview || {};
     if (!assignment || !assignment.clientReview) return '<div class="coach-feedback-empty">The client has not submitted a finish review for this workout.</div>';
     const performed = reviewArray(review,"performedExercises");
-    const head = '<div class="coach-feedback-head"><div><span class="client-section-label">Client submission · revision ' + Number(review.revision || 1) + '</span><h3>What the client actually reported</h3><p>Submitted ' + escapeHtml(displayDate(review.updatedAt || review.submittedAt || assignment.completedAt)) + '</p></div></div>';
+    const head = '<div class="coach-feedback-head"><div><span class="client-section-label">Client submission · revision ' + Number(review.revision || 1) + '</span><h3>What the client actually reported</h3><p>Submitted ' + escapeHtml(displayDate(review.updatedAt || review.submittedAt || assignment.completedAt,true)) + '. Comments below are shown exactly as entered.</p></div><span class="assignment-pill ' + escapeHtml(assignmentStatus(assignment)) + '">' + escapeHtml(assignment.coachReviewedAt ? "Coach reviewed" : "Awaiting coach review") + '</span></div>';
+    // RIR 0 means the client went to failure - the single most important value in the field -
+    // and a truthiness test threw it away as if the question had been left blank.
+    const rirValue = review.rir == null || review.rir === "" ? "" : Number(review.rir);
     const metrics = '<div class="coach-feedback-metrics">'
       + coachDetailRow("completed",completionLabel(review.completion))
-      + coachDetailRow("difficulty",(review.difficulty || "—") + "/10")
-      + coachDetailRow("energy after",(review.energy || "—") + "/5")
-      + coachDetailRow("reps in reserve",review.rir || "")
-      + coachDetailRow("form",review.formQuality || "")
-      + coachDetailRow("range of motion",review.rangeOfMotion || "")
-      + coachDetailRow("time fit",review.timeFit || "")
+      + coachDetailRow("difficulty",review.difficulty,"/10")
+      + coachDetailRow("energy after",review.energy,"/5")
+      + coachDetailRow("reps in reserve",rirValue === 0 ? "0 · to failure" : rirValue)
+      + coachDetailRow("form",reviewValueLabel("formQuality",review.formQuality))
+      + coachDetailRow("range of motion",reviewValueLabel("rangeOfMotion",review.rangeOfMotion))
+      + coachDetailRow("time fit",reviewValueLabel("timeFit",review.timeFit))
       + coachDetailRow("logged efforts",review.loggedSets != null ? review.loggedSets : "")
       + (review.actualDuration && review.duration && Number(review.actualDuration) !== Number(review.duration)
           ? coachDetailRow("actual vs planned",review.actualDuration + " / " + review.duration + " min") : "")
@@ -237,14 +271,17 @@
     // Pain gets its own band, including the movement that caused it, which the panel
     // never surfaced even though the client is asked for it directly.
     const painful = review.pain && review.pain !== "none";
-    const painBand = painful
-      ? '<div class="coach-feedback-pain"><b>Discomfort reported</b><div>'
+    // Silence is the wrong default on a safety question. "No discomfort reported" and
+    // "this review predates the question" are different facts and now read differently.
+    const painAsked = review.painLevel != null || review.pain != null;
+    const painBand = !painful
+      ? '<div class="coach-feedback-nopain">' + (painAsked ? "No discomfort reported" : "Discomfort was not asked in this review") + '</div>'
+      : '<div class="coach-feedback-pain"><b>Discomfort reported</b><div>'
         + [review.painLevel || review.pain, review.painScore != null ? review.painScore + "/10" : "",
            review.injuryArea ? (INJURY_LABELS[review.injuryArea] || review.injuryArea) : "",
            review.painExercise ? "during " + review.painExercise : "",
-           review.movementChanged ? "movement changed" : ""].filter(Boolean).map(escapeHtml).join(" · ")
-        + '</div>' + (review.injuryDetails ? '<p>' + escapeHtml(review.injuryDetails) + '</p>' : '') + '</div>'
-      : "";
+           review.movementChanged === "yes" || review.movementChanged === true ? "movement changed" : ""].filter(Boolean).map(escapeHtml).join(" · ")
+        + '</div>' + (review.injuryDetails ? '<p>' + escapeHtml(review.injuryDetails) + '</p>' : '') + '</div>';
     const records = Array.isArray(review.personalRecords) && review.personalRecords.length
       ? '<div class="coach-feedback-records"><b>Personal records</b><div>' + review.personalRecords.map((record) => escapeHtml(record.label || record.name || String(record))).join(" · ") + '</div></div>'
       : "";
@@ -295,7 +332,7 @@
     const assignments = recentFeedbackForProfile(profile), latest = assignments[0];
     if (!latest) return '<section class="profile-feedback-summary"><div><span class="client-section-label">Client feedback record</span><h4>No workout feedback yet</h4><p>Completed client reviews will be summarized here and retained in workout history.</p></div></section>';
     const review = latest.clientReview;
-    return '<section class="profile-feedback-summary"><div class="profile-feedback-summary-head"><div><span class="client-section-label">Client feedback record</span><h4>Latest workout feedback</h4><p>' + escapeHtml(displayDate(review.updatedAt || latest.completedAt,true)) + ' · ' + assignments.length + ' saved review' + (assignments.length === 1 ? '' : 's') + '</p></div><button class="small-btn" onclick="openCoachAdjustment(\'' + escapeHtml(profile.id) + '\',\'' + escapeHtml(latest.id) + '\')">Open exact review</button></div><div class="profile-feedback-quick"><span><b>' + escapeHtml(completionLabel(review.completion)) + '</b> completion</span><span><b>' + (review.difficulty || '—') + '/10</b> difficulty</span><span><b>' + (review.questions ? 'Question waiting' : latest.coachReviewedAt ? 'Reviewed' : 'Awaiting review') + '</b></span></div><div class="profile-feedback-voice"><p><b>Client note</b>' + escapeHtml(review.notes || 'No workout note entered') + '</p><p><b>Coach question</b>' + escapeHtml(review.questions || 'No question entered') + '</p></div><div class="coach-feedback-movements"><section><h4>Liked</h4>' + movementChips(reviewArray(review,'likedExercises'),'positive') + '</section><section><h4>Disliked / unclear</h4>' + movementChips(reviewArray(review,'dislikedExercises'),'negative') + '</section></div></section>';
+    return '<section class="profile-feedback-summary"><div class="profile-feedback-summary-head"><div><span class="client-section-label">Client feedback record</span><h4>Latest workout feedback</h4><p>' + escapeHtml(displayDate(review.updatedAt || latest.completedAt,true)) + ' · ' + assignments.length + ' saved review' + (assignments.length === 1 ? '' : 's') + '</p></div><button class="small-btn" onclick="openCoachAdjustment(\'' + escapeHtml(profile.id) + '\',\'' + escapeHtml(latest.id) + '\')">Open exact review</button></div><div class="profile-feedback-quick"><span><b>' + escapeHtml(completionLabel(review.completion)) + '</b> completion</span><span><b>' + (review.difficulty || '—') + '/10</b> difficulty</span><span><b>' + (review.questions ? 'Question waiting' : latest.coachReviewedAt ? 'Reviewed' : 'Awaiting review') + '</b></span></div><div class="profile-feedback-voice"><p><b>Client note</b>' + escapeHtml(review.notes || 'No workout note entered') + '</p><p><b>Coach question</b>' + escapeHtml(review.questions || 'No question entered') + '</p></div><div class="coach-feedback-movements"><section><h4>Liked</h4>' + movementChips(reviewArray(review,'likedExercises'),'positive',reviewArray(review,'performedExercises')) + '</section><section><h4>Disliked / unclear</h4>' + movementChips(reviewArray(review,'dislikedExercises'),'negative',reviewArray(review,'performedExercises')) + '</section></div></section>';
   }
   const legacyTrainerAssignmentLoopHtml = window.trainerAssignmentLoopHtml;
   window.trainerAssignmentLoopHtml = function trainerAssignmentLoopHtmlV14(profile) { return legacyTrainerAssignmentLoopHtml(profile) + trainerFeedbackRecordHtml(profile); };
@@ -408,7 +445,7 @@
   }
   function reportTimelineHtml(assignments,profiles) {
     const query = reportState.query.trim().toLowerCase(), filtered = assignments.filter((assignment) => !query || [assignment.client,assignment.programDayName,assignment.clientReview && assignment.clientReview.notes,assignment.clientReview && assignment.clientReview.questions].join(" ").toLowerCase().includes(query));
-    return '<section class="report-panel report-history"><div class="report-panel-head"><div><span class="client-section-label">Chronological record</span><h3>Workout history and client voice</h3></div><input class="swap-search" value="' + escapeHtml(reportState.query) + '" placeholder="Search client, workout, or comment…" oninput="setCoachReportFilter(\'query\',this.value)"></div><div class="report-timeline">' + (filtered.map((assignment) => { const profile = reportProfileForAssignment(assignment,profiles), review = assignment.clientReview || {}, status = assignmentStatus(assignment); return '<article><time>' + escapeHtml(displayDate(assignment.completedAt || assignment.scheduledDate && assignment.scheduledDate + 'T12:00:00' || assignment.assignedAt)) + '</time><div class="report-timeline-main"><div><h4>' + escapeHtml(assignment.client || profile && profile.name || 'Client') + '</h4><p>' + escapeHtml(assignment.programDayName || assignment.session && assignment.session.data && assignment.session.data.goalLabel || 'Assigned workout') + ' · ' + escapeHtml(assignmentStatusLabel(assignment)) + '</p></div><span class="assignment-pill ' + escapeHtml(status) + '">' + escapeHtml(assignment.coachReviewedAt ? 'Coach reviewed' : review.id ? 'Review waiting' : assignmentStatusLabel(assignment)) + '</span></div>' + (review.id || assignment.clientReview ? '<div class="report-timeline-feedback"><p><b>Client note</b>' + escapeHtml(review.notes || 'No note entered') + '</p><p><b>Question</b>' + escapeHtml(review.questions || 'No question entered') + '</p><div>' + movementChips(reviewArray(review,'likedExercises'),'positive') + movementChips(reviewArray(review,'dislikedExercises'),'negative') + '</div></div>' : '') + '<div class="tool-actions"><button class="mini-btn" onclick="openCoachAdjustment(\'' + escapeHtml(profile && profile.id || assignment.profileId || '') + '\',\'' + escapeHtml(assignment.id) + '\')">Open details</button></div></article>'; }).join("") || '<div class="report-empty">No workouts match these filters.</div>') + '</div></section>';
+    return '<section class="report-panel report-history"><div class="report-panel-head"><div><span class="client-section-label">Chronological record</span><h3>Workout history and client voice</h3></div><input class="swap-search" value="' + escapeHtml(reportState.query) + '" placeholder="Search client, workout, or comment…" oninput="setCoachReportFilter(\'query\',this.value)"></div><div class="report-timeline">' + (filtered.map((assignment) => { const profile = reportProfileForAssignment(assignment,profiles), review = assignment.clientReview || {}, status = assignmentStatus(assignment); return '<article><time>' + escapeHtml(displayDate(assignment.completedAt || assignment.scheduledDate && assignment.scheduledDate + 'T12:00:00' || assignment.assignedAt)) + '</time><div class="report-timeline-main"><div><h4>' + escapeHtml(assignment.client || profile && profile.name || 'Client') + '</h4><p>' + escapeHtml(assignment.programDayName || assignment.session && assignment.session.data && assignment.session.data.goalLabel || 'Assigned workout') + ' · ' + escapeHtml(assignmentStatusLabel(assignment)) + '</p></div><span class="assignment-pill ' + escapeHtml(status) + '">' + escapeHtml(assignment.coachReviewedAt ? 'Coach reviewed' : review.id ? 'Review waiting' : assignmentStatusLabel(assignment)) + '</span></div>' + (review.id || assignment.clientReview ? '<div class="report-timeline-feedback"><p><b>Client note</b>' + escapeHtml(review.notes || 'No note entered') + '</p><p><b>Question</b>' + escapeHtml(review.questions || 'No question entered') + '</p><div>' + movementChips(reviewArray(review,'likedExercises'),'positive',reviewArray(review,'performedExercises')) + movementChips(reviewArray(review,'dislikedExercises'),'negative',reviewArray(review,'performedExercises')) + '</div></div>' : '') + '<div class="tool-actions"><button class="mini-btn" onclick="openCoachAdjustment(\'' + escapeHtml(profile && profile.id || assignment.profileId || '') + '\',\'' + escapeHtml(assignment.id) + '\')">Open details</button></div></article>'; }).join("") || '<div class="report-empty">No workouts match these filters.</div>') + '</div></section>';
   }
   window.setCoachReportFilter = function setCoachReportFilter(key,value) { reportState[key] = value; renderCoachReports(); };
   window.resetCoachReportFilters = function resetCoachReportFilters() { reportState.profileId = ""; reportState.from = reportDateKey(new Date(Date.now() - 29 * 86400000)); reportState.to = reportDateKey(new Date()); reportState.query = ""; renderCoachReports(); };

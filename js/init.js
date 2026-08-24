@@ -129,6 +129,14 @@ if (document.getElementById) {
       .then((registration) => registration.update())
       .catch((error) => console.warn("FIT4LIFE offline shell could not start",error));
   }
+  // Flex and Partner split into two tiers each on 2026-08-24. Rewrite any profile still
+  // holding a retired id before anything reads it, and push the correction to Supabase so
+  // other devices do not sync the old value straight back.
+  if (typeof migrateStoredMembershipTiers === "function") {
+    const moved = migrateStoredMembershipTiers();
+    if (moved && typeof window.fit4lifeCloudSaveProfileNow === "function") window.fit4lifeCloudSaveProfileNow();
+    if (moved) console.info("FIT4LIFE: migrated " + moved + " client profile(s) to the new tier ids");
+  }
   cleanupLegacyCalibrationAssignments();
   renderForms();
   setMode("solo");

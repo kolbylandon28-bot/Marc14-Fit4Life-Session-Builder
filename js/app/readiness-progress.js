@@ -426,10 +426,43 @@ function writeProgress(entries) {
   try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(entries.slice(0, 1500))); return true; }
   catch (_) { const status = byId("storageStatus"); if (status) status.textContent = "This browser blocked local storage. Export entries before closing the page."; return false; }
 }
+// Flex and Partner each split into two tiers, and pay-as-you-go gained variants, so a
+// profile saved under an old id is rewritten to the new one. Applied on read as well as
+// persisted once, so a device that never runs the one-off pass still resolves correctly.
+// One builder for every tier dropdown, so a retired tier disappears everywhere at once.
+// A tier already stored on a profile is still offered even if retired, otherwise opening
+// an old client's editor would silently blank their tier.
+function fillMembershipTierSelect(select,emptyLabel,keepId) {
+  if (!select) return;
+  const ids = Object.keys(MEMBERSHIP_TIERS).filter((id) => membershipTierIsSelectable(id) || id === keepId);
+  select.innerHTML = '<option value="">' + escapeHtml(emptyLabel || "Not set") + '</option>'
+    + ids.map((id) => '<option value="' + id + '">' + escapeHtml(MEMBERSHIP_TIERS[id].label) + '</option>').join("");
+}
+function migratedTierProfile(profile) {
+  if (!profile || !profile.membershipTier) return profile;
+  const next = normalizeMembershipTier(profile.membershipTier);
+  return next && next !== profile.membershipTier ? { ...profile, membershipTier:next } : profile;
+}
+function migrateStoredMembershipTiers() {
+  let changed = false;
+  const profiles = loadProfiles().map((profile) => {
+    const next = migratedTierProfile(profile);
+    if (next !== profile) changed = true;
+    return next;
+  });
+  // loadProfiles already migrates in memory, so compare against what is actually on disk.
+  let stored = [];
+  try { stored = JSON.parse(localStorage.getItem(PROFILES_KEY) || "[]"); } catch (_) { return 0; }
+  const stale = stored.filter((profile) => profile && profile.membershipTier
+    && normalizeMembershipTier(profile.membershipTier) !== profile.membershipTier);
+  if (!stale.length) return 0;
+  writeProfiles(profiles);
+  return stale.length;
+}
 function loadProfiles() {
   try {
     const data = JSON.parse(localStorage.getItem(PROFILES_KEY) || "[]");
-    return Array.isArray(data) ? data.map((profile) => profileWithIntakeFilters(profile)) : [];
+    return Array.isArray(data) ? data.map((profile) => profileWithIntakeFilters(migratedTierProfile(profile))) : [];
   } catch (_) { return []; }
 }
 function writeProfiles(profiles) {
@@ -705,6 +738,7 @@ function openInviteClientDialog() {
   }
   const tier = byId("inviteTier");
   tier.innerHTML = '<option value="">Not set yet</option>' + Object.keys(MEMBERSHIP_TIERS)
+    .filter(membershipTierIsSelectable)
     .map((id) => '<option value="' + id + '">' + escapeHtml(MEMBERSHIP_TIERS[id].label) + '</option>').join("");
   ["inviteFirstName","inviteLastName","inviteEmail"].forEach((id) => { byId(id).value = ""; });
   byId("inviteProgrammedDays").value = ""; byId("inviteClientFeedback").textContent = "";
@@ -887,7 +921,8 @@ function openProfileEditor(profileId, target) {
   byId("profileEditStyle").value = profile.trainingStyle || "auto";
   byId("profileEditExperience").value = String(profile.experience || 1); byId("profileEditAge").value = String(profile.age || 30); byId("profileEditMinutes").value = String(profile.minutes || 60);
   byId("profileEditPhase").value = profile.trainingPhase || "general"; byId("profileEditDays").value = String(profile.availableDays || 3); byId("profileEditSport").value = profile.sport || ""; byId("profileEditSchedule").value = profile.sportSchedule || ""; byId("profileEditCompetition").value = profile.competitionDate || "";
-  byId("profileEditTier").value = profile.membershipTier || ""; byId("profileEditSessionsPerWeek").value = profile.sessionsPerWeek ? String(profile.sessionsPerWeek) : "";
+  fillMembershipTierSelect(byId("profileEditTier"),"Not set",normalizeMembershipTier(profile.membershipTier));
+  byId("profileEditTier").value = normalizeMembershipTier(profile.membershipTier) || ""; byId("profileEditSessionsPerWeek").value = profile.sessionsPerWeek ? String(profile.sessionsPerWeek) : "";
   prepareProfileTrainerMenu(profile.assignedTrainerId || '',profile.assignedTrainerName || '');
   renderProfileEditorChoices(); renderProfileExercisePreferences(); byId("profileEditorTitle").textContent = "Edit " + profile.name; byId("profileEditorCopy").textContent = "Change the client’s basic setup here. Renaming a client also updates their saved workout history, InBody scans, and optional body goals."; byId("profileEditorSaveBtn").textContent = "Save changes"; setProfileEditorDeleteControls(true); byId("profileEditorModal").classList.add("open");
 }

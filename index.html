@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20260820-v36-invite-selftest-r1">
+<link rel="manifest" href="manifest.webmanifest?v=20260820-v40-trainer-tiers-r1">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20260820-v36-invite-selftest-r1">
+<link rel="stylesheet" href="styles.css?v=20260820-v40-trainer-tiers-r1">
 </head>
 <body>
 
@@ -622,22 +622,30 @@
 
 <aside class="coach-sidebar" id="coachSidebar" aria-label="Coach navigation">
   <h2>Coach workspace</h2>
-  <button data-coach-nav="dashboard" onclick="openCoachDestination('dashboard')">⌂ Dashboard</button>
-  <button data-coach-nav="actions" onclick="openCoachDestination('actions')">Action Center<span class="coach-attention-badge" data-attention-badge="actions"></span></button>
-  <button data-coach-nav="clients" onclick="openCoachDestination('clients')">● Clients</button>
-  <button data-coach-nav="programming" onclick="openCoachDestination('programming')">▤ Programming</button>
-  <button data-coach-nav="calendar" onclick="openCoachDestination('calendar')">□ Calendar<span class="coach-attention-badge" data-attention-badge="schedule"></span></button>
-  <button data-coach-nav="messages" onclick="openCoachDestination('messages')">✉ Messages<span class="coach-attention-badge" data-attention-badge="messages"></span></button>
-  <button data-coach-nav="library" onclick="openCoachDestination('library')">≡ Exercise Library</button>
-  <button data-coach-nav="assessments" onclick="openCoachDestination('assessments')">✓ Progress &amp; readiness</button><button data-coach-nav="team" onclick="openCoachDestination('team')">✓ Team</button>
-  <button data-coach-nav="reports" onclick="openCoachDestination('reports')">↗ Reports</button>
-  <button data-coach-nav="approvals" onclick="openCoachDestination('approvals')">✓ Approvals &amp; Requests<span class="coach-attention-badge" data-owner-request-badge></span></button>
-  <button data-owner-only data-coach-nav="access" onclick="openCoachDestination('access')">♙ Trainer Access<span class="coach-attention-badge" data-attention-badge="access"></span></button>
-  <button data-coach-nav="settings" onclick="openCoachDestination('settings')">⚙ Settings</button>
+  <button data-coach-nav="dashboard" onclick="openCoachDestination('dashboard')"><span class="nav-icon">⌂</span><span class="nav-label">Dashboard</span></button>
+  <button data-coach-nav="actions" onclick="openCoachDestination('actions')"><span class="nav-icon">⚑</span><span class="nav-label">Actions</span><span class="coach-attention-badge" data-attention-badge="actions"></span></button>
+  <button data-coach-nav="clients" onclick="openCoachDestination('clients')"><span class="nav-icon">●</span><span class="nav-label">Clients</span></button>
+  <button data-coach-nav="programming" onclick="openCoachDestination('programming')"><span class="nav-icon">▤</span><span class="nav-label">Programming</span></button>
+  <button data-coach-nav="calendar" onclick="openCoachDestination('calendar')"><span class="nav-icon">□</span><span class="nav-label">Calendar</span><span class="coach-attention-badge" data-attention-badge="schedule"></span></button>
+  <button data-coach-nav="messages" onclick="openCoachDestination('messages')"><span class="nav-icon">✉</span><span class="nav-label">Messages</span><span class="coach-attention-badge" data-attention-badge="messages"></span></button>
+  <button data-coach-nav="library" onclick="openCoachDestination('library')"><span class="nav-icon">≡</span><span class="nav-label">Exercise Library</span></button>
+  <button data-coach-nav="assessments" onclick="openCoachDestination('assessments')"><span class="nav-icon">✓</span><span class="nav-label">Progress &amp; readiness</span></button><button data-coach-nav="team" onclick="openCoachDestination('team')"><span class="nav-icon">⌸</span><span class="nav-label">Team</span></button>
+  <button data-coach-nav="reports" onclick="openCoachDestination('reports')"><span class="nav-icon">↗</span><span class="nav-label">Reports</span></button>
+  <button data-coach-nav="approvals" onclick="openCoachDestination('approvals')"><span class="nav-icon">⎘</span><span class="nav-label">Approvals &amp; Requests</span><span class="coach-attention-badge" data-owner-request-badge></span></button>
+  <button data-owner-only data-coach-nav="access" onclick="openCoachDestination('access')"><span class="nav-icon">♙</span><span class="nav-label">Trainer Access</span><span class="coach-attention-badge" data-attention-badge="access"></span></button>
+  <button data-coach-nav="settings" onclick="openCoachDestination('settings')"><span class="nav-icon">⚙</span><span class="nav-label">Settings</span></button>
+  <button class="coach-nav-more" data-coach-more onclick="openCoachMoreSheet()"><span class="nav-icon">•••</span><span class="nav-label">More</span><span class="coach-attention-badge" data-coach-more-badge></span></button>
   <div class="coach-side-foot"><button onclick="lockTrainerHub()">⇥ Lock workspace</button></div>
 </aside>
 
 <div id="appToast" class="toast" role="status" aria-live="polite"></div>
+
+<div id="coachMoreSheet" class="modal-backdrop coach-more-backdrop" role="dialog" aria-modal="true" aria-labelledby="coachMoreTitle" onclick="if(event.target===this)closeCoachMoreSheet()">
+  <div class="coach-more-sheet">
+    <div class="coach-more-head"><h3 id="coachMoreTitle">All coach destinations</h3><button class="small-btn" onclick="closeCoachMoreSheet()">Close</button></div>
+    <div class="coach-more-list" id="coachMoreList"></div>
+  </div>
+</div>
 
 <div id="exerciseSwapModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="exerciseSwapTitle">
   <div class="review-dialog swap-dialog">
@@ -991,7 +999,7 @@
       <div class="compact-field wide"><label for="profileEditUsername">Username</label><input id="profileEditUsername" type="text" autocomplete="off" placeholder="name-or-member-id"></div>
       <div class="compact-field wide"><label for="profileEditEmail">Client BYU-I login email</label><input id="profileEditEmail" type="email" autocomplete="off" placeholder="name@byui.edu"><span class="storage-note">Client profiles require the exact verified BYU-I login email. Trainer accounts may use personal or BYU-I email.</span></div>
       <div class="compact-field wide"><label for="profileEditTrainer">Primary coach</label><select id="profileEditTrainer"><option value="">Shared client / no primary coach</option></select><span class="storage-note">Every approved trainer can still view and coach this client. This selection identifies who leads routine follow-up.</span><button id="profileTrainerRequestBtn" data-trainer-only class="small-btn" type="button" onclick="openOwnerRequestDialog('primary_trainer',byId('profileEditId').value,'','Reassign this client’s primary coach')">Request reassignment</button></div>
-      <div class="compact-field"><label for="profileEditTier">Membership tier</label><select id="profileEditTier" onchange="syncProfileEditorTierDefault()"><option value="">Not set</option><option value="flex">Flex · floor hours</option><option value="starter">Starter</option><option value="standard">Standard</option><option value="premium">Premium</option><option value="partner">Partner</option><option value="group">Group class</option><option value="one_time">Pay as you go</option></select><span class="storage-note">Calibration workouts are built for Flex clients. Filled in automatically once the booking export is connected.</span></div>
+      <div class="compact-field"><label for="profileEditTier">Membership tier</label><select id="profileEditTier" onchange="syncProfileEditorTierDefault()"><option value="">Not set</option></select><span class="storage-note">Calibration workouts are built for Flex clients. Filled in automatically once the booking export is connected.</span></div>
       <div class="compact-field"><label for="profileEditSessionsPerWeek">Sessions per week</label><select id="profileEditSessionsPerWeek"><option value="">Not set</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
       <div class="compact-field"><label for="profileEditPrimary">Primary goal</label><select id="profileEditPrimary"></select></div>
       <div class="compact-field"><label for="profileEditSecondary">Secondary goal</label><select id="profileEditSecondary"></select></div>
@@ -1258,25 +1266,25 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/engine/exercise-library.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/engine/session-engine.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/engine/session-builders.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/engine/personalization.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/app/navigation.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/app/program-app.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/app/forms.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/engine/generation.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/app/rendering.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/app/calculations-timers.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/engine/multiweek-programs.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/app/readiness-progress.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/app/client-consultation.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/trainer/trainer-hub.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/trainer/coaching-support.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/app/role-governance.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/app/action-calendar.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/app/workout-feedback-reports.js?v=20260820-v36-invite-selftest-r1"></script>
-<script src="js/init.js?v=20260820-v36-invite-selftest-r1"></script>
+<script src="cloud-sync.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/engine/exercise-library.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/engine/session-engine.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/engine/session-builders.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/engine/personalization.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/app/navigation.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/app/program-app.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/app/forms.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/engine/generation.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/app/rendering.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/app/calculations-timers.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/engine/multiweek-programs.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/app/readiness-progress.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/app/client-consultation.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/trainer/trainer-hub.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/trainer/coaching-support.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/app/role-governance.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/app/action-calendar.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/app/workout-feedback-reports.js?v=20260820-v40-trainer-tiers-r1"></script>
+<script src="js/init.js?v=20260820-v40-trainer-tiers-r1"></script>
 </body>
 </html>

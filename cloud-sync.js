@@ -1763,15 +1763,18 @@
     return true;
   };
 
-  window.fit4lifeCloudRejectRegistration = async function fit4lifeCloudRejectRegistration(requestId) {
+  // kind names what is actually being rejected - a trainer request said "client access"
+  // before - and skipConfirm lets a caller that has already asked avoid a second dialog.
+  window.fit4lifeCloudRejectRegistration = async function fit4lifeCloudRejectRegistration(requestId,options) {
+    const settings = options || {}, kind = settings.kind === "trainer" ? "trainer" : "client";
     if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return false;
-    if (!window.confirm("Reject this client account request? The person will keep their login but will not receive client access.")) return false;
+    if (!settings.skipConfirm && !window.confirm("Reject this " + kind + " account request? The person will keep their login but will not receive " + kind + " access.")) return false;
     const response = await cloudClient.rpc("reject_fit4life_registration", { target_request: requestId, trainer_note: "Please contact the gym so a trainer can verify your account details." });
     if (response.error) {
       if (typeof showToast === "function") showToast(response.error.message || "The request could not be rejected");
       return false;
     }
-    if (typeof showToast === "function") showToast("Account request rejected");
+    if (typeof showToast === "function") showToast((kind === "trainer" ? "Trainer" : "Client") + " request rejected");
     await loadTrainerRegistrationRequests();
     return true;
   };
@@ -1781,9 +1784,52 @@
     const response = await cloudClient.rpc("list_fit4life_trainers");
     if (response.error) { console.error("Trainer list failed", response.error); return null; }
     window.fit4lifeCloudTrainers = Array.isArray(response.data) ? response.data : [];
+    // Tiers come from a separate additive RPC rather than by redefining list_fit4life_trainers,
+    // whose definition does not exist in this repo and could not be reproduced faithfully.
+    // Merged as a LEFT join keyed on user_id: a trainer with no tier row keeps their place in
+    // the roster and defaults, because dropping them would remove them from the Team screen,
+    // the primary-coach picker and the calendar trainer filter at once.
+    await mergeTrainerTiers();
     const mine = window.fit4lifeCloudTrainers.find((trainer) => trainer.user_id === cloudUser.id);
     if (mine && window.fit4lifeCloudIdentity) window.fit4lifeCloudIdentity.displayName = mine.display_name || window.fit4lifeCloudIdentity.displayName;
     return window.fit4lifeCloudTrainers;
+  };
+
+  // Undefined until the tier RPC has been tried; false means the Supabase migration has not
+  // been run, and every tier control hides rather than rendering broken.
+  window.fit4lifeTrainerTiersAvailable = undefined;
+  async function mergeTrainerTiers() {
+    const roster = window.fit4lifeCloudTrainers || [];
+    if (!cloudClient || !roster.length) return roster;
+    let rows = null;
+    try {
+      const response = await cloudClient.rpc("list_fit4life_trainer_tiers");
+      if (response.error) throw response.error;
+      rows = Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      // A missing function is the expected un-migrated state, not a fault worth shouting about.
+      window.fit4lifeTrainerTiersAvailable = false;
+      return roster;
+    }
+    window.fit4lifeTrainerTiersAvailable = true;
+    const byUser = new Map(rows.map((row) => [row.user_id, row.trainer_tier]));
+    window.fit4lifeCloudTrainers = roster.map((trainer) => ({
+      ...trainer, trainer_tier: byUser.get(trainer.user_id) || "staff_standard"
+    }));
+    return window.fit4lifeCloudTrainers;
+  }
+
+  window.fit4lifeCloudSetTrainerTier = async function fit4lifeCloudSetTrainerTier(userId, tier) {
+    if (!cloudClient || cloudRole !== "owner") { if (typeof showToast === "function") showToast("Only an owner can change a trainer's tier"); return false; }
+    if (!userId || !["staff_standard","staff_premium"].includes(tier)) return false;
+    const response = await cloudClient.rpc("set_fit4life_trainer_tier", { target_user:userId, target_tier:tier });
+    if (response.error) {
+      if (typeof showToast === "function") showToast(response.error.message || "The trainer tier could not be saved");
+      return false;
+    }
+    const roster = window.fit4lifeCloudTrainers || [];
+    window.fit4lifeCloudTrainers = roster.map((trainer) => trainer.user_id === userId ? { ...trainer, trainer_tier:tier } : trainer);
+    return true;
   };
 
   window.fit4lifeCloudListTrainerRequests = async function fit4lifeCloudListTrainerRequests() {

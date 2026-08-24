@@ -138,8 +138,10 @@ function inviteEmailTestPanelHtml() {
     + '<div class="compact-field wide"><label for="inviteTestEmail">Send a test invite to</label>'
     + '<input id="inviteTestEmail" type="email" value="' + escapeHtml(identity.email || "") + '" placeholder="you@byui.edu"></div>'
     + '<div class="tool-actions"><button class="small-btn" onclick="runInviteDiagnostics()">Check setup</button>'
-    + '<button class="small-btn primary" onclick="sendTestInvite()">Send test email</button></div>'
-    + '<div id="inviteTestResult" class="storage-note"></div></section>';
+    + '<button class="small-btn primary" onclick="sendTestInvite()">Send test email</button>'
+    + '<button class="small-btn" onclick="sendNewClientTestInvite()">Test as a brand-new client</button></div>'
+    + '<div id="inviteTestResult" class="storage-note"></div>'
+    + '<div class="capability-note">Supabase sends a different email depending on whether the address already has an account: an existing address gets the <b>Magic Link</b> template, a brand-new one gets <b>Confirm signup</b> \u2014 which is what a real client receives. Testing your own address only proves the first. <b>Test as a brand-new client</b> adds a +tag to your address so it reaches the same inbox as a genuinely new account. Every send, including these tests, uses the same hourly limit as real invites.</div></section>';
 }
 async function runInviteDiagnostics() {
   const out = byId("inviteTestResult"); if (!out) return;
@@ -152,22 +154,48 @@ async function runInviteDiagnostics() {
       ? "\u2713 Ready to send. A failure now would come from Supabase itself \u2014 send a test to be certain."
       : "\u2717 Fix the items above before sending.") + '</div>';
 }
-async function sendTestInvite() {
-  const field = byId("inviteTestEmail"), out = byId("inviteTestResult");
-  if (!field || !out) return;
-  const email = field.value.trim().toLowerCase();
-  if (!email) { out.textContent = "Enter an address to send the test to."; return; }
-  if (typeof window.fit4lifeCloudSendClientInvite !== "function") { out.textContent = "The secure connection is not ready yet."; return; }
-  out.textContent = "Sending to " + email + "…";
-  const result = await window.fit4lifeCloudSendClientInvite(email,"Invite self-test");
+// The result is worded to separate what was proved from what was not: Supabase accepting
+// the request is not delivery, and a magic link to an existing address is not the email a
+// brand-new client receives.
+function inviteTestResultHtml(result,email,newAccount) {
   if (result && result.ok) {
-    out.innerHTML = '<div class="invite-check ok">\u2713 Supabase accepted the request. Check that inbox, and the junk folder \u2014 '
-      + 'if nothing arrives within a few minutes the mail was accepted but not delivered, which is an email-provider problem rather than an app one.</div>';
-  } else {
-    out.innerHTML = '<div class="invite-check bad">\u2717 ' + escapeHtml((result && result.error) || "Unknown error")
-      + '</div><div class="storage-note">That message comes straight from Supabase. "rate limit" means too many sent this hour; '
-      + '"redirect" or "not allowed" means the site URL is missing from Authentication \u2192 URL Configuration \u2192 Redirect URLs.</div>';
+    return '<div class="invite-check ok">\u2713 Supabase accepted the request for ' + escapeHtml(email) + '.</div>'
+      + '<div class="storage-note">' + (newAccount
+        ? 'That address had no account, so this exercised the <b>Confirm signup</b> template \u2014 the same email a real client gets. A pending client account now exists for it; remove it in Supabase \u2192 Authentication \u2192 Users once you have checked the inbox.'
+        : 'If that address already has an account this was the <b>Magic Link</b> template, not the invite a new client receives. Use <b>Test as a brand-new client</b> to check that one.')
+      + ' Check the inbox and the junk folder \u2014 if nothing arrives within a few minutes the mail was accepted but not delivered, which is an email-provider problem rather than an app one.</div>';
   }
+  return '<div class="invite-check bad">\u2717 ' + escapeHtml((result && result.error) || "Unknown error")
+    + '</div><div class="storage-note">That message comes straight from Supabase. "rate limit" means too many sent this hour \u2014 the tests on this panel count toward it; '
+    + '"redirect" or "not allowed" means the site URL is missing from Authentication \u2192 URL Configuration \u2192 Redirect URLs.</div>';
+}
+function inviteTestAddress() {
+  const field = byId("inviteTestEmail"); return field ? field.value.trim().toLowerCase() : "";
+}
+async function runInviteTest(email,newAccount) {
+  const out = byId("inviteTestResult"); if (!out) return false;
+  if (!email) { out.textContent = "Enter an address to send the test to."; return false; }
+  if (typeof window.fit4lifeCloudSendClientInvite !== "function") { out.textContent = "The secure connection is not ready yet."; return false; }
+  out.textContent = "Sending to " + email + "\u2026";
+  const result = await window.fit4lifeCloudSendClientInvite(email,"Invite self-test");
+  out.innerHTML = inviteTestResultHtml(result,email,newAccount);
+  return Boolean(result && result.ok);
+}
+async function sendTestInvite() {
+  const email = inviteTestAddress(), identity = typeof currentAccountIdentity === "function" ? currentAccountIdentity() : {};
+  // Sending to anyone other than yourself creates a real pending client account for them.
+  if (email && email !== String(identity.email || "").trim().toLowerCase()
+    && !window.confirm("Send a test invite to " + email + "?\n\nIf that address has no account yet this creates a real pending client account for it, and the person receives a genuine invite email.")) return false;
+  return await runInviteTest(email,false);
+}
+async function sendNewClientTestInvite() {
+  const email = inviteTestAddress();
+  if (!email || email.indexOf("@") < 1) { const out = byId("inviteTestResult"); if (out) out.textContent = "Enter a valid address first."; return false; }
+  const [name,domain] = [email.slice(0,email.indexOf("@")),email.slice(email.indexOf("@") + 1)];
+  if (name.indexOf("+") >= 0) { const out = byId("inviteTestResult"); if (out) out.textContent = "Use a plain address here \u2014 the +tag is added for you."; return false; }
+  const tagged = name + "+f4l" + Date.now().toString(36) + "@" + domain;
+  if (!window.confirm("Send a brand-new-client test to " + tagged + "?\n\nIt reaches your inbox, and because the address is new to Supabase it exercises the same Confirm signup email a real client receives. A pending client account will be created for it, which you can delete afterwards.")) return false;
+  return await runInviteTest(tagged,true);
 }
 function renderAdvancedStudio() {
   if (!trainerIsUnlocked()) return false;

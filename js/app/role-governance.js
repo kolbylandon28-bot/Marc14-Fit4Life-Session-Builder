@@ -69,7 +69,8 @@ function renderTeamModule() {
       : '<p class="storage-note">No saved workouts yet.</p>';
     return '<section class="coach-module-card team-card">'
       + '<div class="team-head"><div><h3>' + escapeHtml(member.name) + (mine ? ' <span class="team-you">you</span>' : '') + '</h3>'
-      + '<p>' + escapeHtml(member.role === "owner" ? "Owner" : "Trainer") + (member.email ? ' · ' + escapeHtml(member.email) : '') + '</p></div>'
+      + '<p>' + escapeHtml(member.role === "owner" ? "Owner" : "Trainer") + (member.email ? ' · ' + escapeHtml(member.email) : '') + '</p>'
+      + (member.role !== "owner" && window.fit4lifeTrainerTiersAvailable === true ? staffTierBadgeHtml(member.staffTier) : '') + '</div>' 
       + (canEdit ? '' : '<span class="team-readonly">Read only</span>') + '</div>'
       + stats + roster
       + '<h4 class="analysis-section-title" style="margin-top:14px">Saved workouts</h4>' + library
@@ -122,7 +123,8 @@ function teamMembers() {
   const cloud = Array.isArray(window.fit4lifeCloudTrainers) ? window.fit4lifeCloudTrainers : [];
   const fromCloud = cloud.map((trainer) => ({
     id:trainer.user_id || trainer.id || "", name:trainer.display_name || trainer.email || "Trainer",
-    email:trainer.email || "", role:trainer.role || "trainer", active:trainer.is_active !== false }));
+    email:trainer.email || "", role:trainer.role || "trainer", active:trainer.is_active !== false,
+    staffTier:trainer.trainer_tier || "" }));
   if (fromCloud.length) return fromCloud;
   // Before the trainer-account sync has run, fall back to whoever is named on client
   // records so the view is never simply empty.
@@ -130,7 +132,7 @@ function teamMembers() {
   loadProfiles().forEach((profile) => {
     if (!profile.assignedTrainerId || seen.has(profile.assignedTrainerId)) return;
     seen.set(profile.assignedTrainerId,{ id:profile.assignedTrainerId,name:profile.assignedTrainerName || "Trainer",
-      email:profile.assignedTrainerEmail || "", role:"trainer", active:true });
+      email:profile.assignedTrainerEmail || "", role:"trainer", active:true, staffTier:"" });
   });
   return [...seen.values()];
 }
@@ -155,6 +157,7 @@ function syncRoleGovernanceControls() {
   document.querySelectorAll("[data-trainer-only]").forEach((node) => { node.hidden = !isFit4LifeTrainer(); });
   document.querySelectorAll("[data-staff-role-label]").forEach((node) => { node.textContent = isFit4LifeOwner() ? "Owner" : "Trainer"; });
   const count = loadOwnerRequests().filter((request) => request.status === "pending").length;
+  if (typeof syncCoachMoreBadge === "function") setTimeout(syncCoachMoreBadge,0);
   document.querySelectorAll("[data-owner-request-badge]").forEach((node) => { node.textContent = count ? String(count) : ""; node.classList.toggle("show",Boolean(count)); });
 }
 

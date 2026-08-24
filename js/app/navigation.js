@@ -37,6 +37,8 @@ function show(view) {
   const coachNav = document.getElementById("coachSidebar"), showCoachNav = portalRole === "trainer" && COACH_SHELL_VIEWS.includes(view) && trainerIsUnlocked();
   if (coachNav) { coachNav.classList.toggle("show",showCoachNav); const key = openCoachDestination.current || ({"trainer-menu":"dashboard",trainer:"clients",builder:"programming",programs:"programming",tools:"dashboard",readiness:"assessments",advanced:"business"}[view] || ""); coachNav.querySelectorAll("[data-coach-nav]").forEach((button) => button.classList.toggle("on",button.dataset.coachNav === key)); }
   if (document.body && document.body.classList) document.body.classList.toggle("coach-shell-on",showCoachNav);
+  if (typeof closeCoachMoreSheet === "function") closeCoachMoreSheet();
+  if (typeof syncCoachMoreBadge === "function") syncCoachMoreBadge();
   if (showClientNav) renderClientAppView(view);
   syncTrainerClientPreviewBar();
   if (portalRole === "trainer" && trainerIsUnlocked()) renderTrainerAttention();
@@ -519,20 +521,80 @@ function assignmentForSession(sessionId) { return loadAssignedWorkouts().find((i
 // the difference between them is floor hours versus a dedicated private session, which
 // is a real distinction the price reflects but the program does not see.
 const MEMBERSHIP_TIERS = {
-  flex:     { label:"Flex",          short:"FLEX", sessionsPerWeek:1, programmedDays:3, kind:"individual" },
-  starter:  { label:"Starter",       short:"STRT", sessionsPerWeek:1, programmedDays:3, kind:"individual" },
-  standard: { label:"Standard",      short:"STND", sessionsPerWeek:2, programmedDays:4, kind:"individual" },
-  premium:  { label:"Premium",       short:"PREM", sessionsPerWeek:3, programmedDays:6, kind:"individual" },
-  // Partner and Group programmed-day counts are deliberately unresolved and parked.
-  // They fall back to their trainer-day count so nothing over-programs in the meantime.
-  partner:  { label:"Partner",       short:"PAIR", sessionsPerWeek:1, programmedDays:0, kind:"partner"    },
-  group:    { label:"Group class",   short:"GRP",  sessionsPerWeek:2, programmedDays:0, kind:"group"      },
-  one_time: { label:"Pay as you go", short:"PAYG", sessionsPerWeek:0, programmedDays:0, kind:"one_time"   }
+  // Every package is a 60-minute session; sessionMinutes exists so the workout generator
+  // can default a duration instead of asking, and so imported bookings that carry only a
+  // start time ("Monday 4:00 PM") can be given an end.
+  // supervision: "full" = private, trainer-led throughout. "partial" = floor hours, the
+  // client runs most of it alone. "partnered" = shared with another client.
+  flex_1:         { label:"Flex 1",           short:"FLX1", sessionsPerWeek:1, programmedDays:3, sessionMinutes:60, supervision:"partial",   family:"flex", kind:"individual" },
+  flex_2:         { label:"Flex 2",           short:"FLX2", sessionsPerWeek:2, programmedDays:3, sessionMinutes:60, supervision:"partial",   family:"flex", kind:"individual" },
+  starter:        { label:"Bronze",           short:"BRNZ", sessionsPerWeek:1, programmedDays:3, sessionMinutes:60, supervision:"full",      family:"bronze", kind:"individual" },
+  standard:       { label:"Silver",           short:"SLVR", sessionsPerWeek:2, programmedDays:4, sessionMinutes:60, supervision:"full",      family:"silver", kind:"individual" },
+  premium:        { label:"Gold",             short:"GOLD", sessionsPerWeek:3, programmedDays:6, sessionMinutes:60, supervision:"full",      family:"gold", kind:"individual" },
+  partner_1:      { label:"Partner 1",        short:"PR1",  sessionsPerWeek:1, programmedDays:2, sessionMinutes:60, supervision:"partnered", family:"partner", kind:"partner"    },
+  partner_2:      { label:"Partner 2",        short:"PR2",  sessionsPerWeek:2, programmedDays:2, sessionMinutes:60, supervision:"partnered", family:"partner", kind:"partner"    },
+  // UNCONFIRMED: whether a one-off purchase earns programmed workouts was never answered,
+  // so these carry 0 - the conservative choice, since 0 under-programs visibly rather than
+  // silently writing workouts nobody agreed to. Kickstart is the exception: it is sold as
+  // "a custom program and 4 sessions", so it must produce a program. 3 is a placeholder.
+  payg_single:    { label:"Single session",   short:"1X",   sessionsPerWeek:0, programmedDays:0, sessionMinutes:60, supervision:"full",      family:"payg", kind:"one_time", unconfirmed:true },
+  payg_4pack:     { label:"4-session pack",   short:"4PK",  sessionsPerWeek:0, programmedDays:0, sessionMinutes:60, supervision:"full",      family:"payg", kind:"one_time", unconfirmed:true },
+  payg_kickstart: { label:"Kickstart bundle", short:"KICK", sessionsPerWeek:0, programmedDays:3, sessionMinutes:60, supervision:"full",      family:"payg", kind:"one_time", unconfirmed:true },
+  // Disabled 2026-08-24 - hidden from pickers, definition kept so existing data still
+  // resolves and so it can be switched back on without a migration.
+  group:          { label:"Group class",      short:"GRP",  sessionsPerWeek:2, programmedDays:0, sessionMinutes:60, supervision:"group",     family:"group", kind:"group",    disabled:true }
 };
+// Old ids and the names the booking export uses. Renaming the ids themselves would mean
+// migrating every stored profile in localStorage and Supabase for no visible gain, so the
+// ids stay and only the labels changed.
+const MEMBERSHIP_TIER_ALIASES = {
+  flex:"flex_1", flex1:"flex_1", flex2:"flex_2",
+  bronze:"starter", silver:"standard", gold:"premium",
+  partner:"partner_1", partner1:"partner_1", partner2:"partner_2",
+  one_time:"payg_single", single_session:"payg_single",
+  "4_session_pack":"payg_4pack", four_session_pack:"payg_4pack", kickstart:"payg_kickstart", kickstart_bundle:"payg_kickstart"
+};
+function membershipTierIsSelectable(id) {
+  const meta = MEMBERSHIP_TIERS[id];
+  return Boolean(meta) && !meta.disabled;
+}
+/* ---------- staff tiers ---------- */
+// A trainer's tier, which is NOT a client's tier. The ids are prefixed because the bare
+// words "standard" and "premium" are already client package ids above (Silver and Gold),
+// and normalizeMembershipTier resolves them - so an unprefixed value here would be one
+// careless helper call away from turning a trainer into a Gold client.
+// Standard trainers cover Flex clients, premium trainers cover Bronze/Silver/Gold. The
+// pairing is NOT enforced here: the booking site already refuses a mismatched booking,
+// and a second copy of the rule would be a second thing to keep in step.
+const STAFF_TIERS = {
+  staff_standard: { label:"Standard trainer", short:"STD", covers:["flex"],                      rank:1 },
+  staff_premium:  { label:"Premium trainer",  short:"PRM", covers:["flex","bronze","silver","gold"], rank:2 }
+};
+const STAFF_TIER_FALLBACK = { label:"Tier not set", short:"—", covers:[], rank:0 };
+const STAFF_TIER_DEFAULT = "staff_standard";
+function normalizeStaffTier(value) {
+  const key = String(value == null ? "" : value).trim().toLowerCase().replace(/[\s-]+/g,"_");
+  if (Object.prototype.hasOwnProperty.call(STAFF_TIERS,key)) return key;
+  // Tolerate the bare words arriving from SQL, a hand edit, or a future export column.
+  if (key === "standard") return "staff_standard";
+  if (key === "premium") return "staff_premium";
+  return "";
+}
+// Always returns an object, never undefined - several roster screens render inside a single
+// .map() with no try/catch, so one unguarded lookup would blank the whole screen.
+function staffTierMeta(value) {
+  const id = normalizeStaffTier(value);
+  return id ? { id, ...STAFF_TIERS[id] } : { id:"unset", ...STAFF_TIER_FALLBACK };
+}
+function staffTierBadgeHtml(value) {
+  const meta = staffTierMeta(value);
+  return '<span class="staff-tier staff-tier-' + escapeHtml(meta.id) + '">' + escapeHtml(meta.label) + '</span>';
+}
 const MEMBERSHIP_TIER_FALLBACK = { label:"No tier set", short:"—", sessionsPerWeek:0, kind:"unset" };
 function normalizeMembershipTier(value) {
   const key = String(value == null ? "" : value).trim().toLowerCase().replace(/[\s-]+/g,"_");
   if (Object.prototype.hasOwnProperty.call(MEMBERSHIP_TIERS,key)) return key;
+  if (Object.prototype.hasOwnProperty.call(MEMBERSHIP_TIER_ALIASES,key)) return MEMBERSHIP_TIER_ALIASES[key];
   // Tolerate labels arriving from an import or an older free-text profile field.
   const match = Object.keys(MEMBERSHIP_TIERS).find((id) => MEMBERSHIP_TIERS[id].label.toLowerCase() === key.replace(/_/g," "));
   return match || "";

@@ -1,14 +1,15 @@
-const CACHE_NAME = "fit4life-shell-2026-08-20-v36-invite-selftest-r1";
+const CACHE_NAME = "fit4life-shell-2026-08-24-v40-trainer-tiers-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
+const ASSET_VERSION = "20260820-v40-trainer-tiers-r1";
 const SHELL = [
   "/",
   "/index.html",
-  "/cloud-sync.js?v=20260818-v14-feedback-reports-r1",
-  "/styles.css?v=20260818-v14-feedback-reports-r1",
-  "/js/app/client-consultation.js?v=20260818-v14-feedback-reports-r1",
-  "/js/app/role-governance.js?v=20260818-v14-feedback-reports-r1",
-  "/js/app/action-calendar.js?v=20260818-v14-feedback-reports-r1",
-  "/js/app/workout-feedback-reports.js?v=20260818-v14-feedback-reports-r1",
+  "/cloud-sync.js?v=" + ASSET_VERSION,
+  "/styles.css?v=" + ASSET_VERSION,
+  "/js/app/client-consultation.js?v=" + ASSET_VERSION,
+  "/js/app/role-governance.js?v=" + ASSET_VERSION,
+  "/js/app/action-calendar.js?v=" + ASSET_VERSION,
+  "/js/app/workout-feedback-reports.js?v=" + ASSET_VERSION,
   "/dark-rock-background-v2.jpg",
   "/theme-assets/halloween-scene.jpg",
   "/theme-assets/thanksgiving-scene.jpg",

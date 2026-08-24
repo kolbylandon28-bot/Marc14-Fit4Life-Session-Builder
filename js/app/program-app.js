@@ -315,6 +315,7 @@ function updateCoachAttentionItem(id,status) {
 }
 function renderTrainerAttention() {
   const attention = trainerAttentionSnapshot(), panel = byId("trainerAttentionPanel");
+  if (typeof syncCoachMoreBadge === "function") setTimeout(syncCoachMoreBadge,0);
   document.querySelectorAll("[data-attention-badge]").forEach((badge) => {
     const key = badge.dataset.attentionBadge, count = key === "messages" ? attention.unanswered.length : key === "reviews" ? attention.reviews : attention.trainerRequests.length;
     badge.textContent = count > 99 ? "99+" : String(count); badge.classList.toggle("show",count > 0);
@@ -650,7 +651,9 @@ function renderActiveWorkout() {
   const out = byId('activeWorkoutContent'), data = activeAssignmentAndSession(); if (!out || !data.session || !data.profile) { if (out) out.innerHTML = '<div class="empty-state-polished"><b>Workout unavailable</b><p>Return to Workout and reopen the current assignment.</p></div>'; return; }
   const units = activeWorkoutUnits(data.session,activeWorkout.shortened); if (!units.length) return; activeWorkout.unitIndex = Math.max(0,Math.min(activeWorkout.unitIndex,units.length - 1)); const unit = units[activeWorkout.unitIndex]; activeWorkout.pairIndex = Math.max(0,Math.min(activeWorkout.pairIndex,unit.items.length - 1)); const exercise = unit.items[activeWorkout.pairIndex], rx = exercise.rx || unit.block.rx || {}, bodyweightOnly = exercise.zone === 'bodyweight' && !/^Weighted\b/i.test(exercise.name), cardioOnly = exercise.zone === 'cardio' || exercise.region === 'cardio';
   const sets = getSessionSets(data.session.sessionId,exercise.name), planned = plannedSetsForActive(exercise,unit.block), nextUnset = nextActiveSetNumber(data.session,activeWorkout.unitIndex,exercise,unit.block), saved = sets.find((entry) => Number(entry.data && entry.data.setNumber) === nextUnset), previous = latestSetFor(data.profile.name,exercise.name), recommendation = !bodyweightOnly && !cardioOnly ? recommendedLoadFor(data.profile.name,exercise,rx) : null, history = activeWorkoutHistoryHtml(data.profile,exercise,data.session.sessionId), unitDone = activeUnitIsDone(data.session,unit,activeWorkout.unitIndex);
-  const setSelector = '<div class="tool-actions" style="padding:0 20px 10px">' + Array.from({length:planned},(_,index) => { const number = index + 1, isSaved = sets.some((entry) => Number(entry.data && entry.data.setNumber) === number), isSkipped = Boolean(activeWorkout.skippedSets[activeSkipKey(activeWorkout.unitIndex,exercise.name,number)]); return '<button class="mini-btn ' + (number === nextUnset ? 'primary' : '') + '" onclick="selectActiveSet(\'' + escapeHtml(exercise.name) + '\',' + number + ')">' + (isSaved ? '✓ ' : isSkipped ? '↷ ' : '') + 'Set ' + number + '</button>'; }).join('') + '</div>';
+  const setSelector = '<div class="tool-actions" style="padding:0 20px 10px">' + Array.from({length:planned},(_,index) => { const number = index + 1, isSaved = sets.some((entry) => Number(entry.data && entry.data.setNumber) === number), isSkipped = Boolean(activeWorkout.skippedSets[activeSkipKey(activeWorkout.unitIndex,exercise.name,number)]); return '<button class="mini-btn ' + (number === nextUnset ? 'primary' : '') + '" data-active-set="' + number + '" data-active-exercise="' + escapeHtml(exercise.name) + '"">' + (isSaved ? '✓ ' : isSkipped ? '↷ ' : '') + 'Set ' + number + '</button>'; }).join('') + '</div>';
+  // Bound after render rather than inlined, so an exercise name is never parsed as code.
+  const bindActiveSetButtons = () => bindDataHandlers(byId('activeWorkoutContent'),'[data-active-exercise]',(button) => selectActiveSet(button.dataset.activeExercise,Number(button.dataset.activeSet)));
   const completedUnits = units.filter((candidate,index) => activeUnitIsDone(data.session,candidate,index)).length;
   byId('activeWorkoutLabel').textContent = (data.session.goalLabel || 'Workout') + (activeWorkout.shortened ? ' · shortened' : ''); byId('activeWorkoutStep').textContent = unit.block.title + ' · ' + (activeWorkout.unitIndex + 1) + ' of ' + units.length; byId('activeWorkoutProgress').style.width = Math.round(completedUnits / Math.max(1,units.length) * 100) + '%';
   const supersetOn = unit.type === 'superset' && Boolean(activeWorkout.supersetMode[activeWorkout.unitIndex]);
@@ -671,6 +674,7 @@ function renderActiveWorkout() {
   const goalReminder = activeGoal.deeperReason ? '<section class="active-goal-reminder"><span>Why you came today</span><p>' + escapeHtml(activeGoal.deeperReason) + '</p></section>' : '';
   const calibrationBanner = data.session.calibration ? '<section class="baseline-session-banner"><div><b>' + (data.session.calibration.supportSession ? 'First-week foundation workout' : 'Useful workout + embedded calibration') + '</b><p>' + (data.session.calibration.supportSession ? 'No extra testing is required today. Practice the plan at conservative effort and report anything that changes comfort or technique.' : 'Only the clearly marked anchors collect starting evidence. Train normally, avoid max effort, and report any pain that changes the movement.') + '</p></div><span>' + (data.session.calibration.supportSession ? 'Day ' + data.session.calibration.weeklySession + ' of ' + data.session.calibration.weeklySessions : 'Evidence session ' + data.session.calibration.sessionNumber + ' of ' + data.session.calibration.totalSessions) + '</span></section>' : '';
   out.innerHTML = calibrationBanner + goalReminder + readinessBanner + '<div class="active-workout-shell">' + activeQueueHtml(units,data.session) + '<div class="active-current-stage"><div class="active-current-stage-label"><b>Current exercise</b><span>' + escapeHtml(unit.block.title) + ' · ' + (activeWorkout.unitIndex + 1) + ' of ' + units.length + '</span></div>' + card + '</div></div><div class="active-rest-dock"><div><span>Rest timer · ' + escapeHtml(rx.rest || 'as needed') + '</span><b id="activeRestDisplay">' + formatClock(restTimer.remaining) + '</b></div><div class="tool-actions"><button class="small-btn" id="activeRestToggle" onclick="toggleRestTimer()">' + (restTimer.running ? 'Pause' : 'Start') + '</button><button class="small-btn" onclick="resetRestTimer()">Reset</button></div></div>';
+  bindActiveSetButtons();
   // In superset mode both movements are logged together, so the partner's row sits
   // directly beneath and a single action records the round.
   const partnerExercise = supersetOn && unit.items.length > 1
@@ -854,6 +858,54 @@ function openReadiness() {
     renderProgressHistory();
   }
 }
+/* ---------- phone coach navigation ---------- */
+// The bottom bar has five slots and the workspace has thirteen destinations. Four are
+// pinned, the rest live behind More - previously they were simply hidden by CSS, which
+// left Settings, Messages, Reports and five others unreachable on a phone.
+const COACH_PINNED_DESTINATIONS = ["dashboard","actions","clients","calendar"];
+function coachMoreDestinations() {
+  const sidebar = byId("coachSidebar"); if (!sidebar) return [];
+  return Array.from(sidebar.querySelectorAll("button[data-coach-nav]"))
+    .filter((button) => !COACH_PINNED_DESTINATIONS.includes(button.dataset.coachNav))
+    // data-owner-only is toggled elsewhere; an owner-only destination stays out of the
+    // sheet for a trainer exactly as it stays out of the sidebar.
+    .filter((button) => !button.hidden);
+}
+function renderCoachMoreSheet() {
+  const list = byId("coachMoreList"); if (!list) return;
+  const current = openCoachDestination.current || "";
+  list.innerHTML = coachMoreDestinations().map((button) => {
+    const key = button.dataset.coachNav, icon = button.querySelector(".nav-icon"), label = button.querySelector(".nav-label");
+    const badge = button.querySelector("[data-attention-badge]"), ownerBadge = button.querySelector("[data-owner-request-badge]");
+    // The badge markers are copied so the existing attention renderers keep filling them in.
+    const badgeHtml = badge ? '<span class="coach-attention-badge" data-attention-badge="' + escapeHtml(badge.dataset.attentionBadge) + '"></span>'
+      : ownerBadge ? '<span class="coach-attention-badge" data-owner-request-badge></span>' : "";
+    return '<button data-coach-more-go="' + escapeHtml(key) + '"' + (key === current ? ' class="on"' : '') + '>'
+      + '<span class="nav-icon">' + escapeHtml(icon ? icon.textContent : "") + '</span>'
+      + '<span class="nav-label">' + escapeHtml(label ? label.textContent : key) + '</span>' + badgeHtml + '</button>';
+  }).join("") || '<div class="empty-state">No further destinations are available for this account.</div>';
+  bindDataHandlers(list,"[data-coach-more-go]",(button) => { closeCoachMoreSheet(); openCoachDestination(button.dataset.coachMoreGo); });
+  if (typeof renderTrainerAttention === "function") renderTrainerAttention();
+  if (typeof syncRoleGovernanceControls === "function") syncRoleGovernanceControls();
+}
+function openCoachMoreSheet() {
+  const sheet = byId("coachMoreSheet"); if (!sheet) return false;
+  renderCoachMoreSheet(); sheet.classList.add("open"); return true;
+}
+function closeCoachMoreSheet() { const sheet = byId("coachMoreSheet"); if (sheet) sheet.classList.remove("open"); return false; }
+// A badge behind More is the only signal that something needs attention there, so the
+// hidden destinations' counts are summed onto it.
+function syncCoachMoreBadge() {
+  const button = document.querySelector("[data-coach-more]"); if (!button) return;
+  const badge = button.querySelector("[data-coach-more-badge]"); if (!badge) return;
+  const total = coachMoreDestinations().reduce((sum,item) => {
+    const mark = item.querySelector(".coach-attention-badge");
+    return sum + (mark && mark.classList.contains("show") ? Number(mark.textContent) || 0 : 0);
+  },0);
+  badge.textContent = total ? String(total) : "";
+  badge.classList.toggle("show",Boolean(total));
+  button.classList.toggle("on",!COACH_PINNED_DESTINATIONS.includes(openCoachDestination.current || "dashboard"));
+}
 function openCoachDestination(destination) {
   if (!trainerIsUnlocked()) { requestTrainerAccess(destination === 'clients' || destination === 'reports' ? 'trainer' : destination === 'programming' ? 'programs' : 'trainer-menu'); return; }
   if (destination === 'access' && window.fit4lifeCloudRole !== 'owner') { destination = 'approvals'; showToast('Only an owner can manage trainer access'); }
@@ -908,6 +960,25 @@ function renderCoachModule(destination) {
     out.innerHTML = '<section class="coach-module-card"><h3>Data & backups</h3><p>Export or restore the full local coaching record before changing devices.</p><div class="tool-actions"><button class="small-btn" onclick="exportProgress()">Export backup</button><button class="small-btn" onclick="byId(\'progressImport\').click()">Restore backup</button></div></section><section class="coach-module-card"><h3>Security</h3><p>Hosted accounts and approved Supabase roles control live trainer and client access. There is no shared trainer password.</p><div class="tool-actions"><button class="small-btn" onclick="lockTrainerHub()">Sign out / lock workspace</button></div></section><section class="coach-module-card"><h3>Gym branding</h3><p>Manage gym identity, available equipment, and teams from one organization setup.</p><div class="tool-actions"><button class="small-btn" onclick="openAdvancedStudio(\'organization\')">Open organization setup</button></div></section><section class="coach-module-card"><h3>Monitoring imports</h3><p>Attach optional monitoring exports to a specific client, then review them alongside workout and check-in evidence.</p><div class="tool-actions"><button class="small-btn" onclick="openAdvancedStudio(\'monitoring\')">Open monitoring</button></div></section>';
   }
 }
+// Inline on* attributes are HTML-decoded before the JavaScript is parsed, so an escaped
+// quote inside one becomes a real quote and breaks out of the string. Values ride in
+// data- attributes instead and are bound here after the markup is in place.
+function bindDataHandlers(root,selector,handler) {
+  if (!root) return;
+  root.querySelectorAll(selector).forEach((button) => button.addEventListener('click',(event) => { event.preventDefault(); handler(button); }));
+}
+// Standard trainers cover Flex clients, premium cover Bronze/Silver/Gold. Changing this
+// does not move any client - it records who is allowed to, and the booking site enforces it.
+async function setTrainerTier(userId,tier) {
+  if (window.fit4lifeCloudRole !== 'owner') { showToast('Only an owner can change a trainer tier'); return false; }
+  if (typeof window.fit4lifeCloudSetTrainerTier !== 'function') { showToast('The secure connection is not ready yet'); return false; }
+  const meta = staffTierMeta(tier), roster = window.fit4lifeCloudTrainers || [];
+  const who = (roster.find((trainer) => trainer.user_id === userId) || {});
+  if (!window.confirm('Make ' + (who.display_name || who.email || 'this trainer') + ' a ' + meta.label.toLowerCase() + '?')) return false;
+  const done = await window.fit4lifeCloudSetTrainerTier(userId,tier);
+  if (done) { showToast('Saved \u2014 now a ' + meta.label.toLowerCase()); await refreshTrainerAccessManager(); }
+  return done;
+}
 async function refreshTrainerAccountManager() {
   const out = byId('trainerAccountList'); if (!out) return;
   if (!window.fit4lifeCloudListTrainers) { out.innerHTML = '<div class="empty-state">Run the trainer-account SQL upgrade in Supabase, then refresh this page.</div>'; return; }
@@ -915,7 +986,26 @@ async function refreshTrainerAccountManager() {
   if (!Array.isArray(trainers)) { out.innerHTML = '<div class="empty-state">Trainer accounts could not be loaded.</div>'; return; }
   window.fit4lifeCloudTrainers = trainers;
   if (byId('myTrainerDisplayName')) byId('myTrainerDisplayName').value = currentAccountIdentity().displayName;
-  out.innerHTML = trainers.map((trainer) => '<div class="trainer-account-row"><div><b>' + escapeHtml(trainer.display_name || trainer.email || 'Trainer') + '</b><span>' + escapeHtml(trainer.email || '') + ' · ' + escapeHtml(trainer.role || 'trainer') + (trainer.is_active === false ? ' · inactive' : ' · active') + '</span></div>' + (window.fit4lifeCloudRole === 'owner' && trainer.role !== 'owner' && trainer.is_active !== false ? '<button class="small-btn danger" onclick="deactivateTrainerAccount(\'' + escapeHtml(trainer.user_id) + '\')">Deactivate</button>' : '') + '</div>').join('') || '<div class="empty-state">No trainer accounts found.</div>';
+  const canPromote = window.fit4lifeCloudRole === 'owner' && window.fit4lifeTrainerTiersAvailable === true;
+  out.innerHTML = trainers.map((trainer) => {
+    const tier = staffTierMeta(trainer.trainer_tier);
+    const isOwner = trainer.role === 'owner', active = trainer.is_active !== false;
+    // An owner is not a trainer tier, so no promote/demote is offered on their row.
+    const tierControls = canPromote && !isOwner && active
+      ? '<button class="small-btn" data-staff-tier-set data-user="' + escapeHtml(trainer.user_id) + '" data-tier="' + (tier.id === 'staff_premium' ? 'staff_standard' : 'staff_premium') + '">'
+        + (tier.id === 'staff_premium' ? 'Demote to standard' : 'Promote to premium') + '</button>'
+      : '';
+    return '<div class="trainer-account-row"><div><b>' + escapeHtml(trainer.display_name || trainer.email || 'Trainer') + '</b><span>'
+      + escapeHtml(trainer.email || '') + ' \u00b7 ' + escapeHtml(trainer.role || 'trainer')
+      + (active ? ' \u00b7 active' : ' \u00b7 inactive') + '</span>'
+      + (isOwner || window.fit4lifeTrainerTiersAvailable !== true ? '' : staffTierBadgeHtml(trainer.trainer_tier)) + '</div>'
+      + '<div class="tool-actions">' + tierControls
+      + (window.fit4lifeCloudRole === 'owner' && !isOwner && active
+        ? '<button class="small-btn danger" data-trainer-deactivate data-user="' + escapeHtml(trainer.user_id) + '">Deactivate</button>' : '')
+      + '</div></div>';
+  }).join('') || '<div class="empty-state">No trainer accounts found.</div>';
+  bindDataHandlers(out,'[data-trainer-deactivate]',(button) => deactivateTrainerAccount(button.dataset.user));
+  bindDataHandlers(out,'[data-staff-tier-set]',(button) => setTrainerTier(button.dataset.user,button.dataset.tier));
 }
 // Declining uses the same reject RPC the client-request path already had; only the
 // trainer queue was missing a way to reach it.
@@ -924,7 +1014,7 @@ async function declineTrainerRequest(requestId,who) {
   if (!requestId) { showToast("That request is missing its id and cannot be declined here"); return false; }
   if (!window.confirm("Decline the trainer request from " + (who || "this person") + "? They keep their login but do not get trainer access.")) return false;
   if (typeof window.fit4lifeCloudRejectRegistration !== "function") { showToast("The secure connection is not ready yet"); return false; }
-  const done = await window.fit4lifeCloudRejectRegistration(requestId);
+  const done = await window.fit4lifeCloudRejectRegistration(requestId,{ skipConfirm:true, kind:"trainer" });
   if (done) { await refreshTrainerAccessManager(); renderTrainerAttention(); }
   return done;
 }
@@ -934,7 +1024,13 @@ async function refreshTrainerAccessManager() {
   await refreshTrainerAccountManager();
   const trainerRequests = Array.isArray(history) ? history : [], requests = trainerRequests.filter((request) => request.requested_role === 'trainer' && request.status === 'pending'), out = byId('trainerRequestList');
   const canConfirm = window.fit4lifeCloudRole === 'owner';
-  if (out) out.innerHTML = requests.map((request) => '<div class="trainer-account-row pending"><div><b>' + escapeHtml(request.full_name || request.email || 'Trainer request') + '</b><span>' + escapeHtml(request.email || '') + ' · requested ' + new Date(request.created_at).toLocaleString() + ' · confirm identity and verified email before approval</span></div>' + (canConfirm ? '<div class="tool-actions"><button class="small-btn primary" onclick="approveTrainerRequest(\'' + escapeHtml(request.email || '') + '\',\'' + escapeHtml(request.full_name || '') + '\')">Confirm trainer access</button><button class="small-btn" onclick="declineTrainerRequest(\'' + escapeHtml(request.id || '') + '\',\'' + escapeHtml(request.full_name || request.email || '') + '\')">Decline</button></div>' : '') + '</div>').join('') || '<div class="empty-state">No trainer requests are waiting.' + (window.fit4lifeCloudRole === 'owner' ? ' The owner may still grant access manually above.' : '') + '</div>';
+  if (out) {
+    out.innerHTML = requests.map((request) => '<div class="trainer-account-row pending"><div><b>' + escapeHtml(request.full_name || request.email || 'Trainer request') + '</b><span>' + escapeHtml(request.email || '') + ' · requested ' + escapeHtml(new Date(request.created_at).toLocaleString()) + ' · confirm identity and verified email before approval</span></div>' + (canConfirm ? '<div class="tool-actions"><button class="small-btn primary" data-trainer-approve data-email="' + escapeHtml(request.email || '') + '" data-name="' + escapeHtml(request.full_name || '') + '">Confirm trainer access</button><button class="small-btn" data-trainer-decline data-request="' + escapeHtml(request.id || '') + '" data-name="' + escapeHtml(request.full_name || request.email || '') + '">Decline</button></div>' : '') + '</div>').join('') || '<div class="empty-state">No trainer requests are waiting.' + (window.fit4lifeCloudRole === 'owner' ? ' The owner may still grant access manually above.' : '') + '</div>';
+    // Names are data, never code. They travel in data- attributes and are read back through
+    // dataset, so an apostrophe stays an apostrophe instead of closing a JavaScript string.
+    bindDataHandlers(out,'[data-trainer-approve]',(button) => approveTrainerRequest(button.dataset.email,button.dataset.name));
+    bindDataHandlers(out,'[data-trainer-decline]',(button) => declineTrainerRequest(button.dataset.request,button.dataset.name));
+  }
   const decisions = trainerRequests.filter((request) => request.status !== 'pending').slice(0,20), decisionOut = byId('trainerApprovalHistory'), trainers = window.fit4lifeCloudTrainers || [];
   if (decisionOut) decisionOut.innerHTML = decisions.map((request) => {
     const reviewer = trainers.find((trainer) => trainer.user_id === request.reviewed_by), reviewerName = reviewer && (reviewer.display_name || reviewer.email) || (request.reviewed_by ? 'Approved staff member' : 'Automated client flow');
