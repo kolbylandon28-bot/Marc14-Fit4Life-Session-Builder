@@ -558,6 +558,35 @@ function membershipTierIsSelectable(id) {
   const meta = MEMBERSHIP_TIERS[id];
   return Boolean(meta) && !meta.disabled;
 }
+/* ---------- where an attention item is resolved ---------- */
+// Which tab of a client's workspace actually clears each kind of notification. Routing and
+// the tab badges both read this, so a notification can never point somewhere it cannot be
+// handled - previously the destination was hand-written at four separate call sites and the
+// consultation branch simply had none, dropping the coach on Overview with no clue.
+const ATTENTION_TAB_FOR_KIND = {
+  pain:"details", consultation:"details", consult_questionnaire:"details",
+  readiness:"details", intake:"details",
+  workout:"workouts", workout_request:"workouts", program:"workouts",
+  baseline:"workouts", formal:"workouts", session_unprepared:"workouts",
+  checkin:"checkins", recovery:"checkins",
+  progress_receipt:"progress", receipt_weekly:"progress", receipt_formal:"progress",
+  message:"messages", follow_up:"messages", recognition:"messages",
+  inactive:"messages", recovery_due:"messages",
+  automation:"overview"
+};
+function attentionTabForKind(kind) {
+  return Object.prototype.hasOwnProperty.call(ATTENTION_TAB_FOR_KIND,String(kind)) ? ATTENTION_TAB_FOR_KIND[String(kind)] : "overview";
+}
+// Counts, per tab, of what is waiting on ONE client - used to badge their tabs.
+function attentionCountsByTab(profileId,items) {
+  const counts = {};
+  (items || []).forEach((item) => {
+    if (!profileId || item.profileId !== profileId) return;
+    const tab = attentionTabForKind(item.kind);
+    counts[tab] = (counts[tab] || 0) + 1;
+  });
+  return counts;
+}
 /* ---------- staff tiers ---------- */
 // A trainer's tier, which is NOT a client's tier. The ids are prefixed because the bare
 // words "standard" and "premium" are already client package ids above (Silver and Gold),

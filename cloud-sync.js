@@ -607,6 +607,9 @@
       if (typeof applyGymBrand === "function") applyGymBrand();
       if (currentView === "trainer" && typeof renderTrainerHub === "function") renderTrainerHub(selectedTrainerClient || "");
       if (String(currentView || "").indexOf("client-") === 0 && typeof renderClientAppView === "function") renderClientAppView(currentView);
+      // Runs after cloudApplying has been cleared, so it covers the pull path the guard
+      // above deliberately skips.
+      if (typeof renderTrainerAttention === "function") renderTrainerAttention();
     } catch (_) {}
   }
 
@@ -691,6 +694,12 @@
     }
     window.fit4lifeCloudRegistrationRequests = cloudRegistrationRequests.slice();
     try { if (typeof renderProfileRequests === "function") renderProfileRequests(); } catch (_) {}
+    // The request queue is the ONLY attention count not derived from local storage, so it
+    // is the only one that can go stale after a change. Nothing in this file repainted it,
+    // which left the sidebar badge frozen after approving or rejecting an account until a
+    // reload. Skipped while a pull is being applied: the attention snapshot writes to local
+    // storage, and a write in that window would not be queued for upload.
+    if (!cloudApplying) { try { if (typeof renderTrainerAttention === "function") renderTrainerAttention(); } catch (_) {} }
     return cloudRegistrationRequests;
   }
   window.fit4lifeCloudRefreshRegistrationRequests = loadTrainerRegistrationRequests;
@@ -822,7 +831,11 @@
       full_name: String(profile.name || "Client").trim(),
       username: String(profile.username || "").replace(/^@/, "").trim().toLowerCase(),
       email: normalizedEmail(profile.email) || null,
-      status: "active",
+      // Never blindly "active". This line un-archived every deleted profile: the delete
+      // archives the row, then the next push from ANY device that still holds the client
+      // locally upserts it back to active, and the following pull rebuilds it locally.
+      // Whatever the server already has is preserved; only genuinely new rows start active.
+      status: (remoteProfilesByExternalId.get(String(profile.id)) || {}).status || "active",
       created_by: cloudUser.id
     };
   }
@@ -1962,11 +1975,13 @@
     if (!cloudClient || cloudRole !== "owner") return false;
     const remote = remoteProfilesByExternalId.get(String(externalId));
     if (!remote) return false;
+    // .select("id") matters: a row-level-security refusal comes back as error:null with an
+    // empty result, which the old error-only check read as success.
     const response = permanent
-      ? await cloudClient.from("client_profiles").delete().eq("id", remote.id)
-      : await cloudClient.from("client_profiles").update({ status: "archived" }).eq("id", remote.id);
-    if (response.error) {
-      console.error("Cloud profile deletion failed", response.error);
+      ? await cloudClient.from("client_profiles").delete().eq("id", remote.id).select("id")
+      : await cloudClient.from("client_profiles").update({ status: "archived" }).eq("id", remote.id).select("id");
+    if (response.error || !(response.data && response.data.length)) {
+      console.error("Cloud profile deletion failed", response.error || "the database refused the change");
       return false;
     }
     remoteProfilesByExternalId.delete(String(externalId));

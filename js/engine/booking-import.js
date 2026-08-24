@@ -10,7 +10,7 @@
   // commas ("Sat, Aug 22 ...") - a naive split silently shears every schedule in half.
   function parseCsv(text) {
     const rows = []; let row = [], field = "", quoted = false;
-    const src = String(text || "").replace(/^﻿/, "");   // strip the BOM Jason's file starts with
+    const src = String(text || "").replace(/^\uFEFF/, "");  // strip the BOM Jason's file starts with
     for (let i = 0; i < src.length; i++) {
       const ch = src[i];
       if (quoted) {

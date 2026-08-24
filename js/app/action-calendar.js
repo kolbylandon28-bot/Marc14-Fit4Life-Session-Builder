@@ -209,7 +209,21 @@ window.trainerAttentionSnapshot = function v6TrainerAttentionSnapshot() {
 
 const legacyOpenCoachAttentionItem = window.openCoachAttentionItem;
 window.openCoachAttentionItem = function v6OpenCoachAttentionItem(profileId,kind,itemId) {
-  if (kind === "consultation") { openCoachDestination("clients"); setTimeout(() => openTrainerConsultationReview(profileId),30); return; }
+  // Land on the tab that actually resolves this, not just on the client. The consultation
+  // card lives on Client details, so dropping the coach on Overview left them hunting.
+  if (kind === "consultation") {
+    const profile = calendarProfile(profileId);
+    if (!profile) { openCoachDestination("clients"); return; }
+    openCoachDestination.current = "clients";
+    selectedTrainerClient = profile.name;
+    selectedInBodyScanId = "";
+    trainerSummaryState = newTrainerSummaryState();
+    trainerSummaryState.tab = attentionTabForKind("consultation");
+    show("trainer");
+    renderTrainerHub(profile.name);
+    setTimeout(() => openTrainerConsultationReview(profileId),30);
+    return;
+  }
   if (kind === "calendar_notice") { const notice = loadCalendarNotices().find((entry) => "calendar-notice:" + entry.id === itemId); openCoachDestination("calendar"); if (notice) setTimeout(() => openCalendarEventEditor(notice.eventId),30); return; }
   if (kind === "calendar_event") { openCoachDestination("calendar"); setTimeout(() => openCalendarEventEditor(String(itemId).replace(/^calendar-event:/,"")),30); return; }
   if (kind === "workout_request") {
@@ -275,8 +289,19 @@ function renderActionCenterList() { const out = byId("actionCenterList"); if (ou
 window.renderTrainerAttention = function v6RenderTrainerAttention() {
   const attention = trainerAttentionSnapshot(), panel = byId("trainerAttentionPanel");
   if (typeof syncCoachMoreBadge === "function") setTimeout(syncCoachMoreBadge,0);
+  // The Trainer Access badge used to count client account requests as well as trainer
+  // ones, because both share the "access" category - so it showed a number that page
+  // could never clear. Client requests are approved from the Clients directory, so they
+  // are counted there instead. Categories are unchanged; only who displays them is.
+  const kindCount = (kind) => attention.items.filter((item) => item.kind === kind).length;
   document.querySelectorAll("[data-attention-badge]").forEach((badge) => {
-    const key = badge.dataset.attentionBadge, count = key === "messages" ? attention.categoryCounts.messages : key === "schedule" ? attention.categoryCounts.schedule : key === "actions" ? attention.items.length : key === "access" ? attention.categoryCounts.access : attention.categoryCounts.workouts;
+    const key = badge.dataset.attentionBadge;
+    const count = key === "messages" ? attention.categoryCounts.messages
+      : key === "schedule" ? attention.categoryCounts.schedule
+      : key === "actions" ? attention.items.length
+      : key === "access" ? kindCount("trainer_request")
+      : key === "client_requests" ? kindCount("account_request")
+      : attention.categoryCounts[key] || 0;
     badge.textContent = count > 99 ? "99+" : String(count); badge.classList.toggle("show",count > 0);
   });
   if (typeof syncRoleGovernanceControls === "function") syncRoleGovernanceControls();

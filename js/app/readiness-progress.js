@@ -1078,12 +1078,18 @@ function saveProfileEditor() {
   else showToast(creating ? "Created " + profile.name + " without assigning a workout or program" : "Updated " + profile.name + " and kept all connected history");
   return profile;
 }
-function deleteClientProfile(profileId, target) {
+async function deleteClientProfile(profileId, target) {
   if (!ownerOnlyMutation("Deleting client profiles","client_archive",profileId,"","Archive or delete a client")) return false;
   const profiles = loadProfiles(), profile = profiles.find((item) => item.id === profileId); if (!profile) { showToast("Choose a saved profile to delete"); return false; }
   if (!window.confirm("Delete " + profile.name + "’s saved profile? Completed workouts, reviews, InBody scans, and body goals will be kept.")) return false;
+  // The shared database is asked first. Removing locally before knowing the server agreed
+  // was how deleted clients came back: the local copy vanished, the remote row stayed, and
+  // the next sync rebuilt it.
+  if (window.fit4lifeCloudDeleteProfile) {
+    const removed = await window.fit4lifeCloudDeleteProfile(profileId,false);
+    if (!removed) { showToast("This client could not be removed from the shared database, so nothing was deleted."); return false; }
+  }
   if (!writeProfiles(profiles.filter((item) => item.id !== profileId))) return false;
-  if (window.fit4lifeCloudDeleteProfile) window.fit4lifeCloudDeleteProfile(profileId,false);
   writeAssignedWorkouts(loadAssignedWorkouts().filter((item) => item.profileId !== profileId));
   writeLocalArray(TEAMS_KEY,loadTeams().map((team) => ({ ...team,profileIds:(team.profileIds || []).filter((id) => id !== profileId) })),200);
   if (advancedState && advancedState.profileId === profileId) advancedState.profileId = "";
@@ -1091,7 +1097,7 @@ function deleteClientProfile(profileId, target) {
   [state.solo,state.p1,state.p2].forEach((item) => { if (item && item.profileId === profileId) item.profileId = ""; });
   byId("profileEditorModal").classList.remove("open"); profileEditorTarget = null; refreshProfileSelects(); renderForms(); renderTrainerHub(profile.name); showToast("Profile and assigned workout deleted. " + profile.name + "’s completed workout and scan history was kept."); return true;
 }
-function deleteProfileFromEditor() { return deleteClientProfile(byId("profileEditId").value, profileEditorTarget); }
+async function deleteProfileFromEditor() { return await deleteClientProfile(byId("profileEditId").value, profileEditorTarget); }
 function updateSelectedProgramProfileFromSetup() {
   if (!requireTrainerMutation("update client profiles")) return null;
   const id = byId("programProfile").value, profile = loadProfiles().find((item) => item.id === id);
@@ -1116,7 +1122,7 @@ function updateSelectedProgramProfileFromSetup() {
   return updated;
 }
 function editSelectedProgramProfile() { const id = byId("programProfile").value; if (!id) { showToast("Choose a saved client profile first"); return; } openProfileEditor(id); }
-function deleteSelectedProgramProfile() { const id = byId("programProfile").value; if (!id) { showToast("Choose a saved client profile first"); return false; } return deleteClientProfile(id); }
+async function deleteSelectedProgramProfile() { const id = byId("programProfile").value; if (!id) { showToast("Choose a saved client profile first"); return false; } return await deleteClientProfile(id); }
 function deleteAllSelectedProgramClient() { const id = byId("programProfile").value, profile = loadProfiles().find((item) => item.id === id); if (!profile) { showToast("Choose a saved client profile first"); return; } openCompleteDeleteClient(profile.name); }
 function clientDeletionCounts(client) {
   const matchingProfiles = loadProfiles().filter((item) => clientMatches(item.name, client)), profileIds = new Set(matchingProfiles.map((item) => item.id));
@@ -1154,14 +1160,17 @@ function updateCompleteDeleteState() {
 function resetDeletedClientTarget(target, client) {
   if (!target || !clientMatches(target.client, client)) return; Object.assign(target, { client: "", profileId: "", goal: "", goals: [], experience: "", age: 30, minutes: 60, muscles: [], injuries: [], zones: [] });
 }
-function purgeClientData(client) {
+async function purgeClientData(client) {
   if (!requireTrainerMutation("permanently delete client data")) return null;
   client = String(client || "").trim(); if (!client) return null;
   const profilesToDelete = loadProfiles().filter((profile) => clientMatches(profile.name,client)), profileIds = new Set(profilesToDelete.map((profile) => profile.id));
   const matchesAdvancedClient = (item) => profileIds.has(item.profileId) || clientMatches(item.client,client);
   const counts = clientDeletionCounts(client), entries = loadProgress(), deletedEntryIds = new Set(entries.filter((entry) => clientMatches(entry.client, client)).map((entry) => entry.id));
+  if (window.fit4lifeCloudDeleteProfile) {
+    const results = await Promise.all(profilesToDelete.map((profile) => window.fit4lifeCloudDeleteProfile(profile.id,true)));
+    if (results.some((ok) => !ok)) { showToast("This client could not be removed from the shared database, so nothing was deleted."); return null; }
+  }
   if (!writeProfiles(loadProfiles().filter((profile) => !clientMatches(profile.name, client)))) return null;
-  if (window.fit4lifeCloudDeleteProfile) profilesToDelete.forEach((profile) => window.fit4lifeCloudDeleteProfile(profile.id,true));
   if (!writeProfileRequests(loadProfileRequests().filter((request) => !clientMatches(request.name, client)))) return null;
   if (!writeProgress(entries.filter((entry) => !clientMatches(entry.client, client)))) return null;
   const scans = loadInBodyScans(), deletedScans = scans.filter((scan) => clientMatches(scan.client, client)); deletedScans.forEach((scan) => deleteInBodyAttachment(scan.id));
@@ -1196,10 +1205,10 @@ function purgeClientData(client) {
   if (profileIds.has(activeClientProfileId())) { try { localStorage.removeItem(ACTIVE_CLIENT_KEY); localStorage.removeItem(ACTIVE_WORKOUT_KEY); } catch (_) {} activeWorkout = null; }
   return counts;
 }
-function confirmCompleteClientDelete() {
+async function confirmCompleteClientDelete() {
   if (!requireTrainerMutation("permanently delete client data")) return null;
   updateCompleteDeleteState(); if (byId("completeDeleteButton").disabled) { showToast("Type the client’s full name exactly to confirm"); return null; }
-  const client = byId("completeDeleteClient").value, counts = purgeClientData(client); if (!counts) return null;
+  const client = byId("completeDeleteClient").value, counts = await purgeClientData(client); if (!counts) return null;
   closeCompleteDeleteModal(); closeProfileEditor(); refreshProfileSelects(); renderForms(); renderProgressHistory(); renderTrainerHub();
   if (!state.session) { const output = byId("output"), reshuffle = byId("reshuffleBtn"); if (output) output.innerHTML = ""; if (reshuffle) reshuffle.style.display = "none"; }
   showToast(client + " and all connected client data were permanently deleted"); return counts;

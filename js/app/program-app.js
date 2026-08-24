@@ -284,12 +284,7 @@ function openCoachAttentionItem(profileId,kind,itemId) {
   selectedTrainerClient = profile.name;
   selectedInBodyScanId = "";
   trainerSummaryState = newTrainerSummaryState();
-  trainerSummaryState.tab = kind === "message" || kind === "recognition" || kind === "inactive" || kind === "recovery_due" ? "messages"
-    : ["checkin","recovery"].includes(kind) ? "checkins"
-      : kind === "automation" ? "overview"
-      : kind === "workout" || kind === "program" || kind === "formal" || kind === "baseline" ? "workouts"
-        : ["receipt_weekly","receipt_formal"].includes(kind) ? "progress"
-        : kind === "pain" || kind === "readiness" || kind === "intake" ? "details" : "overview";
+  trainerSummaryState.tab = attentionTabForKind(kind);
   show("trainer");
   renderTrainerHub(profile.name);
   if (kind === "workout") setTimeout(() => openCoachAdjustment(profile.id),30);

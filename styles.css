@@ -847,6 +847,13 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   .analysis-history-item b{display:block;font-size:10.5px}.analysis-history-item span{font-size:9px;color:#737780}
   .analysis-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
   .analysis-note{font-size:9px;color:#767a82;line-height:1.45;margin-top:13px;border-top:1px solid #d9dce1;padding-top:10px}
+  /* A tab with something waiting on it, so a notification that routes here says so. */
+  .summary-tab{position:relative}
+  .summary-tab.has-attention{color:#B4271F;font-weight:800}
+  .summary-tab.has-attention::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:#D8352A}
+  .summary-tab.has-attention.on::after{background:#B4271F}
+  .summary-tab-badge{display:inline-grid;place-items:center;min-width:16px;height:16px;margin-left:6px;padding:0 4px;
+    border-radius:99px;background:#D8352A;color:#fff;font:800 9px var(--mono);vertical-align:middle}
   .summary-tabs{display:flex;gap:5px;flex-wrap:wrap;padding:10px 14px;background:#e7e9ed;border-bottom:1px solid #cfd2d8}
   .summary-tab{border:1px solid #c8cbd1;background:#fff;color:#4c5058;border-radius:6px;padding:8px 11px;font:700 10px var(--mono);letter-spacing:.05em;text-transform:uppercase}
   .summary-tab.on{background:#121319;border-color:#121319;color:#fff}

@@ -8,10 +8,11 @@ global.window = {};
 global.normalizeMembershipTier = (v) => ({ flex:"flex_1", partner:"partner_1" }[v] || v || "");
 eval(fs.readFileSync(path.join(__dirname, "booking-import.js"), "utf8"));
 const I = window.bookingImportInternals;
+const REPO = path.resolve(__dirname, "..", "..");
 
 const HDR = "Member,Phone,Email,Package,Trainer,Chosen Times,Status,Next Renewal";
-// Leading ﻿ is deliberate: the real export starts with a byte-order mark.
-const SAMPLE = "﻿" + HDR + "\n" + [
+// The \uFEFF below is deliberate: the real export starts with a byte-order mark.
+const SAMPLE = "\uFEFF" + HDR + "\n" + [
   'Robin Vale,5550100,rvale@example.edu,Bronze — 1 session / week,Alex Stone,,Expired,',
   'Robin Vale,5550100,rvale@example.edu,Bronze — 1 session / week,Casey Fern,"Monday 4:00 PM; Sat, Aug 22 3:30 PM–4:30 PM · Consult",Active,',
   'Robin Vale,5550100,rvale@example.edu,Flex — 1 session / week,Alex Stone,"Monday 7:15 AM",Cancelled,',
@@ -108,6 +109,31 @@ const twoRows = `${HDR}
 Eve Marsh,1,eve@example.edu,Bronze — 1 session / week,A,"Wed, Aug 12 3:00 PM–4:00 PM · Session",Active,
 Eve Marsh,1,eve@example.edu,Gold — 3 sessions / week,B,"Wed, Aug 12 3:00 PM–3:30 PM · Session",Active,`;
 t("same start, different end keeps both", P(twoRows).clients[0].appointments.length, 2);
+
+console.log("--- no invisible characters anywhere in the source ---");
+// A literal U+FEFF typed into the code that strips BOMs sat in two files here and broke
+// GitHub's uploader outright. Invisible characters are impossible to spot in review, so
+// they are checked mechanically instead.
+const INVISIBLE = new Set([0xFEFF,0x200B,0x200C,0x200D,0x2060,0x00A0,0x202A,0x202B,0x202C,0x202D,0x202E,0x2066,0x2067,0x2068,0x2069]);
+const TEXT_EXT = [".js",".html",".css",".sql",".json",".txt",".md",".webmanifest",".svg"];
+const offenders = [];
+(function walk(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes:true })) {
+    if (entry.name === ".git" || entry.name === "node_modules") continue;
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) { walk(full); continue; }
+    if (!TEXT_EXT.includes(path.extname(entry.name).toLowerCase())) continue;
+    const body = fs.readFileSync(full, "utf8");
+    for (let i = 0; i < body.length; i++) {
+      const cp = body.codePointAt(i);
+      if (INVISIBLE.has(cp) || (cp < 0x20 && !"\n\r\t".includes(body[i])) || cp === 0x7F) {
+        offenders.push(path.relative(REPO, full) + " (U+" + cp.toString(16).toUpperCase().padStart(4,"0") + ")");
+        break;
+      }
+    }
+  }
+})(REPO);
+t("no file contains an invisible character", offenders.length ? offenders.join(", ") : 0, 0);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
