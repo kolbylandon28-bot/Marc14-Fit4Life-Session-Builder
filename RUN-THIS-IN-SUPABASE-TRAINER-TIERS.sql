@@ -91,6 +91,30 @@ revoke all on function public.set_fit4life_trainer_tier(uuid, text) from public;
 grant execute on function public.list_fit4life_trainer_tiers() to authenticated;
 grant execute on function public.set_fit4life_trainer_tier(uuid, text) to authenticated;
 
+-- 5. Proof it worked. This prints one row - read it and check every column.
+--    If you get "Success. No rows returned" instead of a table, you ran a
+--    different file.
+select
+  to_regprocedure('public.list_fit4life_trainer_tiers()')::text        as read_function_installed,
+  to_regprocedure('public.set_fit4life_trainer_tier(uuid,text)')::text as write_function_installed,
+  exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'memberships'
+       and column_name = 'trainer_tier'
+  ) as tier_column_present,
+  (select count(*) from public.memberships where trainer_tier = 'staff_standard') as trainers_now_standard,
+  (select count(*) from public.memberships where trainer_tier = 'staff_premium')  as trainers_now_premium;
+
+-- WHAT A GOOD RESULT LOOKS LIKE
+--   read_function_installed   list_fit4life_trainer_tiers()
+--   write_function_installed  set_fit4life_trainer_tier(uuid,text)
+--   tier_column_present       true
+--   trainers_now_standard     however many accounts you have
+--   trainers_now_premium      0   <- expected; you promote them in the app
+--
+-- Any column showing blank or false means that step did not apply. Re-run the
+-- whole file; nothing here is harmed by running twice.
+
 -- ============================================================================
 -- TO UNDO (only if something went wrong)
 --   drop function if exists public.set_fit4life_trainer_tier(uuid, text);
