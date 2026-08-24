@@ -217,15 +217,22 @@
         status, statusRaw: value("Status"), nextRenewal: value("Next Renewal"),
         recurring: times.recurring, appointments: times.appointments
       };
-      if (!email) result.errors.push("Row " + row.line + " has no email address, so it cannot be matched to anyone.");
+      // A row with no email cannot be matched to anyone, but it must not take the rest of
+      // the file down with it - a stray line should never block importing everyone else.
+      if (!email) { result.warnings.push("Row " + row.line + " has no email address and was skipped."); row.skipped = true; }
       if (pkg.unmapped) result.warnings.push('Row ' + row.line + ': package "' + pkg.raw + '" does not match any tier and needs a decision.');
       if (status === "unknown") result.warnings.push('Row ' + row.line + ': status "' + row.statusRaw + '" is not one this app knows.');
       times.warnings.forEach((warning) => result.warnings.push("Row " + row.line + ": " + warning));
       result.rows.push(row);
     });
 
-    result.clients = collapseRows(result.rows, result.warnings);
-    result.trainerNames = distinctTrainers(result.rows);
+    const usable = result.rows.filter((row) => !row.skipped);
+    result.skippedRows = result.rows.length - usable.length;
+    result.clients = collapseRows(usable, result.warnings);
+    result.trainerNames = distinctTrainers(usable);
+    // Only a structural problem - wrong columns, an empty file, nothing usable at all -
+    // stops the import. Individual bad rows are reported and stepped over.
+    if (!usable.length) result.errors.push("No row in this file had an email address, so nothing could be matched.");
     result.ok = result.errors.length === 0;
     return result;
   }
