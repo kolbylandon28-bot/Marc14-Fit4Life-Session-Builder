@@ -476,7 +476,20 @@ function prescribedSetCount(value) {
   return Math.max.apply(null,numbers.map(Number));
 }
 function plannedSetsForActive(exercise,block) { const rx = exercise.rx || block && block.rx || {}; return Math.max(1,Math.min(12,prescribedSetCount(rx.sets) + Number(activeWorkout.extraSets[exercise.name] || 0))); }
-function parseRestSeconds(value) { const text = String(value || '60'); const values = (text.match(/\d+/g) || ['60']).map(Number); const base = Math.max.apply(null,values); return /min/i.test(text) ? base * 60 : base; }
+// "minimal" contains "min", so the old test matched it as a MINUTES unit, found no digits,
+// defaulted to 60 and multiplied - handing a client a 60-minute rest timer mid-workout.
+// Seven library exercises prescribe "minimal". The unit now has to be a whole word.
+function parseRestSeconds(value) {
+  const text = String(value == null ? '' : value).trim();
+  if (!text) return 60;
+  if (/minimal|none|no rest|as needed/i.test(text)) return 30;
+  const values = (text.match(/\d+/g) || []).map(Number);
+  if (!values.length) return 60;
+  const base = Math.max.apply(null, values);
+  const seconds = /\bmin(?:s|utes?)?\b/i.test(text) ? base * 60 : base;
+  // A rest longer than ten minutes is a typo, not a prescription.
+  return Math.max(5, Math.min(600, seconds));
+}
 function startActiveRest(exercise,block) { const rx = exercise.rx || block && block.rx || {}; setRestTimer(parseRestSeconds(rx.rest)); toggleRestTimer(); }
 function restartCurrentActiveRest() { const data = activeAssignmentAndSession(), unit = activeWorkoutUnits(data.session,activeWorkout.shortened)[activeWorkout.unitIndex]; if (!unit) return; const exercise = unit.items[activeWorkout.pairIndex] || unit.items[0]; startActiveRest(exercise,unit.block); }
 function activeSetField(label,input,className) { const wrap = el('div',className || ''); wrap.append(el('label','',label),input); return wrap; }
