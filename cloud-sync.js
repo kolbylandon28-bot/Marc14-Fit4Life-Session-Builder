@@ -222,8 +222,12 @@
     return String(value || "").trim().toLowerCase();
   }
 
+  // PILOT MODE. Set to false to require @byui.edu again.
+  window.FIT4LIFE_ALLOW_ANY_EMAIL = true;
   function clientByuiEmail(value) {
-    return /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@byui\.edu$/i.test(normalizedEmail(value));
+    const email = normalizedEmail(value);
+    if (window.FIT4LIFE_ALLOW_ANY_EMAIL) return /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(email);
+    return /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@byui\.edu$/i.test(email);
   }
 
   function normalizedName(value) {

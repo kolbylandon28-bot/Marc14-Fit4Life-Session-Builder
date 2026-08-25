@@ -35,7 +35,9 @@ let clientConsultationRequiredMode = false;
 let trainerConsultationProfileId = "";
 
 function isByuiEmail(value) {
-  return /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@byui\.edu$/i.test(String(value || "").trim());
+  const email = String(value || "").trim();
+  if (window.FIT4LIFE_ALLOW_ANY_EMAIL) return /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(email);
+  return /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@byui\.edu$/i.test(email);
 }
 window.fit4lifeIsByuiEmail = isByuiEmail;
 
