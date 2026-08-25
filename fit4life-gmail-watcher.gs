@@ -29,8 +29,14 @@ function checkForBookingReport() {
         var name = file.getName() || "";
         if (!/\.csv$/i.test(name)) return;   // the report is a CSV; ignore anything else
 
+        // Send the real sender, not SENDER, so the server checks it independently
+        // instead of trusting whatever this script asserts.
+        var raw = message.getFrom() || "";
+        var match = raw.match(/<([^>]+)>/);
+        var actualFrom = (match ? match[1] : raw).trim().toLowerCase();
+
         var payload = {
-          from: SENDER,
+          from: actualFrom,
           subject: message.getSubject(),
           filename: name,
           csv: file.getDataAsString()

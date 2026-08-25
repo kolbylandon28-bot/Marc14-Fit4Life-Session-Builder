@@ -1845,6 +1845,29 @@
     return true;
   };
 
+  window.fit4lifeCloudPendingBookingImports = async function fit4lifeCloudPendingBookingImports() {
+    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return [];
+    const response = await cloudClient
+      .from("booking_imports")
+      .select("id,fingerprint,filename,subject,sender,csv_body,received_at")
+      .eq("status","pending")
+      .order("received_at",{ ascending:false })
+      .limit(10);
+    if (response.error) { console.warn("Pending booking imports unavailable",response.error.message); return null; }
+    return Array.isArray(response.data) ? response.data : [];
+  };
+
+  window.fit4lifeCloudMarkBookingImport = async function fit4lifeCloudMarkBookingImport(id,status) {
+    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return false;
+    if (!["applied","ignored"].includes(status)) return false;
+    const response = await cloudClient
+      .from("booking_imports")
+      .update({ status, applied_at:new Date().toISOString(), applied_by:cloudUser && cloudUser.id || null })
+      .eq("id",id);
+    if (response.error) { console.error("Could not mark the import",response.error); return false; }
+    return true;
+  };
+
   window.fit4lifeCloudListTrainerRequests = async function fit4lifeCloudListTrainerRequests() {
     if (!cloudClient || !cloudOrganizationId || cloudRole !== "owner") return [];
     const response = await cloudClient

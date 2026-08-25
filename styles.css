@@ -1799,6 +1799,7 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
 .invite-check{padding:6px 0;font-size:11px;line-height:1.45}
 .invite-check.ok{color:var(--tier-group)}
 .invite-check.bad{color:#E8A0A0}
+.booking-arrivals{margin:10px 0}
 .booking-import-preview{margin-top:12px}
 .booking-import-group{margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
 .booking-import-group.warn{border-color:color-mix(in srgb,var(--tier-partner) 45%,var(--line));

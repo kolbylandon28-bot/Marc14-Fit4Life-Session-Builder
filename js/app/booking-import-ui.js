@@ -22,11 +22,42 @@
       ? "Last applied " + new Date(state.lastImportedAt).toLocaleString() + " · " + (state.knownEmails || []).length + " client(s) tracked"
       : "Nothing has been imported yet.";
     return '<section class="advanced-card wide"><h3>Import from Jason’s booking report</h3>'
+      + '<div id="bookingArrivals" class="booking-arrivals"></div>'
       + '<p>Reads the CSV attached to the bookings report email. Reading it only shows what would change — nothing is written until you press Apply, and <b>no email is ever sent from this screen</b>.</p>'
       + '<div class="storage-note">' + escapeHtml(last) + '</div>'
       + '<div class="compact-field wide"><label for="bookingImportFile">Booking report CSV</label>'
       + '<input id="bookingImportFile" type="file" accept=".csv,text/csv" onchange="readBookingExportFile(this)"></div>'
       + '<div id="bookingImportPreview" class="booking-import-preview"></div></section>';
+  }
+
+  // Reports that arrived by email land in Supabase. They are parsed and reviewed here,
+  // through the same code the manual path uses.
+  window.refreshBookingArrivals = async function refreshBookingArrivals() {
+    const out = byId("bookingArrivals"); if (!out) return false;
+    if (typeof window.fit4lifeCloudPendingBookingImports !== "function") return false;
+    const waiting = await window.fit4lifeCloudPendingBookingImports();
+    if (waiting === null) { out.innerHTML = '<div class="storage-note">Could not check for emailed reports.</div>'; return false; }
+    if (!waiting.length) { out.innerHTML = '<div class="storage-note">No emailed report is waiting.</div>'; return true; }
+    out.innerHTML = '<div class="booking-import-group warn"><b>Arrived by email</b>'
+      + waiting.map((item) => '<div class="booking-import-row"><span>' + escapeHtml(item.filename || "booking report") + '</span>'
+        + '<small>from ' + escapeHtml(item.sender || "") + ' \u00b7 ' + escapeHtml(new Date(item.received_at).toLocaleString()) + '</small>'
+        + '<button class="mini-btn" data-arrival-open data-id="' + escapeHtml(item.id) + '">Review</button></div>').join("") + '</div>';
+    bindDataHandlers(out,"[data-arrival-open]",(button) => openArrival(waiting.find((item) => item.id === button.dataset.id)));
+    return true;
+  };
+
+  function openArrival(item) {
+    if (!item) return false;
+    const parsed = window.parseBookingExport(item.csv_body,{ reference:new Date() });
+    const diff = window.diffBookingImport(parsed,{
+      profiles: loadProfiles(), previousState: loadImportState(), trainerAliases: loadTrainerAliases() });
+    pending = { text:item.csv_body, parsed, diff, fileName:item.filename || "booking report", arrivalId:item.id };
+    const out = byId("bookingImportPreview"); if (!out) return false;
+    out.innerHTML = previewHtml(parsed,diff);
+    bindDataHandlers(out,"[data-booking-apply]",() => applyBookingImport());
+    bindDataHandlers(out,"[data-alias-link]",(button) => linkTrainerAlias(button.dataset.key,button.dataset.name));
+    out.scrollIntoView({ block:"nearest" });
+    return true;
   }
 
   window.readBookingExportFile = function readBookingExportFile(input) {
@@ -249,6 +280,10 @@
       + bookings + " booking" + (bookings === 1 ? "" : "s") + " on the calendar"
       + (retired ? ", " + retired + " future session" + (retired === 1 ? "" : "s") + " cancelled" : "")
       + (skipped.length ? ", " + skipped.length + " could not be created" : "") + ". No emails sent.");
+    // Mark it handled so it stops being offered on every device.
+    if (pending.arrivalId && typeof window.fit4lifeCloudMarkBookingImport === "function") {
+      window.fit4lifeCloudMarkBookingImport(pending.arrivalId,"applied").then(() => refreshBookingArrivals());
+    }
     pending = null;
     const out = byId("bookingImportPreview");
     if (out) out.innerHTML = '<div class="invite-check ok">\u2713 Applied. ' + createdCount + ' created, ' + updatedCount + ' updated, '

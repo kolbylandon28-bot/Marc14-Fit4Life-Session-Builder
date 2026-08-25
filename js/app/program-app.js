@@ -971,6 +971,7 @@ function renderCoachModule(destination) {
     // clicks away and under a heading that gives no hint they are there.
     if (typeof bookingImportPanelHtml === "function") {
       out.insertAdjacentHTML('beforeend', bookingImportPanelHtml());
+      if (typeof refreshBookingArrivals === "function") refreshBookingArrivals();
     }
     if (typeof inviteEmailTestPanelHtml === "function") {
       out.insertAdjacentHTML('beforeend', inviteEmailTestPanelHtml());
