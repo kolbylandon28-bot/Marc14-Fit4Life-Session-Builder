@@ -198,6 +198,10 @@
       completed = assignments[assignmentIndex];
     }
     const profile = updateProfileFeedback(session,completed,review);
+    // A question asked in a review had nowhere to be answered. It now also lands in the
+    // coach thread, where the "last message is from the client" rule already marks a thread
+    // unanswered and clears it the moment the coach replies - no new state to keep in step.
+    postReviewQuestionToCoach(profile || loadProfiles().find((item) => item.id === session.spec.profileId),review,completed,session);
     refreshHistoryFilters(); renderProgressHistory(); renderTrainerAttention(); closeWorkoutReview();
     showToast(existingReview ? "Workout review updated for your trainer" : review.questions ? "Workout review sent — your question is highlighted for the trainer" : "Workout review sent to your trainer");
     if (portalRole === "client" && completed) { activeWorkout = null; saveActiveWorkoutState(); activateClientProfile(completed.profileId); }
@@ -248,6 +252,50 @@
     return '<div><b>' + escapeHtml(String(value) + (suffix || "")) + '</b><span>' + escapeHtml(label) + '</span></div>';
   }
   function coachMovementChips(items,tone,performed) { return movementChips(items,tone,performed,"coach-feedback-empty-inline"); }
+  // Idempotent on review id AND text: revising a review must not re-ask the same question,
+  // but genuinely changing the question should reach the coach.
+  window.answerClientQuestion = function answerClientQuestion(profileId) {
+    if (typeof requireTrainerMutation === "function" && !requireTrainerMutation("reply to a client")) return false;
+    const box = byId("coachQuestionReply"), body = box ? box.value.trim() : "";
+    if (!body) { showToast("Write a reply first"); return false; }
+    const profile = loadProfiles().find((item) => item.id === profileId);
+    if (!profile) { showToast("That client could not be found"); return false; }
+    const identity = typeof currentAccountIdentity === "function" ? currentAccountIdentity() : {};
+    const messages = loadLocalArray(CLIENT_MESSAGES_KEY);
+    messages.unshift({ id:"message-" + Date.now() + "-a", profileId:profile.id, client:profile.name,
+      from:"trainer", senderRole:"trainer", senderUserId:identity.id || "",
+      senderName:identity.displayName || profile.assignedTrainerName || "Coaching team",
+      recipientRole:"client", recipientUserId:profile.authUserId || "", recipientName:profile.name,
+      body, createdAt:new Date().toISOString() });
+    if (!writeLocalArray(CLIENT_MESSAGES_KEY,messages,1000)) { showToast("The reply could not be saved"); return false; }
+    box.value = "";
+    // The thread's last message is now the trainer's, so the unanswered badge clears itself.
+    if (typeof renderTrainerAttention === "function") renderTrainerAttention();
+    if (typeof window.fit4lifeCloudSaveProfileNow === "function") window.fit4lifeCloudSaveProfileNow();
+    showToast("Reply sent to " + profile.name);
+    return true;
+  };
+  function postReviewQuestionToCoach(profile,review,assignment,session) {
+    const body = String(review && review.questions || "").trim();
+    if (!profile || !body) return false;
+    const stamp = "review-question:" + review.id + ":" + body;
+    const messages = loadLocalArray(CLIENT_MESSAGES_KEY);
+    if (messages.some((message) => message.sourceId === stamp)) return false;
+    const workout = (assignment && assignment.programDayName) || (session && session.goalLabel) || "the last workout";
+    const when = displayDate((assignment && assignment.completedAt) || (review && review.updatedAt) || new Date().toISOString());
+    const identity = typeof currentAccountIdentity === "function" ? currentAccountIdentity() : {};
+    messages.unshift({ id:"message-" + Date.now() + "-q", sourceId:stamp,
+      profileId:profile.id, client:profile.name, from:"client", senderRole:"client",
+      senderUserId:identity.id || "", senderName:profile.name,
+      recipientRole:"trainer", recipientUserId:profile.assignedTrainerId || "",
+      recipientName:profile.assignedTrainerName || "Coaching team",
+      // The context line, so the question is not stranded without the workout it came from.
+      body:"About " + workout + " \u00b7 " + when + "\n" + body,
+      createdAt:new Date().toISOString() });
+    if (!writeLocalArray(CLIENT_MESSAGES_KEY,messages,1000)) return false;
+    if (typeof renderTrainerAttention === "function") renderTrainerAttention();
+    return true;
+  }
   function coachFeedbackHtml(assignment) {
     const review = assignment && assignment.clientReview || {};
     if (!assignment || !assignment.clientReview) return '<div class="coach-feedback-empty">The client has not submitted a finish review for this workout.</div>';
@@ -289,8 +337,15 @@
       + coachMovementChips(reviewArray(review,"likedExercises"),"positive",performed)
       + '</section><section><h4>Disliked / unclear movements</h4>'
       + coachMovementChips(reviewArray(review,"dislikedExercises"),"negative",performed) + '</section></div>';
-    const comments = '<div class="coach-feedback-comments">'
-      + feedbackTextBlock("Question for coach",review.questions,"No question entered")
+    // The question is answerable from here, in the context it was asked in. The reply goes
+    // into the client's normal coach thread, so they read it where they already look.
+    const questionBlock = review.questions
+      ? '<article class="coach-feedback-question"><span>Question for coach</span><div>' + escapeHtml(review.questions) + '</div>'
+        + '<div class="coach-question-reply"><textarea id="coachQuestionReply" rows="2" placeholder="Reply to ' + escapeHtml((assignment.client || "your client").split(" ")[0]) + '\u2026"></textarea>'
+        + '<button class="small-btn primary" data-answer-question data-profile="' + escapeHtml(assignment.profileId || "") + '">Send reply</button></div>'
+        + '<small>Sends as a message in their coach thread.</small></article>'
+      : feedbackTextBlock("Question for coach","","No question entered");
+    const comments = '<div class="coach-feedback-comments">' + questionBlock
       + feedbackTextBlock("Workout notes",review.notes,"No workout note entered") + '</div>';
     return head + metrics + painBand + records + movements + comments;
   }
@@ -306,6 +361,7 @@
     byId("coachAdjustmentProfileId").value = profile.id; byId("coachAdjustmentTitle").textContent = "Review " + profile.name;
     byId("coachAdjustmentSummary").textContent = (exact.programDayName || review.workoutName || "Assigned workout") + " · " + sets.logged + " of " + sets.planned + " planned efforts logged";
     byId("coachAdjustmentClientFeedback").innerHTML = coachFeedbackHtml(exact);
+    bindDataHandlers(byId("coachAdjustmentClientFeedback"),"[data-answer-question]",(button) => window.answerClientQuestion(button.dataset.profile));
     byId("coachAdjustmentAction").value = exact.nextAction || recommendedCoachAction(review); byId("coachAdjustmentNote").value = exact.coachNote || "";
     byId("coachFormalReviewComplete").checked = false; byId("coachFormalDecision").value = "continue"; byId("coachFormalNote").value = ""; byId("formalReviewBox").open = formal.due;
     byId("formalReviewSummary").textContent = formal.due ? "Four-week formal review · due now" : "Four-week formal review · " + formal.count + "/4 workouts";

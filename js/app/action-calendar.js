@@ -967,9 +967,107 @@ function calendarRangeLabel() {
   if (coachCalendarState.view === "agenda") return "Upcoming and recent schedule";
   const start = calendarStartOfWeek(anchor), end = calendarAddDays(start,6); return start.toLocaleDateString([],{month:"short",day:"numeric"}) + " – " + end.toLocaleDateString([],{month:"short",day:"numeric",year:"numeric"});
 }
+// A real time grid: an hour column with events positioned by their clock time, rather than
+// a list that happens to be sorted. Only trainer-attended items are placed - sessions and
+// consultations - because the main calendar is "who is coming in", and programmed workouts
+// a client does alone would bury that.
+const CALENDAR_GRID_START_HOUR = 5;
+const CALENDAR_GRID_END_HOUR = 22;
+const CALENDAR_ATTENDED_TYPES = ["appointment","consultation"];
+function calendarMinutes(value) {
+  const match = String(value || "").match(/^(\d{1,2}):(\d{2})$/);
+  return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+}
+function calendarAttendedEvents(events) {
+  return (events || []).filter((event) => CALENDAR_ATTENDED_TYPES.includes(event.type) && calendarMinutes(event.startTime) != null);
+}
+function calendarHourColumnHtml() {
+  let rows = "";
+  for (let hour = CALENDAR_GRID_START_HOUR; hour <= CALENDAR_GRID_END_HOUR; hour++) {
+    const label = (hour % 12 === 0 ? 12 : hour % 12) + (hour < 12 ? "am" : "pm");
+    rows += '<div class="calendar-hour"><span>' + label + '</span></div>';
+  }
+  return '<div class="calendar-hours">' + rows + '</div>';
+}
+function calendarPlacedEventHtml(event) {
+  const start = calendarMinutes(event.startTime);
+  const end = calendarMinutes(event.endTime);
+  const top = ((start - CALENDAR_GRID_START_HOUR * 60) / 60) * 44;
+  // A missing or backwards end time still gets a readable block rather than a sliver.
+  const minutes = end != null && end > start ? end - start : 60;
+  const height = Math.max(22, (minutes / 60) * 44);
+  const tier = typeof calendarTier === "function" ? calendarTier(loadProfiles().find((p) => p.id === event.profileId)) : "unset";
+  return '<button class="calendar-slot tier-' + escapeHtml(tier) + ' status-' + escapeHtml(event.status || "scheduled")
+    + '" style="top:' + top.toFixed(1) + 'px;height:' + height.toFixed(1) + 'px" data-calendar-open="' + escapeHtml(event.id) + '"'
+    + ' title="' + escapeHtml((event.client || event.title) + " \u00b7 " + (event.startTime || "")) + '">'
+    + '<b>' + escapeHtml(event.client || event.title) + '</b>'
+    + '<small>' + escapeHtml(event.startTime || "") + (event.type === "consultation" ? " \u00b7 Consult" : "")
+    + (event.workout ? " \u00b7 \u25b8 " + escapeHtml(event.workout.title || "workout ready") : "") + '</small></button>';
+}
+function calendarDayColumnHtml(dateKey, events, label, options) {
+  const settings = options || {};
+  const types = settings.types || CALENDAR_ATTENDED_TYPES;
+  const pool = (events || []).filter((event) => event.date === dateKey && types.includes(event.type));
+  // A programmed workout carries no clock time - it is "do this today", not "be here at
+  // four". Timed things are placed in the grid; untimed ones sit as a chip above the day,
+  // which is the only honest way to show something with a date but no hour.
+  const timed = pool.filter((event) => calendarMinutes(event.startTime) != null)
+    .sort((a, b) => calendarMinutes(a.startTime) - calendarMinutes(b.startTime));
+  const untimed = pool.filter((event) => calendarMinutes(event.startTime) == null);
+  const height = (CALENDAR_GRID_END_HOUR - CALENDAR_GRID_START_HOUR + 1) * 44;
+  const chips = untimed.map((event) => '<span class="calendar-allday type-' + escapeHtml(event.type) + '" title="'
+    + escapeHtml(event.title || "") + '">' + escapeHtml(event.title || "Workout") + '</span>').join("");
+  return '<div class="calendar-daycol">' + (label ? '<div class="calendar-daycol-head">' + label + '</div>' : '')
+    + (settings.allDayRow ? '<div class="calendar-allday-row">' + chips + '</div>' : '')
+    + '<div class="calendar-daycol-body" style="height:' + height + 'px">'
+    + timed.map(calendarPlacedEventHtml).join("")
+    + (pool.length ? "" : '<span class="calendar-daycol-empty">' + escapeHtml(settings.emptyLabel || "Nobody booked") + '</span>') + '</div></div>';
+}
+
+/* ---------- one client's own week ---------- */
+// The main calendar deliberately shows only trainer-attended sessions, because volume. At
+// one-client scale there is no volume problem, so this view adds the workouts they are
+// meant to do on their own - which is the question a coach actually asks of a client page.
+const CLIENT_CALENDAR_TYPES = ["appointment","consultation","workout"];
+let clientCalendarAnchor = "";
+function shiftClientCalendar(days) {
+  clientCalendarAnchor = calendarDateKey(calendarAddDays(calendarDate(clientCalendarAnchor || calendarDateKey(new Date())), days));
+  if (typeof renderTrainerHub === "function") renderTrainerHub(selectedTrainerClient || "");
+  return false;
+}
+function clientWeekCalendarHtml(profile) {
+  if (!profile) return "";
+  const anchor = calendarDate(clientCalendarAnchor || calendarDateKey(new Date()));
+  const start = calendarStartOfWeek(anchor), today = calendarDateKey(new Date());
+  const days = Array.from({length:7},(_,index) => calendarAddDays(start,index));
+  const mine = allCoachCalendarEvents().filter((event) => event.profileId === profile.id);
+  const week = mine.filter((event) => days.some((date) => calendarDateKey(date) === event.date));
+  const sessions = week.filter((event) => CALENDAR_ATTENDED_TYPES.includes(event.type)).length;
+  const workouts = week.filter((event) => event.type === "workout").length;
+  return '<section class="analysis-panel client-week-calendar"><div class="analysis-panel-head">'
+    + '<div><h4 class="analysis-section-title">This client\u2019s week</h4>'
+    + '<p>' + sessions + ' with a trainer \u00b7 ' + workouts + ' to do on their own</p></div>'
+    + '<div class="tool-actions"><button class="mini-btn" onclick="return shiftClientCalendar(-7)">\u2039</button>'
+    + '<button class="mini-btn" onclick="return shiftClientCalendar(0)">This week</button>'
+    + '<button class="mini-btn" onclick="return shiftClientCalendar(7)">\u203a</button></div></div>'
+    + '<div class="calendar-timegrid week client"><div class="calendar-timegrid-body">' + calendarHourColumnHtml()
+    + days.map((date) => { const key = calendarDateKey(date);
+        return calendarDayColumnHtml(key,week,'<span' + (key === today ? ' class="is-today"' : '') + '>'
+          + escapeHtml(date.toLocaleDateString([],{weekday:"short"})) + ' ' + date.getDate() + '</span>',
+          { types:CLIENT_CALENDAR_TYPES, emptyLabel:"\u2014", allDayRow:true }); }).join("")
+    + '</div></div></section>';
+}
 function calendarGridHtml(events) {
   const anchor = calendarDate(coachCalendarState.anchor), today = calendarDateKey(new Date());
   if (coachCalendarState.view === "day") {
+    const dateKey = calendarDateKey(anchor);
+    return '<section class="calendar-timegrid"><div class="calendar-timegrid-head"><b>'
+      + escapeHtml(calendarDateLabel(dateKey,{weekday:"long",month:"long",day:"numeric"})) + '</b>'
+      + '<button class="mini-btn" onclick="openCalendarEventEditor(\'\',\'' + dateKey + '\')">+ Schedule</button></div>'
+      + '<div class="calendar-timegrid-body">' + calendarHourColumnHtml()
+      + calendarDayColumnHtml(dateKey,events,"") + '</div></section>';
+  }
+  if (coachCalendarState.view === "legacyday") {
     const dateKey = calendarDateKey(anchor), dayEvents = events.filter((event) => event.date === dateKey);
     return '<section class="calendar-day-view"><div class="calendar-day-heading"><b>' + calendarDateLabel(dateKey,{weekday:"long",month:"long",day:"numeric"}) + '</b><button class="mini-btn" onclick="openCalendarEventEditor(\'\',\'' + dateKey + '\')">+ Add here</button></div><div class="calendar-day-events">' + (dayEvents.map(calendarEventChip).join("") || '<div class="calendar-empty">No scheduled work.</div>') + '</div></section>';
   }
@@ -981,6 +1079,15 @@ function calendarGridHtml(events) {
   if (coachCalendarState.view === "month") {
     const first = new Date(anchor.getFullYear(),anchor.getMonth(),1,12), start = calendarStartOfWeek(first), days = Array.from({length:42},(_,index) => calendarAddDays(start,index));
     return '<div class="calendar-month-head">' + ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((day) => '<span>' + day + '</span>').join("") + '</div><div class="calendar-month-grid">' + days.map((date) => { const dateKey = calendarDateKey(date), dayEvents = events.filter((event) => event.date === dateKey), outside = date.getMonth() !== anchor.getMonth(); return '<section class="calendar-month-day' + (dateKey === today ? ' today' : '') + (outside ? ' outside' : '') + (dayEvents.length ? ' has-events' : '') + '"><button class="calendar-day-number" onclick="setCoachCalendarAnchor(\'' + dateKey + '\',\'day\')">' + date.getDate() + '</button>' + dayEvents.slice(0,3).map(calendarEventChip).join("") + (dayEvents.length > 3 ? '<button class="calendar-more" onclick="setCoachCalendarAnchor(\'' + dateKey + '\',\'day\')">+' + (dayEvents.length - 3) + ' more</button>' : '') + '</section>'; }).join("") + '</div>';
+  }
+  if (coachCalendarState.view === "week") {
+    const weekStart = calendarStartOfWeek(anchor);
+    const weekDays = Array.from({length:7},(_,index) => calendarAddDays(weekStart,index));
+    return '<section class="calendar-timegrid week"><div class="calendar-timegrid-body">' + calendarHourColumnHtml()
+      + weekDays.map((date) => { const key = calendarDateKey(date);
+          return calendarDayColumnHtml(key,events,'<span' + (key === today ? ' class="is-today"' : '') + '>'
+            + escapeHtml(date.toLocaleDateString([],{weekday:"short"})) + ' ' + date.getDate() + '</span>'); }).join("")
+      + '</div></section>';
   }
   const start = calendarStartOfWeek(anchor), days = Array.from({length:7},(_,index) => calendarAddDays(start,index));
   return '<div class="calendar-week-grid">' + days.map((date) => { const dateKey = calendarDateKey(date), dayEvents = events.filter((event) => event.date === dateKey); return '<section class="calendar-week-day' + (dateKey === today ? ' today' : '') + '"><div class="calendar-week-head"><button onclick="setCoachCalendarAnchor(\'' + dateKey + '\',\'day\')"><span>' + date.toLocaleDateString([],{weekday:"short"}) + '</span><b>' + date.getDate() + '</b></button><button class="mini-btn" onclick="openCalendarEventEditor(\'\',\'' + dateKey + '\')">+</button></div><div>' + (dayEvents.map(calendarEventChip).join("") || '<span class="calendar-empty">Open</span>') + '</div></section>'; }).join("") + '</div>';
@@ -1015,6 +1122,8 @@ function renderCoachCalendarModule() {
   const upcoming = events.filter((event) => calendarDate(event.date) >= calendarDate(calendarDateKey(new Date())) && !["cancelled","completed"].includes(event.status)).length, missed = events.filter((event) => event.status === "missed").length;
   const views = ["day","week","month","agenda"].map((view) => '<button class="calendar-view-btn ' + (coachCalendarState.view === view ? "on" : "") + '" onclick="setCoachCalendarView(\'' + view + '\')">' + view[0].toUpperCase() + view.slice(1) + '</button>').join("");
   out.innerHTML = '<section class="coach-module-card operational-calendar"><div class="calendar-topbar"><div><span class="client-section-label">Operational calendar</span><h3>' + escapeHtml(calendarRangeLabel()) + '</h3><p>Appointments, assigned workouts, and coaching follow-ups share one schedule. Shared clients remain visible to every approved trainer.</p></div><div class="tool-actions"><button class="small-btn" onclick="setCoachCalendarAnchor(\'' + calendarDateKey(new Date()) + '\')">Today</button><button class="small-btn primary" onclick="openCalendarEventEditor()">+ Schedule</button></div></div><div class="calendar-policy-note"><b>Rescheduling policy is still a management draft.</b> V6 requires a reason and records the actor and time for every schedule change, but it does not enforce a fee or notice cutoff yet.</div><div class="calendar-stats"><div><b>' + upcoming + '</b><span>Upcoming</span></div><div><b>' + missed + '</b><span>Missed / follow-up</span></div><div><b>' + events.filter((event) => event.type === "workout").length + '</b><span>Assigned workouts</span></div><div><b>' + events.filter((event) => event.type === "appointment").length + '</b><span>Appointments</span></div></div><div class="calendar-controls"><div class="calendar-range-controls"><button onclick="moveCoachCalendar(-1)" aria-label="Previous">‹</button><button onclick="moveCoachCalendar(1)" aria-label="Next">›</button><strong>' + escapeHtml(calendarRangeLabel()) + '</strong></div><div class="calendar-view-toggle">' + views + '</div></div><div class="calendar-filters">' + calendarFilterSelect("calendarClientFilter","Clients","client",profiles.map((profile) => [profile.id,profile.name])) + calendarFilterSelect("calendarTrainerFilter","Trainers","trainer",[["__shared","Coaching team / unassigned"],...trainers.map((trainer) => [trainer.id,trainer.name])]) + calendarFilterSelect("calendarTypeFilter","Types","type",Object.entries(CALENDAR_TYPE_LABELS)) + calendarFilterSelect("calendarStatusFilter","Statuses","status",Object.entries(CALENDAR_STATUS_LABELS)) + calendarFilterSelect("calendarTierFilter","Tiers","tier",tiers.map((tier) => [tier,calendarTierLabel(tier)])) + calendarFilterSelect("calendarTimeFilter","Times","time",[["all_day","All-day items"],["morning","Morning · before noon"],["afternoon","Afternoon · noon–5 PM"],["evening","Evening · after 5 PM"]]) + '</div><div class="calendar-canvas">' + dailyPrepPanelHtml() + weeklyBalancePanelHtml(membershipWeekStartKey(coachCalendarState.anchor),allEvents) + calendarGridHtml(events) + '</div></section>';
+  // Slots carry the event id in a data attribute rather than an inline handler.
+  if (typeof bindDataHandlers === "function") bindDataHandlers(out,"[data-calendar-open]",(button) => openCalendarEventEditor(button.dataset.calendarOpen));
 }
 
 function enhanceClientSchedule(profile) {

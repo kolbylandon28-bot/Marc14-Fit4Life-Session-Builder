@@ -203,6 +203,7 @@
     });
 
     if (!writeProfiles(profiles)) { showToast("The import could not be saved. Nothing was changed."); return false; }
+    const bookings = applyImportedBookings(diff, profiles, aliases);
     const state = { ...pending.diff.nextState, lastImportedAt:new Date().toISOString(),
       history:[{ at:new Date().toISOString(), file:pending.fileName, created:createdCount, updated:updatedCount },
         ...(loadImportState().history || [])].slice(0, 20) };
@@ -215,6 +216,60 @@
     if (out) out.innerHTML = '<div class="invite-check ok">✓ Applied. ' + createdCount + ' created, ' + updatedCount + ' updated, no email sent.</div>';
     return true;
   };
+
+  // Only sessions and consultations - a trainer is present for both, and those are the only
+  // things the user wants on the main calendar. Programmed workouts a client does alone stay
+  // off it. Recurring weekly slots are generated across a rolling horizon, because "Monday
+  // 4:00 PM" repeats forever and something has to bound it.
+  const RECURRING_WEEKS_AHEAD = 8;
+  function applyImportedBookings(diff, profiles, aliases) {
+    if (typeof loadCalendarEvents !== "function") return 0;
+    const byEmail = new Map(profiles.filter((p) => p.bookingEmail || p.email)
+      .map((p) => [String(p.bookingEmail || p.email).toLowerCase(), p]));
+    const events = loadCalendarEvents();
+    const seen = new Set(events.map((event) => event.sourceKey).filter(Boolean));
+    const clients = [...diff.created.map((item) => item.client), ...diff.updated.map((item) => item.client)];
+    let added = 0;
+
+    clients.forEach((client) => {
+      const profile = byEmail.get(client.email); if (!profile) return;
+      const alias = aliases.get(client.trainerKey);
+      const base = { source:"calendar", profileId:profile.id, client:profile.name,
+        trainerId: alias && alias.trainer_user_id || "", trainerName: client.trainerName || "",
+        status:"scheduled", importedFrom:"booking_report" };
+
+      client.appointments.forEach((slot) => {
+        // Keyed on the booking itself, so re-importing the same export never duplicates it.
+        const key = "booking:" + client.email + ":" + slot.date + ":" + slot.startTime + ":" + slot.kind;
+        if (seen.has(key)) return;
+        seen.add(key); added++;
+        events.unshift({ ...base, id:"calendar-event-import-" + Date.now() + "-" + added,
+          sourceKey:key, type:slot.kind, date:slot.date, startTime:slot.startTime, endTime:slot.endTime,
+          title:(slot.kind === "consultation" ? "Consultation" : "Training session") + " \u00b7 " + profile.name });
+      });
+
+      client.recurring.forEach((slot) => {
+        for (let week = 0; week < RECURRING_WEEKS_AHEAD; week++) {
+          const date = nextWeekdayKey(slot.weekday, week);
+          const key = "booking-weekly:" + client.email + ":" + slot.weekday + ":" + slot.startTime + ":" + date;
+          if (seen.has(key)) continue;
+          seen.add(key); added++;
+          events.unshift({ ...base, id:"calendar-event-import-" + Date.now() + "-w" + added,
+            sourceKey:key, type:"appointment", date, startTime:slot.startTime, endTime:slot.endTime,
+            recurringSlot:true, title:"Training session \u00b7 " + profile.name });
+        }
+      });
+    });
+
+    if (added && typeof writeLocalArray === "function") writeLocalArray(CALENDAR_EVENTS_KEY, events, 2000);
+    return added;
+  }
+  function nextWeekdayKey(weekday, weeksAhead) {
+    const today = new Date(); today.setHours(12,0,0,0);
+    const delta = (weekday - today.getDay() + 7) % 7;
+    const when = new Date(today.getTime()); when.setDate(today.getDate() + delta + weeksAhead * 7);
+    return when.getFullYear() + "-" + String(when.getMonth() + 1).padStart(2,"0") + "-" + String(when.getDate()).padStart(2,"0");
+  }
 
   window.bookingImportPanelHtml = bookingImportPanelHtml;
   window.loadBookingImportState = loadImportState;
