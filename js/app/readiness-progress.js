@@ -222,11 +222,11 @@ function toggleGoalMilestone(profileId,index) {
   showToast(milestone.completed ? "Milestone completed" : "Milestone reopened");
   return true;
 }
-function updateGoalCurrentValue(profileId) {
+async function updateGoalCurrentValue(profileId) {
   const profiles = loadProfiles(), profileIndex = profiles.findIndex((item) => item.id === profileId); if (profileIndex < 0) return false;
   const profile = profiles[profileIndex], contract = goalContractFor(profile), evidence = goalContractCurrentEvidence(profile,contract);
   if (evidence.automatic) { showToast("This value updates automatically from " + evidence.source.toLowerCase()); return false; }
-  const answer = prompt("Current " + (contract.metricLabel || "goal value") + (contract.unit ? " (" + contract.unit + ")" : ""),contract.currentValue == null ? "" : contract.currentValue);
+  const answer = await askForText("Current " + (contract.metricLabel || "goal value") + (contract.unit ? " (" + contract.unit + ")" : ""),contract.currentValue == null ? "" : contract.currentValue,{ type:"number" });
   if (answer == null) return false;
   const value = goalNumber(answer); if (value == null) { showToast("Enter a valid number"); return false; }
   contract.currentValue = value; contract.updatedAt = new Date().toISOString();
@@ -1136,7 +1136,7 @@ function updateSelectedProgramProfileFromSetup() {
     name:profile.name,username:profile.username,email:profile.email,goals:goals.length ? goals : ["general"],
     trainingStyle:byId("programStyle").value || "auto",cardioMode:cardioModes[0],cardioModes,
     experience:Number(byId("programExp").value),age:Math.max(18,Math.min(90,Math.round(numberFrom("programAge",profile.age || 30)))),
-    minutes:Number(byId("programMinutes").value) || profile.minutes || 60,availableDays,
+    minutes:Number(byId("programMinutes").value) || sessionMinutesForProfile(profile),availableDays,
     injuries:[...programFilters.injuries],zones:[...programFilters.zones],muscles:[...(profile.muscles || [])],trainingDays:inferredTrainingDays(profile,availableDays),
     trainingPhase:profile.trainingPhase || "general",sport:profile.sport || "",sportSchedule:profile.sportSchedule || "",competitionDate:profile.competitionDate || "",
     exercisePreferences:{...(profile.exercisePreferences || {})},phaseCompoundAnchors:{...(profile.phaseCompoundAnchors || {})},

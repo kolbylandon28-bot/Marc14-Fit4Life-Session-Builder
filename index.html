@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20260820-v51-import-lifecycle-r2">
+<link rel="manifest" href="manifest.webmanifest?v=20260820-v53-jargon-lifecycle-r2">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20260820-v51-import-lifecycle-r2">
+<link rel="stylesheet" href="styles.css?v=20260820-v53-jargon-lifecycle-r2">
 </head>
 <body>
 
@@ -498,7 +498,7 @@
             <div class="compact-field"><label for="programMode">Program type</label><select id="programMode" onchange="syncProgramMode()"><option value="starter" selected>3-week starter rhythm</option><option value="progressive">Ongoing progressive program</option></select></div>
             <div class="compact-field"><label for="programDays">Days per week</label><select id="programDays"><option value="1">1 day</option><option value="2" selected>2 days</option><option value="3">3 days</option><option value="4">4 days</option><option value="5">5 days</option></select><span class="storage-note" id="programTierNote"></span></div>
             <div class="compact-field"><label for="programWeeks">Program length</label><select id="programWeeks" disabled><option value="3" selected>3 weeks</option><option value="4">4 weeks</option><option value="6">6 weeks</option><option value="8">8 weeks</option><option value="12">12 weeks</option></select></div>
-            <div class="compact-field"><label for="programMinutes">Session length</label><select id="programMinutes"><option value="30">30 min</option><option value="45">45 min</option><option value="60" selected>60 min</option><option value="90">90 min</option></select></div>
+            <div class="compact-field"><label for="programMinutes">Session length</label><select id="programMinutes"><option value="" selected>Use their tier (60 min)</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option><option value="90">90 min</option></select></div>
             <div class="compact-field"><label for="programFocus">Extra muscle emphasis</label><select id="programFocus"><option value="">No extra emphasis</option><option value="chest">Chest</option><option value="back">Back</option><option value="shoulders">Shoulders</option><option value="quads">Quads</option><option value="hamstrings">Hamstrings</option><option value="glutes">Glutes</option><option value="arms">Arms</option><option value="calves">Calves</option><option value="core">Core</option></select></div>
             <div class="program-mode-note" id="programModeNote"><b>Starter rhythm · recommended for new clients</b>Two recognizable workouts repeat for three weeks. Week 1 learns the plan, Week 2 repeats it with a small progression, and Week 3 builds confidence without swapping the exercise menu. A client review follows Week 1.</div>
           </div>
@@ -1266,27 +1266,27 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/engine/exercise-library.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/engine/session-engine.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/engine/session-builders.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/engine/personalization.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/engine/booking-import.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/app/navigation.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/app/program-app.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/app/forms.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/engine/generation.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/app/rendering.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/app/calculations-timers.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/engine/multiweek-programs.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/app/readiness-progress.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/app/client-consultation.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/trainer/trainer-hub.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/trainer/coaching-support.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/app/role-governance.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/app/action-calendar.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/app/workout-feedback-reports.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/app/booking-import-ui.js?v=20260820-v51-import-lifecycle-r2"></script>
-<script src="js/init.js?v=20260820-v51-import-lifecycle-r2"></script>
+<script src="cloud-sync.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/engine/exercise-library.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/engine/session-engine.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/engine/session-builders.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/engine/personalization.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/engine/booking-import.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/app/navigation.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/app/program-app.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/app/forms.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/engine/generation.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/app/rendering.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/app/calculations-timers.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/engine/multiweek-programs.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/app/readiness-progress.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/app/client-consultation.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/trainer/trainer-hub.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/trainer/coaching-support.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/app/role-governance.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/app/action-calendar.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/app/workout-feedback-reports.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/app/booking-import-ui.js?v=20260820-v53-jargon-lifecycle-r2"></script>
+<script src="js/init.js?v=20260820-v53-jargon-lifecycle-r2"></script>
 </body>
 </html>

@@ -769,6 +769,13 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   .modal-backdrop{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.76);display:none;align-items:center;justify-content:center;padding:18px;pointer-events:none}
   .modal-backdrop.open{display:flex;pointer-events:auto}
   .modal-backdrop.open>.review-dialog{position:relative;pointer-events:auto}
+  .ask-backdrop{align-items:center;justify-content:center;padding:18px}
+  .ask-dialog{width:min(420px,100%);padding:16px 18px;border:1px solid var(--line-bright);border-radius:14px;
+    background:var(--panel,#101116);pointer-events:auto;box-shadow:0 22px 60px rgba(0,0,0,.5)}
+  .ask-dialog h4{margin:0 0 10px;font:800 12px var(--mono);letter-spacing:.03em;color:var(--text)}
+  .ask-dialog input,.ask-dialog textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
+    background:transparent;color:var(--text);font:inherit;font-size:13px;resize:vertical}
+  .ask-dialog .tool-actions{margin-top:12px;justify-content:flex-end}
   .coach-more-backdrop{align-items:flex-end;padding:0}
   .coach-more-sheet{width:100%;max-height:78vh;overflow:auto;background:var(--panel,#101116);border:1px solid var(--line-bright);
     border-radius:18px 18px 0 0;padding:16px 14px calc(18px + env(safe-area-inset-bottom));pointer-events:auto}

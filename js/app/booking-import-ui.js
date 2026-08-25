@@ -188,6 +188,27 @@
       profiles.unshift(record); createdCount++;
     });
 
+    // A client who cancels or expires keeps every future session that was already
+    // generated for them - phantom appointments that still count toward owed sessions and
+    // still mark a solo day as a trainer day, so the report the calendar exists to produce
+    // comes out wrong. Their FUTURE bookings are cancelled; the past is history and stays.
+    const leaving = [...diff.created.map((i) => i.client), ...diff.updated.map((i) => i.client)]
+      .filter((client) => ["cancelled","expired"].includes(client.status));
+    let retired = 0;
+    if (leaving.length) {
+      const todayKey = new Date().toISOString().slice(0,10);
+      const byBooking = new Map(profiles.filter((p) => p.bookingEmail || p.email)
+        .map((p) => [String(p.bookingEmail || p.email).toLowerCase(), p.id]));
+      const events = loadCalendarEvents().map((event) => {
+        const owner = leaving.find((client) => byBooking.get(client.email) === event.profileId);
+        if (!owner || event.date < todayKey || event.status === "cancelled") return event;
+        retired++;
+        return { ...event, status:"cancelled",
+          cancelReason:"Membership " + owner.status + " in the booking report" };
+      });
+      if (retired) writeLocalArray(CALENDAR_EVENTS_KEY, events, 2000);
+    }
+
     diff.updated.forEach((item) => {
       const index = profiles.findIndex((profile) => profile.id === item.profileId); if (index < 0) return;
       const client = item.client, current = profiles[index];
@@ -226,6 +247,7 @@
     refreshProfileSelects();
     showToast("Imported — " + createdCount + " created, " + updatedCount + " updated, "
       + bookings + " booking" + (bookings === 1 ? "" : "s") + " on the calendar"
+      + (retired ? ", " + retired + " future session" + (retired === 1 ? "" : "s") + " cancelled" : "")
       + (skipped.length ? ", " + skipped.length + " could not be created" : "") + ". No emails sent.");
     pending = null;
     const out = byId("bookingImportPreview");

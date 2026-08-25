@@ -119,7 +119,7 @@ function loadProgramProfile() {
   byId("programClient").value = profile.name; byId("programGoal").value = profile.goals[0] || "general";
   byId("programSecondaryGoal").value = profile.goals[1] || ""; byId("programExp").value = profile.experience;
   byId("programStyle").value = profile.trainingStyle || "auto"; programCardioModes = normalizeCardioPreferences(profile.cardioModes || profile.cardioMode); renderProgramCardioChoices();
-  byId("programAge").value = profile.age; byId("programMinutes").value = profile.minutes || 60;
+  byId("programAge").value = profile.age; byId("programMinutes").value = profile.minutes && profile.minutes !== sessionMinutesForProfile(profile) ? profile.minutes : "";
   byId("programMode").value = mode;
   const tierCap = syncProgramDaysToTier(profile);
   const requestedDays = existingProgram && existingProgram.setup && existingProgram.setup.days
@@ -491,7 +491,7 @@ function generateProgram() {
     weeks: programMode === "starter" ? 3 : Number(byId("programWeeks").value),
     programMode,
     starter:programMode === "starter",
-    minutes: Number(byId("programMinutes").value),
+    minutes: Number(byId("programMinutes").value) || sessionMinutesForProfile(selectedProfile),
     focus: byId("programFocus").value,
     trainingStyle: byId("programStyle").value || "auto", cardioMode: cardioModes[0], cardioModes,
     injuries: [...programFilters.injuries], zones: [...programFilters.zones],

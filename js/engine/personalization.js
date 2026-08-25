@@ -162,6 +162,31 @@ const CAUTION_TEXT = {
   postpartum: "High-impact and ballistic choices are filtered while the client returns gradually. Clearance, symptoms, delivery recovery, and pelvic-floor tolerance should guide progression.",
   balance: "Unilateral, high-impact, plyometric, and Olympic movements are filtered to reduce fall risk. Favor stable support and controlled changes of direction.",
   pelvicfloor: "High-impact, ballistic, and maximal metabolic finishers are filtered. Use symptom-guided breathing and pressure management, and refer persistent symptoms to a qualified clinician.",
+
+  // Plain-language versions for the tags that had none. A client picks several of these
+  // themselves, so the explanation has to make sense to them, not to the engine.
+  foot: "Exercises that load or push off your foot and toes are left out until it settles.",
+  handgrip: "Exercises that need a hard grip are swapped for ones that do not.",
+  thoracic: "Exercises that twist or compress your upper back and ribs are left out.",
+  abdominal: "Hard bracing and direct ab work are left out while this heals.",
+  medicalhold: "Training is paused until the person treating you clears you to start again.",
+  noimpact: "No jumping, running or landing - your sessions stay on the ground.",
+  noballistic: "Fast, explosive movements are replaced with steady, controlled ones.",
+  nooverhead: "Nothing is pressed or held above your head.",
+  nodeepknee: "Your knees stay in a comfortable range - no deep squatting or kneeling.",
+  nodeephip: "Your hips stay in a comfortable range - nothing that folds you up deeply.",
+  nohinge: "Bending forward from the hips, like a deadlift, is left out.",
+  noaxialload: "Nothing rests weight down through your spine, so no bars across your back or shoulders.",
+  nospinalflexion: "Rounding or curling your back forward is left out, including sit-ups.",
+  nospinalextension: "Arching your back backwards is left out.",
+  norotation: "Twisting under load is left out.",
+  nogrip: "Anything you have to grip hard is swapped for machines or straps.",
+  nosingleleg: "You stay on both feet - no single-leg or balance work.",
+  nofloor: "Nothing asks you to get down to the floor and back up.",
+  nosupine: "No exercises lying flat on your back.",
+  noprone: "No exercises lying face down, including planks.",
+  nostraining: "Nothing that makes you hold your breath and strain - the effort stays moderate.",
+  lowintensity: "Everything stays light and easy for now."
 };
 
 let state = {

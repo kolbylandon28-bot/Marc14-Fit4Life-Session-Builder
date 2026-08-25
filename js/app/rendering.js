@@ -196,7 +196,7 @@ function renderCard(session, sessionRef, partnerKey, partnerLabel) {
     const c = el("div", "caution");
     c.appendChild(el("div", "cx-i", "\u26a0\ufe0f"));
     const t = el("div", "cx-t");
-    t.innerHTML = "<b>" + escapeHtml(INJURY_LABELS[tag] || tag) + ":</b> " + escapeHtml(CAUTION_TEXT[tag] || "The universal safety filter removes exercises whose movement demands conflict with this reported restriction. Recheck symptoms and technique before progressing.");
+    t.innerHTML = "<b>" + escapeHtml(INJURY_LABELS[tag] || tag) + ":</b> " + escapeHtml(CAUTION_TEXT[tag] || "Exercises that would aggravate this are left out of your sessions.");
     c.appendChild(t);
     body.appendChild(c);
   });
@@ -413,7 +413,7 @@ function recommendedLoadFor(client, exercise, rx) {
 }
 function effortSelect(exerciseName, value) {
   const select = document.createElement("select"); select.setAttribute("aria-label",exerciseName + " effort");
-  [["","RPE optional"],[6,"6 · easy"],[7,"7 · 3 left"],[8,"8 · 2 left"],[9,"9 · 1 left"],[10,"10 · max"]].forEach(([optionValue,text]) => { const option = document.createElement("option"); option.value = optionValue; option.textContent = text; select.appendChild(option); });
+  [["","How hard was it? (optional)"],[6,"Easy \u00b7 plenty left"],[7,"Moderate \u00b7 about 3 more reps"],[8,"Hard \u00b7 about 2 more reps"],[9,"Very hard \u00b7 1 more rep"],[10,"Maximum \u00b7 nothing left"]].forEach(([optionValue,text]) => { const option = document.createElement("option"); option.value = optionValue; option.textContent = text; select.appendChild(option); });
   if (value != null) select.value = String(value); return select;
 }
 
@@ -1068,6 +1068,33 @@ function numberFrom(id, fallback) {
 }
 function escapeHtml(value) {
   return String(value == null ? "" : value).replace(/[&<>'"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[ch]));
+}
+// window.prompt is suppressed in an installed PWA, so a button built on it silently does
+// nothing and whatever the client typed is lost. This is the same question asked in the
+// page itself, which works everywhere.
+function askForText(question, initialValue, options) {
+  const settings = options || {};
+  return new Promise((resolve) => {
+    const backdrop = el("div","modal-backdrop open ask-backdrop");
+    backdrop.innerHTML = '<div class="ask-dialog"><h4>' + escapeHtml(question) + '</h4>'
+      + (settings.multiline
+        ? '<textarea id="askForTextInput" rows="3"></textarea>'
+        : '<input id="askForTextInput" type="' + escapeHtml(settings.type || "text") + '">')
+      + '<div class="tool-actions"><button class="small-btn" data-ask-cancel>Cancel</button>'
+      + '<button class="small-btn primary" data-ask-ok>' + escapeHtml(settings.confirmLabel || "Save") + '</button></div></div>';
+    document.body.appendChild(backdrop);
+    const field = backdrop.querySelector("#askForTextInput");
+    field.value = initialValue == null ? "" : String(initialValue);
+    const close = (value) => { backdrop.remove(); resolve(value); };
+    backdrop.querySelector("[data-ask-ok]").addEventListener("click",() => close(field.value.trim()));
+    backdrop.querySelector("[data-ask-cancel]").addEventListener("click",() => close(null));
+    backdrop.addEventListener("click",(event) => { if (event.target === backdrop) close(null); });
+    field.addEventListener("keydown",(event) => {
+      if (event.key === "Enter" && !settings.multiline) { event.preventDefault(); close(field.value.trim()); }
+      if (event.key === "Escape") close(null);
+    });
+    setTimeout(() => { field.focus(); field.select(); },0);
+  });
 }
 function showToast(message) {
   const toast = byId("appToast");

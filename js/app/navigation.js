@@ -558,6 +558,20 @@ function membershipTierIsSelectable(id) {
   const meta = MEMBERSHIP_TIERS[id];
   return Boolean(meta) && !meta.disabled;
 }
+// Every package is a 60-minute session, so a client's tier already answers "how long".
+// Falls back to 60 when they have no tier yet.
+function sessionMinutesForProfile(profile) {
+  const meta = typeof membershipTierMeta === "function" ? membershipTierMeta(profile) : null;
+  const tierMinutes = meta && meta.sessionMinutes;
+  const own = Number(profile && profile.minutes);
+  if (own && (!tierMinutes || own !== tierMinutes)) return own;
+  return tierMinutes || own || 60;
+}
+/* ---------- Monday-first weekday index ---------- */
+function mondayFirstDayIndex(date) {
+  const day = (date instanceof Date ? date : new Date()).getDay();
+  return day === 0 ? 6 : day - 1;
+}
 /* ---------- where an attention item is resolved ---------- */
 // Which tab of a client's workspace actually clears each kind of notification. Routing and
 // the tab badges both read this, so a notification can never point somewhere it cannot be
