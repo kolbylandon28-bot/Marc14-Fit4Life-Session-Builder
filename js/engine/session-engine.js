@@ -596,7 +596,7 @@ const COMMON_LIMITATIONS = [...COMMON_BODY_LIMITATIONS,...COMMON_SPECIAL_LIMITAT
 const PAIN_LEVELS = {
   green:{rank:0,label:"Green · No pain",color:"#55c98a",legacy:"none",action:"Continue as planned. Keep normal technique and range."},
   yellow:{rank:1,label:"Yellow · Mild awareness; movement normal",color:"#e4c85b",legacy:"mild",action:"Reduce load, range, speed, or complexity if helpful. Movement must stay normal. Monitor it and tell the trainer."},
-  orange:{rank:2,label:"Orange · Movement changed",color:"#ed9448",legacy:"changed",action:"Stop that exercise. Use a pain-free substitute only; the trainer must review the report before the next workout."},
+  orange:{rank:2,label:"Orange · Changed technique, range, or balance",color:"#ed9448",legacy:"changed",action:"Stop that exercise. Use a pain-free substitute only; the trainer must review the report before the next workout."},
   red:{rank:3,label:"Red · Severe, sharp, or worsening",color:"#e86666",legacy:"stopped",action:"End the workout. Do not test the painful movement again today; seek appropriate qualified evaluation."},
 };
 const LEGACY_PAIN_LEVELS = {none:"green",mild:"yellow",changed:"orange",stopped:"red","0":"green","1":"yellow","2":"orange","3":"red"};

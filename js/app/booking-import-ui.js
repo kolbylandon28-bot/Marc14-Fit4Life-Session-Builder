@@ -156,6 +156,7 @@
     const profiles = loadProfiles();
     const aliases = new Map(loadTrainerAliases().map((alias) => [alias.normalized_name, alias]));
     let createdCount = 0, updatedCount = 0;
+    const skipped = [];
 
     diff.created.forEach((item) => {
       const client = item.client;
@@ -173,7 +174,9 @@
         goals: ["general"], experience: 1, age: 30, minutes: 60,
         muscles: [], injuries: [], zones: [], preferences: {}, cardioModes: ["any"], trainingDays: [1,3,5], limitationAssessments: {}
       }, client.name, "");
-      if (findProfileConflict(profiles, record.name, record.username)) return;   // never create a near-duplicate
+      const clash = findProfileConflict(profiles, record.name, record.username);
+      if (clash) { skipped.push({ name:client.name, email:client.email, reason:clash.reason === "similar"
+        ? "a very similar client name already exists" : "that name or username is already taken" }); return; }
       record.id = "profile-imported-" + Date.now() + "-" + Math.random().toString(16).slice(2);
       record.updatedAt = new Date().toISOString();
       profiles.unshift(record); createdCount++;
@@ -204,16 +207,28 @@
 
     if (!writeProfiles(profiles)) { showToast("The import could not be saved. Nothing was changed."); return false; }
     const bookings = applyImportedBookings(diff, profiles, aliases);
-    const state = { ...pending.diff.nextState, lastImportedAt:new Date().toISOString(),
+    // A skipped client must not be remembered as imported, or they are never created and
+    // never reported absent on any later run - they just quietly cease to exist.
+    const skippedEmails = new Set(skipped.map((item) => item.email));
+    const carried = { ...pending.diff.nextState,
+      knownEmails:(pending.diff.nextState.knownEmails || []).filter((email) => !skippedEmails.has(email)) };
+    const state = { ...carried, lastImportedAt:new Date().toISOString(),
       history:[{ at:new Date().toISOString(), file:pending.fileName, created:createdCount, updated:updatedCount },
         ...(loadImportState().history || [])].slice(0, 20) };
     writeJson(IMPORT_KEY, state);
     if (typeof window.fit4lifeCloudSaveProfileNow === "function") window.fit4lifeCloudSaveProfileNow();
     refreshProfileSelects();
-    showToast("Imported — " + createdCount + " created, " + updatedCount + " updated. No emails sent.");
+    showToast("Imported — " + createdCount + " created, " + updatedCount + " updated, "
+      + bookings + " booking" + (bookings === 1 ? "" : "s") + " on the calendar"
+      + (skipped.length ? ", " + skipped.length + " could not be created" : "") + ". No emails sent.");
     pending = null;
     const out = byId("bookingImportPreview");
-    if (out) out.innerHTML = '<div class="invite-check ok">✓ Applied. ' + createdCount + ' created, ' + updatedCount + ' updated, no email sent.</div>';
+    if (out) out.innerHTML = '<div class="invite-check ok">\u2713 Applied. ' + createdCount + ' created, ' + updatedCount + ' updated, '
+      + bookings + ' booking' + (bookings === 1 ? '' : 's') + ' on the calendar. No email sent.</div>'
+      + (skipped.length ? '<div class="booking-import-group warn"><b>Not created \u2014 needs your attention</b>'
+        + skipped.map((item) => '<div class="booking-import-row"><span>' + escapeHtml(item.name || item.email) + '</span>'
+          + '<small>' + escapeHtml(item.email) + ' \u00b7 ' + escapeHtml(item.reason)
+          + '. Rename the existing client, or add this one by hand.</small></div>').join("") + '</div>' : '');
     return true;
   };
 

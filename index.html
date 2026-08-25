@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20260820-v49-client-calendar-r1">
+<link rel="manifest" href="manifest.webmanifest?v=20260820-v50-safety-import-fixes-r1">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20260820-v49-client-calendar-r1">
+<link rel="stylesheet" href="styles.css?v=20260820-v50-safety-import-fixes-r1">
 </head>
 <body>
 
@@ -576,7 +576,7 @@
           <div class="compact-field weekly-checkin-field"><label for="checkInEnergy">Energy</label><select id="checkInEnergy"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · High</option></select></div>
           <div class="compact-field weekly-checkin-field"><label for="checkInConfidence">Training confidence</label><select id="checkInConfidence"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Steady</option><option value="4">4 · Confident</option><option value="5">5 · Very confident</option></select></div>
           <div class="compact-field weekly-checkin-field"><label for="checkInMotivation">Motivation</label><select id="checkInMotivation"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Average</option><option value="4">4 · Strong</option><option value="5">5 · Very strong</option></select></div>
-          <div class="compact-field"><label for="checkInPain" id="checkInPainLabel">Pain this week</label><select id="checkInPain" onchange="updateCheckInPainFields()"><option value="0">Green · No pain</option><option value="1">Yellow · Mild awareness; movement normal</option><option value="2">Orange · Changed technique, range, or training</option><option value="3">Red · Severe, sharp, worsening, or stopped training</option></select></div>
+          <div class="compact-field"><label for="checkInPain" id="checkInPainLabel">Pain this week</label><select id="checkInPain" onchange="updateCheckInPainFields()"><option value="0">Green · No pain</option><option value="1">Yellow · Mild awareness; movement normal</option><option value="2">Orange · Changed technique, range, or balance</option><option value="3">Red · Severe, sharp, or worsening</option></select></div>
           <div class="compact-field review-safety" id="checkInPainAreaField" hidden><label for="checkInPainArea">Where?</label><select id="checkInPainArea"></select></div>
           <div class="compact-field review-safety" id="checkInPainMovementField" hidden><label for="checkInPainMovement">Did it change movement?</label><select id="checkInPainMovement" onchange="syncCheckInPainLevel()"><option value="no">No</option><option value="yes">Yes — technique, range, balance, or training changed</option></select></div>
           <div class="starter-review-fields compact-grid weekly-checkin-field" id="checkInStarterFields">
@@ -1141,7 +1141,7 @@
       <div class="pain-level-card" style="--pain-color:#e86666"><b>Red</b><span>Severe, sharp, worsening, or concerning. End the workout and seek appropriate help.</span></div>
     </div>
     <div class="review-grid">
-      <div class="compact-field"><label for="clientPainLevel">Response level</label><select id="clientPainLevel" onchange="updateClientPainAction()"><option value="yellow">Yellow · Mild awareness; movement normal</option><option value="orange">Orange · Changed technique, range, or balance</option><option value="red">Red · Severe, sharp, or worsening</option></select></div>
+      <div class="compact-field"><label for="clientPainLevel">Response level</label><select id="clientPainLevel" onchange="updateClientPainAction()"><option value="" selected>Choose how it feels</option><option value="yellow">Yellow · Mild awareness; movement normal</option><option value="orange">Orange · Changed technique, range, or balance</option><option value="red">Red · Severe, sharp, or worsening</option></select></div>
       <div class="compact-field"><label for="clientPainArea">Where?</label><select id="clientPainArea"></select></div>
       <div class="compact-field"><label for="clientPainMovementChanged">Did it change movement?</label><select id="clientPainMovementChanged" onchange="syncClientPainLevel()"><option value="no">No</option><option value="yes">Yes — technique, range, or balance changed</option></select></div>
       <div class="compact-field"><label for="clientPainScore">0–10 rating <span style="font-weight:400">(optional)</span></label><input id="clientPainScore" type="number" min="0" max="10" step="1" placeholder="Optional"></div>
@@ -1163,7 +1163,7 @@
       <div class="review-grid">
         <div class="compact-field full"><label for="reviewClient">Client / workout</label><select id="reviewClient"></select></div>
         <div class="compact-field"><label for="reviewDifficulty">Overall difficulty</label><select id="reviewDifficulty"><option value="4">4 · Easy</option><option value="5">5 · Comfortable</option><option value="6">6 · Moderate</option><option value="7" selected>7 · Challenging</option><option value="8">8 · Hard</option><option value="9">9 · Very hard</option><option value="10">10 · Maximum</option></select></div>
-        <div class="compact-field"><label for="reviewPain">Pain or injury?</label><select id="reviewPain" onchange="updateReviewPainFields()"><option value="none">Green · No pain</option><option value="mild">Yellow · Mild awareness; movement normal</option><option value="changed">Orange · Changed technique, range, or balance</option><option value="stopped">Red · Severe, sharp, worsening, or stopped</option></select></div>
+        <div class="compact-field"><label for="reviewPain">Pain or injury?</label><select id="reviewPain" onchange="updateReviewPainFields()"><option value="none">Green · No pain</option><option value="mild">Yellow · Mild awareness; movement normal</option><option value="changed">Orange · Changed technique, range, or balance</option><option value="stopped">Red · Severe, sharp, or worsening</option></select></div>
         <div class="compact-field review-safety" id="reviewInjuryAreaField" hidden><label for="reviewInjuryArea">Body area</label><select id="reviewInjuryArea"></select></div>
         <div class="compact-field review-safety" id="reviewMovementChangedField" hidden><label for="reviewMovementChanged">Did it change movement?</label><select id="reviewMovementChanged" onchange="syncReviewPainLevel()"><option value="no">No</option><option value="yes">Yes — technique, range, or balance changed</option></select></div>
         <div class="compact-field review-safety" id="reviewPainScoreField" hidden><label for="reviewPainScore">0–10 rating <span style="font-weight:400">(optional)</span></label><input id="reviewPainScore" type="number" min="0" max="10" step="1" placeholder="Optional"></div>
@@ -1266,27 +1266,27 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/engine/exercise-library.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/engine/session-engine.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/engine/session-builders.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/engine/personalization.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/engine/booking-import.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/app/navigation.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/app/program-app.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/app/forms.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/engine/generation.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/app/rendering.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/app/calculations-timers.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/engine/multiweek-programs.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/app/readiness-progress.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/app/client-consultation.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/trainer/trainer-hub.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/trainer/coaching-support.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/app/role-governance.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/app/action-calendar.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/app/workout-feedback-reports.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/app/booking-import-ui.js?v=20260820-v49-client-calendar-r1"></script>
-<script src="js/init.js?v=20260820-v49-client-calendar-r1"></script>
+<script src="cloud-sync.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/engine/exercise-library.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/engine/session-engine.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/engine/session-builders.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/engine/personalization.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/engine/booking-import.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/app/navigation.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/app/program-app.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/app/forms.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/engine/generation.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/app/rendering.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/app/calculations-timers.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/engine/multiweek-programs.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/app/readiness-progress.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/app/client-consultation.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/trainer/trainer-hub.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/trainer/coaching-support.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/app/role-governance.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/app/action-calendar.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/app/workout-feedback-reports.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/app/booking-import-ui.js?v=20260820-v50-safety-import-fixes-r1"></script>
+<script src="js/init.js?v=20260820-v50-safety-import-fixes-r1"></script>
 </body>
 </html>

@@ -465,8 +465,16 @@ function loadProfiles() {
     return Array.isArray(data) ? data.map((profile) => profileWithIntakeFilters(migratedTierProfile(profile))) : [];
   } catch (_) { return []; }
 }
+const PROFILE_STORAGE_LIMIT = 1000;
 function writeProfiles(profiles) {
-  try { localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles.slice(0, 100))); return true; }
+  // The cap used to be 100 and the overflow was dropped in silence, then pushed to the
+  // server - so importing a real roster destroyed everyone past the hundredth without a
+  // word. Raised, and truncation now announces itself rather than quietly losing people.
+  if (profiles.length > PROFILE_STORAGE_LIMIT) {
+    showToast("Too many client profiles to store (" + profiles.length + "). Nothing was saved \u2014 tell your developer before adding more.");
+    return false;
+  }
+  try { localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles)); return true; }
   catch (_) { showToast("This browser could not save the client profile"); return false; }
 }
 function clientMatches(a, b) { return String(a || "Client").trim().toLowerCase() === String(b || "Client").trim().toLowerCase(); }
@@ -843,13 +851,32 @@ function createInvitedClient() {
   // The email is the link between the invite and the account they create, so it has to
   // be right. A personal address here means their sign-up never finds this profile.
   if (!isByuiEmail(email)) { feedback.textContent = "Use their BYU-I email address, ending in @byui.edu."; return null; }
-  if (loadProfiles().some((profile) => String(profile.email || "").toLowerCase() === email)) {
+  // An imported client already has a profile carrying their booking email, so this check
+  // refused the very invite that would give them a login - they were locked out permanently
+  // with no route back. An existing profile that has never been invited is now ADOPTED:
+  // the invite attaches to it rather than being blocked or creating a second record.
+  const existing = loadProfiles().find((profile) =>
+    String(profile.email || "").toLowerCase() === email || String(profile.bookingEmail || "").toLowerCase() === email);
+  if (existing && existing.onboardingStatus !== "imported") {
     feedback.textContent = "A client with that email already exists."; return null;
   }
   const tierId = normalizeMembershipTier(byId("inviteTier").value);
   const tierCap = tierId && MEMBERSHIP_TIERS[tierId] ? MEMBERSHIP_TIERS[tierId].programmedDays : 0;
   let explicitDays = Number(byId("inviteProgrammedDays").value) || 0;
   if (tierCap && explicitDays > tierCap) explicitDays = tierCap;
+  // Adopt rather than duplicate. Creating would trip the name-conflict guard against the
+  // imported record itself, which is why removing the refusal alone was not enough.
+  if (existing) {
+    const adopted = updateClientProfile(existing.id, { ...existing, name, email, bookingEmail:existing.bookingEmail || email,
+      username: existing.username, membershipTier: tierId,
+      sessionsPerWeek: tierId && MEMBERSHIP_TIERS[tierId] ? MEMBERSHIP_TIERS[tierId].sessionsPerWeek : existing.sessionsPerWeek || 0,
+      programmedDays: explicitDays || existing.programmedDays || tierCap,
+      invitedAt: new Date().toISOString(), onboardingStatus: "invited" });
+    if (!adopted) return null;
+    feedback.textContent = "Invited " + name + " \u2014 their imported record is now linked to this invite.";
+    refreshProfileSelects();
+    return adopted;
+  }
   const created = createClientProfile({
     name, email,
     username: (first + "-" + last).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"") || email.split("@")[0],

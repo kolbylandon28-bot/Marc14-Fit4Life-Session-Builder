@@ -371,7 +371,7 @@ function renderClientMore(profile) {
 function openClientPainReport() {
   const profile = activeClientProfile(); if (!profile) return;
   fillSelectOptions(byId("clientPainArea"),painLocationOptions(true),"");
-  byId("clientPainLevel").value = "yellow";
+  byId("clientPainLevel").value = "";   // no default on a safety field - the client chooses
   byId("clientPainMovementChanged").value = "no";
   byId("clientPainScore").value = "";
   byId("clientPainExercise").value = activeWorkout ? (() => {
@@ -395,7 +395,12 @@ function updateClientPainAction() {
 }
 function saveClientPainReport() {
   const profile = activeClientProfile(); if (!profile) return null;
-  const movementChanged = byId("clientPainMovementChanged").value === "yes", level = normalizePainLevel(byId("clientPainLevel").value,movementChanged), info = PAIN_LEVELS[level];
+  const movementChanged = byId("clientPainMovementChanged").value === "yes";
+  // normalizePainLevel turns an empty value into the mildest level, which would file an
+  // unanswered safety question as "mild". It has to be asked, not assumed.
+  const chosenLevel = byId("clientPainLevel").value;
+  if (!chosenLevel) { showToast("Choose how it feels first"); byId("clientPainLevel").focus(); return null; }
+  const level = normalizePainLevel(chosenLevel,movementChanged), info = PAIN_LEVELS[level];
   const area = byId("clientPainArea").value, exercise = byId("clientPainExercise").value.trim(), details = byId("clientPainDetails").value.trim(), rawScore = byId("clientPainScore").value;
   if (!area) { showToast("Choose where you felt it"); byId("clientPainArea").focus(); return null; }
   if (info.rank >= PAIN_LEVELS.orange.rank && !exercise) { showToast("Name the movement or exercise that changed"); byId("clientPainExercise").focus(); return null; }
@@ -653,7 +658,7 @@ function renderActiveWorkout() {
   byId('activeWorkoutLabel').textContent = (data.session.goalLabel || 'Workout') + (activeWorkout.shortened ? ' · shortened' : ''); byId('activeWorkoutStep').textContent = unit.block.title + ' · ' + (activeWorkout.unitIndex + 1) + ' of ' + units.length; byId('activeWorkoutProgress').style.width = Math.round(completedUnits / Math.max(1,units.length) * 100) + '%';
   const supersetOn = unit.type === 'superset' && Boolean(activeWorkout.supersetMode[activeWorkout.unitIndex]);
   const pair = unit.type === 'superset' ? '<div class="active-superset-choice"><b>Superset available · A1 + A2</b><p>Optional. Turn it on to alternate the two movements before resting. Leave it off to finish straight sets of each movement.</p><div class="tool-actions"><button class="small-btn ' + (!supersetOn ? 'primary' : '') + '" onclick="setActiveSupersetMode(false)">Straight sets</button><button class="small-btn ' + (supersetOn ? 'primary' : '') + '" onclick="setActiveSupersetMode(true)">Use superset</button></div></div><div class="active-block-pair"><div class="client-section-label">' + (supersetOn ? 'Superset active · alternate A1 / A2' : 'Paired exercises · straight sets selected') + '</div>' + unit.items.map((item,index) => '<button class="active-pair-tab ' + (index === activeWorkout.pairIndex ? 'on' : '') + '" onclick="setActivePair(' + index + ')">A' + (index + 1) + ' · ' + escapeHtml(item.name) + '</button>').join('') + '</div>' : '';
-  const calibrationDomains = Array.isArray(exercise.baselineDomains) ? exercise.baselineDomains : [], calibrationCapture = calibrationDomains.length ? '<div class="baseline-capture"><div class="baseline-capture-head"><b>Calibration anchor</b><span>' + escapeHtml(calibrationDomains.map((domain) => BASELINE_DOMAIN_LABELS[domain] || domain).join(' · ')) + '</span></div><p>' + escapeHtml(exercise.baselineProtocol || 'Use a comfortable, pain-free effort. This is not a max test.') + '</p><div class="baseline-capture-grid"><label>Confidence<select id="activeBaselineConfidence"><option value="1">1 · Not confident</option><option value="2">2 · Unsure</option><option value="3" selected>3 · Okay</option><option value="4">4 · Confident</option><option value="5">5 · Very confident</option></select></label><label>Pain response<select id="activeBaselinePain"><option value="0" selected>Green · No pain</option><option value="1">Yellow · Mild awareness, movement normal</option><option value="2">Orange · Changed range or technique</option><option value="3">Red · Stopped the set</option></select></label></div></div>' : '';
+  const calibrationDomains = Array.isArray(exercise.baselineDomains) ? exercise.baselineDomains : [], calibrationCapture = calibrationDomains.length ? '<div class="baseline-capture"><div class="baseline-capture-head"><b>Calibration anchor</b><span>' + escapeHtml(calibrationDomains.map((domain) => BASELINE_DOMAIN_LABELS[domain] || domain).join(' · ')) + '</span></div><p>' + escapeHtml(exercise.baselineProtocol || 'Use a comfortable, pain-free effort. This is not a max test.') + '</p><div class="baseline-capture-grid"><label>Confidence<select id="activeBaselineConfidence"><option value="1">1 · Not confident</option><option value="2">2 · Unsure</option><option value="3" selected>3 · Okay</option><option value="4">4 · Confident</option><option value="5">5 · Very confident</option></select></label><label>Pain response<select id="activeBaselinePain"><option value="" selected>Choose one</option><option value="0">Green · No pain</option><option value="1">Yellow · Mild awareness; movement normal</option><option value="2">Orange · Changed technique, range, or balance</option><option value="3">Red · Severe, sharp, or worsening</option></select></label></div></div>' : '';
   const load = document.createElement('input'); load.id = 'activeSetLoad'; load.type = 'number'; load.step = '0.5'; load.inputMode = 'decimal'; load.placeholder = recommendation && recommendation.load ? recommendation.load : 'Weight';
   const reps = document.createElement('input'); reps.id = 'activeSetReps'; reps.type = 'number'; reps.inputMode = 'numeric'; reps.placeholder = cardioOnly ? 'Minutes' : plannedRepTarget(rx) || 'Reps';
   const effort = effortSelect(exercise.name + ' effort',(saved && saved.data && saved.data.rpe) || (activeSetDraft(exercise.name,nextUnset) || {}).rpe); effort.id = 'activeSetEffort'; effort.classList.add('active-effort');
