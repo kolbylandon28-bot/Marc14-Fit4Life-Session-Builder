@@ -254,6 +254,24 @@
   function coachMovementChips(items,tone,performed) { return movementChips(items,tone,performed,"coach-feedback-empty-inline"); }
   // Idempotent on review id AND text: revising a review must not re-ask the same question,
   // but genuinely changing the question should reach the coach.
+  window.renameAssignedWorkout = async function renameAssignedWorkout(assignmentId) {
+    if (typeof requireTrainerMutation === "function" && !requireTrainerMutation("rename a workout")) return false;
+    const assignments = loadAssignedWorkouts(), index = assignments.findIndex((item) => item.id === assignmentId);
+    if (index < 0) { showToast("That workout could not be found"); return false; }
+    const current = assignments[index].programDayName
+      || (assignments[index].session && assignments[index].session.data && assignments[index].session.data.goalLabel) || "";
+    const next = await askForText("Rename this workout", current, { confirmLabel:"Save name" });
+    if (next === null) return false;
+    const clean = String(next || "").trim().slice(0,80);
+    if (!clean) { showToast("Give the workout a name"); return false; }
+    assignments[index] = { ...assignments[index], programDayName:clean, updatedAt:new Date().toISOString() };
+    if (!writeAssignedWorkouts(assignments)) { showToast("The name could not be saved"); return false; }
+    if (typeof window.fit4lifeCloudSaveProfileNow === "function") window.fit4lifeCloudSaveProfileNow();
+    showToast("Renamed to \u201c" + clean + "\u201d");
+    openCoachAdjustment(assignments[index].profileId, assignmentId);
+    return true;
+  };
+
   window.answerClientQuestion = function answerClientQuestion(profileId) {
     if (typeof requireTrainerMutation === "function" && !requireTrainerMutation("reply to a client")) return false;
     const box = byId("coachQuestionReply"), body = box ? box.value.trim() : "";
@@ -360,6 +378,12 @@
     const review = exact.clientReview || {}, sets = assignmentProgressStats(exact), formal = formalReviewStatus(profile);
     byId("coachAdjustmentProfileId").value = profile.id; byId("coachAdjustmentTitle").textContent = "Review " + profile.name;
     byId("coachAdjustmentSummary").textContent = (exact.programDayName || review.workoutName || "Assigned workout") + " · " + sets.logged + " of " + sets.planned + " planned efforts logged";
+    const renameHost = byId("coachAdjustmentSummary");
+    if (renameHost && !renameHost.querySelector("[data-rename-workout]")) {
+      renameHost.insertAdjacentHTML("beforeend",
+        ' <button class="mini-btn" data-rename-workout data-assignment="' + escapeHtml(exact.id) + '">Rename</button>');
+      bindDataHandlers(renameHost,"[data-rename-workout]",(button) => renameAssignedWorkout(button.dataset.assignment));
+    }
     byId("coachAdjustmentClientFeedback").innerHTML = coachFeedbackHtml(exact);
     bindDataHandlers(byId("coachAdjustmentClientFeedback"),"[data-answer-question]",(button) => window.answerClientQuestion(button.dataset.profile));
     byId("coachAdjustmentAction").value = exact.nextAction || recommendedCoachAction(review); byId("coachAdjustmentNote").value = exact.coachNote || "";
