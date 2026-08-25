@@ -99,6 +99,11 @@
         + '<small>on ' + trainer.count + ' row' + (trainer.count === 1 ? "" : "s") + '</small>'
         + '<button class="mini-btn" data-alias-link data-key="' + escapeHtml(trainer.key) + '" data-name="' + escapeHtml(trainer.name) + '">Link</button></div>').join("") + '</div>' : "";
 
+    const clashes = importedClashes(diff, new Map(loadTrainerAliases().map((a) => [a.normalized_name, a])));
+    const clashBlock = clashes.length ? '<div class="booking-import-group warn"><b>Double-booked</b>'
+      + '<div class="storage-note">Two clients share a trainer and a time. The export cannot see this; you will need to move one.</div>'
+      + clashes.map((c) => '<div class="booking-import-row"><span>' + escapeHtml(c.trainer) + '</span>'
+        + '<small>' + escapeHtml(c.when) + ' \u00b7 ' + escapeHtml(c.a) + ' and ' + escapeHtml(c.b) + '</small></div>').join("") + '</div>' : "";
     const problems = (parsed.warnings || []).length ? '<div class="booking-import-group warn"><b>Warnings from the file</b>'
       + parsed.warnings.map((warning) => '<div class="booking-import-row"><small>' + escapeHtml(warning) + '</small></div>').join("") + '</div>' : "";
 
@@ -106,7 +111,7 @@
       + (diff.created.length + diff.updated.length) + ' change' + ((diff.created.length + diff.updated.length) === 1 ? "" : "s") + '</button></div>'
       + '<div class="storage-note">Applying writes client records on this device and syncs them. It sends no email to anyone.</div>';
 
-    return repeat + counts + created + updated + review + missing + trainers + problems + apply;
+    return repeat + counts + created + updated + review + clashBlock + missing + trainers + problems + apply;
   }
 
   const statTile = (value, label) => '<div class="advanced-stat"><b>' + value + '</b><span>' + escapeHtml(label) + '</span></div>';
@@ -172,7 +177,8 @@
         assignedTrainerEmail: alias && alias.email || "",
         onboardingStatus: "imported", importedAt: new Date().toISOString(),
         goals: ["general"], experience: 1, age: 30, minutes: 60,
-        muscles: [], injuries: [], zones: [], preferences: {}, cardioModes: ["any"], trainingDays: [1,3,5], limitationAssessments: {}
+        muscles: [], injuries: [], zones: [], preferences: {}, cardioModes: ["any"],
+        trainingDays: soloTrainingDays(client), limitationAssessments: {}
       }, client.name, "");
       const clash = findProfileConflict(profiles, record.name, record.username);
       if (clash) { skipped.push({ name:client.name, email:client.email, reason:clash.reason === "similar"
@@ -284,6 +290,48 @@
     const delta = (weekday - today.getDay() + 7) % 7;
     const when = new Date(today.getTime()); when.setDate(today.getDate() + delta + weeksAhead * 7);
     return when.getFullYear() + "-" + String(when.getMonth() + 1).padStart(2,"0") + "-" + String(when.getDate()).padStart(2,"0");
+  }
+
+  // The days they are with a trainer come from the export. Solo workouts are placed on the
+  // OTHER days, so a programmed session is never stacked on a day they are already training.
+  function soloTrainingDays(client) {
+    const booked = new Set();
+    (client.recurring || []).forEach((slot) => booked.add(Number(slot.weekday)));
+    (client.appointments || []).forEach((slot) => {
+      const when = new Date(slot.date + "T12:00:00");
+      if (!isNaN(when)) booked.add(when.getDay());
+    });
+    if (!booked.size) return [1,3,5];
+    const free = [1,2,3,4,5,6,0].filter((day) => !booked.has(day));
+    const wanted = client.tierId && typeof MEMBERSHIP_TIERS === "object" && MEMBERSHIP_TIERS[client.tierId]
+      ? MEMBERSHIP_TIERS[client.tierId].programmedDays : 3;
+    // Spread across the free days rather than clustering at the start of the week.
+    if (!free.length) return [1,3,5];
+    const step = Math.max(1, Math.floor(free.length / Math.max(1, wanted)));
+    const picked = [];
+    for (let i = 0; i < free.length && picked.length < wanted; i += step) picked.push(free[i]);
+    return picked.length ? picked : free.slice(0, wanted);
+  }
+
+  // Two clients booked with the same trainer at the same hour is a real scheduling problem
+  // the export cannot see. The app only checked clashes when a human saved an event, so an
+  // import could create dozens at once in silence - and a repeating slot repeats the clash.
+  function importedClashes(diff, aliases) {
+    const slots = new Map(), clashes = [];
+    const clients = [...diff.created.map((i) => i.client), ...diff.updated.map((i) => i.client)];
+    clients.forEach((client) => {
+      const who = (aliases.get(client.trainerKey) || {}).display_name || client.trainerName || "(unassigned)";
+      const note = (date, time, weekly) => {
+        const key = who + "|" + date + "|" + time;
+        if (slots.has(key) && slots.get(key) !== client.email) {
+          clashes.push({ trainer:who, when:(weekly ? "every " + weekly + " at " : date + " ") + time,
+            a:slots.get(key), b:client.email });
+        } else slots.set(key, client.email);
+      };
+      (client.appointments || []).forEach((slot) => note(slot.date, slot.startTime, ""));
+      (client.recurring || []).forEach((slot) => note("weekly-" + slot.weekday, slot.startTime, slot.weekdayName));
+    });
+    return clashes;
   }
 
   window.bookingImportPanelHtml = bookingImportPanelHtml;

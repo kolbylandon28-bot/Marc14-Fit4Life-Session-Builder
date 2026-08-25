@@ -416,7 +416,7 @@ function openCalendarEventEditor(eventId,dateKey,type) {
   if (byId("calendarEventPartner")) byId("calendarEventPartner").value = event && event.partnerProfileId || "";
   if (byId("calendarEventCancelledBy")) byId("calendarEventCancelledBy").value = event && event.cancelledBy || "client";
   syncCalendarCancelFields();
-  byId("calendarEventTrainer").value = event && event.trainerId || identity.id || ""; byId("calendarEventTrainer").disabled = false;
+  byId("calendarEventTrainer").value = event ? (event.trainerId || "") : (identity.id || ""); byId("calendarEventTrainer").disabled = false;
   byId("calendarEventDate").value = event && event.date || dateKey || coachCalendarState.anchor; byId("calendarEventStart").value = event && event.startTime || ""; byId("calendarEventEnd").value = event && event.endTime || "";
   byId("calendarEventStart").disabled = false; byId("calendarEventEnd").disabled = false;
   byId("calendarEventLocation").value = event && event.location || ""; byId("calendarEventLocation").disabled = false;

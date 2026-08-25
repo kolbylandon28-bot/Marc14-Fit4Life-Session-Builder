@@ -177,7 +177,8 @@ function renderTrainerDirectory() {
     const button = el("button", "client-row" + (clientMatches(name, selectedTrainerClient) ? " on" : "")); button.type = "button";
     const rowStatus = waiting ? "Awaiting trainer review" : lastReview && ["changed", "stopped"].includes(lastReview.data.pain) ? "Safety flag · " + (lastReview.data.injuryArea ? INJURY_LABELS[lastReview.data.injuryArea] : "pain reported") : active ? assignmentStatusLabel(assignment) : last ? "Last activity " + new Date(last.date).toLocaleDateString() : "Profile only";
     const ownership = profile && profile.assignedTrainerId ? (profile.assignedTrainerId === identity.id ? "Primary coach · you" : "Primary coach · " + (profile.assignedTrainerName || "assigned")) : "Shared client";
-    button.append(el("strong", "", name), el("span", "", ownership + " · " + (profile ? "@" + profileUsername(profile) + " · " : "") + goals), el("span", waiting || (lastReview && ["changed", "stopped"].includes(lastReview.data.pain)) ? "client-alert" : "", rowStatus));
+    const noLogin = profile && profile.onboardingStatus === "imported";
+    button.append(el("strong", "", name), el("span", "", (noLogin ? "No login yet · " : "") + ownership + " · " + (profile ? "@" + profileUsername(profile) + " · " : "") + goals), el("span", waiting || (lastReview && ["changed", "stopped"].includes(lastReview.data.pain)) ? "client-alert" : "", rowStatus));
     // One badge per client showing their single highest-priority open item. A cluster of
     // indicators would just recreate the noise problem on a smaller surface.
     const badge = typeof clientAttentionBadge === "function" && profile ? clientAttentionBadge(profile.id) : null;
@@ -543,6 +544,7 @@ function trainerNutritionTab(profile) { return '<section class="analysis-panel">
 function trainerNotesTab(analysis) { const notes = analysis.entries.filter((entry) => entry.type === 'note' || summaryMetaFor(entry).note); return '<section class="analysis-panel"><h4 class="analysis-section-title">Workout record notes</h4><div class="analysis-history">' + (notes.map((entry) => '<div class="analysis-history-item"><b>' + escapeHtml(entry.label || 'Note') + ' · ' + new Date(entry.date).toLocaleDateString() + '</b><span>' + escapeHtml(entry.note || summaryMetaFor(entry).note || entry.value || '') + '</span></div>').join('') || '<div class="empty-state">No workout record notes.</div>') + '</div></section>' + (typeof coachNotesPanelHtml === 'function' ? coachNotesPanelHtml(analysis.profile) : ''); }
 function trainerDocumentsTab(analysis) { const scans = inBodyScansFor(analysis.client); return '<section class="analysis-panel"><h4 class="analysis-section-title">Documents</h4><div class="analysis-history">' + (scans.map((scan) => '<div class="analysis-history-item"><b>InBody scan · ' + new Date(scan.date + 'T12:00:00').toLocaleDateString() + '</b><span>' + escapeHtml(scan.fileName || 'Values entered manually') + '</span></div>').join('') || '<div class="empty-state">No client documents saved.</div>') + '</div><div class="tool-actions"><button class="small-btn primary" onclick="openInBodyModal()">Add InBody scan</button></div></section>'; }
 function trainerClientOwnershipLabel(profile) {
+  if (profile && profile.onboardingStatus === "imported") return "Imported · no login yet, so messages will not reach them";
   if (!profile || !profile.assignedTrainerId) return "Shared client · all trainers can coach";
   return "Primary coach · " + (profile.assignedTrainerName || "Assigned trainer");
 }

@@ -565,9 +565,10 @@ function profileRecordFromTarget(target, name, username) {
   // blank an existing client's tier every time a workout was saved.
   const CARRIED = ["membershipTier","sessionsPerWeek","programmedDays","phone","bookingEmail",
     "bookingStatus","assignedTrainerId","assignedTrainerName","assignedTrainerEmail",
-    "onboardingStatus","invitedAt","importedAt"];
+    "onboardingStatus","invitedAt","importedAt","trainingDays"];
   CARRIED.forEach((key) => {
     if (target[key] === undefined || target[key] === null) return;
+    if (key === "trainingDays" && !(Array.isArray(target[key]) && target[key].length)) return;
     record[key] = key === "membershipTier" ? normalizeMembershipTier(target[key]) : target[key];
   });
   return record;
