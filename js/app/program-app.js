@@ -986,7 +986,8 @@ function renderCoachModule(destination) {
       out.insertAdjacentHTML('beforeend', bookingImportPanelHtml());
       if (typeof refreshBookingArrivals === "function") refreshBookingArrivals();
     }
-    if (owner) { out.insertAdjacentHTML('beforeend', archivedClientsPanelHtml()); refreshArchivedClients(); }
+    if (owner) out.insertAdjacentHTML('beforeend', archivedClientsPanelHtml());
+    if (owner) out.insertAdjacentHTML('beforeend', trainerLinksPanelHtml());
     if (typeof inviteEmailTestPanelHtml === "function") {
       out.insertAdjacentHTML('beforeend', inviteEmailTestPanelHtml());
     }
@@ -1006,12 +1007,74 @@ function bindDataHandlers(root,selector,handler) {
 // does not move any client - it records who is allowed to, and the booking site enforces it.
 // Owner-only. Archived clients are invisible everywhere else in the app by design, so this
 // is the one place they can be seen and brought back.
-function archivedClientsPanelHtml() {
-  return '<section class="coach-module-card" style="grid-column:1/-1"><h3>Archived clients</h3>'
-    + '<p>Clients removed with <b>Delete profile only</b>. Their workouts, reviews and scans were kept. '
-    + 'Restoring puts them back in your roster exactly as they were.</p>'
-    + '<div id="archivedClientList" class="archived-client-list">Checking\u2026</div></section>';
+// Jason's export names trainers but carries no email, so each name has to be linked to an
+// account once. Owner-only, because one row here re-points every future import for that name.
+function trainerLinksPanelHtml() {
+  return '<section class="coach-module-card"><h3>Trainer name links</h3>'
+    + '<p>Jason\u2019s report names trainers but sends no email address. Link each name to the account it belongs to, once.</p>'
+    + '<div class="tool-actions"><button class="small-btn primary" onclick="openTrainerLinks()">Trainer name links</button></div></section>';
 }
+function openTrainerLinks() {
+  const modal = byId("trainerLinksModal"); if (!modal) return false;
+  modal.classList.add("open");
+  refreshTrainerLinks();
+  return true;
+}
+function closeTrainerLinks() { const modal = byId("trainerLinksModal"); if (modal) modal.classList.remove("open"); return false; }
+
+async function refreshTrainerLinks() {
+  const out = byId("trainerLinksList"); if (!out) return false;
+  out.textContent = "Loading\u2026";
+  const roster = (window.fit4lifeCloudTrainers || []).filter((trainer) => trainer.is_active !== false);
+  const aliases = typeof loadTrainerAliases === "function" ? loadTrainerAliases() : [];
+  const seen = typeof knownExportTrainerNames === "function" ? knownExportTrainerNames() : [];
+  const names = [...new Set([...seen, ...aliases.map((a) => a.source_name)])].filter(Boolean).sort();
+  if (!names.length) { out.innerHTML = '<div class="storage-note">No trainer names have arrived from a booking report yet. Read one in and they will appear here.</div>'; return true; }
+  const options = (selected) => '<option value="">Not linked</option>'
+    + '<option value="__external"' + (selected === "__external" ? " selected" : "") + '>Not a FIT4LIFE trainer</option>'
+    + roster.map((trainer) => '<option value="' + escapeHtml(trainer.user_id) + '"' + (selected === trainer.user_id ? " selected" : "") + '>'
+        + escapeHtml(trainer.display_name || trainer.email) + '</option>').join("");
+  out.innerHTML = names.map((name) => {
+    const key = typeof window.bookingImportInternals === "object" ? window.bookingImportInternals.normalizeName(name) : String(name).toLowerCase();
+    const alias = aliases.find((a) => a.normalized_name === key) || {};
+    const selected = alias.status === "external" ? "__external" : (alias.trainer_user_id || "");
+    return '<div class="trainer-link-row"><div><b>' + escapeHtml(name) + '</b><span>'
+      + (alias.status === "linked" ? "linked to " + escapeHtml(alias.display_name || "an account")
+         : alias.status === "external" ? "not a FIT4LIFE trainer" : "not linked yet") + '</span></div>'
+      + '<select data-trainer-link data-key="' + escapeHtml(key) + '" data-name="' + escapeHtml(name) + '">' + options(selected) + '</select></div>';
+  }).join("");
+  out.querySelectorAll("[data-trainer-link]").forEach((select) => {
+    select.addEventListener("change", () => setTrainerLink(select.dataset.key, select.dataset.name, select.value));
+  });
+  return true;
+}
+
+function setTrainerLink(key, name, value) {
+  if (window.fit4lifeCloudRole !== "owner") { showToast("Only an owner can change trainer links"); return false; }
+  if (typeof saveTrainerAlias !== "function") { showToast("The import module is not loaded"); return false; }
+  const roster = (window.fit4lifeCloudTrainers || []);
+  const trainer = roster.find((item) => item.user_id === value);
+  saveTrainerAlias(key, name, value === "__external" ? null : trainer, value === "__external");
+  showToast(value ? "Linked " + name : "Unlinked " + name);
+  refreshTrainerLinks();
+  return true;
+}
+
+function archivedClientsPanelHtml() {
+  return '<section class="coach-module-card"><h3>Archived clients</h3>'
+    + '<p>Clients removed with <b>Delete profile only</b>. Their workouts, reviews and scans were kept.</p>'
+    + '<div class="tool-actions"><button class="small-btn primary" onclick="openArchivedClients()">Archived clients</button></div></section>';
+}
+
+// Opened on demand rather than sitting on the Settings page - most days there is nothing
+// here, and a permanent list of removed people is not what Settings is for.
+function openArchivedClients() {
+  const modal = byId("archivedClientsModal"); if (!modal) return false;
+  modal.classList.add("open");
+  refreshArchivedClients();
+  return true;
+}
+function closeArchivedClients() { const modal = byId("archivedClientsModal"); if (modal) modal.classList.remove("open"); return false; }
 
 async function refreshArchivedClients() {
   const out = byId("archivedClientList"); if (!out) return false;

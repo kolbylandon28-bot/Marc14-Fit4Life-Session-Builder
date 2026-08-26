@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20260820-v60-tab-fix-panels-r1">
+<link rel="manifest" href="manifest.webmanifest?v=20260820-v61-settings-links-r1">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20260820-v60-tab-fix-panels-r1">
+<link rel="stylesheet" href="styles.css?v=20260820-v61-settings-links-r1">
 </head>
 <body>
 
@@ -644,6 +644,21 @@
   <div class="coach-more-sheet">
     <div class="coach-more-head"><h3 id="coachMoreTitle">All coach destinations</h3><button class="small-btn" onclick="closeCoachMoreSheet()">Close</button></div>
     <div class="coach-more-list" id="coachMoreList"></div>
+  </div>
+</div>
+
+<div id="archivedClientsModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="archivedClientsTitle" onclick="if(event.target===this)closeArchivedClients()">
+  <div class="list-dialog">
+    <div class="list-dialog-head"><h3 id="archivedClientsTitle">Archived clients</h3><button class="small-btn" onclick="closeArchivedClients()">Close</button></div>
+    <div id="archivedClientList" class="archived-client-list">Checking…</div>
+  </div>
+</div>
+
+<div id="trainerLinksModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="trainerLinksTitle" onclick="if(event.target===this)closeTrainerLinks()">
+  <div class="list-dialog">
+    <div class="list-dialog-head"><h3 id="trainerLinksTitle">Trainer name links</h3><button class="small-btn" onclick="closeTrainerLinks()">Close</button></div>
+    <p class="storage-note">Pick the account each name from Jason&rsquo;s report belongs to. Saved once and reused on every future import.</p>
+    <div id="trainerLinksList" class="trainer-link-list">Loading…</div>
   </div>
 </div>
 
@@ -1266,27 +1281,27 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/engine/exercise-library.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/engine/session-engine.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/engine/session-builders.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/engine/personalization.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/engine/booking-import.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/app/navigation.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/app/program-app.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/app/forms.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/engine/generation.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/app/rendering.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/app/calculations-timers.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/engine/multiweek-programs.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/app/readiness-progress.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/app/client-consultation.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/trainer/trainer-hub.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/trainer/coaching-support.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/app/role-governance.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/app/action-calendar.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/app/workout-feedback-reports.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/app/booking-import-ui.js?v=20260820-v60-tab-fix-panels-r1"></script>
-<script src="js/init.js?v=20260820-v60-tab-fix-panels-r1"></script>
+<script src="cloud-sync.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/engine/exercise-library.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/engine/session-engine.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/engine/session-builders.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/engine/personalization.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/engine/booking-import.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/app/navigation.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/app/program-app.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/app/forms.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/engine/generation.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/app/rendering.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/app/calculations-timers.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/engine/multiweek-programs.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/app/readiness-progress.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/app/client-consultation.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/trainer/trainer-hub.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/trainer/coaching-support.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/app/role-governance.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/app/action-calendar.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/app/workout-feedback-reports.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/app/booking-import-ui.js?v=20260820-v61-settings-links-r1"></script>
+<script src="js/init.js?v=20260820-v61-settings-links-r1"></script>
 </body>
 </html>

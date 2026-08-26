@@ -270,7 +270,9 @@
     const skippedEmails = new Set(skipped.map((item) => item.email));
     const carried = { ...pending.diff.nextState,
       knownEmails:(pending.diff.nextState.knownEmails || []).filter((email) => !skippedEmails.has(email)) };
-    const state = { ...carried, lastImportedAt:new Date().toISOString(),
+    const seenNames = [...new Set([...(loadImportState().seenTrainerNames || []),
+      ...(pending.parsed.trainerNames || []).map((item) => item.name)])];
+    const state = { ...carried, seenTrainerNames:seenNames, lastImportedAt:new Date().toISOString(),
       history:[{ at:new Date().toISOString(), file:pending.fileName, created:createdCount, updated:updatedCount },
         ...(loadImportState().history || [])].slice(0, 20) };
     writeJson(IMPORT_KEY, state);
@@ -390,6 +392,29 @@
     });
     return clashes;
   }
+
+  // Shared with the Settings screen so a name can be linked there, not only mid-import.
+  window.loadTrainerAliases = loadTrainerAliases;
+  window.saveTrainerAlias = function saveTrainerAlias(key, sourceName, trainer, external) {
+    const aliases = loadTrainerAliases().filter((alias) => alias.normalized_name !== key);
+    if (external) {
+      aliases.push({ normalized_name:key, source_name:sourceName, trainer_user_id:"", status:"external", resolved_at:new Date().toISOString() });
+    } else if (trainer) {
+      aliases.push({ normalized_name:key, source_name:sourceName, trainer_user_id:trainer.user_id,
+        display_name:trainer.display_name || trainer.email, email:trainer.email || "",
+        status:"linked", resolved_at:new Date().toISOString() });
+    }
+    return writeJson(ALIAS_KEY, aliases);
+  };
+  // Every trainer name any stored report has mentioned, so Settings can list them without
+  // waiting for someone to open an import.
+  window.knownExportTrainerNames = function knownExportTrainerNames() {
+    const names = new Set();
+    loadTrainerAliases().forEach((alias) => { if (alias.source_name) names.add(alias.source_name); });
+    const state = loadImportState();
+    (state.seenTrainerNames || []).forEach((name) => names.add(name));
+    return [...names];
+  };
 
   window.bookingImportPanelHtml = bookingImportPanelHtml;
   window.loadBookingImportState = loadImportState;
