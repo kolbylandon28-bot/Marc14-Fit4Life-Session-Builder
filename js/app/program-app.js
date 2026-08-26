@@ -986,6 +986,7 @@ function renderCoachModule(destination) {
       out.insertAdjacentHTML('beforeend', bookingImportPanelHtml());
       if (typeof refreshBookingArrivals === "function") refreshBookingArrivals();
     }
+    if (owner) { out.insertAdjacentHTML('beforeend', archivedClientsPanelHtml()); refreshArchivedClients(); }
     if (typeof inviteEmailTestPanelHtml === "function") {
       out.insertAdjacentHTML('beforeend', inviteEmailTestPanelHtml());
     }
@@ -1003,6 +1004,42 @@ function bindDataHandlers(root,selector,handler) {
 }
 // Standard trainers cover Flex clients, premium cover Bronze/Silver/Gold. Changing this
 // does not move any client - it records who is allowed to, and the booking site enforces it.
+// Owner-only. Archived clients are invisible everywhere else in the app by design, so this
+// is the one place they can be seen and brought back.
+function archivedClientsPanelHtml() {
+  return '<section class="coach-module-card" style="grid-column:1/-1"><h3>Archived clients</h3>'
+    + '<p>Clients removed with <b>Delete profile only</b>. Their workouts, reviews and scans were kept. '
+    + 'Restoring puts them back in your roster exactly as they were.</p>'
+    + '<div id="archivedClientList" class="archived-client-list">Checking\u2026</div></section>';
+}
+
+async function refreshArchivedClients() {
+  const out = byId("archivedClientList"); if (!out) return false;
+  if (typeof window.fit4lifeCloudListArchivedProfiles !== "function") { out.textContent = "The secure connection is not ready yet."; return false; }
+  const rows = await window.fit4lifeCloudListArchivedProfiles();
+  if (rows === null) { out.textContent = "Could not read the archived list."; return false; }
+  if (!rows.length) { out.textContent = "No archived clients."; return true; }
+  out.innerHTML = rows.map((row) => '<div class="archived-client-row"><div><b>'
+    + escapeHtml(row.full_name || "Client") + '</b><span>' + escapeHtml(row.email || "no email on file")
+    + ' \u00b7 archived ' + escapeHtml(new Date(row.updated_at).toLocaleDateString()) + '</span></div>'
+    + '<button class="small-btn primary" data-restore-client data-id="' + escapeHtml(row.external_id) + '" data-name="'
+    + escapeHtml(row.full_name || "this client") + '">Restore</button></div>').join("");
+  bindDataHandlers(out,"[data-restore-client]",(button) => restoreArchivedClient(button.dataset.id,button.dataset.name));
+  return true;
+}
+
+async function restoreArchivedClient(externalId,name) {
+  if (window.fit4lifeCloudRole !== "owner") { showToast("Only an owner can restore a client"); return false; }
+  if (!window.confirm("Restore " + name + "?\n\nThey return to your roster with their workout history intact.")) return false;
+  const done = await window.fit4lifeCloudRestoreProfile(externalId);
+  if (!done) { showToast("That client could not be restored"); return false; }
+  showToast(name + " restored \u2014 syncing them back now");
+  if (typeof window.fit4lifeCloudPullNow === "function") window.fit4lifeCloudPullNow();
+  refreshArchivedClients();
+  refreshProfileSelects();
+  return true;
+}
+
 async function setTrainerTier(userId,tier) {
   if (window.fit4lifeCloudRole !== 'owner') { showToast('Only an owner can change a trainer tier'); return false; }
   if (typeof window.fit4lifeCloudSetTrainerTier !== 'function') { showToast('The secure connection is not ready yet'); return false; }

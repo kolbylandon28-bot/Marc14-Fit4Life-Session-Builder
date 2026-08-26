@@ -78,6 +78,7 @@
   let authMode = "signin";
   const pendingScopes = new Set();
   const remoteProfilesByExternalId = new Map();
+  const archivedExternalIds = new Set();
   const remoteSyncRecords = new Map();
 
   window.fit4lifeCloudRole = "";
@@ -839,7 +840,10 @@
       // archives the row, then the next push from ANY device that still holds the client
       // locally upserts it back to active, and the following pull rebuilds it locally.
       // Whatever the server already has is preserved; only genuinely new rows start active.
-      status: (remoteProfilesByExternalId.get(String(profile.id)) || {}).status || "active",
+      // Absent from the map means archived - the pull only maps active rows - so defaulting
+      // to "active" here un-archived them on the next push from any device.
+      status: (remoteProfilesByExternalId.get(String(profile.id)) || {}).status
+        || (archivedExternalIds.has(String(profile.id)) ? "archived" : "active"),
       created_by: cloudUser.id
     };
   }
@@ -1248,7 +1252,9 @@
     let workoutRequests = [];
     let clientActiveWorkout = null;
 
+    profileRows.forEach((row) => { if (row.status === "archived") archivedExternalIds.add(String(row.external_id)); });
     profileRows.filter((row) => row.status === "active").forEach((row) => {
+      archivedExternalIds.delete(String(row.external_id));
       remoteProfilesByExternalId.set(row.external_id, row);
       const plan = byClientAndType.get(row.id + "|client_plan") || {};
       const activity = byClientAndType.get(row.id + "|client_activity") || {};
@@ -1381,7 +1387,8 @@
     if (!cloudReady || cloudPushing) return;
     clearTimeout(cloudPullTimer);
     cloudPullTimer = setTimeout(() => pullCloudState(false), 450);
-  }
+  }  window.fit4lifeCloudPullNow = function fit4lifeCloudPullNow() { scheduleCloudPull(); };
+
 
   function subscribeToChanges() {
     if (cloudChannel) cloudClient.removeChannel(cloudChannel);
@@ -1997,6 +2004,38 @@
     wrapWriter("writeLocalObject", null, 0);
     wrapWriter("saveActiveWorkoutState", "activity");
   }
+
+  // Archived profiles are filtered out of the normal pull, so nothing in the app can see
+  // them. This is the only way back.
+  window.fit4lifeCloudListArchivedProfiles = async function fit4lifeCloudListArchivedProfiles() {
+    if (!cloudClient || !cloudOrganizationId || cloudRole !== "owner") return [];
+    const response = await cloudClient
+      .from("client_profiles")
+      .select("id,external_id,full_name,email,updated_at")
+      .eq("organization_id", cloudOrganizationId)
+      .eq("status", "archived")
+      .order("updated_at", { ascending:false })
+      .limit(200);
+    if (response.error) { console.error("Archived clients unavailable", response.error); return null; }
+    return Array.isArray(response.data) ? response.data : [];
+  };
+
+  window.fit4lifeCloudRestoreProfile = async function fit4lifeCloudRestoreProfile(externalId) {
+    if (!cloudClient || cloudRole !== "owner") return false;
+    const response = await cloudClient
+      .from("client_profiles")
+      .update({ status:"active" })
+      .eq("organization_id", cloudOrganizationId)
+      .eq("external_id", String(externalId))
+      .select("id,external_id,status");
+    if (response.error || !(response.data && response.data.length)) {
+      console.error("Restore failed", response.error || "the database refused the change");
+      return false;
+    }
+    const row = response.data[0];
+    remoteProfilesByExternalId.set(String(row.external_id), row);
+    return true;
+  };
 
   window.fit4lifeCloudDeleteProfile = async function fit4lifeCloudDeleteProfile(externalId, permanent) {
     if (!cloudClient || cloudRole !== "owner") return false;
