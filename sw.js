@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-08-24-v64-modifier-field-r2";
+const CACHE_NAME = "fit4life-shell-2026-08-24-v65-trainer-assistance-r3";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20260820-v64-modifier-field-r2";
+const ASSET_VERSION = "20260820-v65-trainer-assistance-r3";
 const SHELL = [
   "/",
   "/index.html",
@@ -9,6 +9,7 @@ const SHELL = [
   "/js/app/client-consultation.js?v=" + ASSET_VERSION,
   "/js/app/role-governance.js?v=" + ASSET_VERSION,
   "/js/app/action-calendar.js?v=" + ASSET_VERSION,
+  "/js/app/walkthrough.js?v=" + ASSET_VERSION,
   "/js/app/workout-feedback-reports.js?v=" + ASSET_VERSION,
   "/dark-rock-background-v2.jpg",
   "/theme-assets/halloween-scene.jpg",

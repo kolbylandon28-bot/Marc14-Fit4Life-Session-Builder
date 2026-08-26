@@ -1103,6 +1103,10 @@
   }
 
   async function pushPending() {
+
+    // a walkthrough runs on a practice client; none of it belongs on the server
+
+    if (window.FIT4LIFE_WALKTHROUGH_ACTIVE) return false;
     if (!cloudReady || !cloudClient || !cloudUser || cloudApplying || cloudPushing) return false;
     if (browserIsOffline()) {
       persistPendingScopes();

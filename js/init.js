@@ -137,6 +137,8 @@ if (document.getElementById) {
     if (moved && typeof window.fit4lifeCloudSaveProfileNow === "function") window.fit4lifeCloudSaveProfileNow();
     if (moved) console.info("FIT4LIFE: migrated " + moved + " client profile(s) to the new tier ids");
   }
+  // a walkthrough interrupted by a closed tab left practice data behind; put the real data back first
+  if (typeof walkthroughRecoverIfInterrupted === "function") walkthroughRecoverIfInterrupted();
   cleanupLegacyCalibrationAssignments();
   renderForms();
   setMode("solo");

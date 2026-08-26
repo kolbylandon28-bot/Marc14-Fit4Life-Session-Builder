@@ -982,6 +982,10 @@ function renderCoachModule(destination) {
     // The import and the invite self-test are operational tools used most weeks. They were
     // reachable only through "Open holiday themes & appearance", which is gym setup - two
     // clicks away and under a heading that gives no hint they are there.
+    if (typeof trainerAssistancePanelHtml === "function") {
+      out.insertAdjacentHTML('afterbegin', trainerAssistancePanelHtml());
+      if (typeof bindWalkthroughCards === "function") bindWalkthroughCards(out);
+    }
     if (typeof bookingImportPanelHtml === "function") {
       out.insertAdjacentHTML('beforeend', bookingImportPanelHtml());
       if (typeof refreshBookingArrivals === "function") refreshBookingArrivals();

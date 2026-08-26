@@ -32,6 +32,9 @@ function show(view) {
   home.textContent = view === "trainer-menu" && signedInTrainerCanPreview() ? "\u2190 Choose side" : CLIENT_APP_VIEWS.includes(view) ? "\u2190 Client home" : view === "active-workout" ? "\u2190 Leave workout" : inMenu ? "\u2190 Workspace" : portalRole ? "\u2190 " + (portalRole === "trainer" ? "Trainer" : "Client") + " workspace" : "\u2190 Home";
   context.textContent = portalRole ? (portalRole === "trainer" ? "Trainer workspace" : view === "client-consultation" ? "Client setup" : trainerClientPreviewActive() ? "Owner preview · client side" : "Client workspace") : "";
   context.classList.toggle("show", Boolean(portalRole) && view !== "home");
+  // Trainer Assistance is only useful to a signed-in trainer, and never on top of a running walkthrough
+  const helpBtn = document.getElementById("trainerHelpBtn");
+  if (helpBtn) helpBtn.classList.toggle("show", portalRole === "trainer" && view !== "home" && !(typeof walkthroughActive === "function" && walkthroughActive()));
   const clientNav = document.getElementById("clientBottomNav"), showClientNav = portalRole === "client" && CLIENT_APP_VIEWS.includes(view);
   if (clientNav) { clientNav.classList.toggle("show",showClientNav); clientNav.querySelectorAll("button").forEach((button) => button.classList.toggle("on",view === "client-" + button.dataset.clientTab)); }
   const coachNav = document.getElementById("coachSidebar"), showCoachNav = portalRole === "trainer" && COACH_SHELL_VIEWS.includes(view) && trainerIsUnlocked();

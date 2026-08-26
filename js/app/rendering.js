@@ -68,7 +68,7 @@ function renderWorkoutOptionPicker(out) {
       row.appendChild(copy); flow.appendChild(row);
     }));
     card.appendChild(flow);
-    const bottom = el("div","workout-choice-bottom"), choose = el("button","btn btn-primary","Choose option " + String.fromCharCode(65 + index)); choose.type = "button"; choose.onclick = () => chooseWorkoutOption(index);
+    const bottom = el("div","workout-choice-bottom"), choose = el("button","btn btn-primary","Choose option " + String.fromCharCode(65 + index)); choose.type = "button"; choose.dataset.wt = "choose-option"; choose.onclick = () => chooseWorkoutOption(index);
     bottom.append(el("p","",direction[1]),choose); card.appendChild(bottom); grid.appendChild(card);
   });
   if (portalRole === "trainer" && trainerIsUnlocked() && state.mode === "solo") {
@@ -128,8 +128,8 @@ function sessionActions(isGroup) {
     save.onclick = () => openSaveWorkoutDialog();
     bar.appendChild(save);
     const approved = workoutPlans(state.session).every((plan) => plan.session.approval && plan.session.approval.status === "approved");
-    if (!approved) { const approve = el("button","mini-btn primary",isGroup ? "Coach approve both drafts" : "Coach approve draft"); approve.onclick = () => approveCurrentWorkoutDraft(); bar.appendChild(approve); }
-    else { const assign = el("button","mini-btn primary",isGroup ? "Assign both workouts" : "Assign to client"); assign.onclick = () => assignCurrentWorkout(); bar.appendChild(assign); }
+    if (!approved) { const approve = el("button","mini-btn primary",isGroup ? "Coach approve both drafts" : "Coach approve draft"); approve.dataset.wt = "approve-draft"; approve.onclick = () => approveCurrentWorkoutDraft(); bar.appendChild(approve); }
+    else { const assign = el("button","mini-btn primary",isGroup ? "Assign both workouts" : "Assign to client"); assign.dataset.wt = "assign"; assign.onclick = () => assignCurrentWorkout(); bar.appendChild(assign); }
   }
   const review = el("button", "mini-btn primary", "Finish & Review");
   review.onclick = () => openWorkoutReview();

@@ -1877,3 +1877,50 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
 .invite-check small{display:block;color:var(--text-faint);font-size:10px;margin-top:2px;overflow-wrap:anywhere}
 #inviteTestEmail{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;
   background:var(--slate-1);color:var(--text);font:inherit;font-size:12px}
+
+/* ============================================================
+   WALKTHROUGHS
+   The bar sits above everything and never covers the control it
+   is pointing at, so it is pinned to the bottom and the page can
+   still scroll behind it.
+   ============================================================ */
+.help-btn{display:none;align-items:center;justify-content:center;width:32px;height:32px;margin-left:8px;
+  border:1px solid var(--line);border-radius:50%;background:rgba(19,19,23,.86);color:var(--blue-bright);
+  font:800 15px var(--body);cursor:pointer;transition:border-color .14s,color .14s,background .14s}
+.help-btn.show{display:inline-flex}
+.help-btn:hover{border-color:var(--blue);background:var(--blue-glow);color:#fff}
+
+.walkthrough-bar{position:fixed;left:0;right:0;bottom:0;z-index:120;padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,rgba(12,12,15,.94),rgba(12,12,15,.99));border-top:1px solid var(--blue);
+  box-shadow:0 -10px 34px rgba(0,0,0,.5)}
+.wt-bar-inner{display:flex;align-items:center;gap:16px;max-width:1100px;margin:0 auto;flex-wrap:wrap}
+.wt-bar-copy{flex:1;min-width:220px;display:grid;gap:4px}
+.wt-count{font:800 8.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--blue-bright)}
+.wt-bar-copy p{margin:0;color:var(--text);font-size:13.5px;line-height:1.45}
+.wt-waiting{font:600 9px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint)}
+.wt-bar-actions{display:flex;gap:7px;flex-wrap:wrap}
+.wt-exit{border-color:var(--blue)!important;color:var(--blue-bright)!important}
+
+/* the highlight has to win over whatever it lands on, hence the z-index and the !important */
+.wt-target{position:relative!important;z-index:121!important;
+  outline:2px solid var(--blue-bright)!important;outline-offset:3px!important;border-radius:6px;
+  box-shadow:0 0 0 4px var(--blue-glow),0 0 26px rgba(90,166,240,.45)!important;
+  animation:wt-pulse 1.6s ease-in-out infinite}
+@keyframes wt-pulse{0%,100%{box-shadow:0 0 0 4px var(--blue-glow),0 0 26px rgba(90,166,240,.45)}
+  50%{box-shadow:0 0 0 7px var(--blue-glow),0 0 34px rgba(90,166,240,.6)}}
+@media(prefers-reduced-motion:reduce){.wt-target{animation:none}}
+
+.wt-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:13px}
+.wt-card{display:grid;gap:5px;text-align:left;padding:14px;border:1px solid var(--line);border-radius:11px;
+  background:var(--slate-0);color:var(--text);cursor:pointer;transition:border-color .14s,background .14s}
+.wt-card:hover{border-color:var(--blue);background:var(--blue-glow)}
+.wt-card b{font-size:13px}
+.wt-card span{color:var(--text-faint);font-size:10.5px;line-height:1.5}
+.wt-done{font:700 8px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:#79efbb;font-style:normal}
+
+@media(max-width:700px){
+  .wt-bar-inner{gap:10px}
+  .wt-bar-actions{width:100%}
+  .wt-bar-actions .small-btn{flex:1}
+  body.walkthrough-on{padding-bottom:120px}
+}
