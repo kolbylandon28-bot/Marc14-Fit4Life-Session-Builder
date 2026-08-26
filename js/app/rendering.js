@@ -1096,6 +1096,31 @@ function askForText(question, initialValue, options) {
     setTimeout(() => { field.focus(); field.select(); },0);
   });
 }
+// A picker in the app's own styling. Replaces window.prompt, which an installed PWA
+// suppresses outright and which looked like a browser alert rather than the app.
+function askForChoice(question, options, settings) {
+  const config = settings || {};
+  return new Promise((resolve) => {
+    const backdrop = el("div","modal-backdrop open ask-backdrop");
+    backdrop.innerHTML = '<div class="ask-dialog"><h4>' + escapeHtml(question) + '</h4>'
+      + (config.note ? '<p class="storage-note">' + escapeHtml(config.note) + '</p>' : '')
+      + '<select id="askForChoiceInput">'
+      + options.map((option) => '<option value="' + escapeHtml(String(option.value)) + '">'
+          + escapeHtml(option.label) + '</option>').join("")
+      + '</select>'
+      + '<div class="tool-actions"><button class="small-btn" data-ask-cancel>Cancel</button>'
+      + '<button class="small-btn primary" data-ask-ok>' + escapeHtml(config.confirmLabel || "Save") + '</button></div></div>';
+    document.body.appendChild(backdrop);
+    const field = backdrop.querySelector("#askForChoiceInput");
+    if (config.selected != null) field.value = String(config.selected);
+    const close = (value) => { backdrop.remove(); resolve(value); };
+    backdrop.querySelector("[data-ask-ok]").addEventListener("click",() => close(field.value));
+    backdrop.querySelector("[data-ask-cancel]").addEventListener("click",() => close(null));
+    backdrop.addEventListener("click",(event) => { if (event.target === backdrop) close(null); });
+    field.addEventListener("keydown",(event) => { if (event.key === "Escape") close(null); });
+    setTimeout(() => field.focus(),0);
+  });
+}
 function showToast(message) {
   const toast = byId("appToast");
   if (!toast) return;

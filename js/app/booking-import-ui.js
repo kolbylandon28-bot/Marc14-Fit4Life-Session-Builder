@@ -148,26 +148,19 @@
   const statTile = (value, label) => '<div class="advanced-stat"><b>' + value + '</b><span>' + escapeHtml(label) + '</span></div>';
   const tierLabel = (id) => id && typeof MEMBERSHIP_TIERS === "object" && MEMBERSHIP_TIERS[id] ? MEMBERSHIP_TIERS[id].label : "No tier set";
 
-  window.linkTrainerAlias = function linkTrainerAlias(key, name) {
+  window.linkTrainerAlias = async function linkTrainerAlias(key, name) {
     if (!requireTrainerMutation("link a trainer name")) return false;
     const roster = (window.fit4lifeCloudTrainers || []).filter((trainer) => trainer.is_active !== false);
     if (!roster.length) { showToast("No trainer accounts have loaded yet"); return false; }
-    const choice = window.prompt("Which account is \"" + name + "\"?\n\n"
-      + roster.map((trainer, index) => (index + 1) + ". " + (trainer.display_name || trainer.email)).join("\n")
-      + "\n\nEnter a number, or 0 if they have no FIT4LIFE account.");
-    if (choice == null) return false;
-    const index = Number(choice);
-    const aliases = loadTrainerAliases().filter((alias) => alias.normalized_name !== key);
-    if (index === 0) aliases.push({ normalized_name:key, source_name:name, trainer_user_id:"", status:"external", resolved_at:new Date().toISOString() });
-    else {
-      const trainer = roster[index - 1];
-      if (!trainer) { showToast("That was not one of the numbers listed"); return false; }
-      aliases.push({ normalized_name:key, source_name:name, trainer_user_id:trainer.user_id,
-        display_name:trainer.display_name || trainer.email, email:trainer.email || "", status:"linked", resolved_at:new Date().toISOString() });
-    }
-    writeJson(ALIAS_KEY, aliases);
-    showToast("Linked " + name);
-    if (pending) window.readBookingExportFile({ files:[] }), refreshPreviewFromPending();
+    const options = [{ value:"", label:"Not linked" }, { value:"__external", label:"Not a FIT4LIFE trainer" }]
+      .concat(roster.map((trainer) => ({ value:trainer.user_id, label:trainer.display_name || trainer.email })));
+    const choice = await askForChoice('Which account is "' + name + '"?', options,
+      { note:"Saved once and reused on every future import.", confirmLabel:"Link" });
+    if (choice === null) return false;
+    const trainer = roster.find((item) => item.user_id === choice);
+    window.saveTrainerAlias(key, name, trainer, choice === "__external");
+    showToast(choice ? "Linked " + name : "Unlinked " + name);
+    refreshPreviewFromPending();
     return true;
   };
 

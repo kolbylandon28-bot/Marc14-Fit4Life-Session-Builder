@@ -773,6 +773,9 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   .ask-dialog{width:min(420px,100%);padding:16px 18px;border:1px solid var(--line-bright);border-radius:14px;
     background:var(--panel,#101116);pointer-events:auto;box-shadow:0 22px 60px rgba(0,0,0,.5)}
   .ask-dialog h4{margin:0 0 10px;font:800 12px var(--mono);letter-spacing:.03em;color:var(--text)}
+  .ask-dialog select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
+    background:var(--panel,#101116);color:var(--text);font:inherit;font-size:13px}
+  .ask-dialog p.storage-note{margin:0 0 10px}
   .ask-dialog input,.ask-dialog textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
     background:transparent;color:var(--text);font:inherit;font-size:13px;resize:vertical}
   .ask-dialog .tool-actions{margin-top:12px;justify-content:flex-end}
