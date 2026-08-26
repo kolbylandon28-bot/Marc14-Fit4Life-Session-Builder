@@ -648,12 +648,17 @@ function renderExercise(session, block, bi, ei, ex, sessionRef, partnerKey) {
   const edit = el("button","ex-btn edit");
   edit.innerHTML = "&#9998;"; edit.title = "Edit sets, reps, tempo, rest, and effort"; edit.setAttribute("aria-label","Edit " + ex.name + " prescription");
   edit.onclick = () => openPrescriptionEditor(session,block,bi,ei,sessionRef,partnerKey);
+  const mod = el("button", "ex-btn modifier");
+  mod.innerHTML = "&#9889;"; mod.title = "Run it as a burnout, drop set, tempo…";
+  mod.setAttribute("aria-label", "Change how " + ex.name + " is run");
+  if (ex.modifier) mod.classList.add("on");
+  mod.onclick = () => openModifierPicker(session, block, bi, ei, ex, sessionRef, partnerKey);
   const rm = el("button", "ex-btn remove");
   rm.innerHTML = "&times;"; rm.title = "Remove"; rm.setAttribute("aria-label", "Remove " + ex.name);
   rm.onclick = () => removeExercise(block, ei, sessionRef, bi, partnerKey);
   if (portalRole === "client") {
     if (["accessory","iso","finisher","core","circuit"].includes(block.key)) actions.appendChild(swap);
-  } else actions.append(up, down, edit, swap, rm);
+  } else actions.append(up, down, edit, swap, mod, rm);
   if (actions.children.length) row.appendChild(actions);
   return row;
 }
@@ -1131,3 +1136,29 @@ function showToast(message) {
 }
 function updateNetworkStatus() { const status = byId('networkStatus'); if (status) status.classList.toggle('show',typeof navigator !== 'undefined' && navigator.onLine === false); }
 if (typeof window !== 'undefined' && window.addEventListener) { window.addEventListener('online',updateNetworkStatus); window.addEventListener('offline',updateNetworkStatus); }
+
+/* ============================================================
+   MODIFIER PICKER
+   A modifier is how a movement is run, not a different movement,
+   so it lives on the exercise row rather than in the swap list.
+   Only modifiers that suit this exercise are offered.
+   ============================================================ */
+async function openModifierPicker(session, block, bi, ei, ex, sessionRef, partnerKey) {
+  if (typeof requireTrainerMutation === "function" && !requireTrainerMutation()) return;
+  const base = ex.baseName ? findExerciseByName(ex.baseName) : findExerciseByName(ex.name);
+  if (!base) { showToast("That exercise is not in the library any more."); return; }
+  const options = modifiersFor(base);
+  if (!options.length) { showToast(base.name + " does not take a modifier."); return; }
+  const choice = await askForChoice("How should " + base.name + " be run?",
+    [{ value:"", label:"Straight sets (no modifier)" }].concat(options.map((option) => ({ value:option.key, label:option.label + " \u2014 " + option.cue }))),
+    { note:"Changes the name the client sees and the sets, reps and rest.", confirmLabel:"Apply", selected:ex.modifier || "" });
+  if (choice === null) return;
+  const next = choice ? applyModifier(base, choice) : Object.assign({}, base);
+  const keptRx = (ex.rx && !ex.modifier) ? ex.rx : null;
+  replaceExercise(block, ei, next);
+  const placed = block.items[ei];
+  if (placed) placed.rx = next.modRx || keptRx || block.rx || placed.rx;
+  markSessionDraft(sessionContainingBlock(block), choice ? "Modifier applied" : "Modifier removed");
+  renderOutput();
+  showToast(choice ? placed.name : base.name + " back to straight sets");
+}

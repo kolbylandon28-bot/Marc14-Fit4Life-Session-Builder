@@ -1295,9 +1295,10 @@ function unresolvedClientSafetyHold(profile) {
 
 /* ---- Eligibility: filter the library for this person ---- */
 function eligible(spec, age) {
-  return LIBRARY.filter((ex) => {
+  const bases = LIBRARY.filter((ex) => {
     return !exerciseConstraintIssues(ex,spec,age).some((issue) => issue.hard);
-  }).map((ex) => ({ ...ex, _preference:exercisePreferenceFor(spec,ex) }));
+  });
+  return expandWithModifiers(bases).map((ex) => ({ ...ex, _preference:exercisePreferenceFor(spec,ex) }));
 }
 
 /* Dedicated finishers must ONLY appear in the finisher block, never as a main

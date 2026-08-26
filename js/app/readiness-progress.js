@@ -695,7 +695,7 @@ function renderProfileExercisePreferences() {
   list.innerHTML = entries.length ? entries.map(([id,value]) => { const ex = LIBRARY.find((item) => exerciseId(item) === id); return '<div class="preference-row"><span><b>' + escapeHtml(ex ? ex.name : id) + '</b><small>' + escapeHtml(value) + '</small></span><button type="button" class="mini-btn" onclick="removeProfileExercisePreference(\'' + escapeHtml(id) + '\')">Remove</button></div>'; }).join("") : '<div class="lookup-note">No exercise preferences saved. Neutral is assumed.</div>';
 }
 function setProfileExercisePreference() {
-  const typed = byId("profilePreferenceExercise").value.trim(), exercise = LIBRARY.find((item) => item.name.toLowerCase() === typed.toLowerCase());
+  const typed = byId("profilePreferenceExercise").value.trim(), exercise = findExerciseByName(typed);
   if (!exercise) { showToast("Choose an exercise from the exercise bank"); return false; }
   const value = byId("profilePreferenceValue").value;
   if (!EXERCISE_PREFERENCE_VALUES.includes(value)) return false;
