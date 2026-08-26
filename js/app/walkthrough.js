@@ -50,10 +50,11 @@ const WALKTHROUGHS = [
       { say: "Start from your client list.", target: '[data-coach-nav="clients"]', advance: "click" },
       { say: "Tap the client you are programming for.", target: ".client-row", advance: "click" },
       { say: "Open a new workout for them.", target: '[data-wt="new-workout"]', advance: "click" },
-      { say: "Their profile is already loaded, so you never search for them here.", target: ".profile-loaded", advance: "next" },
-      { say: "Pick what today is for. This is the single biggest lever on what gets built.", target: '[data-wt="goal"]', advance: "next" },
-      { say: "Then how they train for it - resistance, cardio, or a mix. Leave it on auto and the goal decides.", target: '[data-wt="training-route"]', advance: "next" },
-      { say: "Anything that hurts goes here. Nothing that stresses it will be programmed, warm-up included.", target: '[data-wt="injuries"]', advance: "next" },
+      { say: "Nothing on this screen is yours to fill in. Everything below was answered by the client on their questionnaire when they joined.", target: ".profile-loaded", advance: "next", info: true },
+      { say: "Their goal is already picked from that questionnaire. This one setting drives more of the workout than anything else on the page.", target: '[data-wt="goal"]', advance: "next", info: true },
+      { say: "Build muscle gives them two main lifts, two accessories and an isolation at 4 sets of 8-12 with 60-90 seconds rest. Lose body fat gives them one lift, then circuits and conditioning instead. Same client, same equipment, a completely different hour.", target: '[data-wt="goal"]', advance: "next", info: true },
+      { say: "This is how they chase that goal - lifting, cardio or a mix. On auto the goal decides, which is usually right. Change it only when today needs to be different from their normal.", target: '[data-wt="training-route"]', advance: "next", info: true },
+      { say: "Anything that hurts goes here, and this you do change. Nothing that stresses it will be programmed, warm-up included.", target: '[data-wt="injuries"]', advance: "next" },
       { say: "Untick whatever is broken or busy today. A machine you untick cannot appear anywhere in the session.", target: '[data-wt="zones"]', advance: "next" },
       { say: "Build it.", target: "#buildBtn", advance: "click" },
       { say: "Three genuinely different answers, not one shuffled three ways. Read them and pick the one that suits today.", target: ".workout-choice-grid", advance: "next" },
@@ -210,7 +211,7 @@ function walkthroughClearStep(run) {
   const state = run || walkthroughRun; if (!state) return;
   if (state.timer) { clearInterval(state.timer); state.timer = null; }
   if (state.onClick) { document.removeEventListener("click", state.onClick, true); state.onClick = null; }
-  document.querySelectorAll(".wt-target").forEach((el) => el.classList.remove("wt-target"));
+  document.querySelectorAll(".wt-target").forEach((el) => el.classList.remove("wt-target", "wt-info"));
 }
 
 /* Walkthroughs about editing a workout need one on screen. Launched cold from
@@ -245,6 +246,7 @@ function walkthroughApplyHighlight(step) {
   const el = found[0] || null;
   document.querySelectorAll(".wt-target").forEach((node) => { if (node !== el) node.classList.remove("wt-target"); });
   if (!step || !step.target) return true;
+  if (el) el.classList.toggle("wt-info", !!step.info);
   if (el && !el.classList.contains("wt-target")) {
     el.classList.add("wt-target");
     // a control below the fold looks like nothing happened
@@ -333,6 +335,7 @@ function walkthroughRenderBar() {
     + '<div class="wt-bar-copy"><span class="wt-count">Step ' + (walkthroughRun.index + 1) + ' of ' + steps.length + '</span>'
     + '<p>' + escapeHtml(step.say) + '</p>'
     + (waiting ? '<span class="wt-waiting">Waiting for you to tap it</span>' : '')
+    + (step.info && !missing ? '<span class="wt-info-note">Reading only \u2014 nothing to change here</span>' : '')
     + (missing ? '<span class="wt-missing">That control is not on this screen right now \u2014 skip past it or step back.</span>' : '') + '</div>'
     + '<div class="wt-bar-actions">'
     + (walkthroughRun.index > 0 ? '<button class="small-btn" data-wt-back>Back</button>' : '')

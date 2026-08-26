@@ -1927,3 +1927,9 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
 .wt-missing{font:600 9px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--warn)}
 .wt-bar-inner.wt-stuck{position:relative}
 .walkthrough-bar:has(.wt-stuck){border-top-color:var(--warn)}
+/* An informational step is locked: reading about a setting must not change it,
+   and it should not look like something waiting to be tapped. */
+.wt-target.wt-info{pointer-events:none!important;animation:none!important;
+  outline-color:var(--text-dim)!important;
+  box-shadow:0 0 0 4px rgba(168,172,182,.12),0 0 22px rgba(168,172,182,.22)!important}
+.wt-info-note{font:600 9px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
