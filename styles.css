@@ -897,7 +897,12 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   .analysis-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
   .analysis-note{font-size:9px;color:#767a82;line-height:1.45;margin-top:13px;border-top:1px solid #d9dce1;padding-top:10px}
   /* A tab with something waiting on it, so a notification that routes here says so. */
-  .summary-tab{position:relative}
+  .needs-attention{position:relative;border-color:#D8352A !important;
+  box-shadow:0 0 0 1px #D8352A, 0 0 18px rgba(216,53,42,.18)}
+.needs-attention::before{content:"Handle this";position:absolute;top:-9px;left:14px;z-index:2;
+  padding:1px 8px;border-radius:99px;background:#D8352A;color:#fff;
+  font:800 9px var(--mono);letter-spacing:.05em;text-transform:uppercase}
+.summary-tab{position:relative}
   .summary-tab.has-attention{color:#B4271F;font-weight:800}
   .summary-tab.has-attention::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:#D8352A}
   .summary-tab.has-attention.on::after{background:#B4271F}

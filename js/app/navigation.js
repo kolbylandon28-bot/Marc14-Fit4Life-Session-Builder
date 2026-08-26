@@ -592,6 +592,30 @@ function attentionTabForKind(kind) {
   return Object.prototype.hasOwnProperty.call(ATTENTION_TAB_FOR_KIND,String(kind)) ? ATTENTION_TAB_FOR_KIND[String(kind)] : "overview";
 }
 // Counts, per tab, of what is waiting on ONE client - used to badge their tabs.
+// Which panel inside a tab actually resolves each kind, so the destination can be marked
+// rather than leaving the coach to hunt the right tab.
+const ATTENTION_PANEL_FOR_KIND = {
+  consultation:"client-consultation-review", consult_questionnaire:"client-consultation-review",
+  pain:"client-safety-reports",
+  workout:"client-recent-activity", workout_request:"client-recent-activity",
+  program:"client-assigned-program", baseline:"client-assigned-program",
+  checkin:"client-checkins", recovery:"client-checkins",
+  message:"client-messages", follow_up:"client-messages"
+};
+function attentionPanelForKind(kind) {
+  return Object.prototype.hasOwnProperty.call(ATTENTION_PANEL_FOR_KIND,String(kind))
+    ? ATTENTION_PANEL_FOR_KIND[String(kind)] : "";
+}
+// The panels a given client currently needs attention in.
+function attentionPanelsForProfile(profileId,items) {
+  const panels = new Set();
+  (items || []).forEach((item) => {
+    if (!profileId || item.profileId !== profileId) return;
+    const panel = attentionPanelForKind(item.kind);
+    if (panel) panels.add(panel);
+  });
+  return panels;
+}
 function attentionCountsByTab(profileId,items) {
   const counts = {};
   (items || []).forEach((item) => {
