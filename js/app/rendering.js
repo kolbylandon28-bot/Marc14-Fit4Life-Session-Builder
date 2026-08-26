@@ -224,7 +224,7 @@ function renderBlock(session, block, bi, sessionRef, partnerKey) {
   wrap.appendChild(head);
   if (portalRole !== "client" && session.blocks.reduce((sum,item) => sum + (item.items || []).length,0) > 1) {
     const tools = el("div","block-superset-tools"), copy = el("span","","Optional paired block for this section"), actions = el("div","tool-actions"), create = el("button","small-btn","Create a superset");
-    create.type = "button"; create.onclick = () => openSupersetEditor(session,block,bi,sessionRef,partnerKey); actions.appendChild(create);
+    create.type = "button"; create.dataset.wt = "create-superset"; create.onclick = () => openSupersetEditor(session,block,bi,sessionRef,partnerKey); actions.appendChild(create);
     if ((block.groups || []).some((group) => group.type === "superset")) { const clear = el("button","small-btn","Clear supersets"); clear.type = "button"; clear.onclick = () => clearBlockSupersets(session,block); actions.appendChild(clear); }
     tools.append(copy,actions); wrap.appendChild(tools);
   }
@@ -576,6 +576,7 @@ function renderExercise(session, block, bi, ei, ex, sessionRef, partnerKey) {
 
   const note = document.createElement("input");
   note.className = "ex-note-input";
+  note.dataset.wt = "coach-note";
   note.placeholder = "Coaching notes\u2026";
   const nid = noteId(session, bi, ei, partnerKey);
   if (sessionRef.edits && sessionRef.edits[nid]) note.value = sessionRef.edits[nid];

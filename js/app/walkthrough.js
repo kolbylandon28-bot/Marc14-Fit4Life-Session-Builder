@@ -45,45 +45,71 @@ const WALKTHROUGHS = [
     id: "program-workout",
     role: "trainer",
     title: "Program a workout for a client",
-    blurb: "Build one, pick an approach, approve it and send it.",
+    blurb: "The whole arc - set it up, build it, approve it, send it.",
     steps: [
       { say: "Start from your client list.", target: '[data-coach-nav="clients"]', advance: "click" },
       { say: "Tap the client you are programming for.", target: ".client-row", advance: "click" },
       { say: "Open a new workout for them.", target: '[data-wt="new-workout"]', advance: "click" },
-      { say: "Their goal, experience and equipment are already filled in from their profile. Change anything you want for today.", target: "#soloFields", advance: "next" },
+      { say: "Their profile is already loaded, so you never search for them here.", target: ".profile-loaded", advance: "next" },
+      { say: "Pick what today is for. This is the single biggest lever on what gets built.", target: '[data-wt="goal"]', advance: "next" },
+      { say: "Then how they train for it - resistance, cardio, or a mix. Leave it on auto and the goal decides.", target: '[data-wt="training-route"]', advance: "next" },
+      { say: "Anything that hurts goes here. Nothing that stresses it will be programmed, warm-up included.", target: '[data-wt="injuries"]', advance: "next" },
+      { say: "Untick whatever is broken or busy today. A machine you untick cannot appear anywhere in the session.", target: '[data-wt="zones"]', advance: "next" },
       { say: "Build it.", target: "#buildBtn", advance: "click" },
-      { say: "You get three different answers, not one. Read the cards and pick the approach that suits them today.", target: ".workout-choice-grid", advance: "next" },
-      { say: "Choose one.", target: '[data-wt="choose-option"]', advance: "click" },
-      { say: "This is your draft. Nothing has reached the client yet - you can still change every movement.", target: "#output", advance: "next" },
-      { say: "Approve the draft when you are happy with it.", target: '[data-wt="approve-draft"]', advance: "click" },
+      { say: "Three genuinely different answers, not one shuffled three ways. Read them and pick the one that suits today.", target: ".workout-choice-grid", advance: "next" },
+      { say: "Choose one. You can still change every movement afterwards.", target: '[data-wt="choose-option"]', advance: "click" },
+      { say: "This is a draft. Nothing has reached the client yet.", target: "#output", advance: "next" },
+      { say: "Approve the draft. This step is easy to miss and nothing sends without it.", target: '[data-wt="approve-draft"]', advance: "click" },
       { say: "Now send it. This is the moment it appears on their phone.", target: '[data-wt="assign"]', advance: "click" },
     ],
-    done: "That is the whole loop. Build, choose, approve, send.",
+    done: "Set it up, build, choose, approve, send. That is the whole loop.",
   },
   {
-    id: "edit-sets-reps",
+    id: "tailor-workout",
     role: "trainer",
-    title: "Change the sets and reps on a movement",
-    blurb: "Tailor any single movement without rebuilding the workout.",
+    title: "Tailor a workout after it is built",
+    blurb: "Sets and reps, coaching notes, modifiers, swaps, supersets, removing a movement.",
     needs: "workout",
     steps: [
-      { say: "Here is a workout on the practice client. Every movement has its own controls on the right.", target: ".ex-actions", advance: "next" },
-      { say: "Tap the pencil on the movement you want to change.", target: ".ex-btn.edit", advance: "click" },
-      { say: "Set the sets, reps, rest and effort you actually want, then save. Only this movement changes.", target: ".modal-backdrop.open", advance: "next" },
+      { say: "Here is a built workout on a practice client. Every movement has its own controls down the right-hand side.", target: ".ex-actions", advance: "next" },
+      { say: "The pencil changes sets, reps, rest and effort for that one movement only.", target: ".ex-btn.edit", advance: "click" },
+      { say: "Set what you actually want, then save.", target: ".modal-backdrop.open", advance: "next" },
+      { say: "The notes box under a movement is what the client reads on their phone. Cues, tempo, a weight to start at.", target: '[data-wt="coach-note"]', advance: "next" },
+      { say: "The lightning bolt runs a movement differently - burnout, drop set, 21s, tempo, pause. Only the ones that suit it are offered.", target: ".ex-btn.modifier", advance: "click" },
+      { say: "Pick how it should be run, or straight sets to undo it. It changes the name the client sees and the prescription.", target: ".ask-dialog", advance: "next" },
+      { say: "The arrows swap a movement for one that trains the same thing - use it when a machine is taken.", target: ".ex-btn.swap", advance: "click" },
+      { say: "Shuffle for another suggestion, or pick from the list. Your sets and reps carry across.", target: ".modal-backdrop.open", advance: "next" },
+      { say: "The X removes a movement outright.", target: ".ex-btn.remove", advance: "next" },
+      { say: "And this pairs two movements into a superset, so they alternate at one station.", target: '[data-wt="create-superset"]', advance: "next" },
     ],
-    done: "The rest of the workout is untouched.",
+    done: "Every one of those changes only the workout in front of you.",
   },
   {
-    id: "swap-movement",
+    id: "change-equipment",
     role: "trainer",
-    title: "Swap a movement out",
-    blurb: "When a machine is taken or a movement does not suit them.",
+    title: "Handle a machine being unavailable",
+    blurb: "Before you build, or after - two different fixes.",
     needs: "workout",
     steps: [
-      { say: "Here is a workout on the practice client. Tap the swap arrows on a movement you want to replace.", target: ".ex-btn.swap", advance: "click" },
-      { say: "You get replacements that train the same thing. Shuffle for another, or pick one from the list.", target: ".modal-backdrop.open", advance: "next" },
+      { say: "If a machine is down before you build, untick it here and nothing in the session will use it.", target: '[data-wt="zones"]', advance: "next" },
+      { say: "If you only find out mid-session, do not rebuild. Swap the single movement instead.", target: ".ex-btn.swap", advance: "click" },
+      { say: "Pick a replacement that uses what is free. The sets and reps stay as you set them.", target: ".modal-backdrop.open", advance: "next" },
     ],
-    done: "The prescription carries over, so the sets and reps stay as you set them.",
+    done: "Untick it before you build; swap it after. Never rebuild the whole session.",
+  },
+  {
+    id: "update-limitations",
+    role: "trainer",
+    title: "Update what a client cannot do",
+    blurb: "Record an injury so it is respected from now on, not just today.",
+    needs: "workout",
+    steps: [
+      { say: "Limitations set here apply to this session only.", target: '[data-wt="injuries"]', advance: "next" },
+      { say: "To make it stick for every future workout it has to go on their profile. Open their client details.", target: '[data-coach-nav="clients"]', advance: "click" },
+      { say: "Tap the client.", target: ".client-row", advance: "click" },
+      { say: "Edit their profile and record it there. Every workout built from now on will respect it.", target: '[data-wt="new-workout"]', advance: "next" },
+    ],
+    done: "Session-only goes in the builder. Permanent goes on their profile.",
   },
 ];
 
@@ -206,9 +232,19 @@ function walkthroughPrepareWorkout() {
   return true;
 }
 
+// Existing in the DOM is not the same as being on screen. A hidden view still holds
+// its buttons, so matching on existence alone left the bar waiting for a tap on
+// something the trainer could not see or reach.
+function walkthroughVisible(el) {
+  if (!el || el.offsetParent === null) return false;
+  const box = el.getBoundingClientRect();
+  return box.width > 0 && box.height > 0;
+}
 function walkthroughApplyHighlight(step) {
-  const el = step && step.target ? document.querySelector(step.target) : null;
+  const found = step && step.target ? Array.from(document.querySelectorAll(step.target)).filter(walkthroughVisible) : [];
+  const el = found[0] || null;
   document.querySelectorAll(".wt-target").forEach((node) => { if (node !== el) node.classList.remove("wt-target"); });
+  if (!step || !step.target) return true;
   if (el && !el.classList.contains("wt-target")) {
     el.classList.add("wt-target");
     // a control below the fold looks like nothing happened
@@ -217,6 +253,7 @@ function walkthroughApplyHighlight(step) {
       if (box.bottom > window.innerHeight - 130 || box.top < 60) el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }
+  return !!el;
 }
 function walkthroughGoToStep(index) {
   if (!walkthroughRun) return;
@@ -230,17 +267,30 @@ function walkthroughGoToStep(index) {
 
   // Apply it now so the step never starts with nothing lit, then keep re-applying:
   // the app re-renders constantly and would otherwise drop the class.
+  walkthroughRun.missing = false;
+  walkthroughRun.missingSince = null;
   walkthroughApplyHighlight(step);
   walkthroughRun.timer = setInterval(() => {
     if (!walkthroughRun) return;
-    walkthroughApplyHighlight(step);
+    // Waiting for a tap on a control that is not on screen is how someone gets stranded,
+    // so once it has been absent for a moment, say so and offer a way past.
+    if (walkthroughApplyHighlight(step)) {
+      walkthroughRun.missingSince = null;
+      if (walkthroughRun.missing) { walkthroughRun.missing = false; walkthroughRenderBar(); }
+      return;
+    }
+    if (!walkthroughRun.missingSince) walkthroughRun.missingSince = Date.now();
+    if (!walkthroughRun.missing && Date.now() - walkthroughRun.missingSince > 1400) {
+      walkthroughRun.missing = true;
+      walkthroughRenderBar();
+    }
   }, WALKTHROUGH_HIGHLIGHT_MS);
 
   if (step.advance === "click" && step.target) {
     walkthroughRun.onClick = (event) => {
       if (!walkthroughRun) return;
       const hit = event.target && event.target.closest && event.target.closest(step.target);
-      if (!hit) return;
+      if (!hit || !walkthroughVisible(hit)) return;
       const at = walkthroughRun.index;
       setTimeout(() => { if (walkthroughRun && walkthroughRun.index === at) walkthroughGoToStep(at + 1); }, 260);
     };
@@ -277,15 +327,17 @@ function walkthroughRenderBar() {
     document.body.appendChild(bar);
   }
   const steps = walkthroughRun.plan.steps, step = steps[walkthroughRun.index];
-  const waiting = step.advance === "click";
-  bar.innerHTML = '<div class="wt-bar-inner">'
+  const missing = !!walkthroughRun.missing;
+  const waiting = step.advance === "click" && !missing;
+  bar.innerHTML = '<div class="wt-bar-inner' + (missing ? ' wt-stuck' : '') + '">'
     + '<div class="wt-bar-copy"><span class="wt-count">Step ' + (walkthroughRun.index + 1) + ' of ' + steps.length + '</span>'
     + '<p>' + escapeHtml(step.say) + '</p>'
-    + (waiting ? '<span class="wt-waiting">Waiting for you to tap it</span>' : '') + '</div>'
+    + (waiting ? '<span class="wt-waiting">Waiting for you to tap it</span>' : '')
+    + (missing ? '<span class="wt-missing">That control is not on this screen right now \u2014 skip past it or step back.</span>' : '') + '</div>'
     + '<div class="wt-bar-actions">'
     + (walkthroughRun.index > 0 ? '<button class="small-btn" data-wt-back>Back</button>' : '')
-    + (waiting ? '' : '<button class="small-btn primary" data-wt-next>Next</button>')
-    + '<button class="small-btn wt-exit" data-wt-exit>I’ve got it</button>'
+    + (waiting ? '' : '<button class="small-btn primary" data-wt-next>' + (missing ? 'Skip' : 'Next') + '</button>')
+    + '<button class="small-btn wt-exit" data-wt-exit>I\u2019ve got it</button>'
     + '</div></div>';
   const back = bar.querySelector("[data-wt-back]");
   if (back) back.onclick = () => walkthroughGoToStep(walkthroughRun.index - 1);

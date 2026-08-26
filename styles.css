@@ -1924,3 +1924,6 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   .wt-bar-actions .small-btn{flex:1}
   body.walkthrough-on{padding-bottom:120px}
 }
+.wt-missing{font:600 9px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--warn)}
+.wt-bar-inner.wt-stuck{position:relative}
+.walkthrough-bar:has(.wt-stuck){border-top-color:var(--warn)}

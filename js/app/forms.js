@@ -43,6 +43,7 @@ function ageField(target) {
 function chipMulti(labelText, key, options, labelMap, target, isInjury) {
   const wrap = document.createElement("div");
   wrap.className = "field";
+  wrap.dataset.wt = key;
   wrap.style.gridColumn = "1 / -1";
   const label = document.createElement("label");
   label.textContent = labelText;
@@ -270,7 +271,12 @@ function profileField(target) {
   const lookupWrap = document.createElement("div"); lookupWrap.className = "compact-field profile-lookup";
   const lookupLabel = document.createElement("label"); lookupLabel.textContent = "Name or username";
   const results = document.createElement("div"); results.className = "profile-results";
-  const active = loadProfiles().find((p) => p.id === target.profileId), actions = document.createElement("div"); actions.className = "profile-actions";
+  let active = loadProfiles().find((p) => p.id === target.profileId);
+  // A loaded profile that no longer exists - deleted, archived, or a practice client from a
+  // walkthrough - used to leave an empty search box the trainer could not get past, because
+  // the builder still believed someone was selected. Forget it and show the search instead.
+  if (target.profileId && !active) { target.profileId = ""; target.client = ""; target.username = ""; }
+  const actions = document.createElement("div"); actions.className = "profile-actions";
   if (active) {
     const loaded = document.createElement("div"); loaded.className = "profile-loaded";
     const identity = document.createElement("div"), loadedName = document.createElement("strong"), loadedUser = document.createElement("span");
@@ -438,8 +444,8 @@ function buildPersonFields(target, container) {
   const grid = document.createElement("div");
   grid.className = "field-grid";
   grid.appendChild(profileField(target));
-  grid.appendChild(goalField(target));
-  grid.appendChild(trainingRouteField(target));
+  const goalWrap = goalField(target); goalWrap.dataset.wt = "goal"; grid.appendChild(goalWrap);
+  const routeWrap = trainingRouteField(target); routeWrap.dataset.wt = "training-route"; grid.appendChild(routeWrap);
   if (["cardio","mixed","performance","recovery"].includes(resolvedTrainingRoute(target))) grid.appendChild(cardioPreferenceField(target));
   grid.appendChild(selectField("Experience", "experience", EXP_OPTIONS, target, target.experience));
   grid.appendChild(ageField(target));
