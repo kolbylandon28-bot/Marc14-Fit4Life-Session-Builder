@@ -207,6 +207,7 @@ function renderCard(session, sessionRef, partnerKey, partnerLabel) {
 
 function renderBlock(session, block, bi, sessionRef, partnerKey) {
   const wrap = el("div", "block");
+  wrap.dataset.blockKey = block.key || "";
   const head = el("div", "block-head");
   head.appendChild(el("div", "block-idx", String(bi + 1)));
   head.appendChild(el("div", "block-title", block.title));
@@ -650,7 +651,8 @@ function renderExercise(session, block, bi, ei, ex, sessionRef, partnerKey) {
   edit.innerHTML = "&#9998;"; edit.title = "Edit sets, reps, tempo, rest, and effort"; edit.setAttribute("aria-label","Edit " + ex.name + " prescription");
   edit.onclick = () => openPrescriptionEditor(session,block,bi,ei,sessionRef,partnerKey);
   const mod = el("button", "ex-btn modifier");
-  mod.innerHTML = "&#9889;"; mod.title = "Run it as a burnout, drop set, tempo…";
+  mod.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M13 2 4.5 13.5H11l-1 8.5L19.5 10H13l1-8z"/></svg>';
+  mod.title = "Run it as a burnout, drop set, tempo…";
   mod.setAttribute("aria-label", "Change how " + ex.name + " is run");
   if (ex.modifier) mod.classList.add("on");
   mod.onclick = () => openModifierPicker(session, block, bi, ei, ex, sessionRef, partnerKey);

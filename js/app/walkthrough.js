@@ -40,6 +40,11 @@ function practiceClientProfile() {
 
 /* ---- the library ---- */
 
+// The warm-up is the wrong place to demonstrate tailoring: an elliptical takes no
+// modifier, and pairing mobility work into a superset teaches the wrong thing.
+const WORKING_BLOCK = '.block:not([data-block-key="warmup"])';
+const WORKING = WORKING_BLOCK + " .ex";
+
 const WALKTHROUGHS = [
   {
     id: "program-workout",
@@ -72,16 +77,24 @@ const WALKTHROUGHS = [
     blurb: "Sets and reps, coaching notes, modifiers, swaps, supersets, removing a movement.",
     needs: "workout",
     steps: [
-      { say: "Here is a built workout on a practice client. Every movement has its own controls down the right-hand side.", target: ".ex-actions", advance: "next" },
-      { say: "The pencil changes sets, reps, rest and effort for that one movement only.", target: ".ex-btn.edit", advance: "click" },
-      { say: "Set what you actually want, then save.", target: ".modal-backdrop.open", advance: "next" },
-      { say: "The notes box under a movement is what the client reads on their phone. Cues, tempo, a weight to start at.", target: '[data-wt="coach-note"]', advance: "next" },
-      { say: "The lightning bolt runs a movement differently - burnout, drop set, 21s, tempo, pause. Only the ones that suit it are offered.", target: ".ex-btn.modifier", advance: "click" },
-      { say: "Pick how it should be run, or straight sets to undo it. It changes the name the client sees and the prescription.", target: ".ask-dialog", advance: "next" },
-      { say: "The arrows swap a movement for one that trains the same thing - use it when a machine is taken.", target: ".ex-btn.swap", advance: "click" },
-      { say: "Shuffle for another suggestion, or pick from the list. Your sets and reps carry across.", target: ".modal-backdrop.open", advance: "next" },
-      { say: "The X removes a movement outright.", target: ".ex-btn.remove", advance: "next" },
-      { say: "And this pairs two movements into a superset, so they alternate at one station.", target: '[data-wt="create-superset"]', advance: "next" },
+      // WORKING keeps the demo off the warm-up, where half of these controls do not apply -
+      // an elliptical takes no modifier and pairing it into a superset makes no sense.
+      { say: "Here is a built workout on a practice client. We are working on a real training movement, not the warm-up, because that is where these controls matter.", target: WORKING + " .ex-actions", advance: "next", info: true },
+      { say: "The pencil opens everything about how this one movement is prescribed.", target: WORKING + " .ex-btn.edit", advance: "click" },
+      { say: "Working sets is how many hard sets they do. Reps or duration takes a number, a range, or a time - and for one-sided movements write \u201ceach side\u201d.", target: "#prescriptionSets", advance: "next", info: true },
+      { say: "Tempo controls speed - \u201c3-1-1\u201d is three seconds down, one at the bottom, one up. Rest is what they wait between sets.", target: "#prescriptionTempo", advance: "next", info: true },
+      { say: "Target effort is how hard the set should feel. RPE 8 or \u201c2 reps in reserve\u201d both work - the client sees this on their phone.", target: "#prescriptionEffort", advance: "next", info: true },
+      { say: "Target load can be a weight, or a rule like \u201cuse last successful load\u201d so it follows them as they get stronger.", target: "#prescriptionLoad", advance: "next", info: true },
+      { say: "The coach cue is the one line they read mid-set. Keep it to the thing that goes wrong.", target: "#prescriptionCue", advance: "next", info: true },
+      { say: "This is the one to watch: it decides whether the change hits only today, or every future workout with this movement.", target: "#prescriptionScope", advance: "next", info: true },
+      { say: "Save it.", target: '[onclick="savePrescriptionEditor()"]', advance: "click" },
+      { say: "The notes box under a movement is what the client reads on their phone. Cues, a weight to start at, anything you would say out loud.", target: WORKING + ' [data-wt="coach-note"]', advance: "next", info: true },
+      { say: "The lightning bolt runs a movement differently - burnout, drop set, 21s, tempo, pause. Tap it.", target: WORKING + " .ex-btn.modifier", advance: "click" },
+      { say: "Only the ones that suit this movement are offered, which is why a treadmill has none and a cable curl has four. Pick one, or straight sets to undo it.", target: ".ask-dialog", advance: "next", info: true },
+      { say: "The arrows swap a movement for one that trains the same thing. Tap it.", target: WORKING + " .ex-btn.swap", advance: "click" },
+      { say: "Shuffle for another suggestion, or pick from the list. Your sets and reps carry across.", target: ".modal-backdrop.open", advance: "next", info: true },
+      { say: "The X removes a movement outright.", target: WORKING + " .ex-btn.remove", advance: "next", info: true },
+      { say: "And this pairs two movements in the same phase into a superset, so they alternate at one station.", target: WORKING_BLOCK + ' [data-wt="create-superset"]', advance: "next", info: true },
     ],
     done: "Every one of those changes only the workout in front of you.",
   },
@@ -179,6 +192,7 @@ function startWalkthrough(id) {
   ["fit4life_assignments_v1","fit4life_client_messages_v1","fit4life_records_v1","fit4life_calendar_events_v1"]
     .forEach((key) => { if (localStorage.getItem(key) != null) localStorage.setItem(key, "[]"); });
 
+  walkthroughCloseDialogs();
   if (plan.needs === "workout") walkthroughPrepareWorkout();
   document.body.classList.add("walkthrough-on");
   walkthroughRenderBar();
@@ -194,6 +208,7 @@ function endWalkthrough(quiet) {
   walkthroughClearStep(run);
   const bar = document.getElementById("walkthroughBar"); if (bar) bar.remove();
   document.body.classList.remove("walkthrough-on");
+  walkthroughCloseDialogs();
   walkthroughRestoreSnapshot();
 
   if (run.returnView) {
@@ -205,6 +220,13 @@ function endWalkthrough(quiet) {
   else if (typeof renderOutput === "function") renderOutput();
   if (typeof renderTrainerDirectory === "function") renderTrainerDirectory();
   if (!quiet) showToast("Back to your real clients");
+}
+
+/* A dialog left open from a previous run sits on top of the next one and makes the
+   whole walkthrough look broken. Start and finish from a clean screen. */
+function walkthroughCloseDialogs() {
+  document.querySelectorAll(".modal-backdrop.open").forEach((node) => node.classList.remove("open"));
+  document.querySelectorAll(".ask-backdrop").forEach((node) => node.remove());
 }
 
 function walkthroughClearStep(run) {
@@ -239,7 +261,9 @@ function walkthroughPrepareWorkout() {
 function walkthroughVisible(el) {
   if (!el || el.offsetParent === null) return false;
   const box = el.getBoundingClientRect();
-  return box.width > 0 && box.height > 0;
+  // Either dimension is enough. A flex column of buttons measures zero wide while
+  // being perfectly visible, and demanding both dimensions rejected it.
+  return box.width > 0 || box.height > 0;
 }
 function walkthroughApplyHighlight(step) {
   const found = step && step.target ? Array.from(document.querySelectorAll(step.target)).filter(walkthroughVisible) : [];

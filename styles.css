@@ -1890,7 +1890,7 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
 .help-btn.show{display:inline-flex}
 .help-btn:hover{border-color:var(--blue);background:var(--blue-glow);color:#fff}
 
-.walkthrough-bar{position:fixed;left:0;right:0;bottom:0;z-index:120;padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+.walkthrough-bar{position:fixed;left:0;right:0;bottom:0;z-index:300;padding:12px 14px calc(12px + env(safe-area-inset-bottom));
   background:linear-gradient(180deg,rgba(12,12,15,.94),rgba(12,12,15,.99));border-top:1px solid var(--blue);
   box-shadow:0 -10px 34px rgba(0,0,0,.5)}
 .wt-bar-inner{display:flex;align-items:center;gap:16px;max-width:1100px;margin:0 auto;flex-wrap:wrap}
@@ -1902,7 +1902,7 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
 .wt-exit{border-color:var(--blue)!important;color:var(--blue-bright)!important}
 
 /* the highlight has to win over whatever it lands on, hence the z-index and the !important */
-.wt-target{position:relative!important;z-index:121!important;
+.wt-target{position:relative!important;z-index:301!important;
   outline:2px solid var(--blue-bright)!important;outline-offset:3px!important;border-radius:6px;
   box-shadow:0 0 0 4px var(--blue-glow),0 0 26px rgba(90,166,240,.45)!important;
   animation:wt-pulse 1.6s ease-in-out infinite}
@@ -1933,3 +1933,5 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   outline-color:var(--text-dim)!important;
   box-shadow:0 0 0 4px rgba(168,172,182,.12),0 0 22px rgba(168,172,182,.22)!important}
 .wt-info-note{font:600 9px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
+
+.ex-btn.modifier svg{display:block}
