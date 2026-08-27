@@ -185,6 +185,9 @@ function walkthroughStorageKeys() {
   return keys;
 }
 function walkthroughTakeSnapshot() {
+  // If practice data is somehow already in storage - a session that died before it could
+  // restore - snapshotting it would enshrine Batman as a real client on the way back out.
+  purgePracticeProfiles();
   const snap = {};
   walkthroughStorageKeys().forEach((key) => { snap[key] = localStorage.getItem(key); });
   try { localStorage.setItem(WALKTHROUGH_SNAPSHOT_KEY, JSON.stringify(snap)); return true; }
@@ -199,12 +202,29 @@ function walkthroughRestoreSnapshot() {
     if (snap[key] == null) localStorage.removeItem(key); else localStorage.setItem(key, snap[key]);
   });
   localStorage.removeItem(WALKTHROUGH_SNAPSHOT_KEY);
+  purgePracticeProfiles();
   return true;
 }
 // A tab closed mid-walkthrough leaves practice data behind; put the real data back on the next load.
+/* Batman, Superman and Spider-Man exist for practice and must never appear beside real
+   people. Whatever went wrong - a snapshot lost, a tab killed at the wrong moment, a
+   restore that half ran - this removes them from real storage unconditionally. */
+function purgePracticeProfiles() {
+  try {
+    const practice = practiceProfileIds();
+    const stored = JSON.parse(localStorage.getItem(PROFILES_KEY) || "[]");
+    if (!Array.isArray(stored)) return false;
+    const cleaned = stored.filter((profile) => profile && !practice.includes(profile.id));
+    if (cleaned.length === stored.length) return false;
+    localStorage.setItem(PROFILES_KEY, JSON.stringify(cleaned));
+    return true;
+  } catch (_) { return false; }
+}
+
 function walkthroughRecoverIfInterrupted() {
   document.body.classList.remove("sandbox-on");
-  if (!localStorage.getItem(WALKTHROUGH_SNAPSHOT_KEY)) return false;
+  const strayRemoved = purgePracticeProfiles();
+  if (!localStorage.getItem(WALKTHROUGH_SNAPSHOT_KEY)) return strayRemoved;
   walkthroughRestoreSnapshot();
   return true;
 }

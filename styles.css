@@ -2025,8 +2025,23 @@ body.sandbox-on{
   background-size:auto,auto,cover;
   background-blend-mode:normal,normal,normal;
 }
-/* the giant F4L watermark is drawn for a dark ground; it turns to mud on a light one */
-body.sandbox-on::before,body.sandbox-on::after{display:none}
+/* The stock watermark is an outlined, glowing, condensed italic built for a dark ground -
+   it turns to mud on a light one. Practice mode gets its own: one thin black cursive mark,
+   no stroke and no glow, set light enough to read straight through. */
+body.sandbox-on::after{display:none}
+body.sandbox-on::before{
+  content:"F4L";
+  position:fixed;left:50%;top:50%;z-index:0;
+  transform:translate(-50%,-50%);
+  pointer-events:none;white-space:nowrap;
+  font:400 clamp(180px,30vw,470px)/.8 "Snell Roundhand","Apple Chancery","Segoe Script","Brush Script MT",cursive;
+  letter-spacing:.02em;text-indent:0;
+  color:rgba(0,0,0,.11);
+  -webkit-text-fill-color:rgba(0,0,0,.11);
+  -webkit-text-stroke:0;
+  background:none;-webkit-background-clip:border-box;background-clip:border-box;
+  text-shadow:none;filter:none;
+}
 body.sandbox-on .portal-theme-scene{opacity:.1}
 
 /* Surfaces that hard-code a dark colour rather than reading a token. */
