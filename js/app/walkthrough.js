@@ -108,7 +108,8 @@ const WALKTHROUGHS = [
       { say: "Amber is a caution that names the problem: not a primary lift, wrong phase for it, harder than their experience. You can still pick those - you are just picking them knowingly.", target: "#exerciseSwapOptions", advance: "next", info: true },
       { say: "This practice client has a bad shoulder, so some movements are blocked outright. Tap one marked blocked by safety filter and watch what happens.", target: "#exerciseSwapOptions .swap-option.blocked", advance: "click" },
       { say: "It refuses, and tells you which limitation stopped it. That is the one warning you should not talk yourself past - it came from what the client told you.", target: "#exerciseSwapOptions", advance: "next", info: true },
-      { say: "Pick a green one instead and it gets added to this phase.", target: "#exerciseSwapOptions .swap-option:not(.blocked)", advance: "click" },
+      { say: "An amber one is allowed, but it stops and asks you to confirm first, and the workout goes back through coach approval before it reaches them. That is the trade for overriding.", target: "#exerciseSwapOptions", advance: "next", info: true },
+      { say: "Pick one carrying the green tag and it goes straight in, no questions asked.", target: "#exerciseSwapOptions .swap-option:has(.swap-badge.safe)", advance: "click" },
       { say: "Now pair two of them. Tap create a superset.", target: WORKING_BLOCK + ' [data-wt="create-superset"]', advance: "click" },
       { say: "This is the part that matters - you choose which two. A1 is the first movement, A2 is what they alternate it with. Pick the pair you actually want; if A2 sits in another phase it gets moved here so they are done together.", target: ".superset-pair-grid", advance: "next", info: true },
       { say: "This line warns you if the pairing does not work - two of the same movement, or a pair that ties up equipment someone else is waiting on.", target: "#supersetEditorWarning", advance: "next", info: true },
@@ -142,16 +143,21 @@ const WALKTHROUGHS = [
     id: "update-limitations",
     role: "trainer",
     title: "Update what a client cannot do",
-    blurb: "Record an injury so it is respected from now on, not just today.",
+    blurb: "Today only, or from now on - two different places and they behave differently.",
     needs: "workout",
     steps: [
-      { say: "Limitations set here apply to this session only.", target: '[data-wt="injuries"]', advance: "next" },
-      { say: "To make it stick for every future workout it has to go on their profile. Open their client details.", target: '[data-coach-nav="clients"]', advance: "click" },
+      { say: "A client turns up with something hurting. Where you record it decides whether it is remembered.", target: '[data-wt="injuries"]', advance: "next", info: true },
+      { say: "Setting it here covers this session only. Nothing that stresses that area gets programmed - not the main lift, not the accessories, not the warm-up - and in the movement pickers those choices come back marked blocked by safety filter.", target: '[data-wt="injuries"]', advance: "next", info: true },
+      { say: "But it is forgotten the moment you build their next workout. For anything that is not just today, it has to go on their profile. Open your client list.", target: '[data-coach-nav="clients"]', advance: "click" },
       { say: "Tap the client.", target: ".client-row", advance: "click" },
-      { say: "Edit their profile and record it there. Every workout built from now on will respect it.", target: '[data-wt="new-workout"]', advance: "next" },
+      { say: "Edit profile - this is the button, not new workout.", target: '[data-wt="edit-profile"]', advance: "click" },
+      { say: "Here is the permanent version. Pick the area, then write down what actually happened - a future trainer covering for you reads this, so \u201cright shoulder, painful overhead since March\u201d beats ticking a box.", target: "#profileEditInjuries", advance: "next", info: true },
+      { say: "Saved here, it is pre-filled on every workout you build for them from now on, and it follows them to any trainer who picks them up.", target: "#profileEditorSaveBtn", advance: "next", info: true },
+      { say: "Save it.", target: "#profileEditorSaveBtn", advance: "click" },
     ],
-    done: "Session-only goes in the builder. Permanent goes on their profile.",
+    done: "Just today goes in the builder. Anything lasting goes on their profile, where it is remembered and shared.",
   },
+
 ];
 
 function walkthroughById(id) { return WALKTHROUGHS.find((item) => item.id === id) || null; }
