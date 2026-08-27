@@ -121,14 +121,22 @@ const WALKTHROUGHS = [
     id: "change-equipment",
     role: "trainer",
     title: "Handle a machine being unavailable",
-    blurb: "Before you build, or after - two different fixes.",
+    blurb: "Three different equipment filters, and only one of them changes the workout.",
     needs: "workout",
     steps: [
-      { say: "If a machine is down before you build, untick it here and nothing in the session will use it.", target: '[data-wt="zones"]', advance: "next" },
-      { say: "If you only find out mid-session, do not rebuild. Swap the single movement instead.", target: ".ex-btn.swap", advance: "click" },
-      { say: "Pick a replacement that uses what is free. The sets and reps stay as you set them.", target: ".modal-backdrop.open", advance: "next" },
+      { say: "A machine goes down. There are three equipment filters in this app and they do different jobs - this is the only one that changes what gets built. Untick a machine here before you build and nothing in the session can use it, warm-up included.", target: '[data-wt="zones"]', advance: "next", info: true },
+      { say: "The other two only change what you are looking at. Here is the case where you find out mid-session with the workout already built - do not rebuild it, swap the one movement. Tap the arrows.", target: WORKING + " .ex-btn.swap", advance: "click" },
+      { say: "Recommended already respects the equipment on their profile. To filter by hand you need the full bank. Tap workout bank.", target: "#swapBankBtn", advance: "click" },
+      { say: "There it is - the second equipment filter. This one changes nothing about the workout. It only narrows the list you are browsing to movements that use what is actually free right now.", target: "#swapZoneFilter", advance: "next", info: true },
+      { say: "Set it to what you have got. The broken machine stops being offered.", target: "#swapZoneFilter", advance: "change" },
+      { say: "Every row still shows what it needs, so you can see at a glance whether a replacement is even possible today.", target: "#exerciseSwapOptions .swap-option-meta", advance: "next", info: true },
+      { say: "Pick one. Your sets, reps and rest carry across to it.", target: "#exerciseSwapOptions .swap-option", advance: "click" },
+      { say: "Third place, and the one people miss. Adding a movement has the same filter. Tap add.", target: WORKING_BLOCK + " .add-ex", advance: "click" },
+      { say: "Open the entire exercise bank here too - that is where the filters live.", target: "#swapBankBtn", advance: "click" },
+      { say: "Same equipment menu. Use it when a machine going down means you need a different movement altogether rather than a like-for-like swap.", target: "#swapZoneFilter", advance: "next", info: true },
+      { say: "Close it when you are done.", target: '[onclick="closeExerciseSwap()"]', advance: "click" },
     ],
-    done: "Untick it before you build; swap it after. Never rebuild the whole session.",
+    done: "Untick it in the builder to keep it out of the whole session. Use the bank filter in either picker to work around it once the workout exists.",
   },
   {
     id: "update-limitations",
@@ -281,11 +289,18 @@ function walkthroughPrepareWorkout() {
 // its buttons, so matching on existence alone left the bar waiting for a tap on
 // something the trainer could not see or reach.
 function walkthroughVisible(el) {
-  if (!el || el.offsetParent === null) return false;
+  if (!el) return false;
+  const style = getComputedStyle(el);
+  if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") return false;
   const box = el.getBoundingClientRect();
   // Either dimension is enough. A flex column of buttons measures zero wide while
   // being perfectly visible, and demanding both dimensions rejected it.
-  return box.width > 0 || box.height > 0;
+  if (box.width <= 0 && box.height <= 0) return false;
+  // offsetParent is null for every position:fixed element whether it is on screen or
+  // not, so it only tells us about a hidden ancestor for everything else. Using it on
+  // a fixed element rejected every open dialog and stranded the step on top of it.
+  if (style.position !== "fixed" && el.offsetParent === null) return false;
+  return true;
 }
 function walkthroughApplyHighlight(step) {
   const found = step && step.target ? Array.from(document.querySelectorAll(step.target)).filter(walkthroughVisible) : [];
