@@ -113,8 +113,9 @@ const WALKTHROUGHS = [
       { say: "This is the part that matters - you choose which two. A1 is the first movement, A2 is what they alternate it with. Pick the pair you actually want; if A2 sits in another phase it gets moved here so they are done together.", target: ".superset-pair-grid", advance: "next", info: true },
       { say: "This line warns you if the pairing does not work - two of the same movement, or a pair that ties up equipment someone else is waiting on.", target: "#supersetEditorWarning", advance: "next", info: true },
       { say: "Create the pair.", target: '[onclick="saveSupersetEditor()"]', advance: "click" },
+      { say: "Last one, and the simplest. The X on the right of any movement takes it out of the workout entirely - no dialog, no confirmation, it is just gone. Use it when a movement does not belong at all, rather than swapping it for something you do not want either.", target: WORKING + " .ex-btn.remove", advance: "next", info: true },
     ],
-    done: "Edit, note, modify, swap, add, pair. All of it changes only the workout in front of you.",
+    done: "Edit, note, modify, swap, add, pair, remove. All of it changes only the workout in front of you.",
   },
   {
     id: "change-equipment",
@@ -237,7 +238,7 @@ function endWalkthrough(quiet) {
   if (run.returnDestination && typeof openCoachDestination === "function") openCoachDestination(run.returnDestination);
   else if (typeof renderOutput === "function") renderOutput();
   if (typeof renderTrainerDirectory === "function") renderTrainerDirectory();
-  if (!quiet) showToast("Back to your real clients");
+  if (!quiet) showToast("Walkthrough closed \u2014 you are back on your real clients");
 }
 
 /* A dialog left open from a previous run sits on top of the next one and makes the
@@ -358,13 +359,41 @@ function walkthroughGoToStep(index) {
 
 function walkthroughFinish() {
   const plan = walkthroughRun && walkthroughRun.plan;
-  const message = plan && plan.done ? plan.done : "Done.";
   endWalkthrough(true);
   // After the restore, not before: exiting puts the whole snapshot back, which would
   // wipe this the instant it was written and the "done before" mark would never stick.
   const seen = walkthroughSeen();
   if (plan && seen.indexOf(plan.id) < 0) { seen.push(plan.id); walkthroughWriteSeen(seen); }
-  showToast(message);
+  showWalkthroughFinished(plan);
+}
+
+/* The end of a walkthrough is the moment practice stops and real clients start.
+   A toast slides away and is easy to miss, so this is a card they have to dismiss. */
+function showWalkthroughFinished(plan) {
+  const existing = document.getElementById("walkthroughDoneBackdrop"); if (existing) existing.remove();
+  const backdrop = el("div","modal-backdrop open ask-backdrop");
+  backdrop.id = "walkthroughDoneBackdrop";
+  backdrop.innerHTML = '<div class="ask-dialog wt-done-dialog">'
+    + '<span class="wt-done-eyebrow">Demo finished</span>'
+    + '<h4>You finished this trainer demo</h4>'
+    + (plan && plan.done ? '<p class="wt-done-line">' + escapeHtml(plan.done) + '</p>' : '')
+    + '<p class="wt-done-real">Everything you just did was on the practice client and has been thrown away. '
+    + 'You are back on your real clients now, so anything you change from here is real.</p>'
+    + '<div class="tool-actions">'
+    + '<button class="small-btn" data-wt-done-more>Show me something else</button>'
+    + '<button class="small-btn primary" data-wt-done-ok>Back to my clients</button>'
+    + '</div></div>';
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.querySelector("[data-wt-done-ok]").addEventListener("click", close);
+  backdrop.querySelector("[data-wt-done-more]").addEventListener("click", () => {
+    close(); if (typeof openTrainerAssistance === "function") openTrainerAssistance();
+  });
+  backdrop.addEventListener("click", (event) => { if (event.target === backdrop) close(); });
+  document.addEventListener("keydown", function onKey(event) {
+    if (event.key !== "Escape") return;
+    document.removeEventListener("keydown", onKey); close();
+  });
 }
 
 function walkthroughSeen() {

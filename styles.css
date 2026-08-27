@@ -1935,3 +1935,9 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
 .wt-info-note{font:600 9px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
 
 .ex-btn.modifier svg{display:block}
+.wt-done-dialog{max-width:440px}
+.wt-done-eyebrow{display:block;font:800 8.5px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:#79efbb;margin-bottom:7px}
+.wt-done-dialog h4{margin:0 0 9px}
+.wt-done-line{margin:0 0 10px;color:var(--text-dim);font-size:12.5px;line-height:1.55}
+.wt-done-real{margin:0 0 4px;padding:11px 12px;border:1px solid rgba(121,239,187,.3);border-left:3px solid #79efbb;
+  border-radius:8px;background:rgba(121,239,187,.07);color:var(--text);font-size:12px;line-height:1.55}
