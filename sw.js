@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-08-24-v78-superheroes-r1";
+const CACHE_NAME = "fit4life-shell-2026-08-24-v79-inverted-practice-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20260820-v78-superheroes-r1";
+const ASSET_VERSION = "20260820-v79-inverted-practice-r1";
 const SHELL = [
   "/",
   "/index.html",

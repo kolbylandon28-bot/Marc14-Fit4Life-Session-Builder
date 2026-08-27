@@ -203,6 +203,7 @@ function walkthroughRestoreSnapshot() {
 }
 // A tab closed mid-walkthrough leaves practice data behind; put the real data back on the next load.
 function walkthroughRecoverIfInterrupted() {
+  document.documentElement.classList.remove("sandbox-invert");
   if (!localStorage.getItem(WALKTHROUGH_SNAPSHOT_KEY)) return false;
   walkthroughRestoreSnapshot();
   return true;
@@ -681,6 +682,9 @@ function startSandbox() {
   window.FIT4LIFE_PRACTICE_ACTIVE = true;
   seedPracticeRoster();
   document.body.classList.add("sandbox-on");
+  // The filter has to sit on the root element: on body it would become the containing
+  // block for every position:fixed child and unpin the bars.
+  document.documentElement.classList.add("sandbox-invert");
   renderSandboxBanner();
   if (typeof openCoachDestination === "function") openCoachDestination("clients");
   showToast("Practice mode on — nothing you do now is real");
@@ -695,6 +699,7 @@ function exitSandbox(quiet) {
   walkthroughCloseDialogs();
   walkthroughRestoreSnapshot();
   document.body.classList.remove("sandbox-on");
+  document.documentElement.classList.remove("sandbox-invert");
   const banner = document.getElementById("sandboxBanner"); if (banner) banner.remove();
   // the builder may still hold a practice client who no longer exists
   if (typeof state !== "undefined" && state.solo && practiceProfileIds().includes(state.solo.profileId)) {
