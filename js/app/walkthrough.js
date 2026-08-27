@@ -17,6 +17,14 @@
 const WALKTHROUGH_SNAPSHOT_KEY = "fit4life_walkthrough_snapshot_v1";
 const WALKTHROUGH_SEEN_KEY = "fit4life_walkthrough_seen_v1";
 const PRACTICE_CLIENT_ID = "walkthrough-practice-client";
+/* Every store the trainer directory or workspace reads a client out of. Two entries here
+   were previously wrong - fit4life_assignments_v1 and fit4life_records_v1 exist nowhere
+   in the app, so assignments and progress were never actually sandboxed. */
+const PRACTICE_CLEARED_KEYS = [
+  "fit4life_assigned_workouts_v1", "fit4life_client_messages_v1", "fit4life_progress_v1",
+  "fit4life_calendar_events_v1", "fit4life_inbody_v1", "fit4life_body_goals_v1",
+  "fit4life_checkins_v1", "fit4life_athlete_metrics_v1",
+];
 const WALKTHROUGH_HIGHLIGHT_MS = 300;
 
 function practiceClientProfile() {
@@ -58,18 +66,19 @@ const WALKTHROUGHS = [
       { say: "Start from your client list.", target: '[data-coach-nav="clients"]', advance: "click" },
       { say: "Tap the client you are programming for.", target: ".client-row", advance: "click" },
       { say: "Open a new workout for them.", target: '[data-wt="new-workout"]', advance: "click" },
-      { say: "Nothing on this screen is yours to fill in. Everything below was answered by the client on their questionnaire when they joined.", target: ".profile-loaded", advance: "next", info: true },
+      { say: "Their profile is already loaded - you never search for a client here. Their goal, experience, limitations and equipment all come from the questionnaire they filled in when they joined.", target: ".profile-loaded", advance: "next", info: true, go: walkthroughLoadPracticeIntoBuilder },
       { say: "Their goal is already picked from that questionnaire. This one setting drives more of the workout than anything else on the page.", target: '[data-wt="goal"]', advance: "next", info: true },
       { say: "Build muscle gives them two main lifts, two accessories and an isolation at 4 sets of 8-12 with 60-90 seconds rest. Lose body fat gives them one lift, then circuits and conditioning instead. Same client, same equipment, a completely different hour.", target: '[data-wt="goal"]', advance: "next", info: true },
-      { say: "This is how they chase that goal - lifting, cardio or a mix. On auto the goal decides, which is usually right. Change it only when today needs to be different from their normal.", target: '[data-wt="training-route"]', advance: "next", info: true },
+      { say: "This is how they chase that goal, and the goal decides what is even offered - muscle gain gets lifting, or lifting plus a cardio block. A fat-loss client would also get a cardio-only option here. On auto the goal picks for you, which is usually right.", target: '[data-wt="training-route"]', advance: "next", info: true },
       { say: "Anything that hurts goes here, and this you do change. Nothing that stresses it will be programmed, warm-up included.", target: '[data-wt="injuries"]', advance: "next" },
       { say: "Untick whatever is broken or busy today. A machine you untick cannot appear anywhere in the session.", target: '[data-wt="zones"]', advance: "next" },
       { say: "Build it.", target: "#buildBtn", advance: "click" },
-      { say: "Three genuinely different answers, not one shuffled three ways. Read them and pick the one that suits today.", target: ".workout-choice-grid", advance: "next" },
+      { say: "Three genuinely different answers, not one shuffled three ways - plus a blank Option D at the end for when none of them is the intent. Read A, B and C and pick whichever suits today.", target: ".workout-choice-grid", advance: "next", info: true },
       { say: "Choose one. You can still change every movement afterwards.", target: '[data-wt="choose-option"]', advance: "click" },
       { say: "This is a draft. Nothing has reached the client yet.", target: "#output", advance: "next" },
       { say: "Approve the draft. This step is easy to miss and nothing sends without it.", target: '[data-wt="approve-draft"]', advance: "click" },
-      { say: "Now send it. This is the moment it appears on their phone.", target: '[data-wt="assign"]', advance: "click" },
+      { say: "Now send it. It asks you to name the workout first - that name is what the client sees on their phone.", target: '[data-wt="assign"]', advance: "click" },
+      { say: "Name it and confirm. This is the moment it reaches them.", target: "[data-ask-ok]", advance: "click" },
     ],
     done: "Set it up, build, choose, approve, send. That is the whole loop.",
   },
@@ -89,11 +98,12 @@ const WALKTHROUGHS = [
       { say: "Target effort is how hard the set should feel. RPE 8 or \u201c2 reps in reserve\u201d both work - the client sees this on their phone.", target: "#prescriptionEffort", advance: "next", info: true },
       { say: "Target load can be a weight, or a rule like \u201cuse last successful load\u201d so it follows them as they get stronger.", target: "#prescriptionLoad", advance: "next", info: true },
       { say: "The coach cue is the one line they read mid-set. Keep it to the thing that goes wrong.", target: "#prescriptionCue", advance: "next", info: true },
-      { say: "This is the one to watch: it decides whether the change hits only today, or every future workout with this movement.", target: "#prescriptionScope", advance: "next", info: true },
+      { say: "Scope decides how far an edit reaches. In a one-off workout like this it is locked to today only - it opens up when you are editing a multi-week program, where you can push the change across every matching week.", target: "#prescriptionScope", advance: "next", info: true },
       { say: "Save it.", target: '[onclick="savePrescriptionEditor()"]', advance: "click" },
       { say: "The notes box under a movement is what the client reads on their phone. Cues, a weight to start at, anything you would say out loud.", target: WORKING + ' [data-wt="coach-note"]', advance: "next", info: true },
       { say: "The lightning bolt runs a movement differently - burnout, drop set, 21s, tempo, pause. Tap it.", target: WORKING + " .ex-btn.modifier", advance: "click" },
-      { say: "Only the ones that suit this movement are offered, which is why a treadmill has none and a cable curl has four. Pick one, or straight sets to undo it.", target: ".ask-dialog", advance: "next", info: true },
+      { say: "Only the ones that suit this movement are offered - a power clean has none, a cable curl has four. Warm-up, mobility, activation, rotation, olympic, plyometric and agility movements never take one.", target: ".ask-dialog", advance: "next", info: true },
+      { say: "Apply one, or cancel to leave it on straight sets.", target: ".ask-dialog [data-ask-ok], .ask-dialog [data-ask-cancel]", advance: "click" },
       { say: "The arrows swap a movement for something that trains the same thing. Tap it.", target: WORKING + " .ex-btn.swap", advance: "click" },
       { say: "Swapping gives you three lists: recommended already fits this phase and this client, similar keeps the same movement pattern, and the workout bank is everything you own.", target: ".swap-toolbar", advance: "next", info: true },
       { say: "Or let shuffle decide. Either way the sets and reps you set carry across to whatever replaces it.", target: "#swapShuffleBtn", advance: "next", info: true },
@@ -104,8 +114,8 @@ const WALKTHROUGHS = [
       { say: "Equipment narrows it to what is free right now.", target: "#swapZoneFilter", advance: "next", info: true },
       { say: "Widen it to the entire exercise bank so you can see everything you own, not just what suits this phase.", target: "#swapBankBtn", advance: "click" },
       { say: "And this one is quietly hiding things from you. On \u201conly filter-matching\u201d you never see anything that breaks a client rule. Switch it to show overrides with warnings.", target: "#swapSafetyFilter", advance: "change" },
-      { say: "Now read the tags. Green means it fits their equipment, experience, age and every limitation they reported - safe to pick without thinking.", target: "#exerciseSwapOptions .swap-option-meta", advance: "next", info: true },
-      { say: "Amber is a caution that names the problem: not a primary lift, wrong phase for it, harder than their experience. You can still pick those - you are just picking them knowingly.", target: "#exerciseSwapOptions", advance: "next", info: true },
+      { say: "Now read the tags on the right of each row. Green - matches all filters - means it fits their equipment, experience, age and every limitation they reported, and is safe to pick without thinking.", target: "#exerciseSwapOptions", advance: "next", info: true },
+      { say: "Amber is a caution that names the problem - not a primary lift for this phase, or a finisher used outside the finisher phase. You can still pick those; it asks you to confirm and sends the workout back through coach approval. Anything above their experience or against a limitation is not a caution, it is a block.", target: "#exerciseSwapOptions", advance: "next", info: true },
       { say: "This practice client has a bad shoulder, so some movements are blocked outright. Tap one marked blocked by safety filter and watch what happens.", target: "#exerciseSwapOptions .swap-option.blocked", advance: "click" },
       { say: "It refuses, and tells you which limitation stopped it. That is the one warning you should not talk yourself past - it came from what the client told you.", target: "#exerciseSwapOptions", advance: "next", info: true },
       { say: "An amber one is allowed, but it stops and asks you to confirm first, and the workout goes back through coach approval before it reaches them. That is the trade for overriding.", target: "#exerciseSwapOptions", advance: "next", info: true },
@@ -131,6 +141,7 @@ const WALKTHROUGHS = [
       { say: "There it is - the second equipment filter. This one changes nothing about the workout. It only narrows the list you are browsing to movements that use what is actually free right now.", target: "#swapZoneFilter", advance: "next", info: true },
       { say: "Set it to what you have got. The broken machine stops being offered.", target: "#swapZoneFilter", advance: "change" },
       { say: "Every row still shows what it needs, so you can see at a glance whether a replacement is even possible today.", target: "#exerciseSwapOptions .swap-option-meta", advance: "next", info: true },
+      { say: "One thing to expect: if the replacement trains a different pattern to the one it is replacing, the app stops and asks you to confirm, and the workout goes back through coach approval. A like-for-like swap goes straight through.", target: "#exerciseSwapOptions", advance: "next", info: true },
       { say: "Pick one. Your sets, reps and rest carry across to it.", target: "#exerciseSwapOptions .swap-option", advance: "click" },
       { say: "Third place, and the one people miss. Adding a movement has the same filter. Tap add.", target: WORKING_BLOCK + " .add-ex", advance: "click" },
       { say: "Open the entire exercise bank here too - that is where the filters live.", target: "#swapBankBtn", advance: "click" },
@@ -222,8 +233,17 @@ function startWalkthrough(id) {
 
   // one practice client, nobody real
   writeProfiles([practiceClientProfile()]);
-  ["fit4life_assignments_v1","fit4life_client_messages_v1","fit4life_records_v1","fit4life_calendar_events_v1"]
-    .forEach((key) => { if (localStorage.getItem(key) != null) localStorage.setItem(key, "[]"); });
+  // The directory can be left filtered to "my clients" or with a search typed in, either of
+  // which hides the practice client and leaves the step with nothing to point at.
+  try {
+    if (typeof selectTrainerClient === "function") selectTrainerClient(practiceClientProfile().name);
+    const search = document.getElementById("trainerClientSearch"); if (search) search.value = "";
+    const scope = document.getElementById("trainerClientScope"); if (scope) scope.value = "all";
+  } catch (_) {}
+  // The client directory unions profiles with progress, InBody, body goals, check-ins and
+  // athlete metrics, so blanking profiles alone still left real people on screen. Set them
+  // unconditionally - the snapshot puts every one of them back on exit.
+  PRACTICE_CLEARED_KEYS.forEach((key) => localStorage.setItem(key, "[]"));
 
   walkthroughCloseDialogs();
   if (plan.needs === "workout") walkthroughPrepareWorkout();
@@ -270,30 +290,60 @@ function walkthroughClearStep(run) {
   document.querySelectorAll(".wt-target").forEach((el) => el.classList.remove("wt-target", "wt-info"));
 }
 
+/* Steps 4 to 7 tell the trainer their client's answers are already filled in. If they
+   skipped or mis-tapped the two steps that load the client, those fields are empty and
+   the walkthrough is lying to them - and Build stays refused because there is no goal.
+   Guarantee it instead of depending on the taps landing. */
+function walkthroughLoadPracticeIntoBuilder() {
+  if (typeof state === "undefined" || !state.solo) return false;
+  const loaded = state.solo.profileId === PRACTICE_CLIENT_ID
+    && typeof personReady === "function" && personReady(state.solo);
+  if (loaded) return true;
+  try {
+    if (typeof selectTrainerClient === "function") selectTrainerClient(practiceClientProfile().name);
+    if (typeof openSelectedClientSession === "function") openSelectedClientSession();
+    if (typeof renderForms === "function") renderForms();
+    if (typeof updateHint === "function") updateHint();
+  } catch (_) { return false; }
+  return true;
+}
+
 /* Walkthroughs about editing a workout need one on screen. Launched cold from
    Settings there is nothing to point at, so build one on the practice client first. */
 function walkthroughPrepareWorkout() {
   const practice = practiceClientProfile();
   if (typeof state === "undefined" || !state.solo) return false;
-  Object.assign(state.solo, {
-    client: practice.name, goal: "hypertrophy", goals: ["hypertrophy"],
+  // Replace the spec rather than assigning over it. Assigning left a real client's
+  // profileId, coach adjustment, readiness trend, limitation assessments and sport behind,
+  // and those fed the "practice" build. A fresh object is what clears them.
+  state.mode = "solo";
+  state.session = null;
+  state.sessionOptions = [];
+  state.solo = {
+    client: practice.name, profileId: "", username: "",
+    goal: "hypertrophy", goals: ["hypertrophy"],
+    trainingStyle: "auto", cardioMode: "any", cardioModes: ["any"],
+    coachAdjustment: null, readinessTrend: null,
     experience: practice.experience, age: practice.age, minutes: practice.minutes,
-    // their limitation has to come through, or nothing is ever flagged and the
-    // walkthrough cannot show what a safety warning looks like
     muscles: [], injuries: (practice.injuries || []).slice(), zones: practice.zones.slice(),
-  });
+  };
   document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
   const builder = document.getElementById("view-builder"); if (builder) builder.classList.add("active");
   try {
+    // Without these the chips keep whatever they last painted - equipment reading empty,
+    // limitations reading "none", or a real client's still on screen.
+    if (typeof refreshProfileSelects === "function") refreshProfileSelects();
+    if (typeof renderForms === "function") renderForms();
+    if (typeof setMode === "function") setMode("solo");
+    if (typeof updateHint === "function") updateHint();
     if (typeof generate === "function") generate();
     if (typeof chooseWorkoutOption === "function") chooseWorkoutOption(0);
   } catch (_) { return false; }
+  const built = state.session && state.session.data && (state.session.data.blocks || []).length;
+  if (!built) { showToast("Could not build a practice workout on this device"); return false; }
   return true;
 }
 
-// Existing in the DOM is not the same as being on screen. A hidden view still holds
-// its buttons, so matching on existence alone left the bar waiting for a tap on
-// something the trainer could not see or reach.
 function walkthroughVisible(el) {
   if (!el) return false;
   const style = getComputedStyle(el);
@@ -306,10 +356,52 @@ function walkthroughVisible(el) {
   // not, so it only tells us about a hidden ancestor for everything else. Using it on
   // a fixed element rejected every open dialog and stranded the step on top of it.
   if (style.position !== "fixed" && el.offsetParent === null) return false;
+  // On a phone the coach nav becomes a fixed bottom bar that this walkthrough's own bar
+  // sits on top of. A covered element passes every check above, so the step waited
+  // forever for a tap that could not land and never offered Skip. Probe a few points:
+  // any one of them reachable is enough, since a partly covered control is still tappable.
+  const points = [
+    [box.left + box.width / 2, box.top + box.height / 2],
+    [box.left + box.width * 0.2, box.top + box.height * 0.3],
+    [box.left + box.width * 0.8, box.top + box.height * 0.7],
+  ];
+  let probed = false;
+  for (const [x, y] of points) {
+    if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) continue;
+    probed = true;
+    const top = document.elementFromPoint(x, y);
+    if (!top || el.contains(top) || top.contains(el)) return true;
+  }
+  return !probed;
+}
+
+/* A step that waits for a tap on a control the browser will not accept a tap on is the
+   same dead end as one that is off screen - a disabled Build button looks present and
+   never fires. Read-only steps are exempt: they set pointer-events:none deliberately. */
+function walkthroughInteractable(el, step) {
+  if (!el || !step || step.info) return true;
+  if (step.advance !== "click" && step.advance !== "change") return true;
+  if (el.disabled === true || el.getAttribute("aria-disabled") === "true") return false;
+  if (getComputedStyle(el).pointerEvents === "none") return false;
   return true;
 }
+/* A control can be off the bottom of a scrolling rail, or under our own bar. Bring it into
+   view before judging whether it is reachable, otherwise the occlusion test condemns
+   something a single scroll would have fixed. */
+function walkthroughNudgeIntoView(el) {
+  if (!el || typeof el.scrollIntoView !== "function") return;
+  const box = el.getBoundingClientRect();
+  const barTop = window.innerHeight - 150;
+  if (box.bottom > barTop || box.top < 60) el.scrollIntoView({ block: "center" });
+}
 function walkthroughApplyHighlight(step) {
-  const found = step && step.target ? Array.from(document.querySelectorAll(step.target)).filter(walkthroughVisible) : [];
+  let matches = [];
+  // :has() is used by one step; an engine without it must not throw out of the timer
+  try { matches = step && step.target ? Array.from(document.querySelectorAll(step.target)) : []; }
+  catch (_) { matches = []; }
+  // scroll candidates into view first, then judge reachability
+  matches.forEach(walkthroughNudgeIntoView);
+  const found = matches.filter(walkthroughVisible).filter((node) => walkthroughInteractable(node, step));
   const el = found[0] || null;
   document.querySelectorAll(".wt-target").forEach((node) => { if (node !== el) node.classList.remove("wt-target"); });
   if (!step || !step.target) return true;

@@ -94,6 +94,11 @@ function trainerSessionGroups(entries) {
   }).sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
 }
 function trainerClientNames() {
+  // A walkthrough runs on one practice client. The directory otherwise unions six stores,
+  // so a real client whose name sorts first would be highlighted and opened instead.
+  if (typeof walkthroughActive === "function" && walkthroughActive()) {
+    return loadProfiles().filter((profile) => profile.id === PRACTICE_CLIENT_ID).map((profile) => profile.name);
+  }
   return [...loadProfiles().map((profile) => profile.name), ...loadProgress().map((entry) => entry.client).filter(Boolean), ...loadInBodyScans().map((scan) => scan.client).filter(Boolean), ...loadBodyGoals().map((goal) => goal.client).filter(Boolean), ...loadCheckIns().map((item) => item.client).filter(Boolean), ...loadAthleteMetrics().map((item) => item.client).filter(Boolean)]
     .filter((name) => name && name !== "Client")
     .filter((name, index, names) => names.findIndex((other) => clientMatches(other, name)) === index)

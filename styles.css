@@ -1941,3 +1941,18 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
 .wt-done-line{margin:0 0 10px;color:var(--text-dim);font-size:12.5px;line-height:1.55}
 .wt-done-real{margin:0 0 4px;padding:11px 12px;border:1px solid rgba(121,239,187,.3);border-left:3px solid #79efbb;
   border-radius:8px;background:rgba(121,239,187,.07);color:var(--text);font-size:12px;line-height:1.55}
+
+/* While a walkthrough is running its bar owns the bottom of the screen. Anything that
+   normally lives there - the coach rail's lower entries, the mobile nav strip - has to
+   move clear of it, or a step can point at a control the trainer physically cannot tap. */
+body.walkthrough-on .coach-sidebar{padding-bottom:150px}
+body.walkthrough-on main{padding-bottom:170px}
+/* Dialogs centre themselves, which puts their save and cancel buttons straight behind the
+   bar on a short screen. Push the whole dialog up while a walkthrough is running. */
+body.walkthrough-on .modal-backdrop{padding-bottom:170px}
+body.walkthrough-on .modal-backdrop>*{max-height:calc(100vh - 200px)}
+@media(max-width:900px){
+  body.walkthrough-on.coach-shell-on .coach-sidebar{bottom:calc(96px + env(safe-area-inset-bottom))}
+  body.walkthrough-on.coach-shell-on main{padding-bottom:190px}
+  body.walkthrough-on .client-bottom-nav{bottom:calc(96px + env(safe-area-inset-bottom))}
+}
