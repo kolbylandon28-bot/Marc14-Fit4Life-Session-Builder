@@ -74,7 +74,7 @@ const WALKTHROUGHS = [
     id: "tailor-workout",
     role: "trainer",
     title: "Tailor a workout after it is built",
-    blurb: "Sets and reps, coaching notes, modifiers, swaps, supersets, removing a movement.",
+    blurb: "Sets and reps, notes, modifiers, swapping, adding, filters and supersets.",
     needs: "workout",
     steps: [
       // WORKING keeps the demo off the warm-up, where half of these controls do not apply -
@@ -91,12 +91,21 @@ const WALKTHROUGHS = [
       { say: "The notes box under a movement is what the client reads on their phone. Cues, a weight to start at, anything you would say out loud.", target: WORKING + ' [data-wt="coach-note"]', advance: "next", info: true },
       { say: "The lightning bolt runs a movement differently - burnout, drop set, 21s, tempo, pause. Tap it.", target: WORKING + " .ex-btn.modifier", advance: "click" },
       { say: "Only the ones that suit this movement are offered, which is why a treadmill has none and a cable curl has four. Pick one, or straight sets to undo it.", target: ".ask-dialog", advance: "next", info: true },
-      { say: "The arrows swap a movement for one that trains the same thing. Tap it.", target: WORKING + " .ex-btn.swap", advance: "click" },
-      { say: "Shuffle for another suggestion, or pick from the list. Your sets and reps carry across.", target: ".modal-backdrop.open", advance: "next", info: true },
-      { say: "The X removes a movement outright.", target: WORKING + " .ex-btn.remove", advance: "next", info: true },
-      { say: "And this pairs two movements in the same phase into a superset, so they alternate at one station.", target: WORKING_BLOCK + ' [data-wt="create-superset"]', advance: "next", info: true },
+      { say: "The arrows swap a movement for something that trains the same thing. Tap it.", target: WORKING + " .ex-btn.swap", advance: "click" },
+      { say: "Shuffle takes the decision for you. Or read the list and choose - either way the sets and reps you set carry across.", target: "#swapShuffleBtn", advance: "next", info: true },
+      { say: "Pick a replacement from the list.", target: "#exerciseSwapOptions .swap-option", advance: "click" },
+      { say: "Adding a movement rather than replacing one starts here. Tap it.", target: WORKING_BLOCK + " .add-ex", advance: "click" },
+      { say: "Same picker, three ways to narrow it. Recommended already fits this phase and this client. Similar keeps the same movement pattern. Workout bank is everything you own, and will put any exercise in any phase.", target: ".swap-toolbar", advance: "next", info: true },
+      { say: "Or search it directly - by exercise name, by muscle, or by equipment.", target: "#exerciseSwapSearch", advance: "next", info: true },
+      { say: "Read the tags on the right before you pick. Green \u201cmatches all filters\u201d means it fits their equipment, experience, age and every limitation they reported.", target: "#exerciseSwapOptions .swap-option-meta", advance: "next", info: true },
+      { say: "An amber tag is a caution and it tells you exactly what the problem is - not a primary lift, wrong phase, more advanced than they are. You can still choose it; you are just choosing it knowingly. \u201cBlocked by safety filter\u201d is the one to leave alone: their reported injury rules it out.", target: "#exerciseSwapOptions", advance: "next", info: true },
+      { say: "Pick one to add it to this phase.", target: "#exerciseSwapOptions .swap-option", advance: "click" },
+      { say: "Now pair two of them. Tap create a superset.", target: WORKING_BLOCK + ' [data-wt="create-superset"]', advance: "click" },
+      { say: "This is the part that matters - you choose which two. A1 is the first movement, A2 is what they alternate it with. Pick the pair you actually want; if A2 sits in another phase it gets moved here so they are done together.", target: ".superset-pair-grid", advance: "next", info: true },
+      { say: "This line warns you if the pairing does not work - two of the same movement, or a pair that ties up equipment someone else is waiting on.", target: "#supersetEditorWarning", advance: "next", info: true },
+      { say: "Create the pair.", target: '[onclick="saveSupersetEditor()"]', advance: "click" },
     ],
-    done: "Every one of those changes only the workout in front of you.",
+    done: "Edit, note, modify, swap, add, pair. All of it changes only the workout in front of you.",
   },
   {
     id: "change-equipment",
@@ -327,9 +336,12 @@ function walkthroughGoToStep(index) {
 
 function walkthroughFinish() {
   const plan = walkthroughRun && walkthroughRun.plan;
-  const seen = walkthroughSeen(); if (plan && seen.indexOf(plan.id) < 0) { seen.push(plan.id); walkthroughWriteSeen(seen); }
   const message = plan && plan.done ? plan.done : "Done.";
   endWalkthrough(true);
+  // After the restore, not before: exiting puts the whole snapshot back, which would
+  // wipe this the instant it was written and the "done before" mark would never stick.
+  const seen = walkthroughSeen();
+  if (plan && seen.indexOf(plan.id) < 0) { seen.push(plan.id); walkthroughWriteSeen(seen); }
   showToast(message);
 }
 

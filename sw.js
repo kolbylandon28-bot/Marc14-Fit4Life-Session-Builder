@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-08-24-v68-tailor-fixes-r3";
+const CACHE_NAME = "fit4life-shell-2026-08-24-v69-picker-and-supersets-r3";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20260820-v68-tailor-fixes-r3";
+const ASSET_VERSION = "20260820-v69-picker-and-supersets-r3";
 const SHELL = [
   "/",
   "/index.html",
