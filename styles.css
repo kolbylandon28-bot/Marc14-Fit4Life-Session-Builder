@@ -1992,24 +1992,75 @@ body.sandbox-on .topbar{top:58px}
   .wt-sandbox-invite .small-btn{width:100%}
 }
 
-/* ============================================================
-   PRACTICE MODE — INVERTED PALETTE
-   Light and dark swap so practice never looks like the real app,
-   while the blue survives: invert() rotates every hue 180 degrees
-   and hue-rotate(180deg) puts them back. The dark rock photo
-   becomes a pale one for free.
 
-   This lives on <html>, not <body> — a filtered element becomes
-   the containing block for position:fixed descendants, and on
-   body that would unpin every bar and modal in the app.
+
+/* ============================================================
+   PRACTICE MODE — LIGHT GREY
+   A hand-built palette rather than a filter. Inverting the page
+   was quick but ugly: it turned photographs into negatives and
+   left every colour slightly wrong. This redefines the tokens
+   the app already draws from, so practice mode is unmistakably
+   a different place while still looking like the same product.
    ============================================================ */
-html.sandbox-invert{filter:invert(1) hue-rotate(180deg)}
-/* Counter-invert the things that should keep their real colours. Applying the same
-   filter again cancels the first one exactly. */
-html.sandbox-invert .sandbox-banner,
-html.sandbox-invert .portal-theme-scene,
-html.sandbox-invert img,
-html.sandbox-invert video,
-html.sandbox-invert canvas{filter:invert(1) hue-rotate(180deg)}
-/* the inverted page is signal enough; the amber edge would invert to a cold blue */
-html.sandbox-invert body.sandbox-on{box-shadow:none}
+body.sandbox-on{
+  --slate-0:#EDEFF3; --slate-1:#FFFFFF; --slate-2:#F5F7FA; --slate-3:#E9EDF2; --slate-4:#DCE2EA;
+  --line:#D8DDE5; --panel:#FFFFFF; --surface:#EDEFF3; --panel-strong:#E9EDF2;
+  --blue-bright:#2C5FC4; --blue:#3B67D8; --blue-deep:#1E3E96; --blue-glow:rgba(59,103,216,.12);
+  --event-accent:#3B67D8; --event-accent-2:#2C5FC4;
+  --text:#171A20; --text-dim:#525967; --text-faint:#828A97;
+  --warn:#8A5D0C; --warn-bg:rgba(138,93,12,.09); --warn-line:rgba(138,93,12,.3);
+  --danger:#B8433A;
+  --shadow:0 1px 2px rgba(23,26,32,.05),0 6px 20px rgba(23,26,32,.07);
+  --shadow-lg:0 18px 48px rgba(23,26,32,.16);
+
+  color:var(--text);
+  background-color:#EDEFF3;
+  /* No photograph. Two very soft blue washes over a grey gradient - quiet enough to
+     read against all day, distinct enough that you always know where you are. */
+  background-image:
+    radial-gradient(ellipse 920px 560px at 8% -8%,rgba(59,103,216,.10),transparent 62%),
+    radial-gradient(ellipse 740px 520px at 102% 6%,rgba(90,166,240,.09),transparent 58%),
+    linear-gradient(180deg,#F4F6F9 0%,#E8ECF2 55%,#E2E7EE 100%);
+  background-attachment:fixed;
+  background-size:auto,auto,cover;
+  background-blend-mode:normal,normal,normal;
+}
+/* the giant F4L watermark is drawn for a dark ground; it turns to mud on a light one */
+body.sandbox-on::before,body.sandbox-on::after{display:none}
+body.sandbox-on .portal-theme-scene{opacity:.1}
+
+/* Surfaces that hard-code a dark colour rather than reading a token. */
+body.sandbox-on .topbar{background:rgba(255,255,255,.92);border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
+body.sandbox-on .coach-sidebar{background:rgba(255,255,255,.97);border-right:1px solid var(--line)}
+body.sandbox-on .client-bottom-nav{background:rgba(255,255,255,.97);border:1px solid var(--line)}
+body.sandbox-on .modal-backdrop{background:rgba(23,26,32,.42)}
+body.sandbox-on .cloud-status{background:rgba(255,255,255,.9);border-color:var(--line)}
+body.sandbox-on .brand-name .grad-text,body.sandbox-on .grad-text{
+  background:linear-gradient(160deg,#3B67D8,#1E3E96);-webkit-background-clip:text;background-clip:text}
+body.sandbox-on .walkthrough-bar{background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(248,250,252,.99));
+  border-top-color:var(--blue)}
+body.sandbox-on .wt-card,body.sandbox-on .coach-module-card{background:#fff}
+
+/* The client workspace carries its own palette (it went dark in v63). In practice mode the
+   rest of the app is light, so put its light values back rather than leaving one dark slab
+   in the middle of a light page. */
+body.sandbox-on .analysis-sheet{
+  --sheet-bg:#F5F7FA; --sheet-tabbar:#E9EDF2; --sheet-panel:#fff; --sheet-raised:#F8FAFC;
+  --sheet-line:#D8DDE5; --sheet-line-soft:#E5E9EF; --sheet-rule:#171A20;
+  --sheet-ink:#171A20; --sheet-ink-dim:#525967; --sheet-ink-faint:#828A97;
+  --sheet-head:linear-gradient(135deg,#2C3A52,#1E2A3E); --sheet-head-ink:#fff; --sheet-head-dim:#B6C1D2;
+  --sheet-accent:#3B67D8; --sheet-accent-ink:#2C5FC4;
+  --sheet-tab-on-bg:#fff; --sheet-tab-on-ink:#171A20;
+  --sheet-loop-bg:linear-gradient(135deg,#F5F9FF,#EBF2FF);
+  --sheet-note-bg:#EEF6FF; --sheet-note-line:#3B67D8; --sheet-pin-bg:#FFF8E7;
+  --sheet-warn-bg:#FFF6EC; --sheet-good-bg:#EDFBF4;
+  --sheet-up:#0A8B57; --sheet-down:#C0453B; --sheet-hover-ink:#2C5FC4;
+  --text-faint:var(--sheet-ink-faint);
+  border-color:var(--sheet-line);
+}
+body.sandbox-on .client-focus-panel{background:linear-gradient(155deg,#2C3A52,#1E2A3E)}
+
+/* The way out has to read as a control, not a strip of text. */
+.sandbox-banner-inner{padding:10px 14px calc(10px + env(safe-area-inset-top))}
+.sandbox-copy b{font-size:11px}
+.sandbox-exit{font-weight:800;padding:9px 15px;border-width:2px!important;border-radius:9px}
