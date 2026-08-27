@@ -467,6 +467,12 @@ function loadProfiles() {
 }
 const PROFILE_STORAGE_LIMIT = 1000;
 function writeProfiles(profiles) {
+  // Anything saved while practice mode is running is branded, so it can be found and removed
+  // later no matter how the session ended. This catches clients the trainer CREATES during
+  // practice, which get ordinary ids and would otherwise look exactly like real people.
+  if (typeof window !== "undefined" && window.FIT4LIFE_PRACTICE_ACTIVE && Array.isArray(profiles)) {
+    profiles = profiles.map((profile) => (profile && typeof profile === "object") ? { ...profile, _practice: true } : profile);
+  }
   // The cap used to be 100 and the overflow was dropped in silence, then pushed to the
   // server - so importing a real roster destroyed everyone past the hundredth without a
   // word. Raised, and truncation now announces itself rather than quietly losing people.

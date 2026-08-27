@@ -190,13 +190,25 @@ function walkthroughTakeSnapshot() {
   purgePracticeProfiles();
   const snap = {};
   walkthroughStorageKeys().forEach((key) => { snap[key] = localStorage.getItem(key); });
-  try { localStorage.setItem(WALKTHROUGH_SNAPSHOT_KEY, JSON.stringify(snap)); return true; }
-  catch (_) { showToast("Not enough room on this device to start a walkthrough safely"); return false; }
+  try {
+    localStorage.setItem(WALKTHROUGH_SNAPSHOT_KEY, JSON.stringify(snap));
+    // Read it back. Practice mode replaces the real roster, so the snapshot is the only copy
+    // of it - entering without a backup that provably round-trips risks the real clients.
+    const check = JSON.parse(localStorage.getItem(WALKTHROUGH_SNAPSHOT_KEY) || "null");
+    if (!check || check[PROFILES_KEY] !== snap[PROFILES_KEY]) throw new Error("snapshot did not read back");
+    return true;
+  } catch (_) {
+    localStorage.removeItem(WALKTHROUGH_SNAPSHOT_KEY);
+    showToast("Practice mode needs to back up your clients first, and this device would not let it. Nothing was changed.");
+    return false;
+  }
 }
 function walkthroughRestoreSnapshot() {
   let snap = null;
   try { snap = JSON.parse(localStorage.getItem(WALKTHROUGH_SNAPSHOT_KEY) || "null"); } catch (_) { snap = null; }
-  if (!snap) return false;
+  // No snapshot means the restore cannot run - but leaving without purging would hand the
+  // practice roster over as the real one. Clean up regardless, then report the failure.
+  if (!snap) { purgePracticeProfiles(); return false; }
   walkthroughStorageKeys().forEach((key) => { if (!(key in snap)) localStorage.removeItem(key); });
   Object.keys(snap).forEach((key) => {
     if (snap[key] == null) localStorage.removeItem(key); else localStorage.setItem(key, snap[key]);
@@ -214,7 +226,9 @@ function purgePracticeProfiles() {
     const practice = practiceProfileIds();
     const stored = JSON.parse(localStorage.getItem(PROFILES_KEY) || "[]");
     if (!Array.isArray(stored)) return false;
-    const cleaned = stored.filter((profile) => profile && !practice.includes(profile.id));
+    // By brand first, so a client invented during practice goes too, then by id as a
+    // backstop for anything written before branding existed.
+    const cleaned = stored.filter((profile) => profile && profile._practice !== true && !practice.includes(profile.id));
     if (cleaned.length === stored.length) return false;
     localStorage.setItem(PROFILES_KEY, JSON.stringify(cleaned));
     return true;
@@ -290,7 +304,7 @@ function endWalkthrough(quiet) {
   document.body.classList.remove("walkthrough-on");
   walkthroughCloseDialogs();
   // The sandbox owns the snapshot while it runs; it restores on its own exit instead.
-  if (!sandboxActive) walkthroughRestoreSnapshot();
+  if (!sandboxActive) { walkthroughRestoreSnapshot(); purgePracticeProfiles(); }
   else seedPracticeRoster();
 
   if (run.returnView) {
@@ -715,6 +729,7 @@ function exitSandbox(quiet) {
   window.FIT4LIFE_PRACTICE_ACTIVE = false;
   walkthroughCloseDialogs();
   walkthroughRestoreSnapshot();
+  purgePracticeProfiles();
   document.body.classList.remove("sandbox-on");
   const banner = document.getElementById("sandboxBanner"); if (banner) banner.remove();
   // the builder may still hold a practice client who no longer exists

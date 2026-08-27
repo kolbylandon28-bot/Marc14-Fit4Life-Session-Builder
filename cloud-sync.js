@@ -1307,7 +1307,10 @@
       });
     });
 
-    writeJson(CLOUD_KEYS.profiles, profiles);
+    // If a practice client ever reached the server - from a build before the database was
+    // sealed - every pull would hand it back and a local purge could never win. Strip them
+    // on the way in, so the fix holds no matter what is still sitting in the table.
+    writeJson(CLOUD_KEYS.profiles, stripPracticeProfiles(profiles));
     writeJson(CLOUD_KEYS.assignments, assignments);
     writeJson(CLOUD_KEYS.programs, programs);
     writeJson(CLOUD_KEYS.progress, progress);
@@ -1367,6 +1370,16 @@
     return stub;
   }
   function practiceSealed() { return window.FIT4LIFE_PRACTICE_ACTIVE === true; }
+  /* Batman, Superman and Spider-Man, by the ids the practice roster uses and by the brand
+     stamped on anything saved during practice. Kept here rather than imported so the sync
+     layer defends itself even if the walkthrough script fails to load. */
+  const PRACTICE_PROFILE_IDS = ["walkthrough-practice-client", "practice-client-2", "practice-client-3"];
+  function stripPracticeProfiles(list) {
+    if (!Array.isArray(list)) return list;
+    return list.filter((profile) => profile
+      && profile._practice !== true
+      && !PRACTICE_PROFILE_IDS.includes(profile.id));
+  }
   function sealClientDuringPractice(client) {
     if (!client || client.__fit4lifePracticeSealed) return client;
     const realFrom = client.from.bind(client);
