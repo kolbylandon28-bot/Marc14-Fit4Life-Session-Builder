@@ -30,8 +30,8 @@ const WALKTHROUGH_HIGHLIGHT_MS = 300;
 function practiceClientProfile() {
   return {
     id: PRACTICE_CLIENT_ID,
-    name: "Practice Client",
-    username: "practice",
+    name: "Batman",
+    username: "batman",
     age: 27,
     experience: 2,
     minutes: 60,
@@ -44,7 +44,7 @@ function practiceClientProfile() {
     membershipTier: "standard",
     sessionsPerWeek: 2,
     programmedDays: 3,
-    email: "practice@fit4life.local",
+    email: "batman@fit4life.local",
     createdAt: "2026-01-01T00:00:00.000Z",
   };
 }
@@ -211,16 +211,22 @@ function walkthroughRecoverIfInterrupted() {
 /* ---- run state ---- */
 
 let walkthroughRun = null;
+let sandboxActive = false;
 
 function walkthroughActive() { return !!walkthroughRun; }
+/* Either kind of practice - a guided walkthrough or the free-roam sandbox. Everything that
+   has to be faked or blocked keys off this, not off walkthroughs specifically. */
+function practiceModeActive() { return sandboxActive || !!walkthroughRun; }
 
 function startWalkthrough(id) {
   const plan = walkthroughById(id);
   if (!plan) return false;
   if (walkthroughRun) endWalkthrough(true);
-  if (!walkthroughTakeSnapshot()) return false;
+  // In the sandbox a snapshot already exists and the real data is already put away. Taking
+  // another would snapshot the practice data and restore that instead.
+  if (!sandboxActive && !walkthroughTakeSnapshot()) return false;
 
-  window.FIT4LIFE_WALKTHROUGH_ACTIVE = true;
+  window.FIT4LIFE_PRACTICE_ACTIVE = true;
   walkthroughRun = {
     id: plan.id,
     plan: plan,
@@ -257,12 +263,14 @@ function endWalkthrough(quiet) {
   if (!walkthroughRun) return;
   const run = walkthroughRun;
   walkthroughRun = null;
-  window.FIT4LIFE_WALKTHROUGH_ACTIVE = false;
+  if (!sandboxActive) window.FIT4LIFE_PRACTICE_ACTIVE = false;
   walkthroughClearStep(run);
   const bar = document.getElementById("walkthroughBar"); if (bar) bar.remove();
   document.body.classList.remove("walkthrough-on");
   walkthroughCloseDialogs();
-  walkthroughRestoreSnapshot();
+  // The sandbox owns the snapshot while it runs; it restores on its own exit instead.
+  if (!sandboxActive) walkthroughRestoreSnapshot();
+  else seedPracticeRoster();
 
   if (run.returnView) {
     document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
@@ -272,7 +280,8 @@ function endWalkthrough(quiet) {
   if (run.returnDestination && typeof openCoachDestination === "function") openCoachDestination(run.returnDestination);
   else if (typeof renderOutput === "function") renderOutput();
   if (typeof renderTrainerDirectory === "function") renderTrainerDirectory();
-  if (!quiet) showToast("Walkthrough closed \u2014 you are back on your real clients");
+  if (!quiet) showToast(sandboxActive ? "Walkthrough closed \u2014 still in practice mode"
+    : "Walkthrough closed \u2014 you are back on your real clients");
 }
 
 /* A dialog left open from a previous run sits on top of the next one and makes the
@@ -506,8 +515,10 @@ function showWalkthroughFinished(plan) {
     + '<span class="wt-done-eyebrow">Demo finished</span>'
     + '<h4>You finished this trainer demo</h4>'
     + (plan && plan.done ? '<p class="wt-done-line">' + escapeHtml(plan.done) + '</p>' : '')
-    + '<p class="wt-done-real">Everything you just did was on the practice client and has been thrown away. '
-    + 'You are back on your real clients now, so anything you change from here is real.</p>'
+    + '<p class="wt-done-real">' + (sandboxActive
+        ? 'That was all on a practice client. You are still in practice mode, so keep exploring - nothing is real until you leave it.'
+        : 'Everything you just did was on the practice client and has been thrown away. '
+          + 'You are back on your real clients now, so anything you change from here is real.') + '</p>'
     + '<div class="tool-actions">'
     + '<button class="small-btn" data-wt-done-more>Show me something else</button>'
     + '<button class="small-btn primary" data-wt-done-ok>Back to my clients</button>'
@@ -585,13 +596,24 @@ function trainerAssistancePanelHtml() {
     + '<h3>Trainer Assistance</h3>'
     + '<p>Pick anything you want shown. Each one walks you through it on the real screens, on a practice client, '
     + 'so nothing you do here touches a real person. Leave whenever you have got it.</p>'
-    + '<div class="wt-card-grid">' + cards + '</div></section>';
+    + '<div class="wt-card-grid">' + cards + '</div>'
+    + '<div class="wt-sandbox-invite"><div><b>Or just have a look around</b>'
+    + '<span>Practice mode gives you three made-up clients and the run of the whole app. '
+    + 'Nothing is saved, nothing syncs, and your real clients are put away until you leave.</span></div>'
+    + '<button class="small-btn primary" data-sandbox-start>Start practice mode</button></div>'
+    + '</section>';
 }
 
 function bindWalkthroughCards(root) {
-  (root || document).querySelectorAll("[data-wt-start]").forEach((button) => {
+  const scope = root || document;
+  scope.querySelectorAll("[data-wt-start]").forEach((button) => {
     button.onclick = () => startWalkthrough(button.getAttribute("data-wt-start"));
   });
+  const sandbox = scope.querySelector("[data-sandbox-start]");
+  if (sandbox) {
+    sandbox.textContent = sandboxRunning() ? "Leave practice mode" : "Start practice mode";
+    sandbox.onclick = () => { if (sandboxRunning()) exitSandbox(false); else startSandbox(); };
+  }
 }
 
 function openTrainerAssistance() {
@@ -608,4 +630,106 @@ if (typeof window !== "undefined") {
   window.openTrainerAssistance = openTrainerAssistance;
   window.walkthroughActive = walkthroughActive;
   window.walkthroughRecoverIfInterrupted = walkthroughRecoverIfInterrupted;
+}
+
+/* ============================================================
+   SANDBOX
+   Free roam. Same sandboxing as a walkthrough - snapshot every
+   fit4life key, swap in fake clients, block every push - but no
+   steps. Wander the whole app and break nothing.
+
+   A walkthrough started inside it nests: it reuses this snapshot
+   and does not restore on its own, so leaving the sandbox is the
+   single point where real data comes back.
+   ============================================================ */
+
+function practiceRoster() {
+  const base = practiceClientProfile();
+  return [
+    base,
+    { id: "practice-client-2", name: "Superman", username: "superman",
+      age: 35, experience: 3, minutes: 60, goals: ["strength"], injuries: [],
+      zones: base.zones.slice(), membershipTier: "premium", sessionsPerWeek: 3, programmedDays: 6,
+      email: "superman@fit4life.local", createdAt: "2026-01-01T00:00:00.000Z" },
+    { id: "practice-client-3", name: "Spider-Man", username: "spiderman",
+      age: 21, experience: 1, minutes: 45, goals: ["athletic"], injuries: [],
+      zones: base.zones.slice(), membershipTier: "starter", sessionsPerWeek: 1, programmedDays: 3,
+      email: "spiderman@fit4life.local", createdAt: "2026-01-01T00:00:00.000Z" },
+  ];
+}
+function practiceProfileIds() { return practiceRoster().map((profile) => profile.id); }
+
+function seedPracticeRoster() {
+  writeProfiles(practiceRoster());
+  PRACTICE_CLEARED_KEYS.forEach((key) => localStorage.setItem(key, "[]"));
+  try {
+    if (typeof selectTrainerClient === "function") selectTrainerClient(practiceClientProfile().name);
+    const search = document.getElementById("trainerClientSearch"); if (search) search.value = "";
+    const scope = document.getElementById("trainerClientScope"); if (scope) scope.value = "all";
+  } catch (_) {}
+}
+
+function sandboxRunning() { return sandboxActive; }
+
+function startSandbox() {
+  if (typeof requireTrainerMutation === "function" && !requireTrainerMutation()) return false;
+  if (sandboxActive) return true;
+  if (walkthroughActive()) endWalkthrough(true);
+  if (!walkthroughTakeSnapshot()) return false;
+
+  sandboxActive = true;
+  window.FIT4LIFE_PRACTICE_ACTIVE = true;
+  seedPracticeRoster();
+  document.body.classList.add("sandbox-on");
+  renderSandboxBanner();
+  if (typeof openCoachDestination === "function") openCoachDestination("clients");
+  showToast("Practice mode on — nothing you do now is real");
+  return true;
+}
+
+function exitSandbox(quiet) {
+  if (!sandboxActive) return;
+  if (walkthroughActive()) endWalkthrough(true);
+  sandboxActive = false;
+  window.FIT4LIFE_PRACTICE_ACTIVE = false;
+  walkthroughCloseDialogs();
+  walkthroughRestoreSnapshot();
+  document.body.classList.remove("sandbox-on");
+  const banner = document.getElementById("sandboxBanner"); if (banner) banner.remove();
+  // the builder may still hold a practice client who no longer exists
+  if (typeof state !== "undefined" && state.solo && practiceProfileIds().includes(state.solo.profileId)) {
+    state.solo.profileId = ""; state.solo.client = "";
+    state.session = null; state.sessionOptions = [];
+  }
+  try {
+    if (typeof renderForms === "function") renderForms();
+    if (typeof renderOutput === "function") renderOutput();
+    if (typeof renderTrainerDirectory === "function") renderTrainerDirectory();
+    if (typeof openCoachDestination === "function") openCoachDestination("clients");
+  } catch (_) {}
+  if (!quiet) showToast("Practice mode off — you are back on your real clients");
+}
+
+function renderSandboxBanner() {
+  let banner = document.getElementById("sandboxBanner");
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = "sandboxBanner";
+    banner.className = "sandbox-banner";
+    document.body.appendChild(banner);
+  }
+  banner.innerHTML = '<div class="sandbox-banner-inner">'
+    + '<span class="sandbox-dot" aria-hidden="true"></span>'
+    + '<div class="sandbox-copy"><b>Practice mode</b>'
+    + '<span>Three made-up clients. Go anywhere, change anything — none of it is saved and your real clients cannot be touched.</span></div>'
+    + '<button class="small-btn sandbox-exit" data-sandbox-exit>Leave practice</button>'
+    + '</div>';
+  banner.querySelector("[data-sandbox-exit]").onclick = () => exitSandbox(false);
+}
+
+if (typeof window !== "undefined") {
+  window.startSandbox = startSandbox;
+  window.exitSandbox = exitSandbox;
+  window.sandboxRunning = sandboxRunning;
+  window.practiceModeActive = practiceModeActive;
 }
