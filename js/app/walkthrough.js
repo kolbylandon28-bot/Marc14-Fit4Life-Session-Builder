@@ -28,7 +28,10 @@ function practiceClientProfile() {
     experience: 2,
     minutes: 60,
     goals: ["hypertrophy"],
-    injuries: [],
+    // A shoulder limitation is what makes the safety tags real: it rules out 103 movements
+    // instead of 41, so the amber cautions and blocks in the picker are genuine. Chosen
+    // because it leaves the lower-body main lift alone, which the rest of the demo uses.
+    injuries: ["shoulder"],
     zones: ["cardio","platform","rack","crossfit","dumbbell","machine","cable","bodyweight"],
     membershipTier: "standard",
     sessionsPerWeek: 2,
@@ -92,14 +95,20 @@ const WALKTHROUGHS = [
       { say: "The lightning bolt runs a movement differently - burnout, drop set, 21s, tempo, pause. Tap it.", target: WORKING + " .ex-btn.modifier", advance: "click" },
       { say: "Only the ones that suit this movement are offered, which is why a treadmill has none and a cable curl has four. Pick one, or straight sets to undo it.", target: ".ask-dialog", advance: "next", info: true },
       { say: "The arrows swap a movement for something that trains the same thing. Tap it.", target: WORKING + " .ex-btn.swap", advance: "click" },
-      { say: "Shuffle takes the decision for you. Or read the list and choose - either way the sets and reps you set carry across.", target: "#swapShuffleBtn", advance: "next", info: true },
+      { say: "Swapping gives you three lists: recommended already fits this phase and this client, similar keeps the same movement pattern, and the workout bank is everything you own.", target: ".swap-toolbar", advance: "next", info: true },
+      { say: "Or let shuffle decide. Either way the sets and reps you set carry across to whatever replaces it.", target: "#swapShuffleBtn", advance: "next", info: true },
       { say: "Pick a replacement from the list.", target: "#exerciseSwapOptions .swap-option", advance: "click" },
       { say: "Adding a movement rather than replacing one starts here. Tap it.", target: WORKING_BLOCK + " .add-ex", advance: "click" },
-      { say: "Same picker, three ways to narrow it. Recommended already fits this phase and this client. Similar keeps the same movement pattern. Workout bank is everything you own, and will put any exercise in any phase.", target: ".swap-toolbar", advance: "next", info: true },
-      { say: "Or search it directly - by exercise name, by muscle, or by equipment.", target: "#exerciseSwapSearch", advance: "next", info: true },
-      { say: "Read the tags on the right before you pick. Green \u201cmatches all filters\u201d means it fits their equipment, experience, age and every limitation they reported.", target: "#exerciseSwapOptions .swap-option-meta", advance: "next", info: true },
-      { say: "An amber tag is a caution and it tells you exactly what the problem is - not a primary lift, wrong phase, more advanced than they are. You can still choose it; you are just choosing it knowingly. \u201cBlocked by safety filter\u201d is the one to leave alone: their reported injury rules it out.", target: "#exerciseSwapOptions", advance: "next", info: true },
-      { say: "Pick one to add it to this phase.", target: "#exerciseSwapOptions .swap-option", advance: "click" },
+      { say: "This is a different picker to the swap one, because you are choosing something new rather than a like-for-like replacement. Fits this phase respects the section you are adding to; entire exercise bank drops that and lets you put anything anywhere.", target: ".swap-toolbar", advance: "next", info: true },
+      { say: "These narrow it the way you actually think - by body part, then by movement pattern.", target: "#scratchFilterMenus", advance: "next", info: true },
+      { say: "Equipment narrows it to what is free right now.", target: "#swapZoneFilter", advance: "next", info: true },
+      { say: "Widen it to the entire exercise bank so you can see everything you own, not just what suits this phase.", target: "#swapBankBtn", advance: "click" },
+      { say: "And this one is quietly hiding things from you. On \u201conly filter-matching\u201d you never see anything that breaks a client rule. Switch it to show overrides with warnings.", target: "#swapSafetyFilter", advance: "change" },
+      { say: "Now read the tags. Green means it fits their equipment, experience, age and every limitation they reported - safe to pick without thinking.", target: "#exerciseSwapOptions .swap-option-meta", advance: "next", info: true },
+      { say: "Amber is a caution that names the problem: not a primary lift, wrong phase for it, harder than their experience. You can still pick those - you are just picking them knowingly.", target: "#exerciseSwapOptions", advance: "next", info: true },
+      { say: "This practice client has a bad shoulder, so some movements are blocked outright. Tap one marked blocked by safety filter and watch what happens.", target: "#exerciseSwapOptions .swap-option.blocked", advance: "click" },
+      { say: "It refuses, and tells you which limitation stopped it. That is the one warning you should not talk yourself past - it came from what the client told you.", target: "#exerciseSwapOptions", advance: "next", info: true },
+      { say: "Pick a green one instead and it gets added to this phase.", target: "#exerciseSwapOptions .swap-option:not(.blocked)", advance: "click" },
       { say: "Now pair two of them. Tap create a superset.", target: WORKING_BLOCK + ' [data-wt="create-superset"]', advance: "click" },
       { say: "This is the part that matters - you choose which two. A1 is the first movement, A2 is what they alternate it with. Pick the pair you actually want; if A2 sits in another phase it gets moved here so they are done together.", target: ".superset-pair-grid", advance: "next", info: true },
       { say: "This line warns you if the pairing does not work - two of the same movement, or a pair that ties up equipment someone else is waiting on.", target: "#supersetEditorWarning", advance: "next", info: true },
@@ -242,6 +251,7 @@ function walkthroughClearStep(run) {
   const state = run || walkthroughRun; if (!state) return;
   if (state.timer) { clearInterval(state.timer); state.timer = null; }
   if (state.onClick) { document.removeEventListener("click", state.onClick, true); state.onClick = null; }
+  if (state.onChange) { document.removeEventListener("change", state.onChange, true); state.onChange = null; }
   document.querySelectorAll(".wt-target").forEach((el) => el.classList.remove("wt-target", "wt-info"));
 }
 
@@ -253,7 +263,9 @@ function walkthroughPrepareWorkout() {
   Object.assign(state.solo, {
     client: practice.name, goal: "hypertrophy", goals: ["hypertrophy"],
     experience: practice.experience, age: practice.age, minutes: practice.minutes,
-    muscles: [], injuries: [], zones: practice.zones.slice(),
+    // their limitation has to come through, or nothing is ever flagged and the
+    // walkthrough cannot show what a safety warning looks like
+    muscles: [], injuries: (practice.injuries || []).slice(), zones: practice.zones.slice(),
   });
   document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
   const builder = document.getElementById("view-builder"); if (builder) builder.classList.add("active");
@@ -321,6 +333,16 @@ function walkthroughGoToStep(index) {
     }
   }, WALKTHROUGH_HIGHLIGHT_MS);
 
+  if (step.advance === "change" && step.target) {
+    walkthroughRun.onChange = (event) => {
+      if (!walkthroughRun) return;
+      const hit = event.target && event.target.closest && event.target.closest(step.target);
+      if (!hit || !walkthroughVisible(hit)) return;
+      const at = walkthroughRun.index;
+      setTimeout(() => { if (walkthroughRun && walkthroughRun.index === at) walkthroughGoToStep(at + 1); }, 300);
+    };
+    document.addEventListener("change", walkthroughRun.onChange, true);
+  }
   if (step.advance === "click" && step.target) {
     walkthroughRun.onClick = (event) => {
       if (!walkthroughRun) return;
@@ -366,11 +388,11 @@ function walkthroughRenderBar() {
   }
   const steps = walkthroughRun.plan.steps, step = steps[walkthroughRun.index];
   const missing = !!walkthroughRun.missing;
-  const waiting = step.advance === "click" && !missing;
+  const waiting = (step.advance === "click" || step.advance === "change") && !missing;
   bar.innerHTML = '<div class="wt-bar-inner' + (missing ? ' wt-stuck' : '') + '">'
     + '<div class="wt-bar-copy"><span class="wt-count">Step ' + (walkthroughRun.index + 1) + ' of ' + steps.length + '</span>'
     + '<p>' + escapeHtml(step.say) + '</p>'
-    + (waiting ? '<span class="wt-waiting">Waiting for you to tap it</span>' : '')
+    + (waiting ? '<span class="wt-waiting">' + (step.advance === "change" ? "Waiting for you to change it" : "Waiting for you to tap it") + '</span>' : '')
     + (step.info && !missing ? '<span class="wt-info-note">Reading only \u2014 nothing to change here</span>' : '')
     + (missing ? '<span class="wt-missing">That control is not on this screen right now \u2014 skip past it or step back.</span>' : '') + '</div>'
     + '<div class="wt-bar-actions">'
