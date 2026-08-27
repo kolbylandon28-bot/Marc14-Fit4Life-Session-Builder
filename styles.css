@@ -2036,8 +2036,8 @@ body.sandbox-on::before{
   pointer-events:none;white-space:nowrap;
   font:400 clamp(180px,30vw,470px)/.8 "Snell Roundhand","Apple Chancery","Segoe Script","Brush Script MT",cursive;
   letter-spacing:.02em;text-indent:0;
-  color:rgba(0,0,0,.11);
-  -webkit-text-fill-color:rgba(0,0,0,.11);
+  color:rgba(0,0,0,.24);
+  -webkit-text-fill-color:rgba(0,0,0,.24);
   -webkit-text-stroke:0;
   background:none;-webkit-background-clip:border-box;background-clip:border-box;
   text-shadow:none;filter:none;
@@ -2079,3 +2079,20 @@ body.sandbox-on .client-focus-panel{background:linear-gradient(155deg,#2C3A52,#1
 .sandbox-banner-inner{padding:10px 14px calc(10px + env(safe-area-inset-top))}
 .sandbox-copy b{font-size:11px}
 .sandbox-exit{font-weight:800;padding:9px 15px;border-width:2px!important;border-radius:9px}
+
+/* Panels that hard-code a dark fill rather than reading a token. Without these, practice mode
+   leaves dark slabs stranded in a light page. */
+body.sandbox-on .attention-command{background:rgba(255,255,255,.9)}
+body.sandbox-on .attention-command-head{background:var(--slate-3)}
+body.sandbox-on .human-progress-map,
+body.sandbox-on .human-side-stat,
+body.sandbox-on .goal-journey-marker,
+body.sandbox-on .active-set-row,
+body.sandbox-on .exercise-editor-checks,
+body.sandbox-on .movement-feedback-menu,
+body.sandbox-on .consultation-fieldset,
+body.sandbox-on .consultation-review,
+body.sandbox-on .cloud-auth-tabs{background:var(--slate-2);border-color:var(--line);color:var(--text)}
+body.sandbox-on .message-bubble{background:#fff;border:1px solid var(--line);color:var(--text)}
+body.sandbox-on .consultation-option span{background:#fff;border-color:var(--line);color:var(--text)}
+body.sandbox-on .consultation-option small{color:var(--text-faint)}

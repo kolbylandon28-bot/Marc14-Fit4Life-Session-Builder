@@ -1104,9 +1104,9 @@
 
   async function pushPending() {
 
-    // a walkthrough runs on a practice client; none of it belongs on the server
+    // practice mode - a walkthrough or the sandbox - runs on fake clients; none of it belongs on the server
 
-    if (window.FIT4LIFE_WALKTHROUGH_ACTIVE) return false;
+    if (window.FIT4LIFE_PRACTICE_ACTIVE) return false;
     if (!cloudReady || !cloudClient || !cloudUser || cloudApplying || cloudPushing) return false;
     if (browserIsOffline()) {
       persistPendingScopes();
@@ -1237,7 +1237,12 @@
     const profiles = [];
     let assignments = [];
     let programs = [];
-    let progress = [];
+    // Starting empty meant a pull rebuilt this list from the server alone and then wrote it
+    // over the phone's copy, deleting any set logged since the last successful upload - and
+    // the next push sent the shortened list back up. Seed from local so the merge can only
+    // add. Client-scoped: a client holds only their own entries, so this cannot resurrect a
+    // record a trainer deleted, which is why progressReceipts above is seeded the other way.
+    let progress = cloudRole === "client" ? readJson(CLOUD_KEYS.progress, []) : [];
     let scans = [];
     let goals = [];
     let checkins = [];
@@ -1330,8 +1335,65 @@
     }
   }
 
+  /* ============================================================
+     PRACTICE MODE SEAL
+     pushPending() was guarded, but it is not the only way to the
+     database - there are roughly twenty direct .from(...) writes
+     and .rpc(...) calls that bypass it entirely: approving a
+     registration, setting a trainer tier, deactivating a trainer,
+     saving gym-wide settings, archiving or deleting a client.
+     A trainer exploring those screens in practice would have hit
+     the live database for real.
+
+     Rather than guard twenty call sites and hope the next one
+     remembers, the client itself goes inert. In practice mode the
+     app is simply offline as far as Supabase is concerned - which
+     is what a sandbox should mean. Reads are blocked too, so real
+     clients cannot appear on screen either.
+     ============================================================ */
+  function practiceBlockedResult(label) {
+    return { data: null, error: { message: "Practice mode: " + label + " was not sent to the server.", practiceBlocked: true } };
+  }
+  function practiceBlockedQuery(label) {
+    const settled = Promise.resolve(practiceBlockedResult(label));
+    const stub = {
+      then: (onDone, onFail) => settled.then(onDone, onFail),
+      catch: (onFail) => settled.catch(onFail),
+      finally: (onEnd) => settled.finally(onEnd),
+    };
+    ["select","insert","upsert","update","delete","eq","neq","gt","gte","lt","lte","like","ilike","is","in",
+     "contains","or","and","not","filter","match","order","limit","range","single","maybeSingle","csv","abortSignal",
+     "returns","throwOnError","overrideTypes"].forEach((method) => { stub[method] = () => stub; });
+    return stub;
+  }
+  function practiceSealed() { return window.FIT4LIFE_PRACTICE_ACTIVE === true; }
+  function sealClientDuringPractice(client) {
+    if (!client || client.__fit4lifePracticeSealed) return client;
+    const realFrom = client.from.bind(client);
+    const realRpc = client.rpc.bind(client);
+    client.from = function (table) {
+      if (practiceSealed()) return practiceBlockedQuery("a change to " + table);
+      return realFrom(table);
+    };
+    client.rpc = function (name, params, options) {
+      if (practiceSealed()) return practiceBlockedQuery(String(name));
+      return realRpc(name, params, options);
+    };
+    client.__fit4lifePracticeSealed = true;
+    return client;
+  }
+
   async function pullCloudState(initial) {
+    // A pull during practice would paint real clients over the sandbox for the trainer to
+    // see, and the restore would then throw the pulled data away. Stay local.
+    if (practiceSealed()) return;
     if (!cloudClient || !cloudUser || cloudPushing) return;
+    // Anything still waiting to upload would be overwritten by what comes back. Send it first,
+    // and if that fails, do not pull at all - a failed save must never become a lost set.
+    if (pendingScopes.size) {
+      const saved = await pushPending();
+      if (!saved) { cloudStatus("Save waiting \u00b7 tap account", "error"); return; }
+    }
     cloudStatus("Syncing…", "syncing");
     try {
       let profileResponse = await cloudClient
@@ -2070,9 +2132,9 @@
     try {
       const config = await loadPublicConfig();
       if (!window.supabase || typeof window.supabase.createClient !== "function") throw new Error("The secure sign-in library did not load. Check the internet connection and retry.");
-      cloudClient = window.supabase.createClient(config.url, config.key, {
+      cloudClient = sealClientDuringPractice(window.supabase.createClient(config.url, config.key, {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage:fit4lifeAuthStorage }
-      });
+      }));
       await loadPortalContext();
       startOrganizationSettingsRefresh();
       installWriterHooks();
