@@ -388,32 +388,43 @@ function walkthroughInteractable(el, step) {
 /* A control can be off the bottom of a scrolling rail, or under our own bar. Bring it into
    view before judging whether it is reachable, otherwise the occlusion test condemns
    something a single scroll would have fixed. */
-function walkthroughNudgeIntoView(el) {
-  if (!el || typeof el.scrollIntoView !== "function") return;
+function walkthroughOffScreen(el) {
+  if (!el) return false;
   const box = el.getBoundingClientRect();
-  const barTop = window.innerHeight - 150;
-  if (box.bottom > barTop || box.top < 60) el.scrollIntoView({ block: "center" });
+  return box.bottom > window.innerHeight - 150 || box.top < 60;
+}
+/* Bring the control into view when a step starts, and then leave the page alone. This used
+   to run on the highlight timer, so scrolling away to see where something sits in relation
+   to everything else snapped you straight back within 300ms. */
+function walkthroughNudgeIntoView(el, force) {
+  if (!el) return;
+  if (!force && walkthroughRun && walkthroughRun.scrolled) return;
+  if (!walkthroughOffScreen(el)) { if (walkthroughRun) walkthroughRun.scrolled = true; return; }
+  // scrollIntoView alone is unreliable here - it scrolls the nearest scrollable ancestor,
+  // which for a control inside a panel is often already at its limit and moves nothing.
+  // Do that for the container, then move the page explicitly.
+  if (typeof el.scrollIntoView === "function") { try { el.scrollIntoView({ block: "center" }); } catch (_) {} }
+  const box = el.getBoundingClientRect();
+  const usable = window.innerHeight - 150;
+  if (box.top < 60 || box.bottom > usable) {
+    const target = box.top + window.scrollY - Math.max(80, (usable - box.height) / 2);
+    window.scrollTo({ top: Math.max(0, target), behavior: force ? "smooth" : "auto" });
+  }
+  if (walkthroughRun) walkthroughRun.scrolled = true;
 }
 function walkthroughApplyHighlight(step) {
   let matches = [];
   // :has() is used by one step; an engine without it must not throw out of the timer
   try { matches = step && step.target ? Array.from(document.querySelectorAll(step.target)) : []; }
   catch (_) { matches = []; }
-  // scroll candidates into view first, then judge reachability
-  matches.forEach(walkthroughNudgeIntoView);
+  // scroll the first candidate into view once, then judge reachability
+  if (matches.length) walkthroughNudgeIntoView(matches[0]);
   const found = matches.filter(walkthroughVisible).filter((node) => walkthroughInteractable(node, step));
   const el = found[0] || null;
   document.querySelectorAll(".wt-target").forEach((node) => { if (node !== el) node.classList.remove("wt-target"); });
   if (!step || !step.target) return true;
   if (el) el.classList.toggle("wt-info", !!step.info);
-  if (el && !el.classList.contains("wt-target")) {
-    el.classList.add("wt-target");
-    // a control below the fold looks like nothing happened
-    if (typeof el.scrollIntoView === "function") {
-      const box = el.getBoundingClientRect();
-      if (box.bottom > window.innerHeight - 130 || box.top < 60) el.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }
+  if (el && !el.classList.contains("wt-target")) el.classList.add("wt-target");
   return !!el;
 }
 function walkthroughGoToStep(index) {
@@ -430,6 +441,7 @@ function walkthroughGoToStep(index) {
   // the app re-renders constantly and would otherwise drop the class.
   walkthroughRun.missing = false;
   walkthroughRun.missingSince = null;
+  walkthroughRun.scrolled = false;
   walkthroughApplyHighlight(step);
   walkthroughRun.timer = setInterval(() => {
     if (!walkthroughRun) return;
@@ -438,6 +450,10 @@ function walkthroughGoToStep(index) {
     if (walkthroughApplyHighlight(step)) {
       walkthroughRun.missingSince = null;
       if (walkthroughRun.missing) { walkthroughRun.missing = false; walkthroughRenderBar(); }
+      // Scrolling away is allowed now, so offer a way back rather than dragging them there.
+      const bar = document.getElementById("walkthroughBar");
+      const find = bar && bar.querySelector("[data-wt-find]");
+      if (find) find.hidden = !walkthroughOffScreen(document.querySelector(".wt-target"));
       return;
     }
     if (!walkthroughRun.missingSince) walkthroughRun.missingSince = Date.now();
@@ -538,6 +554,7 @@ function walkthroughRenderBar() {
     + (step.info && !missing ? '<span class="wt-info-note">Reading only \u2014 nothing to change here</span>' : '')
     + (missing ? '<span class="wt-missing">That control is not on this screen right now \u2014 skip past it or step back.</span>' : '') + '</div>'
     + '<div class="wt-bar-actions">'
+    + '<button class="small-btn wt-find" data-wt-find hidden>Show me</button>'
     + (walkthroughRun.index > 0 ? '<button class="small-btn" data-wt-back>Back</button>' : '')
     + (waiting ? '' : '<button class="small-btn primary" data-wt-next>' + (missing ? 'Skip' : 'Next') + '</button>')
     + '<button class="small-btn wt-exit" data-wt-exit>I\u2019ve got it</button>'
@@ -547,6 +564,11 @@ function walkthroughRenderBar() {
   const next = bar.querySelector("[data-wt-next]");
   if (next) next.onclick = () => walkthroughGoToStep(walkthroughRun.index + 1);
   bar.querySelector("[data-wt-exit]").onclick = () => endWalkthrough(false);
+  const find = bar.querySelector("[data-wt-find]");
+  if (find) find.onclick = () => {
+    const el = document.querySelector(".wt-target");
+    if (el) walkthroughNudgeIntoView(el, true);
+  };
 }
 
 /* ---- the library screen ---- */

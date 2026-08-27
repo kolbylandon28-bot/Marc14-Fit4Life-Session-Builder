@@ -1956,3 +1956,5 @@ body.walkthrough-on .modal-backdrop>*{max-height:calc(100vh - 200px)}
   body.walkthrough-on.coach-shell-on main{padding-bottom:190px}
   body.walkthrough-on .client-bottom-nav{bottom:calc(96px + env(safe-area-inset-bottom))}
 }
+.wt-find{border-color:var(--blue)!important;color:var(--blue-bright)!important}
+.wt-find[hidden]{display:none!important}
