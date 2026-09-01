@@ -685,6 +685,34 @@
     return response.data || null;
   }
 
+  // Self-signup has to stand on its own - an invite is a convenience, not the only way in.
+  // Nothing in the app has ever written this table; it was left entirely to a database
+  // trigger, and when that did not fire the client sat on a "pending" screen for a request
+  // that did not exist while no trainer could see them. Created here so the route works
+  // whether or not a trigger also does it. Only ever called after a lookup found nothing.
+  async function createMyRegistrationRequest() {
+    if (!cloudClient || !cloudUser) return null;
+    const meta = cloudUser.user_metadata || {};
+    const row = {
+      user_id: cloudUser.id,
+      email: normalizedEmail(cloudUser.email || ""),
+      full_name: meta.full_name || "",
+      requested_role: meta.requested_role === "trainer" ? "trainer" : "client",
+      status: "pending"
+    };
+    if (portalOrganizationId) row.organization_id = portalOrganizationId;
+    const response = await cloudClient.from("registration_requests").insert(row).select().maybeSingle();
+    if (response.error) {
+      // 42P01 missing table, 42501 RLS refusal. Both mean the database is not set up for
+      // self-signup yet; neither deserves an alarming error on a client's device.
+      if (response.error.code !== "42P01" && response.error.code !== "42501") {
+        console.error("Registration request could not be created", response.error);
+      }
+      return null;
+    }
+    return response.data || null;
+  }
+
   async function loadTrainerRegistrationRequests() {
     if (!cloudClient || !cloudOrganizationId || !(cloudRole === "owner" || cloudRole === "trainer")) return [];
     const response = await cloudClient
@@ -1572,6 +1600,14 @@
         );
         subscribeToPendingRegistration();
       } else {
+        // No request on file. Make one, rather than showing a pending screen for nothing.
+        const created = await createMyRegistrationRequest();
+        if (created) {
+          showPendingRequest(created, false);
+          cloudStatus("Waiting for a trainer to approve you", "syncing");
+          subscribeToPendingRegistration();
+          return;
+        }
         showPendingRequest({ email: cloudUser.email || "", status: "pending" }, false);
         setText("cloudPendingIcon", "!");
         setText("cloudPendingTitle", "No client access assigned");
