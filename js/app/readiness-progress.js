@@ -536,6 +536,17 @@ function writeProfileRequests(requests) {
   catch (_) { showToast("This browser could not save the profile request"); return false; }
 }
 function requestProfileCreation(name, username) {
+  // A client has no write channel for this. pushClientState is the only push their role can
+  // make and it requires a linked profile - exactly what they are missing. Writing the request
+  // locally told them it had been sent when nothing left the device, and queued an
+  // organization-scope push that could never succeed.
+  if (window.fit4lifeCloudRole === "client") {
+    const identity = typeof currentAccountIdentity === "function" ? currentAccountIdentity() : {};
+    showToast(identity.email
+      ? "Your trainer needs to add you. Ask them to invite " + identity.email
+      : "Your trainer needs to add you before this works.");
+    return null;
+  }
   name = String(name || "").trim(); username = normalizeUsername(username || usernameFromName(name));
   if (normalizeProfileName(name).length < 2) { showToast("Enter the client’s full name"); return null; }
   if (username.length < 3) { showToast("Use a username with at least three letters or numbers"); return null; }
@@ -763,8 +774,9 @@ function openInviteClientDialog() {
       + '<div id="inviteClientFeedback" class="storage-note"></div>'
       + '<div class="tool-actions"><button class="small-btn primary" id="inviteClientCreate">Create &amp; get invite link</button>'
       + '<button class="small-btn" onclick="closeInviteClientDialog()">Cancel</button></div>'
-      + '<div id="inviteLinkRow" style="display:none"><label for="inviteLinkField">Send them this link</label>'
+      + '<div id="inviteLinkRow" style="display:none"><label for="inviteLinkField">Our site address \u2014 not a sign-in link</label>'
       + '<input id="inviteLinkField" readonly>'
+      + '<span class="storage-note">They sign in from the emailed invite, which carries the actual link. This address is only useful once they already have an account \u2014 sending it on its own will not let anyone in.</span>'
       + '<div class="tool-actions"><button class="small-btn primary" onclick="copyInviteLink()">Copy link</button>'
       + '<button class="small-btn" onclick="closeInviteClientDialog()">Done</button></div></div>'
       + '</div></div>';
@@ -783,7 +795,7 @@ function openInviteClientDialog() {
   byId("inviteClientCreate").disabled = false;
   byId("inviteClientCreate").textContent = "Create & get invite link";
   const linkLabel = byId("inviteLinkRow") && byId("inviteLinkRow").querySelector("label");
-  if (linkLabel) linkLabel.textContent = "Send them this link";
+  if (linkLabel) linkLabel.textContent = "Our site address \u2014 not a sign-in link";
   byId("inviteClientCreate").onclick = () => createInvitedClient();
   modal.classList.add("open"); modal.setAttribute("aria-hidden","false");
   window.setTimeout(() => { const first = byId("inviteFirstName"); if (first) first.focus(); },0);

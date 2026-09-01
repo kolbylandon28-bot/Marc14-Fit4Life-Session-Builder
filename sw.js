@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-09-01-v90-ownership-safety-shoulders-r1";
+const CACHE_NAME = "fit4life-shell-2026-09-01-v92-client-first-run-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20260901-v90-ownership-safety-shoulders-r1";
+const ASSET_VERSION = "20260901-v92-client-first-run-r1";
 const SHELL = [
   "/",
   "/index.html",

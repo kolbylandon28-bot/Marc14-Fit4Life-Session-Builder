@@ -272,6 +272,8 @@
   window.fit4lifeCloudInviteDiagnostics = inviteDiagnostics;
 
   async function sendClientInvite(email, fullName) {
+    // An email cannot be un-sent by a snapshot restore.
+    if (practiceSealed()) return { ok:false, error:"Practice mode: no invite was sent." };
     const address = String(email || "").trim().toLowerCase();
     if (!address) return { ok:false, error:"No email address was provided" };
     if (!cloudClient) return { ok:false, error:"The secure connection is not ready yet. Try again in a moment." };
@@ -1078,7 +1080,9 @@
   }
 
   async function pushTrainerState(scopes) {
-    const profiles = readJson(CLOUD_KEYS.profiles, []);
+    // Belt and braces: the seal should have stopped us reaching here at all, but nothing
+    // practice-branded may ever be upserted into client_profiles.
+    const profiles = stripPracticeProfiles(readJson(CLOUD_KEYS.profiles, []));
     await ensureRemoteProfiles(profiles);
 
     if (scopes.has("all") || scopes.has("organization")) {
@@ -1096,7 +1100,9 @@
   async function pushClientState() {
     const profiles = readJson(CLOUD_KEYS.profiles, []);
     const profile = profiles.find((item) => item && item.id) || null;
-    if (!profile) throw new Error("Your trainer-created profile is not linked yet.");
+    // Marked permanent: no amount of retrying creates a profile. Retrying it forever is what
+    // wedged the queue and pinned the status pill red for every client not yet set up.
+    if (!profile) { const missing = new Error("Your trainer-created profile is not linked yet."); missing.permanent = true; throw missing; }
     const remote = remoteProfilesByExternalId.get(String(profile.id));
     if (!remote) throw new Error("Your cloud profile is not available yet.");
     await saveSyncRecord(remote.id, "client_activity", "main", activityBundle(profile));
@@ -1106,7 +1112,7 @@
 
     // practice mode - a walkthrough or the sandbox - runs on fake clients; none of it belongs on the server
 
-    if (window.FIT4LIFE_PRACTICE_ACTIVE) return false;
+    if (practiceSealed()) return false;
     if (!cloudReady || !cloudClient || !cloudUser || cloudApplying || cloudPushing) return false;
     if (browserIsOffline()) {
       persistPendingScopes();
@@ -1125,6 +1131,15 @@
       cloudStatus("Saved across devices", "synced");
       return true;
     } catch (error) {
+      // Re-queueing a doomed write meant a client with no linked profile failed on every
+      // attempt, persisted the same scope each time, and could never clear the error - the
+      // stuck scope kept failing first even after their profile arrived.
+      if (error && error.permanent) {
+        persistPendingScopes();
+        cloudStatus("Waiting on your trainer", "offline");
+        console.warn("FIT 4 LIFE cloud save skipped", error.message);
+        return false;
+      }
       scopes.forEach((scope) => pendingScopes.add(scope));
       persistPendingScopes();
       cloudStatus("Save waiting · tap account", "error");
@@ -1354,8 +1369,12 @@
      is what a sandbox should mean. Reads are blocked too, so real
      clients cannot appear on screen either.
      ============================================================ */
+  // Surfaced straight onto the screen by several callers, so it has to read like a sentence
+  // and say what to do about it - a trainer who forgot to leave Demo Mode was watching real
+  // invites silently fail while the app talked about "the account action signUp".
   function practiceBlockedResult(label) {
-    return { data: null, error: { message: "Practice mode: " + label + " was not sent to the server.", practiceBlocked: true } };
+    return { data: null, error: { message: "Nothing was sent - the app is still in Demo Mode. Leave Demo Mode and try again."
+      + (label ? " (" + label + ")" : ""), practiceBlocked: true } };
   }
   function practiceBlockedQuery(label) {
     const settled = Promise.resolve(practiceBlockedResult(label));
@@ -1369,7 +1388,15 @@
      "returns","throwOnError","overrideTypes"].forEach((method) => { stub[method] = () => stub; });
     return stub;
   }
-  function practiceSealed() { return window.FIT4LIFE_PRACTICE_ACTIVE === true; }
+  /* The flag is per-tab, but localStorage is shared. A second tab open on the same device
+     saw practice data in storage, believed it was real, and pushed it to the server - which
+     is how a practice client reaches client_profiles at all. The snapshot key exists for
+     exactly the lifetime of practice and every tab can see it, so it seals all of them, and
+     also seals a device whose tab died mid-practice until boot recovery runs. */
+  function practiceSealed() {
+    if (window.FIT4LIFE_PRACTICE_ACTIVE === true) return true;
+    try { return localStorage.getItem("fit4life_walkthrough_snapshot_v1") != null; } catch (_) { return false; }
+  }
   /* Batman, Superman and Spider-Man, by the ids the practice roster uses and by the brand
      stamped on anything saved during practice. Kept here rather than imported so the sync
      layer defends itself even if the walkthrough script fails to load. */
@@ -1392,6 +1419,22 @@
       if (practiceSealed()) return practiceBlockedQuery(String(name));
       return realRpc(name, params, options);
     };
+    // .from and .rpc were wrapped; client.auth was not. signUp, signInWithOtp,
+    // resetPasswordForEmail and updateUser all create real accounts or send real email, and
+    // neither a snapshot restore nor a purge can take an email back.
+    const auth = client.auth;
+    if (auth) {
+      ["signUp", "signInWithOtp", "resetPasswordForEmail", "updateUser"].forEach((name) => {
+        const real = auth[name] && auth[name].bind(auth);
+        if (!real) return;
+        auth[name] = function () {
+          if (practiceSealed()) return Promise.resolve(practiceBlockedResult("the account action " + name));
+          return real.apply(auth, arguments);
+        };
+      });
+      // getSession, onAuthStateChange, refreshSession, signOut and signInWithPassword stay
+      // open on purpose - blocking those wedges sign-in and breaks session recovery.
+    }
     client.__fit4lifePracticeSealed = true;
     return client;
   }
@@ -1677,6 +1720,15 @@
           ? "If this email already has an account, sign in or use Forgot password. Otherwise, wait a minute and try again."
           : response.error.message;
         authMessage(message, true);
+        return false;
+      }
+      // Supabase's anti-enumeration behaviour answers SUCCESS for an address that already has
+      // an account: no session, no email sent, no error. The tell is an empty identities array
+      // on the returned user. Without this the person is sent to check an inbox nothing
+      // arrived in, and reads it as the app being broken.
+      const created = response.data && response.data.user;
+      if (created && Array.isArray(created.identities) && created.identities.length === 0) {
+        authMessage("That email already has an account. Sign in instead, or use Forgot password if you cannot remember it.", true);
         return false;
       }
       const pending = { full_name: fullName, username, email, status: "pending", created_at: new Date().toISOString() };
@@ -2005,7 +2057,11 @@
   };
 
   window.fit4lifeCloudSignOut = async function fit4lifeCloudSignOut() {
-    if (pendingScopes.size && typeof window.confirm === "function" && !window.confirm("Some changes on this device have not reached the shared database yet. Sign out anyway and discard the pending upload?")) return;
+    // Attempt the save before asking anyone to choose between signing out and losing work.
+    // The warning existed but nothing ever tried the push first, so a trainer whose last save
+    // simply had not fired yet was offered a discard when a one-second flush would have done.
+    if (pendingScopes.size) { try { await pushPending(); } catch (_) {} }
+    if (pendingScopes.size && typeof window.confirm === "function" && !window.confirm("Some changes on this device could not be saved to the shared database. Sign out anyway and discard them?")) return;
     pendingScopes.clear();
     persistPendingScopes();
     if (cloudClient) await cloudClient.auth.signOut();
