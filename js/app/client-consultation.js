@@ -137,6 +137,12 @@ function readClientConsultationForm(profile,status) {
 function consultationSetAlert(message,error) {
   const out = byId("consultationAlert"); if (!out) return;
   out.textContent = message || ""; out.classList.toggle("show",Boolean(message)); out.classList.toggle("error",Boolean(error));
+  // The banner sits at the top of a five-step form. A client stuck on step 4 never saw it,
+  // so submitting appeared to do nothing at all. Bring it to them, and say it out loud.
+  if (message && error) {
+    try { out.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (_) {}
+    if (typeof showToast === "function") showToast(message);
+  }
 }
 function validateConsultationStep(step,data) {
   const fail = (message,id) => { consultationSetAlert(message,true); if (id && byId(id)) byId(id).focus(); return false; };
@@ -203,6 +209,7 @@ function changeConsultationStep(delta) {
   showConsultationStep(next); return true;
 }
 function openClientConsultation(required) {
+  installConsultationAutosave();
   if ((window.fit4lifeCloudRole || "") !== "client") { showToast("Only the signed-in client can edit consultation answers"); return false; }
   const profile = activeClientProfile(); if (!profile) { show("client-menu"); return false; }
   clientConsultationRequiredMode = Boolean(required) || !clientConsultationComplete(profile);
@@ -212,15 +219,76 @@ function openClientConsultation(required) {
 }
 
 function normalizedConsultationExerciseText(value) { return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g," ").trim(); }
+/* Turns what a client typed into exercise ids the generator can weight.
+
+   It used to keep a match only when exactly ONE library movement matched, which meant the
+   commonest answers were the ones most certainly discarded: "bench press" matches 9
+   movements, "squat" 19, "deadlift" 6 - all recorded nothing. The raw text is read by no
+   other code, so those answers were simply lost and a client who wrote "I hate squats" got
+   squats. Now every candidate carries the preference; it is a weighting, not a ban
+   (dislike -5 against favorite +8), so breadth costs little where silence cost everything. */
 function consultationExerciseMatches(text) {
   if (typeof LIBRARY === "undefined") return [];
-  const answers = String(text || "").split(/[,;\n]+/).map(normalizedConsultationExerciseText).filter((item) => item && !/^(none|none yet|n\/a|na)$/.test(item));
-  const matches = [];
-  answers.forEach((answer) => {
-    const exact = LIBRARY.find((exercise) => normalizedConsultationExerciseText(exercise.name) === answer);
-    const candidates = exact ? [exact] : answer.length >= 4 ? LIBRARY.filter((exercise) => normalizedConsultationExerciseText(exercise.name).includes(answer) || answer.includes(normalizedConsultationExerciseText(exercise.name))) : [];
-    if (candidates.length === 1) matches.push(exerciseId(candidates[0]));
+  // Aliases as well as the printed name, so gym slang resolves. The field exists on every
+  // movement and until now was populated by nothing and matched by nothing; adding a couple
+  // of aliases is the precise way to fix a mismatch like "bicep curls" finding a leg curl.
+  const named = [];
+  LIBRARY.forEach((exercise) => {
+    named.push([exercise, normalizedConsultationExerciseText(exercise.name)]);
+    (Array.isArray(exercise.aliases) ? exercise.aliases : []).forEach((alias) => {
+      const text = normalizedConsultationExerciseText(alias);
+      if (text) named.push([exercise, text]);
+    });
   });
+  // A phrase vague enough to hit a quarter of the bank is not naming a movement.
+  const tooBroad = Math.max(8, Math.round(named.length / 4));
+  // People type plurals. "planks" and "burpees" matched nothing at all before this.
+  const singular = (word) => word.replace(/ies$/, "y").replace(/(?:es|s)$/, "");
+
+  function candidatesFor(phrase) {
+    if (!phrase || phrase.length < 3) return [];
+    const forms = [...new Set([phrase, singular(phrase)])];
+    for (const form of forms) {
+      const exact = named.filter(([, name]) => name === form);
+      if (exact.length) return exact;
+    }
+    for (const form of forms) {
+      if (form.length < 4) continue;
+      const partial = named.filter(([, name]) => name.includes(form));
+      if (partial.length) return partial;
+    }
+    return [];
+  }
+
+  const matches = [];
+  String(text || "").split(/[,;\n]+/).map(normalizedConsultationExerciseText)
+    .filter((answer) => answer && !/^(none|none yet|n\/a|na)$/.test(answer))
+    .forEach((answer) => {
+      const direct = candidatesFor(answer);
+      if (direct.length && direct.length <= tooBroad) {
+        direct.forEach(([exercise]) => matches.push(exerciseId(exercise)));
+        return;
+      }
+      // Not a bare name - a sentence. Scan its words and adjacent pairs, longest first so
+      // "bench press" wins before a bare "press" can drag in every pressing movement, and
+      // stop a phrase re-matching words an earlier one already claimed. This is what lets
+      // "I don't like squats or deadlifts" record both.
+      const words = answer.split(/\s+/).filter((word) => word.length >= 3);
+      const phrases = [];
+      words.forEach((word, index) => {
+        phrases.push(word);
+        if (words[index + 1]) phrases.push(word + " " + words[index + 1]);
+      });
+      const claimed = new Set();
+      phrases.sort((a, b) => b.length - a.length).forEach((phrase) => {
+        const parts = phrase.split(" ");
+        if (parts.every((part) => claimed.has(part))) return;
+        const found = candidatesFor(phrase);
+        if (!found.length || found.length > tooBroad) return;
+        parts.forEach((part) => claimed.add(part));
+        found.forEach(([exercise]) => matches.push(exerciseId(exercise)));
+      });
+    });
   return [...new Set(matches)];
 }
 function consultationTrainingStyle(data) {
@@ -254,6 +322,22 @@ function applyClientConsultationToProfile(profile,data) {
     limitationReviewRequired:derivedInjuries.length > 0 || Boolean(data.limitations.details),updatedAt:data.updatedAt || new Date().toISOString(),
   };
 }
+/* Writes what is on screen to this device and nothing else - no alert, no cloud call, no
+   navigation. Used by autosave, which must never interrupt someone mid-sentence. */
+function persistClientConsultationDraftLocal() {
+  const profile = activeClientProfile(); if (!profile) return false;
+  const data = readClientConsultationForm(profile,"draft");
+  delete data.draft;
+  data.pendingEdits = clientConsultationComplete(profile);
+  const profiles = loadProfiles(), index = profiles.findIndex((item) => item.id === profile.id);
+  if (index < 0) return false;
+  // An already-submitted client's edits go to consultation.draft rather than over the record.
+  profiles[index] = clientConsultationComplete(profiles[index])
+    ? { ...profiles[index], consultation: { ...profiles[index].consultation, draft: data } }
+    : { ...profiles[index], consultation: data };
+  return writeProfiles(profiles);
+}
+
 async function persistClientConsultation(status) {
   const profile = activeClientProfile(); if (!profile) return false;
   const effectiveStatus = status === "draft" && clientConsultationComplete(profile) ? "submitted" : status;
@@ -313,7 +397,20 @@ function trainerConsultationSummaryHtml(profile) {
   if (!clientConsultationComplete(profile)) return '<section id="client-consultation-review" class="analysis-panel consultation-summary-card"><div class="analysis-panel-head"><div><h4 class="analysis-section-title">Trainer Consultation</h4><p>The client has not submitted the required consultation yet.</p></div><span class="loop-status warn">Waiting</span></div></section>';
   const data = profile.consultation, pending = !data.reviewedAt || new Date(data.reviewedAt) < new Date(data.lastClientSubmittedAt || data.submittedAt), limitations = data.limitations && data.limitations.hasLimitations === "yes";
   return '<section class="analysis-panel consultation-summary-card ' + (limitations && pending ? 'needs-safety-review' : '') + '"><div class="analysis-panel-head"><div><h4 class="analysis-section-title">Trainer Consultation</h4><p>Submitted ' + new Date(data.lastClientSubmittedAt || data.submittedAt).toLocaleString() + ' · revision ' + Number(data.revision || 1) + '</p></div><button class="small-btn ' + (pending ? 'primary' : '') + '" onclick="openTrainerConsultationReview(\'' + escapeHtml(profile.id) + '\')">' + (pending ? 'Review answers' : 'Open answers') + '</button></div><div class="client-fact-grid">'
-    + [["Goal",consultationLabel(CLIENT_CONSULTATION_GOALS,data.primaryGoal)],["Experience",consultationLabel(CLIENT_CONSULTATION_FITNESS,data.fitnessLevel)],["Usual effort",data.usualRpe + "/10"],["Limitations",limitations ? consultationListLabels(CLIENT_CONSULTATION_LIMITATIONS,data.limitations.areas) : "None reported"]].map(([label,value]) => '<div class="client-fact"><span>' + escapeHtml(label) + '</span><b>' + escapeHtml(value) + '</b></div>').join("") + '</div></section>';
+    + [["Goal",consultationLabel(CLIENT_CONSULTATION_GOALS,data.primaryGoal)],["Experience",consultationLabel(CLIENT_CONSULTATION_FITNESS,data.fitnessLevel)],["Usual effort",data.usualRpe + "/10"],["Limitations",limitations ? consultationListLabels(CLIENT_CONSULTATION_LIMITATIONS,data.limitations.areas) : "None reported"],
+      // Everything below was collected and shown to nobody. The limitation description is the
+      // worst of them: required whenever a client answers yes, the most useful sentence on the
+      // form, and read by no screen and no generator.
+      ["In their words",limitations && data.limitations.details ? data.limitations.details : ""],
+      ["Wants from a trainer",consultationListLabels(CLIENT_CONSULTATION_SUPPORT,data.supportPriorities)],
+      ["Interested in",consultationListLabels(CLIENT_CONSULTATION_INTERESTS,data.interests)],
+      ["Past activity",data.pastActivities || ""],
+      ["Favourites",data.favoriteExercises || ""],
+      ["Least favourite",data.leastFavoriteExercises || ""],
+      ["Has not done before",data.unfamiliarExercises || ""],
+      ["Also mentioned",data.supportOther || ""]]
+      .filter(([,value]) => String(value || "").trim() && String(value).trim() !== "None reported" || false)
+      .map(([label,value]) => '<div class="client-fact"><span>' + escapeHtml(label) + '</span><b>' + escapeHtml(value) + '</b></div>').join("") + '</div></section>';
 }
 function openTrainerConsultationReview(profileId) {
   if (!["owner","trainer"].includes(window.fit4lifeCloudRole || "")) { showToast("Trainer access is required"); return false; }
@@ -334,4 +431,31 @@ async function markTrainerConsultationReviewed() {
 }
 function openTrainerConsultationLimitations() {
   const id = trainerConsultationProfileId; closeTrainerConsultationReview(); if (id) openProfileEditor(id);
+}
+
+/* ============================================================
+   CONSULTATION AUTOSAVE
+   Nothing in this form reached storage until the client pressed
+   a button, so a phone locking mid-answer lost the lot. One
+   delegated listener, because the radios and checkboxes are
+   rebuilt every time the form opens.
+   ============================================================ */
+let consultationAutosaveWired = false;
+let consultationAutosaveTimer = null;
+function installConsultationAutosave() {
+  if (consultationAutosaveWired) return;
+  const form = byId("clientConsultationForm"); if (!form) return;
+  consultationAutosaveWired = true;
+  const queue = () => {
+    clearTimeout(consultationAutosaveTimer);
+    consultationAutosaveTimer = setTimeout(() => {
+      try { persistClientConsultationDraftLocal(); } catch (_) {}
+    }, 1500);
+  };
+  form.addEventListener("input", queue);
+  form.addEventListener("change", queue);
+}
+if (typeof window !== "undefined") {
+  window.installConsultationAutosave = installConsultationAutosave;
+  window.persistClientConsultationDraftLocal = persistClientConsultationDraftLocal;
 }
