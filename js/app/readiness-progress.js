@@ -867,13 +867,29 @@ function createInvitedClient() {
   if (existing && existing.onboardingStatus !== "imported") {
     feedback.textContent = "A client with that email already exists."; return null;
   }
+  // Jason's booking site issues personal addresses, so an imported client often carries only
+  // a gmail address while this invite carries their BYU-I one - and neither slot matches.
+  // Without this, inviting someone already in the roster silently creates a second record.
+  // It asks rather than adopting quietly, because two students can share a name and a wrong
+  // adoption merges two people's histories.
+  let adoptTarget = existing;
+  if (!adoptTarget && typeof window.probableIdentityMatches === "function") {
+    const unlinked = loadProfiles().filter((profile) => profile.onboardingStatus === "imported" && !String(profile.email || "").trim());
+    const candidates = window.probableIdentityMatches({ name, phone:"" }, unlinked);
+    const match = candidates.length ? unlinked.find((profile) => profile.id === candidates[0].profileId) : null;
+    if (match && window.confirm("The booking report already has " + (match.name || "a client")
+      + (match.bookingEmail ? " (" + match.bookingEmail + ")" : "") + ", with no login yet.\n\nIs that the same person?"
+      + "\n\nOK links this invite to them and keeps both addresses on one client."
+      + "\nCancel creates a separate client.")) adoptTarget = match;
+  }
   const tierId = normalizeMembershipTier(byId("inviteTier").value);
   const tierCap = tierId && MEMBERSHIP_TIERS[tierId] ? MEMBERSHIP_TIERS[tierId].programmedDays : 0;
   let explicitDays = Number(byId("inviteProgrammedDays").value) || 0;
   if (tierCap && explicitDays > tierCap) explicitDays = tierCap;
   // Adopt rather than duplicate. Creating would trip the name-conflict guard against the
   // imported record itself, which is why removing the refusal alone was not enough.
-  if (existing) {
+  if (adoptTarget) {
+    const existing = adoptTarget;
     const adopted = updateClientProfile(existing.id, { ...existing, name, email, bookingEmail:existing.bookingEmail || email,
       username: existing.username, membershipTier: tierId,
       sessionsPerWeek: tierId && MEMBERSHIP_TIERS[tierId] ? MEMBERSHIP_TIERS[tierId].sessionsPerWeek : existing.sessionsPerWeek || 0,
@@ -951,7 +967,7 @@ function createInvitedClient() {
 function openCreateProfileEditor() {
   if (!requireTrainerMutation("create client profiles")) return null;
   profileEditorTarget = null; profileEditorDraft = { muscles:[],injuries:[],zones:[],preferences:{},cardioModes:["any"],trainingDays:[1,3,5],limitationAssessments:{} };
-  prepareProfileEditorMenus(); byId("profileEditId").value = ""; byId("profileEditName").value = ""; byId("profileEditUsername").value = ""; byId("profileEditEmail").value = "";
+  prepareProfileEditorMenus(); byId("profileEditId").value = ""; byId("profileEditName").value = ""; byId("profileEditUsername").value = ""; byId("profileEditEmail").value = ""; byId("profileEditBookingEmail").value = "";
   byId("profileEditPrimary").value = "general"; byId("profileEditSecondary").value = ""; byId("profileEditStyle").value = "auto";
   byId("profileEditExperience").value = "1"; byId("profileEditAge").value = "30"; byId("profileEditMinutes").value = "60"; byId("profileEditPhase").value = "general"; byId("profileEditDays").value = "3";
   byId("profileEditSport").value = ""; byId("profileEditSchedule").value = ""; byId("profileEditCompetition").value = "";
@@ -962,7 +978,7 @@ function openProfileEditor(profileId, target) {
   if (!requireTrainerMutation("edit client profiles")) return null;
   const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) { showToast("Choose a saved profile to edit"); return; }
   profileEditorTarget = target || null; profileEditorDraft = { muscles: [...(profile.muscles || [])], injuries: [...(profile.injuries || [])], zones: [...(profile.zones || [])], preferences:{ ...(profile.exercisePreferences || {}) },cardioModes:normalizeCardioPreferences(profile.cardioModes || profile.cardioMode),trainingDays:inferredTrainingDays(profile,profile.availableDays || 3),limitationAssessments:JSON.parse(JSON.stringify(profile.limitationAssessments || {})) };
-  byId("profileEditId").value = profile.id; byId("profileEditName").value = profile.name; byId("profileEditUsername").value = profileUsername(profile); byId("profileEditEmail").value = profile.email || "";
+  byId("profileEditId").value = profile.id; byId("profileEditName").value = profile.name; byId("profileEditUsername").value = profileUsername(profile); byId("profileEditEmail").value = profile.email || ""; byId("profileEditBookingEmail").value = profile.bookingEmail || "";
   prepareProfileEditorMenus();
   byId("profileEditPrimary").value = profile.goals && profile.goals[0] || "general"; byId("profileEditSecondary").value = profile.goals && profile.goals[1] || "";
   byId("profileEditStyle").value = profile.trainingStyle || "auto";
@@ -1001,10 +1017,10 @@ function profileSessionSpec(session,profile) {
   };
 }
 function safeProfileReplacement(session,block,exercise,profile,used) {
-  const spec = profileSessionSpec(session,profile), needsAnchor = block.key === "strength" && isPrimaryAnchor(exercise), calibration = Array.isArray(exercise.baselineDomains) && exercise.baselineDomains.length;
+  const spec = profileSessionSpec(session,profile), needsAnchor = block.key === "strength" && acceptsAsPrimaryAnchor(exercise), calibration = Array.isArray(exercise.baselineDomains) && exercise.baselineDomains.length;
   return LIBRARY.filter((candidate) => !used.has(candidate.name) && candidate.name !== exercise.name)
     .filter((candidate) => candidate.pattern === exercise.pattern)
-    .filter((candidate) => !needsAnchor || isPrimaryAnchor(candidate))
+    .filter((candidate) => !needsAnchor || acceptsAsPrimaryAnchor(candidate))
     .filter((candidate) => !calibration || candidate.pattern === exercise.pattern)
     .filter((candidate) => !hardExerciseSafetyIssues(candidate,spec).length)
     .sort((a,b) => Number(b.region === exercise.region) - Number(a.region === exercise.region) || Number(a.exp || 1) - Number(b.exp || 1) || a.name.localeCompare(b.name))[0] || null;
@@ -1096,7 +1112,7 @@ function saveProfileEditor() {
   // larger number in force with no way to correct it.
   const tierChanged = String(previousProfile.membershipTier || "") !== String(nextTier || "");
   const updates = { membershipTier: nextTier, sessionsPerWeek: Number(byId("profileEditSessionsPerWeek").value) || 0,
-    programmedDays: tierChanged ? 0 : (Number(previousProfile.programmedDays) || 0), name: byId("profileEditName").value, username: byId("profileEditUsername").value, email:byId("profileEditEmail").value.trim().toLowerCase(), goals, trainingStyle:byId("profileEditStyle").value, cardioMode:cardioModes[0], cardioModes, experience: Number(byId("profileEditExperience").value), age: Number(byId("profileEditAge").value), minutes: Number(byId("profileEditMinutes").value), muscles: [...profileEditorDraft.muscles], injuries: [...profileEditorDraft.injuries], limitationAssessments:JSON.parse(JSON.stringify(profileEditorDraft.limitationAssessments || {})), zones: [...profileEditorDraft.zones], trainingPhase:byId("profileEditPhase").value, availableDays:Number(byId("profileEditDays").value), trainingDays:[...(profileEditorDraft.trainingDays || [])], sport:byId("profileEditSport").value, sportSchedule:byId("profileEditSchedule").value, competitionDate:byId("profileEditCompetition").value, exercisePreferences:{ ...profileEditorDraft.preferences }, assignedTrainerId:selectedAssignment.id, assignedTrainerName:selectedAssignment.name, assignedTrainerEmail:selectedAssignment.email };
+    programmedDays: tierChanged ? 0 : (Number(previousProfile.programmedDays) || 0), name: byId("profileEditName").value, username: byId("profileEditUsername").value, email:byId("profileEditEmail").value.trim().toLowerCase(), bookingEmail:byId("profileEditBookingEmail").value.trim().toLowerCase(), goals, trainingStyle:byId("profileEditStyle").value, cardioMode:cardioModes[0], cardioModes, experience: Number(byId("profileEditExperience").value), age: Number(byId("profileEditAge").value), minutes: Number(byId("profileEditMinutes").value), muscles: [...profileEditorDraft.muscles], injuries: [...profileEditorDraft.injuries], limitationAssessments:JSON.parse(JSON.stringify(profileEditorDraft.limitationAssessments || {})), zones: [...profileEditorDraft.zones], trainingPhase:byId("profileEditPhase").value, availableDays:Number(byId("profileEditDays").value), trainingDays:[...(profileEditorDraft.trainingDays || [])], sport:byId("profileEditSport").value, sportSchedule:byId("profileEditSchedule").value, competitionDate:byId("profileEditCompetition").value, exercisePreferences:{ ...profileEditorDraft.preferences }, assignedTrainerId:selectedAssignment.id, assignedTrainerName:selectedAssignment.name, assignedTrainerEmail:selectedAssignment.email };
   if (updates.email && !(typeof window.fit4lifeIsByuiEmail === "function" ? window.fit4lifeIsByuiEmail(updates.email) : (window.FIT4LIFE_ALLOW_ANY_EMAIL || /@byui\.edu$/i.test(updates.email)))) { showToast("Client login email must be a BYU-I email ending in @byui.edu"); byId("profileEditEmail").focus(); return null; }
   if (window.fit4lifeCloudRole === 'trainer' && previous) {
     const protectedLimitations = (previous.injuries || []).filter((tag) => { const item = normalizedLimitationAssessment(previous.limitationAssessments && previous.limitationAssessments[tag]); return tag === 'medicalhold' || item.severity === 'severe' || item.ability === 'cannot' || item.decision === 'hold'; });

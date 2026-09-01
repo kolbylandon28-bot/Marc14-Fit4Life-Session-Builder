@@ -45,12 +45,17 @@
     .normalize("NFKC").replace(/[‘’]/g, "'").trim().replace(/\s+/g, " ").toLowerCase();
 
   /* ---------- package -> tier ---------- */
+  // The two exports name the middle tiers differently for the same three packages:
+  // the IT build writes Bronze/Silver/Gold, the booking site writes Starter/Silver/Gold.
   const PLAN_TO_TIER = {
-    flex:    { 1:"flex_1", 2:"flex_2" },
-    bronze:  { "*":"starter" },
-    silver:  { "*":"standard" },
-    gold:    { "*":"premium" },
-    partner: { 1:"partner_1", 2:"partner_2" }
+    flex:     { 1:"flex_1", 2:"flex_2" },
+    bronze:   { "*":"starter" },
+    starter:  { "*":"starter" },
+    silver:   { "*":"standard" },
+    standard: { "*":"standard" },
+    gold:     { "*":"premium" },
+    premium:  { "*":"premium" },
+    partner:  { 1:"partner_1", 2:"partner_2" }
   };
   const STANDALONE_PACKAGES = {
     "4-session pack":"payg_4pack", "4 session pack":"payg_4pack",
@@ -103,12 +108,26 @@
   const MONTHS = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
   const WEEKDAYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
 
+  // Prefix match: the IT export writes "Monday", the booking site writes "Mon". An exact
+  // lookup returned -1 and dropped every slot in the second one.
+  function weekdayIndex(raw) {
+    const key = String(raw == null ? "" : raw).trim().toLowerCase().slice(0, 3);
+    return key.length === 3 ? WEEKDAYS.findIndex((name) => name.slice(0, 3) === key) : -1;
+  }
+
   function parseClock(raw) {
-    const match = String(raw || "").trim().match(/^(\d{1,2}):(\d{2})\s*([AaPp])\.?[Mm]\.?$/);
-    if (!match) return null;
-    let hour = Number(match[1]) % 12;
-    if (match[3].toLowerCase() === "p") hour += 12;
-    return hour * 60 + Number(match[2]);
+    const text = String(raw == null ? "" : raw).trim();
+    const half = text.match(/^(\d{1,2}):(\d{2})\s*([AaPp])\.?[Mm]\.?$/);
+    if (half) {
+      const hour = Number(half[1]), minute = Number(half[2]);
+      if (hour < 1 || hour > 12 || minute > 59) return null;
+      return ((hour % 12) + (half[3].toLowerCase() === "p" ? 12 : 0)) * 60 + minute;
+    }
+    // The booking site's Consultation column can carry a 24-hour clock.
+    const full = text.match(/^(\d{1,2}):(\d{2})$/);
+    if (!full) return null;
+    const hour = Number(full[1]), minute = Number(full[2]);
+    return hour > 23 || minute > 59 ? null : hour * 60 + minute;
   }
   // Wrapped, because start + 60 on an 11:30 PM slot produced "24:30" - not a time, and
   // Invalid Date to anything downstream that builds a Date from it.
@@ -152,8 +171,8 @@
         // A booking that ends "before" it starts has crossed midnight; the stated end time is
         // real and must not be thrown away and replaced with an invented duration.
         if (end != null && end < start) end += 1440;
-        const weekdayIndex = WEEKDAYS.findIndex((name) => name.slice(0,3) === dated[1].slice(0,3).toLowerCase());
-        const year = resolveYear(month, day, reference, weekdayIndex < 0 ? null : weekdayIndex);
+        const dow = weekdayIndex(dated[1]);
+        const year = resolveYear(month, day, reference, dow < 0 ? null : dow);
         const kind = /consult/i.test(dated[6]) ? "consultation" : "appointment";
         // A zero-length booking exists in the real file (12:30 PM-12:30 PM); treat the end
         // as unknown rather than inventing a duration that contradicts what was booked.
@@ -171,7 +190,7 @@
       // "Monday 4:00 PM" - a repeating slot with no end and no date.
       const weekly = token.match(/^([A-Za-z]+)\s+(\d{1,2}:\d{2}\s*[AaPp]\.?[Mm]\.?)$/);
       if (weekly) {
-        const weekday = WEEKDAYS.indexOf(weekly[1].toLowerCase());
+        const weekday = weekdayIndex(weekly[1]);
         const start = parseClock(weekly[2]);
         if (weekday < 0 || start == null) { out.warnings.push('Could not read the weekly slot "' + token + '"'); return; }
         out.recurring.push({ weekday, weekdayName: WEEKDAYS[weekday], startTime: clockLabel(start),
@@ -184,57 +203,298 @@
     return out;
   }
 
+  /* ---------- booking-site columns ---------- */
+  // "Tue 9:00 AM". Scanned rather than split on a delimiter: the file carries one slot per
+  // row today and nobody promised what separates two. Whatever the scan does not consume is
+  // reported with its raw text instead of vanishing.
+  const WEEKLY_SCAN = /(sun|mon|tue|wed|thu|fri|sat)[a-z]*\.?,?\s+(\d{1,2}:\d{2}\s*[AaPp]\.?[Mm]\.?|\d{1,2}:\d{2})/gi;
+  function parseWeeklyTimes(raw, defaultMinutes, label) {
+    const out = { recurring:[], warnings:[] };
+    const text = String(raw == null ? "" : raw).trim();
+    if (!text) return out;
+    let leftover = text, match;
+    WEEKLY_SCAN.lastIndex = 0;
+    while ((match = WEEKLY_SCAN.exec(text)) != null) {
+      const weekday = weekdayIndex(match[1]), start = parseClock(match[2]);
+      if (weekday < 0 || start == null) continue;
+      leftover = leftover.replace(match[0], " ");
+      out.recurring.push({ weekday, weekdayName:WEEKDAYS[weekday], startTime:clockLabel(start),
+        endTime:clockLabel(start + defaultMinutes), endTimeAssumed:true,
+        endsNextDay:start + defaultMinutes >= 1440, raw:match[0].trim() });
+    }
+    const rest = leftover.replace(/[;,&|\u00b7\/-]/g, " ").replace(/\band\b/gi, " ").trim();
+    if (rest) out.warnings.push('could not read part of ' + label + ': "' + rest + '"');
+    return out;
+  }
+
+  // "2026-09-04 8:15 AM" - the only fields in either export that carry their own year.
+  function parseIsoDateTime(raw) {
+    const match = String(raw == null ? "" : raw).trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T,]|\s)*(.*)$/);
+    if (!match) return null;
+    const month = Number(match[2]), day = Number(match[3]);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    const clock = match[4].trim(), start = clock ? parseClock(clock) : null;
+    if (clock && start == null) return null;
+    return { date:match[1] + "-" + String(month).padStart(2,"0") + "-" + String(day).padStart(2,"0"), start };
+  }
+
+  // "Mon Aug 31" - a weekday and a date with no year, resolved the same way Chosen Times is.
+  function parseShortDate(raw, reference) {
+    const text = String(raw == null ? "" : raw).trim();
+    if (!text) return "";
+    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(text)) { const iso = parseIsoDateTime(text); return iso ? iso.date : ""; }
+    const match = text.match(/^(?:([A-Za-z]{3,9})\.?,?\s+)?([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:,?\s*(\d{4}))?$/);
+    if (!match) return "";
+    const month = MONTHS[match[2].slice(0,3).toLowerCase()], day = Number(match[3]);
+    if (month == null || !day || day > 31) return "";
+    const dow = match[1] ? weekdayIndex(match[1]) : -1;
+    const year = match[4] ? Number(match[4])
+      : resolveYear(month, day, reference instanceof Date ? reference : new Date(reference), dow < 0 ? null : dow);
+    return year + "-" + String(month + 1).padStart(2,"0") + "-" + String(day).padStart(2,"0");
+  }
+
+  // UNVERIFIED SHAPE: Session times was empty in every row of the export received so far, so
+  // it is read permissively - ISO stamps, IT-style dated entries and bare weekly slots all
+  // resolve - and anything unreadable is surfaced verbatim rather than dropped.
+  function parseSessionTimes(raw, options, label) {
+    const settings = options || {};
+    const defaultMinutes = Number(settings.defaultMinutes) || 60;
+    const out = { appointments:[], recurring:[], warnings:[] };
+    const text = String(raw == null ? "" : raw).trim();
+    if (!text) return out;
+    text.split(/[;\n]/).map((token) => token.trim()).filter(Boolean).forEach((token) => {
+      // Split only before a clock, so the hyphens inside "2026-09-04" survive.
+      const range = token.split(/\s*[\u2013\u2014-]\s*(?=\d{1,2}:\d{2})/);
+      const stamp = parseIsoDateTime(range[0].replace(/\s*\u00b7.*$/, "").trim());
+      if (stamp && stamp.start != null) {
+        let end = range[1] ? parseClock(range[1].replace(/\s*\u00b7.*$/, "").trim()) : null;
+        if (end != null && end < stamp.start) end += 1440;
+        const finish = end != null && end > stamp.start ? end : null;
+        const close = finish != null ? finish : stamp.start + defaultMinutes;
+        out.appointments.push({ date:stamp.date, startTime:clockLabel(stamp.start),
+          endTime:clockLabel(close), endTimeAssumed:finish == null, endsNextDay:close >= 1440,
+          yearAssumed:false, kind:/consult/i.test(token) ? "consultation" : "appointment",
+          label:(token.split("\u00b7")[1] || label).trim(), raw:token });
+        return;
+      }
+      const dated = parseChosenTimes(token, settings);
+      if (dated.appointments.length || dated.recurring.length) {
+        out.appointments.push(...dated.appointments);
+        out.recurring.push(...dated.recurring);
+        return;
+      }
+      const weekly = parseWeeklyTimes(token, defaultMinutes, label);
+      if (weekly.recurring.length) { out.recurring.push(...weekly.recurring); return; }
+      out.warnings.push('could not read the ' + label + ' entry "' + token + '"');
+    });
+    return out;
+  }
+
   /* ---------- phase 2: parse ---------- */
-  const REQUIRED_COLUMNS = ["Member","Email","Package","Trainer","Chosen Times","Status"];
+  // Two systems export bookings and both are live: the BYU-I IT build and Jason's own booking
+  // site. Their columns barely overlap, so the format is detected from the header and
+  // everything downstream works on one row shape regardless of which file arrived.
+  const FORMATS = [
+    { id:"it", label:"BYU-I IT export", marker:"Chosen Times",
+      // Trainer and Chosen Times are deliberately not required - an export missing either
+      // still yields tiers, and one older download really does omit columns.
+      required:["Member","Email","Package","Status"],
+      columns:{ name:"Member", email:"Email", phone:"Phone", package:"Package", status:"Status",
+        times:"Chosen Times", trainerName:"Trainer", nextRenewal:"Next Renewal" } },
+    { id:"booking", label:"booking-site export", marker:"Confirmation #",
+      required:["Client name","Email","Package","Status"],
+      columns:{ confirmation:"Confirmation #", name:"Client name", email:"Email", phone:"Phone",
+        package:"Package", price:"Price", status:"Status", paid:"Paid", bookedOn:"Booked on",
+        weekly:"Weekly times", sessions:"Session times", consultation:"Consultation",
+        nextRenewal:"Reserved through", trainerName:"Trainer name", trainerEmail:"Trainer email",
+        partnerName:"Partner name", partnerEmail:"Partner email", partnerPhone:"Partner phone",
+        notes:"Notes" } }
+  ];
+
+  // Scored rather than first-match, so a file that satisfies one format is never judged
+  // against the other, and a near miss can say which columns it was short of.
+  function chooseBookingFormat(header) {
+    const names = (header || []).map((cell) => String(cell).trim());
+    let best = null;
+    FORMATS.forEach((format) => {
+      const missing = format.required.filter((name) => !names.includes(name));
+      const score = (format.required.length - missing.length) + (names.includes(format.marker) ? 10 : 0);
+      if (!best || score > best.score) best = { format, missing, score };
+    });
+    return best;
+  }
+  function detectBookingFormat(header) {
+    const best = chooseBookingFormat(header);
+    return best && !best.missing.length ? best.format.id : "";
+  }
+
+  // Matched on a keyword, not the whole sentence, because the questions are free text on
+  // Jason's side and rewording one must not silently orphan its column.
+  const INTAKE_QUESTIONS = [
+    { field:"goals",        test:/fitness goal|top goal/i },
+    { field:"experience",   test:/training experience|experience so far/i },
+    { field:"injuries",     test:/injur|pain|health condition/i },
+    { field:"availability", test:/days a week|which days|days\/times/i },
+    { field:"extra",        test:/anything else/i }
+  ];
+  function intakeColumns(header) {
+    const found = {};
+    header.forEach((raw, position) => {
+      const text = String(raw).trim();
+      if (!/^Q:/i.test(text) && !/questionnaire/i.test(text)) return;
+      const question = text.replace(/^Q:\s*/i, "");
+      const hit = INTAKE_QUESTIONS.find((item) => item.test.test(question));
+      const field = hit ? hit.field : "other";
+      if (!found[field]) found[field] = [];
+      found[field].push({ position, question });
+    });
+    return found;
+  }
+  function readIntake(cells, columns) {
+    const out = {};
+    Object.keys(columns).forEach((field) => {
+      const parts = columns[field]
+        .map((item) => String(cells[item.position] == null ? "" : cells[item.position]).trim())
+        .filter(Boolean);
+      if (parts.length) out[field] = parts.join(" | ");
+    });
+    return out;
+  }
 
   function parseBookingExport(text, options) {
     const settings = options || {};
-    const result = { ok:false, fingerprint:fileFingerprint(text), rows:[], clients:[],
-      trainerNames:[], warnings:[], errors:[] };
+    const result = { ok:false, format:"", formatLabel:"", fingerprint:fileFingerprint(text),
+      rows:[], clients:[], trainerNames:[], warnings:[], errors:[] };
     const grid = parseCsv(text);
     if (!grid.length) { result.errors.push("The file is empty."); return result; }
 
     const header = grid[0].map((cell) => String(cell).trim());
-    const missing = REQUIRED_COLUMNS.filter((name) => !header.includes(name));
-    if (missing.length) {
-      result.errors.push("These expected columns are missing: " + missing.join(", ")
-        + ". Found: " + header.join(", ") + ".");
+    const choice = chooseBookingFormat(header);
+    if (!choice || choice.missing.length) {
+      const missing = choice ? choice.missing : [];
+      // An older IT download omits Status entirely. Parsing it would "succeed" and quietly
+      // assign nobody a tier, so it is named as the specific problem it is.
+      const hint = missing.length === 1 && missing[0] === "Status"
+        ? " Every row's tier is decided by Status, so an export without that column cannot be"
+          + " imported - ask for the version of the report that includes it."
+        : "";
+      result.errors.push("This does not look like either booking export. The closest is the "
+        + (choice ? choice.format.label : "BYU-I IT export") + ", which is missing: "
+        + (missing.length ? missing.join(", ") : "every expected column")
+        + ". Found: " + header.join(", ") + "." + hint);
       return result;
     }
-    const index = (name) => header.indexOf(name);
+    const format = choice.format, columns = format.columns;
+    result.format = format.id;
+    result.formatLabel = format.label;
+    const intakeCols = intakeColumns(header);
+    const reference = settings.reference ? new Date(settings.reference) : new Date();
+    const defaultMinutes = Number(settings.defaultMinutes) || 60;
+    // Resolved once. indexOf inside the row reader re-scanned the header for every field of
+    // every row to get the same answer each time.
+    const at = {};
+    Object.keys(columns).forEach((key) => { at[key] = header.indexOf(columns[key]); });
 
     grid.slice(1).forEach((cells, position) => {
-      const value = (name) => String(cells[index(name)] == null ? "" : cells[index(name)]).trim();
-      const email = normalizeEmail(value("Email"));
-      const pkg = parsePackage(value("Package"));
-      const status = parseStatus(value("Status"));
-      const times = parseChosenTimes(value("Chosen Times"), settings);
+      const line = position + 2;
+      const value = (key) => at[key] == null || at[key] < 0 ? ""
+        : String(cells[at[key]] == null ? "" : cells[at[key]]).trim();
+      const email = normalizeEmail(value("email"));
+      const pkg = parsePackage(value("package"));
+      const status = parseStatus(value("status"));
+      const notes = [];
+      let recurring = [], appointments = [];
+
+      if (format.id === "it") {
+        const times = parseChosenTimes(value("times"), settings);
+        recurring = times.recurring;
+        appointments = times.appointments;
+        times.warnings.forEach((warning) => notes.push(warning));
+      } else {
+        const weekly = parseWeeklyTimes(value("weekly"), defaultMinutes, "Weekly times");
+        const sessions = parseSessionTimes(value("sessions"), settings, "Session times");
+        recurring = weekly.recurring.concat(sessions.recurring);
+        appointments = sessions.appointments;
+        weekly.warnings.concat(sessions.warnings).forEach((warning) => notes.push(warning));
+        const consultRaw = value("consultation");
+        if (consultRaw) {
+          const consult = parseIsoDateTime(consultRaw);
+          if (consult && consult.start != null) {
+            const close = consult.start + defaultMinutes;
+            appointments.push({ date:consult.date, startTime:clockLabel(consult.start),
+              endTime:clockLabel(close), endTimeAssumed:true, endsNextDay:close >= 1440,
+              yearAssumed:false, kind:"consultation", label:"Consultation", raw:consultRaw });
+          } else {
+            notes.push('could not read the consultation "' + consultRaw + '"');
+          }
+        }
+      }
+
       const row = {
-        line: position + 2, name: value("Member"), email, phone: value("Phone"),
-        packageRaw: pkg.raw, plan: pkg.plan, tierId: pkg.tierId,
-        sessionsPerWeek: pkg.sessionsPerWeek, unmappedPackage: pkg.unmapped,
-        trainerName: value("Trainer"), trainerKey: normalizeName(value("Trainer")),
-        status, statusRaw: value("Status"), nextRenewal: value("Next Renewal"),
-        recurring: times.recurring, appointments: times.appointments
+        line, format:format.id, name:value("name"), email, phone:value("phone"),
+        packageRaw:pkg.raw, plan:pkg.plan, tierId:pkg.tierId,
+        sessionsPerWeek:pkg.sessionsPerWeek, unmappedPackage:pkg.unmapped,
+        trainerName:value("trainerName"), trainerEmail:normalizeEmail(value("trainerEmail")),
+        // Name first, so the alias table built against the IT export keeps matching. The
+        // email only stands in when a row names no trainer at all.
+        trainerKey:normalizeName(value("trainerName")) || normalizeEmail(value("trainerEmail")),
+        status, statusRaw:value("status"), nextRenewal:value("nextRenewal"),
+        recurring, appointments
       };
+      if (format.id === "booking") {
+        row.confirmation = value("confirmation");
+        row.price = value("price");
+        row.paidRaw = value("paid");
+        row.paid = /^(yes|y|true|paid)$/i.test(row.paidRaw);
+        row.bookedOnRaw = value("bookedOn");
+        row.bookedOn = parseShortDate(row.bookedOnRaw, reference);
+        if (row.bookedOnRaw && !row.bookedOn) notes.push('could not read the booking date "' + row.bookedOnRaw + '"');
+        row.notes = value("notes");
+        row.intake = readIntake(cells, intakeCols);
+        const partner = { name:value("partnerName"), email:normalizeEmail(value("partnerEmail")), phone:value("partnerPhone") };
+        row.partner = partner.name || partner.email || partner.phone ? partner : null;
+      }
+
       // A row with no email cannot be matched to anyone, but it must not take the rest of
       // the file down with it - a stray line should never block importing everyone else.
-      if (!email) { result.warnings.push("Row " + row.line + " has no email address and was skipped."); row.skipped = true; }
-      if (pkg.unmapped) result.warnings.push('Row ' + row.line + ': package "' + pkg.raw + '" does not match any tier and needs a decision.');
-      if (status === "unknown") result.warnings.push('Row ' + row.line + ': status "' + row.statusRaw + '" is not one this app knows.');
-      times.warnings.forEach((warning) => result.warnings.push("Row " + row.line + ": " + warning));
+      if (!email) { result.warnings.push("Row " + line + " has no email address and was skipped."); row.skipped = true; }
+      if (pkg.unmapped) result.warnings.push('Row ' + line + ': package "' + pkg.raw + '" does not match any tier and needs a decision.');
+      if (status === "unknown") result.warnings.push('Row ' + line + ': status "' + row.statusRaw + '" is not one this app knows.');
+      notes.forEach((warning) => result.warnings.push("Row " + line + ": " + warning));
       result.rows.push(row);
     });
 
     const usable = result.rows.filter((row) => !row.skipped);
     result.skippedRows = result.rows.length - usable.length;
     result.clients = collapseRows(usable, result.warnings);
+    flagSharedPhones(result.clients, result.warnings);
     result.trainerNames = distinctTrainers(usable);
     // Only a structural problem - wrong columns, an empty file, nothing usable at all -
     // stops the import. Individual bad rows are reported and stepped over.
     if (!usable.length) result.errors.push("No row in this file had an email address, so nothing could be matched.");
     result.ok = result.errors.length === 0;
     return result;
+  }
+
+  // Same number, different addresses. Jason's own account appears under four addresses in the
+  // real export. Reported for a human to judge, never merged: two people really can share a
+  // number, and two rows here do so under different names.
+  function flagSharedPhones(clients, warnings) {
+    const byPhone = new Map();
+    clients.forEach((client) => {
+      const digits = String(client.phone || "").replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "");
+      if (digits.length < 7) return;
+      if (!byPhone.has(digits)) byPhone.set(digits, []);
+      byPhone.get(digits).push(client);
+    });
+    byPhone.forEach((group, digits) => {
+      if (group.length < 2) return;
+      group.forEach((client) => {
+        client.sharesPhoneWith = group.filter((other) => other !== client).map((other) => other.email);
+      });
+      warnings.push(group.length + " accounts share the phone ending " + digits.slice(-4) + " ("
+        + group.map((client) => client.email).join(", ") + "). They may be one person under several addresses.");
+    });
   }
 
   // Live rows are what a client currently holds. Expired and cancelled rows are history and
@@ -300,6 +560,15 @@
         warnings.push(email + " has " + droppedBookings + " booking(s) on expired or cancelled packages, which were not imported.");
       }
 
+      // Booking-site extras. Taken from the ranked list so a live row wins over a dead one,
+      // and merged per field: one enrollment can carry the intake answers while another
+      // carries the note.
+      const pick = (field) => { const hit = ranked.find((row) => row[field]); return hit ? hit[field] : ""; };
+      const intake = {};
+      ranked.forEach((row) => Object.keys(row.intake || {}).forEach((field) => {
+        if (!intake[field]) intake[field] = row.intake[field];
+      }));
+
       return {
         email, name: chosen.name, phone: chosen.phone,
         tierId: tierSource ? tierSource.tierId : "",
@@ -310,7 +579,14 @@
         status: chosen.status, nextRenewal: chosen.nextRenewal,
         appointments, recurring,
         rowCount: group.length, competingPackages: competing.length > 0,
-        droppedBookings, historyStatuses: group.map((row) => row.status)
+        droppedBookings, historyStatuses: group.map((row) => row.status),
+        format: chosen.format || "",
+        trainerEmail: pick("trainerEmail"),
+        confirmations: [...new Set(group.map((row) => row.confirmation).filter(Boolean))],
+        bookedOn: pick("bookedOn"), price: pick("price"),
+        paid: live.length ? live.some((row) => row.paid === true) : group.some((row) => row.paid === true),
+        notes: pick("notes"), intake,
+        partner: (ranked.find((row) => row.partner) || {}).partner || null
       };
     });
   }
@@ -319,10 +595,66 @@
     const seen = new Map();
     rows.forEach((row) => {
       if (!row.trainerKey) return;
-      if (!seen.has(row.trainerKey)) seen.set(row.trainerKey, { key:row.trainerKey, name:row.trainerName, count:0 });
-      seen.get(row.trainerKey).count++;
+      if (!seen.has(row.trainerKey)) seen.set(row.trainerKey, { key:row.trainerKey, name:row.trainerName, email:"", count:0 });
+      const entry = seen.get(row.trainerKey);
+      entry.count++;
+      // The booking site names the trainer's address; the IT export never did. Kept so the
+      // link-a-trainer screen can match on it instead of on a display name.
+      if (!entry.email && row.trainerEmail) entry.email = row.trainerEmail;
+      if (!entry.name && row.trainerName) entry.name = row.trainerName;
     });
     return [...seen.values()].sort((a, b) => b.count - a.count);
+  }
+
+  /* ---------- identity: two addresses per client ---------- */
+  // Jason's non-IT site issues personal addresses; his IT build will issue BYU-I ones. A
+  // profile keeps a slot for each and the diff indexes both, so whichever system sent the
+  // file lands on the same record and no switchover migration is ever needed.
+  // Tested strictly here rather than through isByuiEmail(), which returns true for ANY
+  // address while FIT4LIFE_ALLOW_ANY_EMAIL is on for the pilot - routing every gmail
+  // address into the BYU-I slot and defeating the whole arrangement.
+  const BYUI_EMAIL = /@byui\.edu$/i;
+  function emailSlotsFor(address) {
+    const email = normalizeEmail(address);
+    if (!email) return {};
+    // The other slot is deliberately left alone. Overwriting it would discard the very
+    // address that lets the OTHER export find this client.
+    return BYUI_EMAIL.test(email) ? { email } : { bookingEmail:email };
+  }
+
+  const phoneDigits = (value) => String(value == null ? "" : value).replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "");
+  // Suffixes carry no identity and one real row is "Jaden Jeffrey Swarts, Esq."
+  const NAME_NOISE = /^(jr|sr|ii|iii|iv|v|esq|dr|mr|mrs|ms|md)\.?$/;
+  function nameTokens(value) {
+    return normalizeName(value).replace(/[.,]/g, " ").split(/\s+/)
+      .filter((token) => token.length > 1 && !NAME_NOISE.test(token));
+  }
+
+  // The bridge between the two exports for a client whose second address was never captured.
+  // Deliberately suggestive, never decisive: the caller queues these for a human. Phone alone
+  // is NOT treated as strong, because two rows in the real export share a number under
+  // different names.
+  function probableIdentityMatches(client, profiles) {
+    const phone = phoneDigits(client && client.phone);
+    const tokens = nameTokens(client && client.name);
+    const full = tokens.join(" "), last = tokens.length ? tokens[tokens.length - 1] : "";
+    const out = [];
+    (profiles || []).forEach((profile) => {
+      const samePhone = phone.length >= 7 && phoneDigits(profile.phone) === phone;
+      const other = nameTokens(profile.name);
+      const sameFullName = Boolean(full) && other.join(" ") === full;
+      const sameLastName = Boolean(last) && other.length > 0 && other[other.length - 1] === last;
+      // A shared last name alone is noise on a campus; it only counts alongside a phone.
+      if (!samePhone && !sameFullName) return;
+      const reasons = [];
+      if (samePhone) reasons.push("same phone number");
+      if (sameFullName) reasons.push("same name");
+      else if (sameLastName) reasons.push("same last name");
+      out.push({ profileId:profile.id, name:profile.name || "", email:profile.email || "",
+        bookingEmail:profile.bookingEmail || "", reasons,
+        strength:samePhone && (sameFullName || sameLastName) ? "strong" : "possible" });
+    });
+    return out.sort((a, b) => (b.strength === "strong") - (a.strength === "strong")).slice(0, 4);
   }
 
   /* ---------- phase 3: diff ---------- */
@@ -337,7 +669,7 @@
 
     const diff = { fingerprint:parsed && parsed.fingerprint || "", alreadyImported:false, aborted:false,
       created:[], updated:[], unchanged:[], missing:[], review:[], unresolvedTrainers:[],
-      errors:[], nextState:previous };
+      identityChecks:[], errors:[], nextState:previous };
 
     // A file that failed to parse describes nothing. Without this the whole roster looked
     // absent and every client marched toward the two-miss threshold on a bad download.
@@ -365,9 +697,21 @@
     const touched = new Set();
     parsed.clients.forEach((client) => {
       if (duplicates.has(client.email)) { diff.unchanged.push({ email:client.email, reason:"more than one client record uses this address" }); return; }
-      const profile = byEmail.get(client.email);
+      let profile = byEmail.get(client.email);
+      // A decision the trainer already made about this address. Recorded so the same question
+      // is not asked on every future import.
+      const decided = own(previous.identityDecisions || {}, client.email);
+      if (!profile && decided && decided !== "new") profile = profiles.find((item) => item.id === decided) || null;
       if (!profile) {
         if (!LIVE.includes(client.status)) { diff.unchanged.push({ email:client.email, reason:"not a live package, and no existing client to update" }); return; }
+        // Jason's two systems issue different addresses for the same person, so an unmatched
+        // address is not proof of a new client. Where someone on file looks like the same
+        // person, the row is HELD rather than created - nothing happens until a human says
+        // which it is, because a wrong merge blends two clients' training histories.
+        if (!decided) {
+          const candidates = probableIdentityMatches(client, profiles);
+          if (candidates.length) { diff.identityChecks.push({ client, candidates }); return; }
+        }
         touched.add(client.email);
         diff.created.push({ client, invite:false });
         if (client.unmappedPackage || !client.tierId) diff.review.push({ kind:"unmapped_package", email:client.email, detail:client.packageRaw });
@@ -409,7 +753,7 @@
     // truncated export to reach the threshold on its own, defeating the whole rule.
     if (diff.alreadyImported) {
       diff.nextState = { fingerprint:parsed.fingerprint, missCounts:previous.missCounts || {},
-        knownEmails:previous.knownEmails || [] };
+        knownEmails:previous.knownEmails || [], identityDecisions:previous.identityDecisions || {} };
       diff.unresolvedTrainers = unresolvedTrainerNames(parsed, settings);
       return diff;
     }
@@ -427,7 +771,8 @@
     // Only addresses that became a real client are remembered. Recording ones the diff
     // refused to act on produced a missing-twice prompt that could never be cleared.
     diff.nextState = { fingerprint:parsed.fingerprint, missCounts,
-      knownEmails:[...new Set([...(previous.knownEmails || []), ...touched])] };
+      knownEmails:[...new Set([...(previous.knownEmails || []), ...touched])],
+      identityDecisions:previous.identityDecisions || {} };
     return diff;
   }
 
@@ -440,6 +785,12 @@
 
   window.parseBookingExport = parseBookingExport;
   window.diffBookingImport = diffBookingImport;
+  window.detectBookingFormat = detectBookingFormat;
+  window.bookingEmailSlotsFor = emailSlotsFor;
+  window.probableIdentityMatches = probableIdentityMatches;
   window.bookingImportInternals = { parseCsv, parsePackage, parseChosenTimes, parseStatus,
-    normalizeName, normalizeEmail, fileFingerprint, resolveYear };
+    normalizeName, normalizeEmail, fileFingerprint, resolveYear, detectBookingFormat,
+    emailSlotsFor, probableIdentityMatches, phoneDigits, nameTokens,
+    parseWeeklyTimes, parseIsoDateTime, parseShortDate, parseSessionTimes, weekdayIndex,
+    parseClock, FORMATS };
 })();

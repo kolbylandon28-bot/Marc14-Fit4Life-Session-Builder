@@ -110,6 +110,152 @@ Eve Marsh,1,eve@example.edu,Bronze — 1 session / week,A,"Wed, Aug 12 3:00 PM�
 Eve Marsh,1,eve@example.edu,Gold — 3 sessions / week,B,"Wed, Aug 12 3:00 PM–3:30 PM · Session",Active,`;
 t("same start, different end keeps both", P(twoRows).clients[0].appointments.length, 2);
 
+console.log("\n--- the booking-site export (26 columns) ---");
+// Also INVENTED. Same columns and quirks as the real file - abbreviated weekdays, a
+// consultation carrying its own year, Starter where the IT export says Bronze, one person
+// under two enrollments, two accounts sharing a phone - with made-up names and addresses.
+// Rows are built from the column list rather than typed as CSV so a field cannot drift.
+const quote = (cell) => /[",\n]/.test(cell) ? '"' + cell.replace(/"/g, '""') + '"' : cell;
+const BOOK_COLS = ["Confirmation #","Client name","Phone","Email","Package","Price","Status","Paid",
+  "Booked on","Weekly times","Session times","Consultation","Reserved through","Trainer name",
+  "Trainer email","Partner name","Partner email","Partner phone","Notes",
+  "Q: What are your top fitness goals for this semester?",
+  "Q: Do you have any injuries, pain, or health conditions your trainer should know about?",
+  "Other questionnaire answers"];
+const bookRow = (over) => BOOK_COLS.map((name) => quote(over[name] == null ? "" : over[name])).join(",");
+const BOOKING = "\uFEFF" + BOOK_COLS.map(quote).join(",") + "\n" + [
+  bookRow({ "Confirmation #":"F4L-2001", "Client name":"Robin Vale", Phone:"5550100",
+    Email:"rvale@example.edu", Package:"Starter — 1 session / week", Price:"$145.00 /mo",
+    Status:"active", Paid:"no", "Booked on":"Mon Aug 31", "Weekly times":"Tue 9:00 AM; Thu 4:30 PM",
+    Consultation:"2026-09-04 8:15 AM", "Reserved through":"2026-12-11",
+    "Trainer name":"Casey Fern", "Trainer email":"CFern@example.edu",
+    Notes:"Wants to lift, carefully",
+    "Q: What are your top fitness goals for this semester?":"Build strength",
+    "Q: Do you have any injuries, pain, or health conditions your trainer should know about?":"Sore left knee" }),
+  bookRow({ "Confirmation #":"F4L-2002", "Client name":"Robin Vale", Phone:"5550100",
+    Email:"rvale@example.edu", Package:"Gold — 3 sessions / week", Price:"$359.00 /mo",
+    Status:"active", Paid:"yes", "Booked on":"Mon Aug 31", "Weekly times":"Wed 6:00 AM",
+    Consultation:"2026-09-05 14:00", "Reserved through":"2026-12-11",
+    "Trainer name":"Casey Fern", "Trainer email":"cfern@example.edu" }),
+  bookRow({ "Confirmation #":"F4L-2003", "Client name":"Dana Reyes", Phone:"(555) 020-0300",
+    Email:"dreyes@example.edu", Package:"Flex — 1 session / week", Price:"$49.00 /mo",
+    Status:"active", Paid:"no", "Booked on":"Aug 31", "Weekly times":"Fri 7:15 AM",
+    "Session times":"whenever they can fit me in", "Reserved through":"2026-12-11" }),
+  bookRow({ "Confirmation #":"F4L-2004", "Client name":"Sam Pike", Phone:"15550200300",
+    Email:"spike@example.edu", Package:"Partner — 2 sessions / week", Price:"$55.00 /mo",
+    Status:"active", Paid:"no", "Booked on":"Mon Aug 31", "Weekly times":"Sat 11:00 AM",
+    "Reserved through":"2026-12-11", "Partner name":"Dana Reyes",
+    "Partner email":"dreyes@example.edu", "Partner phone":"5550200300" }),
+  bookRow({ "Confirmation #":"F4L-2005", "Client name":"No Address", Phone:"5550400",
+    Package:"Flex — 1 session / week", Status:"active" }),
+  bookRow({ "Confirmation #":"F4L-2006", "Client name":"Lee Ash", Phone:"5550500",
+    Email:"lash@example.edu", Package:"Silver — 2 sessions / week", Status:"cancelled",
+    "Weekly times":"Mon 5:00 PM", "Reserved through":"2026-10-01" })
+].join("\n");
+
+const b = P(BOOKING);
+const rv = b.clients.find((c) => c.email === "rvale@example.edu");
+t("the 26-column file is recognised",             b.format, "booking");
+t("it parses without a structural error",         b.ok, true);
+t("the IT file is still recognised",              P(SAMPLE).format, "it");
+t("abbreviated weekdays resolve",                 rv.recurring.map((r) => r.weekdayName).sort().join(","), "thursday,tuesday,wednesday");
+t("Gold outranks Starter across enrollments",     rv.tierId, "premium");
+t("Starter maps to the same tier as Bronze",      I.parsePackage("Starter — 1 session / week").tierId, "starter");
+t("Silver still maps to standard",                I.parsePackage("Silver — 2 sessions / week").tierId, "standard");
+t("both confirmation numbers are kept",           rv.confirmations.join(","), "F4L-2001,F4L-2002");
+t("Reserved through becomes the renewal date",    rv.nextRenewal, "2026-12-11");
+t("Booked on resolves its missing year",          rv.bookedOn, "2026-08-31");
+t("a date with no weekday still resolves",        b.clients.find((c) => c.email === "dreyes@example.edu").bookedOn, "2026-08-31");
+t("the consultation is an appointment",           rv.appointments.length, 2);
+t("a consultation keeps its own year",            rv.appointments.every((a) => a.yearAssumed === false), true);
+t("a 12-hour consultation time is read",          rv.appointments.find((a) => a.date === "2026-09-04").startTime, "08:15");
+t("a 24-hour consultation time is read",          rv.appointments.find((a) => a.date === "2026-09-05").startTime, "14:00");
+t("a quoted note keeps its comma",                rv.notes, "Wants to lift, carefully");
+t("the goals answer is captured",                 rv.intake.goals, "Build strength");
+t("the injuries answer is captured",              rv.intake.injuries, "Sore left knee");
+t("the trainer address is captured lowercased",   rv.trainerEmail, "cfern@example.edu");
+t("the trainer list carries the address",         b.trainerNames[0].email, "cfern@example.edu");
+t("partner details are kept",                     b.clients.find((c) => c.email === "spike@example.edu").partner.email, "dreyes@example.edu");
+t("a row with no email is skipped, not fatal",    b.skippedRows, 1);
+t("unreadable Session times warns, not drops",    b.warnings.some((w) => /Session times entry "whenever/.test(w)), true);
+t("that row still produced a client",             !!b.clients.find((c) => c.email === "dreyes@example.edu"), true);
+t("a shared phone is reported",                   b.warnings.some((w) => /share the phone ending 0300/.test(w)), true);
+t("a formatted phone matches a raw one",          b.clients.find((c) => c.email === "spike@example.edu").sharesPhoneWith.join(","), "dreyes@example.edu");
+t("a cancelled-only client takes no tier",        b.clients.find((c) => c.email === "lash@example.edu").tierId, "");
+
+console.log("\n--- refusing files that only look close enough ---");
+const noStatus = P("Member,Phone,Email,Package,Trainer,Chosen Times\nA,1,a@b.c,Flex — 1 session / week,T,,");
+t("an IT export missing Status is refused",       noStatus.ok, false);
+t("and the message says why",                     /tier is decided by Status/.test(noStatus.errors[0]), true);
+t("an unrelated CSV is refused",                  P("Name,Nickname\nA,B").ok, false);
+t("a booking file missing Status is refused",     P('Confirmation #,Client name,Email,Package\n1,A,a@b.c,Flex').ok, false);
+t("Trainer is optional, not required",            P("Member,Email,Package,Status\nA,a@b.c,Flex — 1 session / week,Active").ok, true);
+t("13:00 PM is not a time",                       I.parseClock("13:00 PM"), null);
+t("a bare 24-hour clock is",                      I.parseClock("14:05"), 845);
+t("Weds and Wednesday are the same day",          I.weekdayIndex("Weds"), I.weekdayIndex("Wednesday"));
+
+console.log("\n--- two addresses per client, so either export finds them ---");
+// Jason's non-IT site issues personal addresses and his IT build will issue BYU-I ones. A
+// client must be reachable by BOTH without anyone editing anything on switchover day.
+t("a BYU-I address fills the login slot",         JSON.stringify(I.emailSlotsFor("Sam@BYUI.edu")), '{"email":"sam@byui.edu"}');
+t("a personal address fills the booking slot",    JSON.stringify(I.emailSlotsFor("sam@gmail.com")), '{"bookingEmail":"sam@gmail.com"}');
+t("only ever one slot, so the other survives",    Object.keys(I.emailSlotsFor("sam@gmail.com")).length, 1);
+t("a blank address writes nothing",               JSON.stringify(I.emailSlotsFor("  ")), "{}");
+t("a lookalike domain is not BYU-I",              JSON.stringify(I.emailSlotsFor("sam@notbyui.edu.co")), '{"bookingEmail":"sam@notbyui.edu.co"}');
+
+console.log("\n--- who is this? (never merged automatically) ---");
+// Written three different ways on purpose: the export, the roster and a US country code
+// all format the same number differently and every one of them has to match.
+const SAME = { name:"Robin Vale", phone:"15550100100" };
+const roster = [
+  { id:"p-robin",  name:"Robin Vale",  phone:"555-010-0100",   email:"", bookingEmail:"robin.vale@gmail.com" },
+  { id:"p-other",  name:"Dale Vale",   phone:"(555) 010-0100", email:"dale@byui.edu" },
+  { id:"p-name",   name:"Robin Vale",  phone:"5559999999",     email:"robin2@byui.edu" },
+  { id:"p-nomatch",name:"Kim Reyes",   phone:"5551111111",     email:"kim@byui.edu" },
+];
+const matches = I.probableIdentityMatches(SAME, roster);
+t("a shared surname alone is not a match",        matches.some((m) => m.profileId === "p-nomatch"), false);
+t("phone plus full name is strong",               matches.find((m) => m.profileId === "p-robin").strength, "strong");
+t("phone plus surname only is also strong",       matches.find((m) => m.profileId === "p-other").strength, "strong");
+t("name with a different phone is possible",      matches.find((m) => m.profileId === "p-name").strength, "possible");
+t("the strong match is offered first",            matches[0].strength, "strong");
+t("a formatted phone matches a raw one",          matches.find((m) => m.profileId === "p-robin").reasons.includes("same phone number"), true);
+t("a suffix does not break the name",             I.nameTokens("Jaden Jeffrey Swarts, Esq.").join(" "), "jaden jeffrey swarts");
+t("nobody similar means no question asked",       I.probableIdentityMatches({ name:"Nobody Here", phone:"5552222" }, roster).length, 0);
+
+console.log("\n--- the row is HELD until a human decides ---");
+const bookingParsed = P(BOOKING);
+const CLEAN = { fingerprint:"", missCounts:{}, knownEmails:[] };
+const onFile = [{ id:"p-robin", name:"Robin Vale", email:"", bookingEmail:"robin.vale@gmail.com", phone:"5550100" }];
+const held = window.diffBookingImport(bookingParsed, { profiles:onFile, previousState:CLEAN });
+t("a probable match is not created",              held.created.some((c) => c.client.email === "rvale@example.edu"), false);
+t("it is queued as a question instead",           held.identityChecks.length, 1);
+t("naming the client it might be",                held.identityChecks[0].candidates[0].profileId, "p-robin");
+t("an unrelated client still creates normally",   held.created.some((c) => c.client.email === "spike@example.edu"), true);
+
+const asNew = window.diffBookingImport(bookingParsed,
+  { profiles:onFile, previousState:{ ...CLEAN, identityDecisions:{ "rvale@example.edu":"new" } } });
+t("'different person' lets it create",            asNew.created.some((c) => c.client.email === "rvale@example.edu"), true);
+t("and the question stops being asked",           asNew.identityChecks.length, 0);
+
+const asLinked = window.diffBookingImport(bookingParsed,
+  { profiles:onFile, previousState:{ ...CLEAN, identityDecisions:{ "rvale@example.edu":"p-robin" } } });
+t("'same person' updates the existing client",    asLinked.updated.some((u) => u.profileId === "p-robin"), true);
+t("and creates nobody new",                       asLinked.created.some((c) => c.client.email === "rvale@example.edu"), false);
+t("the decision survives the next import",        JSON.stringify(asLinked.nextState.identityDecisions), '{"rvale@example.edu":"p-robin"}');
+
+console.log("\n--- the switchover itself ---");
+// The whole point: a client imported today under a personal address must be found by
+// tomorrow's IT export under their BYU-I one, with no migration in between.
+const bridged = [{ id:"p-brx", name:"Robin Vale", email:"rvale@byui.edu", bookingEmail:"rvale@example.edu", phone:"5550100" }];
+const viaBooking = window.diffBookingImport(bookingParsed, { profiles:bridged, previousState:CLEAN });
+t("the personal address finds them",              viaBooking.updated.some((u) => u.profileId === "p-brx"), true);
+const itFile = P("Member,Phone,Email,Package,Trainer,Chosen Times,Status,Next Renewal\n"
+  + "Robin Vale,5550100,rvale@byui.edu,Flex — 1 session / week,Casey Fern,,Active,");
+const viaSchool = window.diffBookingImport(itFile, { profiles:bridged, previousState:CLEAN });
+t("and so does the BYU-I one, same record",       viaSchool.updated.some((u) => u.profileId === "p-brx"), true);
+t("no second record for the same person",         viaSchool.created.some((c) => c.client.email === "rvale@byui.edu"), false);
+
 console.log("--- no invisible characters anywhere in the source ---");
 // A literal U+FEFF typed into the code that strips BOMs sat in two files here and broke
 // GitHub's uploader outright. Invisible characters are impossible to spot in review, so

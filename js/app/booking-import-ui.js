@@ -94,11 +94,20 @@
         + '<div class="storage-note">' + diff.errors.map(escapeHtml).join("<br>") + '</div>'
         + '<div class="storage-note">Nothing was changed, and no client was marked missing.</div>';
     }
+    // Which of the two exports this was understood as, so the wrong download is obvious
+    // before anything is applied.
+    const source = parsed.formatLabel
+      ? '<div class="invite-check ok">\u2713 Read as the ' + escapeHtml(parsed.formatLabel) + ' \u00b7 '
+        + parsed.rows.length + ' row' + (parsed.rows.length === 1 ? "" : "s") + ' \u00b7 '
+        + parsed.clients.length + ' client' + (parsed.clients.length === 1 ? "" : "s") + '</div>'
+      : "";
+
     const counts = '<div class="advanced-stat-grid">'
       + statTile(diff.created.length, "new client" + (diff.created.length === 1 ? "" : "s"))
       + statTile(diff.updated.length, "to update")
       + statTile(diff.unchanged.length, "unchanged")
       + statTile(diff.missing.length, "not in this file")
+      + ((diff.identityChecks || []).length ? statTile(diff.identityChecks.length, "need a decision") : "")
       + '</div>';
 
     const repeat = diff.alreadyImported
@@ -118,6 +127,21 @@
         + '<small>' + escapeHtml(item.email) + (item.detail ? " · " + escapeHtml(item.detail) : "")
         + (item.from ? " · " + escapeHtml(item.from + " → " + item.to) : "") + '</small></div>').join("") + '</div>' : "";
 
+    // Held, not created. Jason's two systems issue different addresses for the same person,
+    // so an unmatched address is a question rather than a new client.
+    const identity = (diff.identityChecks || []).length ? '<div class="booking-import-group warn"><b>Is this someone you already have?</b>'
+      + '<div class="storage-note">These addresses match nobody on file, but somebody on file looks like the same person. Nothing is created or changed until you choose.</div>'
+      + diff.identityChecks.map((item) => '<div class="booking-import-row"><span>' + escapeHtml(item.client.name || item.client.email) + '</span>'
+        + '<small>' + escapeHtml(item.client.email) + (item.client.phone ? ' \u00b7 ' + escapeHtml(item.client.phone) : '') + '</small>'
+        + item.candidates.map((candidate) => '<div class="booking-import-row"><span>'
+            + escapeHtml(candidate.name || candidate.email || 'Existing client') + '</span><small>'
+            + escapeHtml(candidate.reasons.join(' + ')) + (candidate.strength === 'strong' ? ' \u00b7 likely the same person' : '')
+            + ' \u00b7 ' + escapeHtml(candidate.bookingEmail || candidate.email || 'no address on file') + '</small>'
+            + '<button class="mini-btn" data-identity-link data-email="' + escapeHtml(item.client.email)
+            + '" data-profile="' + escapeHtml(candidate.profileId) + '">Same person</button></div>').join("")
+        + '<button class="mini-btn" data-identity-new data-email="' + escapeHtml(item.client.email) + '">Different person \u2014 create new</button>'
+        + '</div>').join("") + '</div>' : "";
+
     const missing = diff.missing.length ? '<div class="booking-import-group"><b>Not in this file</b>'
       + diff.missing.map((item) => '<div class="booking-import-row"><span>' + escapeHtml(item.email) + '</span>'
         + '<small>' + (item.actionable
@@ -125,9 +149,13 @@
           : "absent once — nothing happens until a second export also omits them") + '</small></div>').join("") + '</div>' : "";
 
     const trainers = diff.unresolvedTrainers.length ? '<div class="booking-import-group warn"><b>Trainers needing a link</b>'
-      + '<div class="storage-note">The export names trainers but carries no email, so each name is linked to an account once and remembered.</div>'
+      + '<div class="storage-note">' + (parsed.format === "booking"
+          ? "Each trainer name is linked to an account once and remembered."
+          : "This export names trainers but carries no email, so each name is linked to an account once and remembered.")
+        + '</div>'
       + diff.unresolvedTrainers.map((trainer) => '<div class="booking-import-row"><span>' + escapeHtml(trainer.name) + '</span>'
-        + '<small>on ' + trainer.count + ' row' + (trainer.count === 1 ? "" : "s") + '</small>'
+        + '<small>on ' + trainer.count + ' row' + (trainer.count === 1 ? "" : "s")
+        + (trainer.email ? ' \u00b7 ' + escapeHtml(trainer.email) : "") + '</small>'
         + '<button class="mini-btn" data-alias-link data-key="' + escapeHtml(trainer.key) + '" data-name="' + escapeHtml(trainer.name) + '">Link</button></div>').join("") + '</div>' : "";
 
     const clashes = importedClashes(diff, new Map(loadTrainerAliases().map((a) => [a.normalized_name, a])));
@@ -142,7 +170,7 @@
       + (diff.created.length + diff.updated.length) + ' change' + ((diff.created.length + diff.updated.length) === 1 ? "" : "s") + '</button></div>'
       + '<div class="storage-note">Applying writes client records on this device and syncs them. It sends no email to anyone.</div>';
 
-    return repeat + counts + created + updated + review + clashBlock + missing + trainers + problems + apply;
+    return source + repeat + counts + identity + created + updated + review + clashBlock + missing + trainers + problems + apply;
   }
 
   const statTile = (value, label) => '<div class="advanced-stat"><b>' + value + '</b><span>' + escapeHtml(label) + '</span></div>';
@@ -172,6 +200,22 @@
     out.innerHTML = previewHtml(pending.parsed, pending.diff);
     bindDataHandlers(out, "[data-booking-apply]", () => applyBookingImport());
     bindDataHandlers(out, "[data-alias-link]", (button) => linkTrainerAlias(button.dataset.key, button.dataset.name));
+    bindDataHandlers(out, "[data-identity-link]", (button) => recordIdentityDecision(button.dataset.email, button.dataset.profile));
+    bindDataHandlers(out, "[data-identity-new]", (button) => recordIdentityDecision(button.dataset.email, "new"));
+  }
+
+  // Only the DECISION is stored here. No client record is touched until Apply, which is what
+  // the panel promises and what makes reading a file safe to do out of curiosity.
+  function recordIdentityDecision(email, choice) {
+    const key = String(email || "").trim().toLowerCase();
+    if (!key || !choice) return false;
+    const state = loadImportState();
+    const decisions = { ...(state.identityDecisions || {}) };
+    decisions[key] = choice;
+    if (!writeJson(IMPORT_KEY, { ...state, identityDecisions:decisions })) { showToast("That choice could not be saved"); return false; }
+    showToast(choice === "new" ? "Will be created as a new client" : "Linked \u2014 both addresses will reach the same client");
+    refreshPreviewFromPending();
+    return true;
   }
 
   window.applyBookingImport = function applyBookingImport() {
@@ -192,7 +236,7 @@
       const cap = client.tierId && MEMBERSHIP_TIERS[client.tierId] ? MEMBERSHIP_TIERS[client.tierId].programmedDays : 0;
       const alias = aliases.get(client.trainerKey);
       const record = profileRecordFromTarget({
-        name: client.name, email: client.email, bookingEmail: client.email, phone: client.phone,
+        name: client.name, email: "", bookingEmail: "", ...window.bookingEmailSlotsFor(client.email), phone: client.phone,
         membershipTier: client.tierId,
         sessionsPerWeek: client.sessionsPerWeek || (client.tierId && MEMBERSHIP_TIERS[client.tierId] ? MEMBERSHIP_TIERS[client.tierId].sessionsPerWeek : 0),
         programmedDays: cap, bookingStatus: client.status,
@@ -241,7 +285,7 @@
       // Only the fields Jason's side owns. Goals, injuries, workouts and feedback are the
       // app's and are never touched by an import.
       const next = { ...current, name: client.name || current.name, phone: client.phone || current.phone,
-        bookingEmail: client.email, bookingStatus: client.status,
+        ...window.bookingEmailSlotsFor(client.email), bookingStatus: client.status,
         assignedTrainerName: client.trainerName || current.assignedTrainerName,
         importedAt: new Date().toISOString() };
       if (alias && alias.trainer_user_id) { next.assignedTrainerId = alias.trainer_user_id; next.assignedTrainerEmail = alias.email || current.assignedTrainerEmail; }
