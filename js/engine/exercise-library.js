@@ -300,6 +300,12 @@ const LIBRARY = [
   { name: "Push-up plus", family: "activation", rank: 5, zone: "bodyweight", pattern: "mobility", region: "mobility", exp: 1, impact: 0, unilateral: false, avoid: ["wrist","shoulder"], muscles: [], preps: ["upper","push"], cue: "Push-up, then press the upper back to the ceiling at the top." },
   { name: "Lat stretch on rack", family: "mobility", rank: 12, zone: "rack", pattern: "mobility", region: "mobility", exp: 1, impact: 0, unilateral: true, avoid: [], muscles: [], preps: ["upper","pull"], cue: "Grip low, sink the hips back, breathe into the lat." },
   { name: "Banded shoulder external rotation", family: "activation", rank: 4, zone: "cable", pattern: "mobility", region: "mobility", exp: 1, impact: 0, unilateral: true, avoid: [], muscles: [], preps: ["upper","push","pull"], cue: "Elbow at the side, rotate out slowly \u2014 rotator cuff prep." },
+  // Added for post-rehab shoulder programming. External rotation shipped without its pair,
+  // which is how it is actually prescribed. Named the way a trainer searches: aliases carry
+  // the gym shorthand, since the search reads that field.
+  { name: "Banded shoulder internal rotation", family: "activation", rank: 4, zone: "cable", pattern: "mobility", region: "mobility", exp: 1, impact: 0, unilateral: true, avoid: [], muscles: [], preps: ["upper","push","pull"], aliases: ["internal rotation","IR","subscap"], cue: "Elbow pinned to the side, rotate the forearm across the body \u2014 the pair to external rotation." },
+  { name: "Side-lying external rotation", family: "activation", rank: 5, zone: "dumbbell", pattern: "mobility", region: "mobility", exp: 1, impact: 0, unilateral: true, avoid: [], muscles: [], preps: ["upper","push","pull"], aliases: ["side lying ER"], demands: ["prone","floor_transfer"], cue: "Lie on the opposite side, elbow tight to the ribs, lift the hand toward the ceiling. Light weight only." },
+  { name: "Tea cups", family: "mobility", rank: 9, zone: "dumbbell", pattern: "mobility", region: "mobility", exp: 2, impact: 0, unilateral: true, avoid: [], muscles: [], preps: ["upper","push"], aliases: ["teacups","tea cup","waiter walk circles"], cue: "Hold light weight flat like a cup of tea and circle it around the shoulder without spilling. Loaded end-range control." },
   { name: "Arm circles", family: "mobility", rank: 1, zone: "bodyweight", pattern: "mobility", region: "mobility", exp: 1, impact: 0, unilateral: false, avoid: [], muscles: [], preps: ["upper","general"], cue: "Small to large, both directions \u2014 simple blood flow to the shoulders." },
   { name: "Bodyweight squat (easy)", family: "squat", rank: 7, zone: "bodyweight", pattern: "mobility", region: "mobility", exp: 1, impact: 0, unilateral: false, avoid: ["knee"], muscles: [], preps: ["lower"], cue: "Slow reps to full depth, grooving the pattern before you load it." },
   { name: "Walking knee hug", family: "mobility", rank: 5, zone: "bodyweight", pattern: "mobility", region: "mobility", exp: 1, impact: 0, unilateral: true, avoid: [], muscles: [], preps: ["lower"], cue: "Hug the knee, rise to the toe \u2014 dynamic hip and glute prep." },
@@ -357,10 +363,25 @@ function inferExerciseDemands(exercise) {
   if (pattern === "lunge") { demands.add("knee_flexion"); demands.add("single_leg"); demands.add("balance_challenge"); }
   if (pattern === "hinge") demands.add("hip_hinge");
   if (pattern === "v_push" || pattern === "v_pull" || /\b(overhead|pulldown|pull-up|chin-up|dead hang|lat pull)\b/.test(name)) demands.add("overhead");
-  if (pattern === "rotation" || /\b(rotation|wood.?chop|russian twist)\b/.test(name)) demands.add("spinal_rotation");
+  // "Rotation" in a name is not always spinal. The library's one rotator-cuff drill,
+  // "Banded shoulder external rotation", is a seated mobility movement with no spinal
+  // component - this name match was excluding it from every low-back, thoracic and
+  // no-rotation client. Joint-named rotations are exempt; an explicit rotation PATTERN
+  // still counts, because that is a deliberate trunk classification.
+  // The joint word is not always in the name - "Side-lying external rotation" has none of
+  // them - so the phrase itself counts too: internal/external rotation is a joint action,
+  // never a trunk one.
+  const jointRotation = /\b(shoulder|rotator|cuff|hip|ankle|wrist|neck|arm)\b/.test(name)
+    || /\b(internal|external)\s+rotation\b/.test(name);
+  if (pattern === "rotation" || (!jointRotation && /\b(rotation|wood.?chop|russian twist)\b/.test(name))) demands.add("spinal_rotation");
   if (pattern === "carry") { demands.add("loaded_carry"); demands.add("loaded_grip"); demands.add("axial_load"); }
   if (pattern === "plyo" || pattern === "olympic") { demands.add("ballistic"); demands.add("impact"); demands.add("balance_challenge"); demands.add("high_abdominal_pressure"); }
-  if (item.unilateral) { demands.add("single_leg"); demands.add("balance_challenge"); }
+  // Unilateral on an ARM movement means one arm, not one leg. Tagging a seated cuff drill or
+  // a landmine press as a single-leg balance challenge excluded them for every client with a
+  // balance or lower-limb limitation, which is the opposite of what those movements are for.
+  const upperOnly = ["push","pull"].includes(item.region)
+    || (Array.isArray(item.preps) && item.preps.length && !item.preps.includes("lower") && !item.preps.includes("general"));
+  if (item.unilateral && !upperOnly) { demands.add("single_leg"); demands.add("balance_challenge"); }
   if (Number(item.impact || 0) >= 2 || /\b(jump|bound|sprint|burpee|running|run)\b/.test(name)) demands.add("impact");
   if (/\b(swing|snatch|clean|jerk|throw|slam|sprint|jump|bound|burpee|high pull)\b/.test(name)) demands.add("ballistic");
   if (/\b(front squat|front rack|clean)\b/.test(name)) demands.add("front_rack");

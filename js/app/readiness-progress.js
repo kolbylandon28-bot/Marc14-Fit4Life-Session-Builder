@@ -570,7 +570,7 @@ function profileRecordFromTarget(target, name, username) {
   // workout builder saves through this same function without them, and a default would
   // blank an existing client's tier every time a workout was saved.
   const CARRIED = ["membershipTier","sessionsPerWeek","programmedDays","phone","bookingEmail",
-    "bookingStatus","assignedTrainerId","assignedTrainerName","assignedTrainerEmail",
+    "bookingStatus","assignedTrainerId","assignedTrainerName","assignedTrainerEmail","safetyExceptions",
     "onboardingStatus","invitedAt","importedAt","trainingDays"];
   CARRIED.forEach((key) => {
     if (target[key] === undefined || target[key] === null) return;
@@ -594,6 +594,9 @@ function approveProfileRequest(requestId) {
   const requests = loadProfileRequests(), request = requests.find((item) => item.id === requestId); if (!request) return null;
   const profile = createClientProfile({ name: request.name, username: request.username, goals: ["general"], experience: 1, age: 30, minutes: 60, muscles: [], injuries: [], zones: [] });
   if (!profile) return null;
+  // createClientProfile rebuilds from a fixed field list, so ownership is written back after.
+  const claim = inviterCoachStamp(null);
+  if (claim.assignedTrainerId) updateClientProfile(profile.id, { ...profile, ...claim });
   if (!writeProfileRequests(requests.filter((item) => item.id !== requestId))) return null; selectedTrainerClient = profile.name; renderTrainerHub(profile.name); openProfileEditor(profile.id); return profile;
 }
 function dismissProfileRequest(requestId) {
@@ -721,9 +724,13 @@ function prepareProfileTrainerMenu(selectedId,selectedName) {
   const identity = currentAccountIdentity(), trainers = Array.isArray(window.fit4lifeCloudTrainers) ? window.fit4lifeCloudTrainers.slice() : [];
   if (identity.id && ['owner','trainer'].includes(identity.role) && !trainers.some((trainer) => trainer.user_id === identity.id)) trainers.push({user_id:identity.id,display_name:identity.displayName,email:identity.email,role:identity.role});
   if (selectedId && !trainers.some((trainer) => trainer.user_id === selectedId)) trainers.push({user_id:selectedId,display_name:selectedName || 'Assigned trainer',email:'',role:'trainer'});
-  select.innerHTML = '<option value="">Shared client / no primary coach</option>' + trainers.sort((a,b) => String(a.display_name || '').localeCompare(String(b.display_name || ''))).map((trainer) => '<option value="' + escapeHtml(trainer.user_id) + '" data-name="' + escapeHtml(trainer.display_name || trainer.email || 'Trainer') + '" data-email="' + escapeHtml(trainer.email || '') + '">' + escapeHtml(trainer.display_name || trainer.email || 'Trainer') + (trainer.role === 'owner' ? ' · Owner' : '') + '</option>').join('');
+  // A trainer may claim an unclaimed client, and only for themselves - so when that is the
+  // case the menu offers exactly that, rather than listing colleagues it will silently ignore.
+  const canClaim = identity.role === 'trainer' && !selectedId;
+  const offered = canClaim ? trainers.filter((trainer) => trainer.user_id === identity.id) : trainers;
+  select.innerHTML = '<option value="">Shared client / no primary coach</option>' + offered.sort((a,b) => String(a.display_name || '').localeCompare(String(b.display_name || ''))).map((trainer) => '<option value="' + escapeHtml(trainer.user_id) + '" data-name="' + escapeHtml(trainer.display_name || trainer.email || 'Trainer') + '" data-email="' + escapeHtml(trainer.email || '') + '">' + escapeHtml(trainer.display_name || trainer.email || 'Trainer') + (trainer.role === 'owner' ? ' · Owner' : '') + '</option>').join('');
   select.value = selectedId || '';
-  select.disabled = identity.role === 'trainer';
+  select.disabled = identity.role === 'trainer' && Boolean(selectedId);
   const requestButton = byId('profileTrainerRequestBtn'); if (requestButton) requestButton.hidden = identity.role !== 'trainer';
 }
 function setProfileEditorDeleteControls(visible) {
@@ -848,6 +855,28 @@ function offerInviteRetry(email,fullName) {
     }).catch(() => { if (token === inviteRequestToken) button.disabled = false; });
   };
 }
+// Nothing a trainer could reach ever wrote assignedTrainerId, so every client except those
+// linked by the booking import read as "Shared" - silently zeroing owed-session counts, the
+// calendar trainer filter and Action Center "mine". Claiming a client you just invited is not
+// reassignment; there is nobody to take them from. Taking one who already HAS a primary coach
+// still needs an owner, which is the gate that was actually worth keeping.
+// A trainer's coach selection is normally discarded, because reassignment needs an owner.
+// The one exception is claiming a client who has NO primary coach, and only for themselves.
+function trainerAssignmentForSave(previous) {
+  const kept = { id:previous && previous.assignedTrainerId || '', name:previous && previous.assignedTrainerName || '',
+    email:previous && previous.assignedTrainerEmail || '' };
+  if (kept.id) return kept;
+  const identity = currentAccountIdentity(), chosen = byId('profileEditTrainer');
+  if (!identity.id || !chosen || chosen.value !== identity.id) return kept;
+  return { id:identity.id, name:identity.displayName || '', email:identity.email || '' };
+}
+function inviterCoachStamp(existing) {
+  const identity = currentAccountIdentity();
+  if (!identity.id || !["trainer","owner"].includes(identity.role)) return {};
+  if (existing && existing.assignedTrainerId) return {};
+  return { assignedTrainerId:identity.id, assignedTrainerName:identity.displayName || "",
+    assignedTrainerEmail:identity.email || "" };
+}
 function createInvitedClient() {
   if (!requireTrainerMutation("create client profiles")) return null;
   const first = byId("inviteFirstName").value.trim(), last = byId("inviteLastName").value.trim();
@@ -894,7 +923,7 @@ function createInvitedClient() {
       username: existing.username, membershipTier: tierId,
       sessionsPerWeek: tierId && MEMBERSHIP_TIERS[tierId] ? MEMBERSHIP_TIERS[tierId].sessionsPerWeek : existing.sessionsPerWeek || 0,
       programmedDays: explicitDays || existing.programmedDays || tierCap,
-      invitedAt: new Date().toISOString(), onboardingStatus: "invited" });
+      invitedAt: new Date().toISOString(), onboardingStatus: "invited", ...inviterCoachStamp(existing) });
     if (!adopted) return null;
     feedback.textContent = "Invited " + name + " \u2014 their imported record is now linked to this invite.";
     refreshProfileSelects();
@@ -923,6 +952,7 @@ function createInvitedClient() {
       programmedDays: explicitDays,
       invitedAt: new Date().toISOString(),
       onboardingStatus: "invited",
+      ...inviterCoachStamp(null),
       updatedAt: new Date().toISOString() };
     writeProfiles(profiles);
   }
@@ -1105,7 +1135,7 @@ function saveProfileEditor() {
   const cardioModes = normalizeCardioPreferences(profileEditorDraft.cardioModes);
   const trainerSelect = byId('profileEditTrainer'), trainerOption = trainerSelect && trainerSelect.selectedOptions[0];
   const creating = !profileId, previous = creating ? null : loadProfiles().find((item) => item.id === profileId);
-  const selectedAssignment = window.fit4lifeCloudRole === 'trainer' ? {id:previous && previous.assignedTrainerId || '',name:previous && previous.assignedTrainerName || '',email:previous && previous.assignedTrainerEmail || ''} : {id:trainerSelect ? trainerSelect.value : '',name:trainerOption && trainerSelect.value ? trainerOption.dataset.name || trainerOption.textContent.split(' · ')[0] : '',email:trainerOption && trainerSelect.value ? trainerOption.dataset.email || '' : ''};
+  const selectedAssignment = window.fit4lifeCloudRole === 'trainer' ? trainerAssignmentForSave(previous) : {id:trainerSelect ? trainerSelect.value : '',name:trainerOption && trainerSelect.value ? trainerOption.dataset.name || trainerOption.textContent.split(' · ')[0] : '',email:trainerOption && trainerSelect.value ? trainerOption.dataset.email || '' : ''};
   const nextTier = byId("profileEditTier").value;
   const previousProfile = loadProfiles().find((item) => item.id === byId("profileEditId").value) || {};
   // A tier change resets the per-client day count, otherwise a downgrade keeps the old,
@@ -1117,7 +1147,21 @@ function saveProfileEditor() {
   if (window.fit4lifeCloudRole === 'trainer' && previous) {
     const protectedLimitations = (previous.injuries || []).filter((tag) => { const item = normalizedLimitationAssessment(previous.limitationAssessments && previous.limitationAssessments[tag]); return tag === 'medicalhold' || item.severity === 'severe' || item.ability === 'cannot' || item.decision === 'hold'; });
     const cleared = protectedLimitations.filter((tag) => { const next = normalizedLimitationAssessment(updates.limitationAssessments && updates.limitationAssessments[tag]); return !updates.injuries.includes(tag) || !(tag === 'medicalhold' || next.severity === 'severe' || next.ability === 'cannot' || next.decision === 'hold'); });
-    if (cleared.length) { openOwnerRequestDialog('safety_exception',previous.id,'',"Review protected limitation: " + cleared.map((tag) => INJURY_LABELS[tag] || tag).join(', ')); showToast('Protected safety holds require owner approval'); return null; }
+    // The request now carries WHICH holds it is about, and an approval actually grants them.
+    // Before this the trainer was blocked, filed a request, an owner approved it, and they
+    // were blocked again identically - a protected limitation could never be cleared at all.
+    const granted = (previous.safetyExceptions && typeof previous.safetyExceptions === 'object') ? previous.safetyExceptions : {};
+    const blocked = cleared.filter((tag) => !granted[tag]);
+    if (blocked.length) {
+      openOwnerRequestDialog('safety_exception',previous.id,blocked.join(','),"Review protected limitation: " + blocked.map((tag) => INJURY_LABELS[tag] || tag).join(', '));
+      showToast('Protected safety holds require owner approval');
+      return null;
+    }
+    // A grant is spent when it is used, so one approval cannot quietly clear the same hold
+    // again months later.
+    if (cleared.length) updates.safetyExceptions = Object.keys(granted)
+      .filter((tag) => !cleared.includes(tag))
+      .reduce((kept,tag) => { kept[tag] = granted[tag]; return kept; },{});
   }
   const profile = creating ? createClientProfile(updates) : updateClientProfile(profileId,updates);
   if (!profile) return null;
