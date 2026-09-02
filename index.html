@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20260901-v94-consultation-answers-r1">
+<link rel="manifest" href="manifest.webmanifest?v=20260901-v95-client-walkthroughs-r1">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20260901-v94-consultation-answers-r1">
+<link rel="stylesheet" href="styles.css?v=20260901-v95-client-walkthroughs-r1">
 </head>
 <body>
 
@@ -122,6 +122,7 @@
     <button class="cloud-account-btn" id="cloudAccountBtn" type="button">Sign in</button>
     <span class="portal-context" id="portalContext"></span>
     <button class="help-btn" id="trainerHelpBtn" type="button" title="Show me how to do something" aria-label="Trainer Assistance" onclick="openTrainerAssistance()">?</button>
+    <button class="help-btn" id="clientHelpBtn" type="button" title="Show me how to use this" aria-label="Show me how" onclick="openClientAssistance()">?</button>
     <button class="home-btn" id="homeBtn" onclick="goHome()">&larr; Home</button>
   </div>
 </div>
@@ -1166,7 +1167,7 @@
       <div class="compact-field full"><label for="clientPainDetails">Short note <span style="font-weight:400">(optional for yellow)</span></label><textarea id="clientPainDetails" placeholder="Where did you feel it, what changed, and did you stop?"></textarea></div>
       <div class="pain-action-note full" id="clientPainAction"></div>
     </div>
-    <div class="tool-actions"><button class="small-btn primary" onclick="saveClientPainReport()">Send to my trainer</button><button class="small-btn" onclick="closeClientPainReport()">Cancel</button></div>
+    <div class="tool-actions"><button class="small-btn primary" data-wt="pain-submit" onclick="saveClientPainReport()">Send to my trainer</button><button class="small-btn" data-wt="pain-cancel" onclick="closeClientPainReport()">Cancel</button></div>
     <p class="storage-note">This tool does not diagnose an injury. For emergency or serious symptoms, follow local emergency procedures.</p>
   </div>
 </div>
@@ -1283,28 +1284,28 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/engine/exercise-library.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/engine/session-engine.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/engine/session-builders.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/engine/personalization.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/engine/booking-import.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/app/navigation.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/app/program-app.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/app/forms.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/engine/generation.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/app/rendering.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/app/calculations-timers.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/engine/multiweek-programs.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/app/readiness-progress.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/app/client-consultation.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/trainer/trainer-hub.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/trainer/coaching-support.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/app/role-governance.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/app/action-calendar.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/app/workout-feedback-reports.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/app/booking-import-ui.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/app/walkthrough.js?v=20260901-v94-consultation-answers-r1"></script>
-<script src="js/init.js?v=20260901-v94-consultation-answers-r1"></script>
+<script src="cloud-sync.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/engine/exercise-library.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/engine/session-engine.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/engine/session-builders.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/engine/personalization.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/engine/booking-import.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/app/navigation.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/app/program-app.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/app/forms.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/engine/generation.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/app/rendering.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/app/calculations-timers.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/engine/multiweek-programs.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/app/readiness-progress.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/app/client-consultation.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/trainer/trainer-hub.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/trainer/coaching-support.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/app/role-governance.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/app/action-calendar.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/app/workout-feedback-reports.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/app/booking-import-ui.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/app/walkthrough.js?v=20260901-v95-client-walkthroughs-r1"></script>
+<script src="js/init.js?v=20260901-v95-client-walkthroughs-r1"></script>
 </body>
 </html>

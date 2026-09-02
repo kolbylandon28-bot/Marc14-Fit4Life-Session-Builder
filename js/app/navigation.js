@@ -35,6 +35,12 @@ function show(view) {
   // Trainer Assistance is only useful to a signed-in trainer, and never on top of a running walkthrough
   const helpBtn = document.getElementById("trainerHelpBtn");
   if (helpBtn) helpBtn.classList.toggle("show", portalRole === "trainer" && view !== "home" && !(typeof walkthroughActive === "function" && walkthroughActive()));
+  // The client "?" lives in the topbar rather than the bottom nav, because the bottom nav is
+  // absent from the active workout - the one screen "Log your sets" can be run from. Hidden
+  // during the required consultation so it cannot be used to get around that gate.
+  const clientHelp = document.getElementById("clientHelpBtn");
+  if (clientHelp) clientHelp.classList.toggle("show", portalRole === "client" && !requiredConsultation
+    && view !== "home" && !(typeof walkthroughActive === "function" && walkthroughActive()));
   const clientNav = document.getElementById("clientBottomNav"), showClientNav = portalRole === "client" && CLIENT_APP_VIEWS.includes(view);
   if (clientNav) { clientNav.classList.toggle("show",showClientNav); clientNav.querySelectorAll("button").forEach((button) => button.classList.toggle("on",view === "client-" + button.dataset.clientTab)); }
   const coachNav = document.getElementById("coachSidebar"), showCoachNav = portalRole === "trainer" && COACH_SHELL_VIEWS.includes(view) && trainerIsUnlocked();

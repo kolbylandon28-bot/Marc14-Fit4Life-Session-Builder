@@ -171,8 +171,157 @@ const WALKTHROUGHS = [
 
 ];
 
-function walkthroughById(id) { return WALKTHROUGHS.find((item) => item.id === id) || null; }
-function walkthroughsForRole(role) { return WALKTHROUGHS.filter((item) => item.role === role); }
+/* ---- the client set ----------------------------------------------------
+
+   Written for someone who has never used a fitness app and may be nervous about the gym.
+   Separate from the trainer set in every way that matters: these run on the person's OWN
+   portal, on their real workout, and move nothing. startWalkthrough refuses to snapshot,
+   seal sync, swap the roster or blank a single store when role is "client".
+
+   Two rules shaped every step below.
+
+   1. A tap is fine for getting around. It is NOT fine for anything that sends. A learner
+      pressing "Send to my trainer" would actually report pain they never felt, so the send
+      buttons are described and left alone. The say text carries that, because info:true only
+      neutralises the one highlighted node and is re-applied on a timer.
+
+   2. Nothing may be targeted that might not be there. A client with no workout has no week
+      strip, no day grid, no start button - and that client is exactly who opens these. Each
+      tour states the condition it needs; the card says so and refuses the tap rather than
+      stranding someone on step one. */
+
+const CLIENT_WALKTHROUGH_GATES = {
+  // Both of these start by tapping the bottom nav, which does not exist on the active-workout
+  // screen - and the "?" is reachable from there, so without this check the tour would start
+  // and strand on step one.
+  onClientTab: function () {
+    if (typeof activeClientProfile !== "function" || !activeClientProfile()) return "Sign in as yourself first and this guide will open.";
+    if (typeof CLIENT_APP_VIEWS === "undefined" || typeof currentView === "undefined" || !CLIENT_APP_VIEWS.includes(currentView)) {
+      return "Finish or leave your workout first - this guide starts from the tabs at the bottom.";
+    }
+    return "";
+  },
+  program: function () {
+    const here = CLIENT_WALKTHROUGH_GATES.onClientTab();
+    if (here) return here;
+    const program = clientProgramSource(activeClientProfile());
+    if (!program) return "Your coach has not sent you a workout yet. This guide will be here as soon as they do.";
+    return "";
+  },
+  inWorkout: function () {
+    if (typeof currentView !== "undefined" && currentView === "active-workout") return "";
+    return "Start your workout first, then open this guide from the top of that screen.";
+  },
+  lastExercise: function () {
+    if (typeof currentView === "undefined" || currentView !== "active-workout" || !activeWorkout) {
+      return "Open this while you are in a workout and near the end of it.";
+    }
+    try {
+      const data = activeAssignmentAndSession();
+      const units = data.session ? activeWorkoutUnits(data.session, activeWorkout.shortened) : [];
+      if (!units.length) return "Open this while you are in a workout and near the end of it.";
+      if (activeWorkout.unitIndex !== units.length - 1) return "This one is about finishing. Open it when you reach the last exercise.";
+    } catch (_) { return "Open this while you are in a workout and near the end of it."; }
+    return "";
+  },
+};
+
+const CLIENT_WALKTHROUGHS = [
+  {
+    id: "client-find-workout",
+    role: "client",
+    title: "Find and start today's workout",
+    blurb: "Where your workout lives, and how to open it.",
+    requires: CLIENT_WALKTHROUGH_GATES.program,
+    steps: [
+      { say: "Your workout lives behind this button. Tap Workout.", target: '[data-client-tab="program"]', advance: "click" },
+      { say: "Your coach may plan several weeks at a time. This row is those weeks, and the one lit up is the week you are in.", target: "#view-client-program .week-strip", advance: "next", info: true },
+      { say: "These seven boxes are the days of that week. Today has a ring around it. A box saying Rest day is not a mistake - rest is part of what your coach planned.", target: "#view-client-program .day-grid", advance: "next", info: true },
+      { say: "Tap a day to look at it. The workout underneath changes to match the day you picked.", target: "#view-client-program .day-grid .day-card:not([disabled])", advance: "click" },
+      { say: "This is the workout for that day: every exercise, in the order you do them, with how many rounds and how many times. Reading it changes nothing and you have not started.", target: "#view-client-program .workout-preview", advance: "next", info: true },
+      { say: "These are your options for today. Use shortened workout is for a day you are pushed for time. Report a limitation is how you tell your coach something hurts before you begin.", target: "#view-client-program .workout-preview .secondary-actions", advance: "next", info: true },
+      { say: "This button opens the workout. Press it and the first exercise fills the screen, and your coach can see you have started. Leave it for now - press Next, then start when you are ready.", target: '[data-wt="client-start-workout"]', advance: "next", info: true },
+    ],
+    done: "Workout tab, pick the day, read it through, then start. That is the whole thing.",
+  },
+  {
+    id: "client-log-sets",
+    role: "client",
+    title: "Log your sets as you go",
+    blurb: "What the numbers mean, and how to write down what you did.",
+    requires: CLIENT_WALKTHROUGH_GATES.inWorkout,
+    steps: [
+      { say: "This is the exercise you are on right now. The big line is its name, and underneath is a note from your coach on doing it well.", target: "#activeWorkoutContent .active-exercise-head", advance: "next", info: true },
+      { say: "This is the plan for it. Sets is how many rounds you do. Reps is how many times you repeat the movement in one round. Rest is how long you wait between rounds.", target: "#activeWorkoutContent .active-prescription", advance: "next", info: true },
+      { say: "This row is where you write down what you actually did. Fill it in after each round rather than at the end. There is a box for how many you did, one for how hard it felt, and one for weight when the exercise uses any.", target: "#activeSetMount .active-set-row", advance: "next", info: true },
+      { say: "Put in the real number, even when it is under the plan. A real number is far more use to your coach than a tidy one.", target: "#activeSetReps", advance: "next", info: true },
+      { say: "This saves the round and moves you to the next. What you type reaches your coach as you go, so press it once the round is genuinely done.", target: '[data-wt="log-set"]', advance: "next", info: true },
+      { say: "If you cannot do a round, use Skip set. That is not a failure. Your coach sees the skip and can change the plan, which they cannot do if you leave it blank.", target: '[data-wt="skip-set"]', advance: "next", info: true },
+      { say: "Once every round here is written down or skipped, this button turns on and takes you to the next exercise. Until then it stays off on purpose, so nothing gets lost.", target: '[data-wt="continue-unit"], [data-wt="finish-workout"]', advance: "next", info: true },
+    ],
+    done: "Write down each round as you finish it, then move on. That is all the app asks of you.",
+  },
+  {
+    id: "client-report-pain",
+    role: "client",
+    title: "Tell your trainer something hurt",
+    blurb: "How to report pain, and what happens after you send it.",
+    // Deliberately NOT gated on having a workout. Someone with nothing assigned yet who has
+    // hurt themselves is exactly who needs to know how to say so, and gating this told them
+    // to wait for a workout that has nothing to do with it.
+    requires: CLIENT_WALKTHROUGH_GATES.onClientTab,
+    steps: [
+      { say: "Anything you need to tell your coach starts here. Tap Coach.", target: '[data-client-tab="coach"]', advance: "click" },
+      { say: "This card is for pain or discomfort. Open it - opening the form sends nothing.", target: '[data-wt="client-report-pain"]', advance: "click",
+        go: function () { if (typeof closeClientPainReport === "function") closeClientPainReport(); } },
+      { say: "These four colours are the whole scale. Green is no pain. Yellow is noticing something while everything still moves normally. Orange is when it changes how you move. Red is sharp, severe, or getting worse.", target: "#clientPainModal .pain-level-guide", advance: "next", info: true },
+      // Deliberately not a change step. The control opens on Green, so a client whose honest
+      // answer IS green alters nothing, no event fires, and the step has no Next and no Skip.
+      { say: "Pick the colour that matches what you felt, then press Next. Choosing one sends nothing.", target: "#clientPainLevel", advance: "next", info: true },
+      { say: "This line now tells you what to do about it, and what your coach will do next. Read it before you go on.", target: "#clientPainAction", advance: "next", info: true },
+      { say: "Answering Yes here moves the report up to orange on its own, because something that changes how you move is treated as more serious. That is deliberate, so answer it honestly.", target: "#clientPainMovementChanged", advance: "next", info: true },
+      { say: "The note is where you say it in your own words: where you felt it, what you were doing, and whether you stopped. A short honest note is worth more than a long one.", target: "#clientPainDetails", advance: "next", info: true },
+      { say: "This button sends the report. Leave it alone for now. When you do send one for real your coach gets it straight away, and if you chose orange or red the app holds your next workout until they have read it and replied.", target: '[data-wt="pain-submit"]', advance: "next", info: true },
+      { say: "Cancel closes the form and throws away everything you typed, and nothing reaches your coach. Use it now to leave.", target: '[data-wt="pain-cancel"]', advance: "click" },
+    ],
+    done: "Coach tab, Report pain, pick the colour, say what happened, send. Telling someone early is what keeps you training.",
+  },
+  {
+    id: "client-finish-review",
+    role: "client",
+    title: "Finish and review a workout",
+    blurb: "The last button, the short form after it, and who sees what.",
+    requires: CLIENT_WALKTHROUGH_GATES.lastExercise,
+    steps: [
+      { say: "You are on the last exercise, so this button now says Finish workout. It sends nothing on its own - it opens a short form first.", target: '[data-wt="finish-workout"]', advance: "next", info: true },
+      { say: "Press it now. If it is still off, there is a round on this exercise that has not been written down or skipped yet.", target: '[data-wt="finish-workout"]', advance: "click",
+        go: function () { if (typeof closeWorkoutReview === "function") closeWorkoutReview(); },
+        settled: function () { const modal = document.getElementById("reviewModal"); return modal && modal.classList.contains("open"); } },
+      // Opens pre-set to 7, so picking 7 fires nothing and the step would have no way out.
+      { say: "This form is how your coach knows what to change for next time. Set this to the number that matches how the session felt - four is easy, ten is as hard as you can go - then press Next. Honest is more use than brave.", target: "#reviewDifficulty", advance: "next", info: true },
+      { say: "This asks whether anything hurt. Orange or red puts your workouts on hold until your coach has read it and replied, so choose those only when they are true. If nothing hurt, leave it on green.", target: "#reviewPain", advance: "next", info: true },
+      { say: "Anything you write here reaches your coach as a message when you send the form. It is the place for a question you did not want to stop the workout for.", target: "#reviewQuestions", advance: "next", info: true },
+      { say: "This button sends the whole form to your coach and marks the workout done. Nothing has been sent while this guide has been running.", target: "#reviewSaveOnlyBtn", advance: "next", info: true },
+    ],
+    done: "The form is still open. Fill it in and send it when you are ready, or close it and come back later.",
+  },
+];
+
+// Both sets, so a client tour is findable by id and by role without the trainer list knowing
+// anything about it.
+function allWalkthroughs() { return WALKTHROUGHS.concat(CLIENT_WALKTHROUGHS); }
+function walkthroughById(id) { return allWalkthroughs().find((item) => item.id === id) || null; }
+/* A trainer's tour can fabricate whatever it needs - walkthroughPrepareWorkout builds a
+   workout on the practice client before the first step runs. A client's tour runs on their own
+   real portal and can invent nothing, so a tour of "start today's workout" aimed at somebody
+   who has not been sent one would point at a button that is not there. That person - brand new,
+   nothing assigned yet - is exactly who opens these. A plan may declare a precondition
+   returning a plain-English reason it cannot run yet, or null when it can. */
+function walkthroughBlockedReason(plan) {
+  if (!plan || typeof plan.requires !== "function") return "";
+  try { return plan.requires() || ""; } catch (_) { return ""; }
+}
+function walkthroughsForRole(role) { return allWalkthroughs().filter((item) => item.role === role); }
 
 /* ---- sandbox ---- */
 
@@ -185,6 +334,13 @@ function walkthroughStorageKeys() {
   return keys;
 }
 function walkthroughTakeSnapshot() {
+  // A snapshot already present means practice is running somewhere else on this device.
+  // Taking a second one would capture the blanked practice state as the real data, and
+  // whichever tab left first would restore empty arrays over everything.
+  if (localStorage.getItem(WALKTHROUGH_SNAPSHOT_KEY)) {
+    showToast("Practice mode is already open in another tab. Leave it there first.");
+    return false;
+  }
   // If practice data is somehow already in storage - a session that died before it could
   // restore - snapshotting it would enshrine Batman as a real client on the way back out.
   purgePracticeProfiles();
@@ -215,6 +371,10 @@ function walkthroughRestoreSnapshot() {
   });
   localStorage.removeItem(WALKTHROUGH_SNAPSHOT_KEY);
   purgePracticeProfiles();
+  // LIBRARY is built once at load from the stored bank edits. Restoring storage does not
+  // rebuild it, so without this the in-memory library keeps whatever practice did to it and
+  // real workouts get generated from it for the rest of the session.
+  if (typeof applyExerciseLibraryEdits === "function") { try { applyExerciseLibraryEdits(); } catch (_) {} }
   return true;
 }
 // A tab closed mid-walkthrough leaves practice data behind; put the real data back on the next load.
@@ -256,15 +416,23 @@ function practiceModeActive() { return sandboxActive || !!walkthroughRun; }
 function startWalkthrough(id) {
   const plan = walkthroughById(id);
   if (!plan) return false;
+  const blocked = walkthroughBlockedReason(plan);
+  if (blocked) { if (typeof showToast === "function") showToast(blocked); return false; }
   if (walkthroughRun) endWalkthrough(true);
+  // A client walks through their OWN portal, on their own real workout. Everything the trainer
+  // path does below - snapshotting, sealing sync, replacing the roster with the practice client
+  // and blanking eight stores - is right for a trainer rehearsing on somebody fictional and
+  // would destroy the data of the very person being taught. None of it runs for a client.
+  const clientRun = plan.role === "client";
   // In the sandbox a snapshot already exists and the real data is already put away. Taking
   // another would snapshot the practice data and restore that instead.
-  if (!sandboxActive && !walkthroughTakeSnapshot()) return false;
+  if (!clientRun && !sandboxActive && !walkthroughTakeSnapshot()) return false;
 
-  window.FIT4LIFE_PRACTICE_ACTIVE = true;
+  if (!clientRun) window.FIT4LIFE_PRACTICE_ACTIVE = true;
   walkthroughRun = {
     id: plan.id,
     plan: plan,
+    client: clientRun,
     index: 0,
     returnView: (document.querySelector(".view.active") || {}).id || null,
     returnDestination: (typeof openCoachDestination === "function" && openCoachDestination.current) || null,
@@ -272,23 +440,34 @@ function startWalkthrough(id) {
     onClick: null,
   };
 
-  // one practice client, nobody real
-  writeProfiles([practiceClientProfile()]);
-  // The directory can be left filtered to "my clients" or with a search typed in, either of
-  // which hides the practice client and leaves the step with nothing to point at.
-  try {
-    if (typeof selectTrainerClient === "function") selectTrainerClient(practiceClientProfile().name);
-    const search = document.getElementById("trainerClientSearch"); if (search) search.value = "";
-    const scope = document.getElementById("trainerClientScope"); if (scope) scope.value = "all";
-  } catch (_) {}
-  // The client directory unions profiles with progress, InBody, body goals, check-ins and
-  // athlete metrics, so blanking profiles alone still left real people on screen. Set them
-  // unconditionally - the snapshot puts every one of them back on exit.
-  PRACTICE_CLEARED_KEYS.forEach((key) => localStorage.setItem(key, "[]"));
+  if (!clientRun) {
+    // one practice client, nobody real
+    writeProfiles([practiceClientProfile()]);
+    // The directory can be left filtered to "my clients" or with a search typed in, either of
+    // which hides the practice client and leaves the step with nothing to point at.
+    try {
+      if (typeof selectTrainerClient === "function") selectTrainerClient(practiceClientProfile().name);
+      const search = document.getElementById("trainerClientSearch"); if (search) search.value = "";
+      const scope = document.getElementById("trainerClientScope"); if (scope) scope.value = "all";
+    } catch (_) {}
+    // The client directory unions profiles with progress, InBody, body goals, check-ins and
+    // athlete metrics, so blanking profiles alone still left real people on screen. Set them
+    // unconditionally - the snapshot puts every one of them back on exit.
+    PRACTICE_CLEARED_KEYS.forEach((key) => localStorage.setItem(key, "[]"));
+  }
 
   walkthroughCloseDialogs();
-  if (plan.needs === "workout") walkthroughPrepareWorkout();
+  if (!clientRun && plan.needs === "workout") walkthroughPrepareWorkout();
   document.body.classList.add("walkthrough-on");
+  // The client's bottom nav is fixed at the bottom of the screen and the tour bar sits on top
+  // of it, so without this a step saying "tap the Workout tab" points at something the bar is
+  // covering and the reachability probe rejects it.
+  document.body.classList.toggle("walkthrough-client", clientRun);
+  // show() hides these while a tour runs, but a tour that never changes view never calls it,
+  // so the "?" sat live on top of its own walkthrough.
+  ["trainerHelpBtn", "clientHelpBtn"].forEach((id) => {
+    const button = document.getElementById(id); if (button) button.classList.remove("show");
+  });
   walkthroughRenderBar();
   walkthroughGoToStep(0);
   return true;
@@ -298,15 +477,35 @@ function endWalkthrough(quiet) {
   if (!walkthroughRun) return;
   const run = walkthroughRun;
   walkthroughRun = null;
-  if (!sandboxActive) window.FIT4LIFE_PRACTICE_ACTIVE = false;
+  if (!run.client && !sandboxActive) window.FIT4LIFE_PRACTICE_ACTIVE = false;
   walkthroughClearStep(run);
   const bar = document.getElementById("walkthroughBar"); if (bar) bar.remove();
   document.body.classList.remove("walkthrough-on");
-  walkthroughCloseDialogs();
+  try { document.body.style.removeProperty("--wt-bar-h"); } catch (_) {}
+  // The sweep exists to clear a dialog left over from a previous PRACTICE run. A client run
+  // has no such history, and one of its tours ends with the review form deliberately open -
+  // closing it here made the closing card's "the form is still open" a lie, and quietly threw
+  // away the difficulty the client had just been asked to set.
+  if (!run.client) walkthroughCloseDialogs();
+  document.body.classList.remove("walkthrough-client");
+  // A client run took no snapshot and moved nobody's data, so there is nothing to put back -
+  // restoring here would overwrite their live portal with a snapshot that was never taken.
   // The sandbox owns the snapshot while it runs; it restores on its own exit instead.
-  if (!sandboxActive) { walkthroughRestoreSnapshot(); purgePracticeProfiles(); }
+  if (run.client) { /* nothing was moved */ }
+  else if (!sandboxActive) { walkthroughRestoreSnapshot(); purgePracticeProfiles(); }
   else seedPracticeRoster();
 
+  if (run.client) {
+    // Back through show(), which also restores the "?" hidden on the way in.
+    // Rather than toggling .active directly: it is what keeps
+    // currentView honest and repaints the bottom nav and the "?" for the view landed on.
+    // The trainer renderers below are not just useless here - renderOutput is the coaching
+    // builder, and running it over a client's screen is how the wrong app appears.
+    const back = String(run.returnView || "").replace(/^view-/, "");
+    if (back && typeof show === "function") show(back);
+    if (!quiet) showToast("Guide closed \u2014 nothing was sent to your coach");
+    return;
+  }
   if (run.returnView) {
     document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
     const target = document.getElementById(run.returnView);
@@ -456,14 +655,27 @@ function walkthroughNudgeIntoView(el, force) {
   }
   if (walkthroughRun) walkthroughRun.scrolled = true;
 }
+// Set by walkthroughApplyHighlight when the target exists but is not usable yet, so the bar
+// can say that instead of claiming the control is missing entirely.
+let walkthroughBlockedHint = "";
 function walkthroughApplyHighlight(step) {
   let matches = [];
   // :has() is used by one step; an engine without it must not throw out of the timer
   try { matches = step && step.target ? Array.from(document.querySelectorAll(step.target)) : []; }
   catch (_) { matches = []; }
-  // scroll the first candidate into view once, then judge reachability
-  if (matches.length) walkthroughNudgeIntoView(matches[0]);
-  const found = matches.filter(walkthroughVisible).filter((node) => walkthroughInteractable(node, step));
+  // Interactability does not depend on scroll position, so it is judged FIRST - otherwise a
+  // disabled control gets scrolled to the middle of the screen and only then rejected, which
+  // reads as the tour pointing at something and immediately denying it exists.
+  walkthroughBlockedHint = "";
+  const usable = matches.filter((node) => walkthroughInteractable(node, step));
+  if (!usable.length && matches.length) {
+    // Present, just not usable yet. The control itself already explains why, so borrow it.
+    const blocked = matches.find(walkthroughVisible) || matches[0];
+    walkthroughBlockedHint = (blocked && blocked.title) || "";
+  }
+  // Scroll only a candidate we might actually accept, then judge reachability.
+  if (usable.length) walkthroughNudgeIntoView(usable[0]);
+  const found = usable.filter(walkthroughVisible);
   const el = found[0] || null;
   document.querySelectorAll(".wt-target").forEach((node) => { if (node !== el) node.classList.remove("wt-target"); });
   if (!step || !step.target) return true;
@@ -523,7 +735,20 @@ function walkthroughGoToStep(index) {
       const hit = event.target && event.target.closest && event.target.closest(step.target);
       if (!hit || !walkthroughVisible(hit)) return;
       const at = walkthroughRun.index;
-      setTimeout(() => { if (walkthroughRun && walkthroughRun.index === at) walkthroughGoToStep(at + 1); }, 260);
+      const advance = () => { if (walkthroughRun && walkthroughRun.index === at) walkthroughGoToStep(at + 1); };
+      // A tap is not proof the thing happened. Approving a draft can be refused by the audit
+      // and the tour still marched on to talk about assigning it. Where a step can say what
+      // "it worked" looks like, wait for that instead - and give up after a few seconds rather
+      // than trapping anyone, letting the next step's own missing-target handling take over.
+      if (typeof step.settled !== "function") { setTimeout(advance, 260); return; }
+      let waited = 0;
+      const poll = setInterval(() => {
+        if (!walkthroughRun || walkthroughRun.index !== at) { clearInterval(poll); return; }
+        let settled = false;
+        try { settled = !!step.settled(); } catch (_) { settled = false; }
+        waited += 160;
+        if (settled || waited >= 4000) { clearInterval(poll); advance(); }
+      }, 160);
     };
     document.addEventListener("click", walkthroughRun.onClick, true);
   }
@@ -543,26 +768,33 @@ function walkthroughFinish() {
 /* The end of a walkthrough is the moment practice stops and real clients start.
    A toast slides away and is easy to miss, so this is a card they have to dismiss. */
 function showWalkthroughFinished(plan) {
+  const forClient = Boolean(plan && plan.role === "client");
   const existing = document.getElementById("walkthroughDoneBackdrop"); if (existing) existing.remove();
   const backdrop = el("div","modal-backdrop open ask-backdrop");
   backdrop.id = "walkthroughDoneBackdrop";
   backdrop.innerHTML = '<div class="ask-dialog wt-done-dialog">'
-    + '<span class="wt-done-eyebrow">Demo finished</span>'
-    + '<h4>You finished this trainer demo</h4>'
+    + '<span class="wt-done-eyebrow">' + (forClient ? 'All done' : 'Demo finished') + '</span>'
+    + '<h4>' + (forClient ? 'That is how it works' : 'You finished this trainer demo') + '</h4>'
     + (plan && plan.done ? '<p class="wt-done-line">' + escapeHtml(plan.done) + '</p>' : '')
-    + '<p class="wt-done-real">' + (sandboxActive
+    + '<p class="wt-done-real">' + (forClient
+        ? 'That was your own screens, and nothing was sent to your coach while the guide was running. '
+          + 'You can open this again any time from the question mark at the top.'
+        : sandboxActive
         ? 'That was all on a practice client. You are still in practice mode, so keep exploring - nothing is real until you leave it.'
         : 'Everything you just did was on the practice client and has been thrown away. '
           + 'You are back on your real clients now, so anything you change from here is real.') + '</p>'
     + '<div class="tool-actions">'
     + '<button class="small-btn" data-wt-done-more>Show me something else</button>'
-    + '<button class="small-btn primary" data-wt-done-ok>Back to my clients</button>'
+    + '<button class="small-btn primary" data-wt-done-ok>' + (forClient ? 'Got it' : 'Back to my clients') + '</button>'
     + '</div></div>';
   document.body.appendChild(backdrop);
   const close = () => backdrop.remove();
   backdrop.querySelector("[data-wt-done-ok]").addEventListener("click", close);
   backdrop.querySelector("[data-wt-done-more]").addEventListener("click", () => {
-    close(); if (typeof openTrainerAssistance === "function") openTrainerAssistance();
+    close();
+    // Sending a client to the trainer's settings page was the old behaviour of this button.
+    if (forClient) { if (typeof openClientAssistance === "function") openClientAssistance(); }
+    else if (typeof openTrainerAssistance === "function") openTrainerAssistance();
   });
   backdrop.addEventListener("click", (event) => { if (event.target === backdrop) close(); });
   document.addEventListener("keydown", function onKey(event) {
@@ -598,13 +830,18 @@ function walkthroughRenderBar() {
     + '<p>' + escapeHtml(step.say) + '</p>'
     + (waiting ? '<span class="wt-waiting">' + (step.advance === "change" ? "Waiting for you to change it" : "Waiting for you to tap it") + '</span>' : '')
     + (step.info && !missing ? '<span class="wt-info-note">Reading only \u2014 nothing to change here</span>' : '')
-    + (missing ? '<span class="wt-missing">That control is not on this screen right now \u2014 skip past it or step back.</span>' : '') + '</div>'
+    + (missing ? '<span class="wt-missing">' + (walkthroughBlockedHint
+        ? escapeHtml(walkthroughBlockedHint)
+        : 'That control is not on this screen right now \u2014 skip past it or step back.') + '</span>' : '') + '</div>'
     + '<div class="wt-bar-actions">'
     + '<button class="small-btn wt-find" data-wt-find hidden>Show me</button>'
     + (walkthroughRun.index > 0 ? '<button class="small-btn" data-wt-back>Back</button>' : '')
     + (waiting ? '' : '<button class="small-btn primary" data-wt-next>' + (missing ? 'Skip' : 'Next') + '</button>')
     + '<button class="small-btn wt-exit" data-wt-exit>I\u2019ve got it</button>'
     + '</div></div>';
+  // The nav above the bar is positioned from this, and the bar's height changes with the
+   // length of each step's text, so it is re-measured on every render.
+  try { document.body.style.setProperty("--wt-bar-h", bar.offsetHeight + "px"); } catch (_) {}
   const back = bar.querySelector("[data-wt-back]");
   if (back) back.onclick = () => walkthroughGoToStep(walkthroughRun.index - 1);
   const next = bar.querySelector("[data-wt-next]");
@@ -619,14 +856,21 @@ function walkthroughRenderBar() {
 
 /* ---- the library screen ---- */
 
+/* One card renderer for both sides. A tour that cannot run yet says so on the card and is not
+   tappable, rather than accepting the tap and stranding someone on step one. */
+function walkthroughCardHtml(plan, seen) {
+  const blocked = walkthroughBlockedReason(plan);
+  return '<button class="wt-card' + (blocked ? ' wt-card-blocked' : '') + '"'
+    + (blocked ? ' disabled' : ' data-wt-start="' + escapeHtml(plan.id) + '"') + '>'
+    + '<b>' + escapeHtml(plan.title) + '</b>'
+    + '<span>' + escapeHtml(blocked || plan.blurb) + '</span>'
+    + (!blocked && (seen || []).indexOf(plan.id) >= 0 ? '<em class="wt-done">Done before</em>' : '')
+    + '</button>';
+}
+
 function trainerAssistancePanelHtml() {
   const seen = walkthroughSeen();
-  const cards = walkthroughsForRole("trainer").map((plan) =>
-    '<button class="wt-card" data-wt-start="' + escapeHtml(plan.id) + '">'
-    + '<b>' + escapeHtml(plan.title) + '</b>'
-    + '<span>' + escapeHtml(plan.blurb) + '</span>'
-    + (seen.indexOf(plan.id) >= 0 ? '<em class="wt-done">Done before</em>' : '')
-    + '</button>').join("");
+  const cards = walkthroughsForRole("trainer").map((plan) => walkthroughCardHtml(plan, seen)).join("");
   return '<section class="coach-module-card" id="trainerAssistance" style="grid-column:1/-1">'
     + '<h3>Trainer Assistance</h3>'
     + '<p>Pick anything you want shown. Each one walks you through it on the real screens, on a practice client, '
@@ -651,6 +895,47 @@ function bindWalkthroughCards(root) {
   }
 }
 
+/* A modal rather than a screen. The "?" is in the topbar so it reaches every client view -
+   including the active workout, which the bottom nav does not appear on and which "Log your
+   sets" can only be run from. Sending them to a settings page to find this would drop them
+   out of the workout they are in the middle of. startWalkthrough closes it on the way past:
+   walkthroughCloseDialogs clears every .modal-backdrop.open. */
+function clientAssistanceMarkup() {
+  const seen = walkthroughSeen();
+  const cards = walkthroughsForRole("client").map((plan) => walkthroughCardHtml(plan, seen)).join("");
+  return '<div id="clientAssistanceModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="clientAssistanceTitle">'
+    + '<div class="review-dialog"><h2 id="clientAssistanceTitle">Show me how</h2>'
+    + '<p>Pick anything you want walked through. It happens on your own screens, at your pace, '
+    + 'and you can stop at any point. Nothing is sent to your coach while a guide is running.</p>'
+    + '<div class="wt-card-grid">' + cards + '</div>'
+    + '<div class="tool-actions"><button class="small-btn" onclick="closeClientAssistance()">Close</button></div>'
+    + '</div></div>';
+}
+function openClientAssistance() {
+  let modal = document.getElementById("clientAssistanceModal");
+  if (!modal) {
+    const wrap = document.createElement("div");
+    wrap.innerHTML = clientAssistanceMarkup();
+    document.body.appendChild(wrap.firstChild);
+    modal = document.getElementById("clientAssistanceModal");
+  } else {
+    // Rebuilt every time: which tours can run depends on where the person is standing.
+    modal.outerHTML = clientAssistanceMarkup();
+    modal = document.getElementById("clientAssistanceModal");
+  }
+  if (!modal) return false;
+  modal.querySelectorAll("[data-wt-start]").forEach((button) => {
+    button.onclick = () => { closeClientAssistance(); startWalkthrough(button.dataset.wtStart); };
+  });
+  modal.classList.add("open");
+  return true;
+}
+function closeClientAssistance() {
+  const modal = document.getElementById("clientAssistanceModal");
+  if (modal) modal.classList.remove("open");
+  return true;
+}
+
 function openTrainerAssistance() {
   if (typeof openCoachDestination === "function") openCoachDestination("settings");
   setTimeout(() => {
@@ -663,6 +948,8 @@ if (typeof window !== "undefined") {
   window.startWalkthrough = startWalkthrough;
   window.endWalkthrough = endWalkthrough;
   window.openTrainerAssistance = openTrainerAssistance;
+  window.openClientAssistance = openClientAssistance;
+  window.closeClientAssistance = closeClientAssistance;
   window.walkthroughActive = walkthroughActive;
   window.walkthroughRecoverIfInterrupted = walkthroughRecoverIfInterrupted;
 }
