@@ -137,7 +137,10 @@ t("and cleared on exit",                       /removeProperty\("--wt-bar-h"\)/.
 // made its closing line a lie and discarded the difficulty the client had just been asked for.
 t("a client exit leaves dialogs standing",     /if \(!run\.client\) walkthroughCloseDialogs\(\)/.test(wt), true);
 const finishPlan = clientBlock.slice(clientBlock.indexOf("client-finish-review"));
-t("so 'the form is still open' is true",       /done:\s*"The form is still open/.test(finishPlan), true);
+// The closing line must hold whether or not the form ended up open - the tour now runs even
+// when the client is nowhere near the last exercise, so an unconditional claim would be false.
+t("the closing line never assumes the form",  /done:\s*"If the form is open/.test(finishPlan), true);
+t("and does not state it outright",           /done:\s*"The form is still open/.test(finishPlan), false);
 
 // The "?" is reachable from the active workout, and show() hides it while a tour runs - but a
 // tour that never changes view never calls show().
@@ -150,7 +153,19 @@ t("a tour starting at the tabs checks it is there", /CLIENT_APP_VIEWS\.includes\
 const painPlan = clientBlock.slice(clientBlock.indexOf("client-report-pain"), clientBlock.indexOf("client-finish-review"));
 t("reporting pain does not require a workout", /requires:\s*CLIENT_WALKTHROUGH_GATES\.onClientTab/.test(painPlan), true);
 t("but finding a workout does",                /requires:\s*CLIENT_WALKTHROUGH_GATES\.program/.test(clientBlock), true);
-t("the two workout tours check the workout",   (clientBlock.match(/CLIENT_WALKTHROUGH_GATES\.(inWorkout|lastExercise)/g) || []).length, 2);
+t("the two workout tours share one gate",     (clientBlock.match(/CLIENT_WALKTHROUGH_GATES\.hasWorkout/g) || []).length, 2);
+// They used to demand you were already in a workout - and the finish one demanded you were on
+// the LAST exercise, so a whole workout had to be completed before the guide about finishing
+// one would open. They now walk you in, and the steps that do skip themselves once you are.
+t("neither demands you are already there",    /GATES\.(inWorkout|lastExercise)/.test(clientBlock), false);
+t("the superseded gates are gone",            /inWorkout:|lastExercise:/.test(gates), false);
+t("steps can opt out of applying",            /typeof step\.skipIf === "function"/.test(wt), true);
+t("and Back does not trap on a skip",         /walkthroughGoToStep\(back \? index - 1 : index \+ 1, back\)/.test(wt), true);
+t("Back is passed the direction",             /walkthroughGoToStep\(walkthroughRun\.index - 1, true\)/.test(wt), true);
+const navSteps = (clientBlock.match(/skipIf/g) || []).length;
+t("conditional steps are actually used",      navSteps >= 8, true);
+// A form step pointed at a dialog that is not open would strand; they are conditional on it.
+t("the review form steps wait for the form",  (clientBlock.match(/reviewModal[\s\S]{0,80}classList\.contains\("open"\)/g) || []).length >= 4, true);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

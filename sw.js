@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-09-01-v95-client-walkthroughs-r1";
+const CACHE_NAME = "fit4life-shell-2026-09-01-v96-tours-open-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20260901-v95-client-walkthroughs-r1";
+const ASSET_VERSION = "20260901-v96-tours-open-r1";
 const SHELL = [
   "/",
   "/index.html",

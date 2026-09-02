@@ -201,27 +201,28 @@ const CLIENT_WALKTHROUGH_GATES = {
     }
     return "";
   },
+  // The two workout tours used to demand you were ALREADY in a workout - and the finish one
+  // demanded you were on the last exercise, so you had to complete a whole workout before the
+  // guide about finishing one would open. Someone who does not know how to log a set does not
+  // know how to get to the logging screen either. They now open whenever there is a workout to
+  // do, and walk you in; the steps that get you there skip themselves once you are.
+  hasWorkout: function () {
+    const profile = typeof activeClientProfile === "function" ? activeClientProfile() : null;
+    if (!profile) return "Sign in as yourself first and this guide will open.";
+    if (typeof currentView !== "undefined" && currentView === "active-workout") return "";
+    if (typeof clientProgramSource === "function" && !clientProgramSource(profile)) {
+      return "Your coach has not sent you a workout yet. This guide will be here as soon as they do.";
+    }
+    if (typeof CLIENT_APP_VIEWS === "undefined" || typeof currentView === "undefined" || !CLIENT_APP_VIEWS.includes(currentView)) {
+      return "Open this from one of the tabs at the bottom, or from inside your workout.";
+    }
+    return "";
+  },
   program: function () {
     const here = CLIENT_WALKTHROUGH_GATES.onClientTab();
     if (here) return here;
     const program = clientProgramSource(activeClientProfile());
     if (!program) return "Your coach has not sent you a workout yet. This guide will be here as soon as they do.";
-    return "";
-  },
-  inWorkout: function () {
-    if (typeof currentView !== "undefined" && currentView === "active-workout") return "";
-    return "Start your workout first, then open this guide from the top of that screen.";
-  },
-  lastExercise: function () {
-    if (typeof currentView === "undefined" || currentView !== "active-workout" || !activeWorkout) {
-      return "Open this while you are in a workout and near the end of it.";
-    }
-    try {
-      const data = activeAssignmentAndSession();
-      const units = data.session ? activeWorkoutUnits(data.session, activeWorkout.shortened) : [];
-      if (!units.length) return "Open this while you are in a workout and near the end of it.";
-      if (activeWorkout.unitIndex !== units.length - 1) return "This one is about finishing. Open it when you reach the last exercise.";
-    } catch (_) { return "Open this while you are in a workout and near the end of it."; }
     return "";
   },
 };
@@ -249,8 +250,13 @@ const CLIENT_WALKTHROUGHS = [
     role: "client",
     title: "Log your sets as you go",
     blurb: "What the numbers mean, and how to write down what you did.",
-    requires: CLIENT_WALKTHROUGH_GATES.inWorkout,
+    requires: CLIENT_WALKTHROUGH_GATES.hasWorkout,
     steps: [
+      // Skipped the moment the workout is open, so this reads as one guide whether it is
+      // opened from a tab or from inside the workout itself.
+      { say: "Writing down what you did happens inside the workout, so we need it open. Tap Workout.", target: '[data-client-tab="program"]', advance: "click", skipIf: function () { return typeof currentView !== "undefined" && currentView === "active-workout"; } },
+      { say: "Now open today's workout with this button.", target: '[data-wt="client-start-workout"]', advance: "click", skipIf: function () { return typeof currentView !== "undefined" && currentView === "active-workout"; },
+        settled: function () { return typeof currentView !== "undefined" && currentView === "active-workout"; } },
       { say: "This is the exercise you are on right now. The big line is its name, and underneath is a note from your coach on doing it well.", target: "#activeWorkoutContent .active-exercise-head", advance: "next", info: true },
       { say: "This is the plan for it. Sets is how many rounds you do. Reps is how many times you repeat the movement in one round. Rest is how long you wait between rounds.", target: "#activeWorkoutContent .active-prescription", advance: "next", info: true },
       { say: "This row is where you write down what you actually did. Fill it in after each round rather than at the end. There is a box for how many you did, one for how hard it felt, and one for weight when the exercise uses any.", target: "#activeSetMount .active-set-row", advance: "next", info: true },
@@ -291,19 +297,34 @@ const CLIENT_WALKTHROUGHS = [
     role: "client",
     title: "Finish and review a workout",
     blurb: "The last button, the short form after it, and who sees what.",
-    requires: CLIENT_WALKTHROUGH_GATES.lastExercise,
+    requires: CLIENT_WALKTHROUGH_GATES.hasWorkout,
     steps: [
-      { say: "You are on the last exercise, so this button now says Finish workout. It sends nothing on its own - it opens a short form first.", target: '[data-wt="finish-workout"]', advance: "next", info: true },
-      { say: "Press it now. If it is still off, there is a round on this exercise that has not been written down or skipped yet.", target: '[data-wt="finish-workout"]', advance: "click",
+      // Skipped the moment the workout is open, so this reads as one guide whether it is
+      // opened from a tab or from inside the workout itself.
+      { say: "Writing down what you did happens inside the workout, so we need it open. Tap Workout.", target: '[data-client-tab="program"]', advance: "click", skipIf: function () { return typeof currentView !== "undefined" && currentView === "active-workout"; } },
+      { say: "Now open today's workout with this button.", target: '[data-wt="client-start-workout"]', advance: "click", skipIf: function () { return typeof currentView !== "undefined" && currentView === "active-workout"; },
+        settled: function () { return typeof currentView !== "undefined" && currentView === "active-workout"; } },
+      { say: "This button at the bottom of the exercise card moves you on. On every exercise but the last it says Continue. On the last one it says Finish workout instead.", target: '[data-wt="continue-unit"], [data-wt="finish-workout"]', advance: "next", info: true },
+      // Only offered when they are actually on the last exercise. Otherwise the next step
+      // describes the form instead of making them finish a workout to see it.
+      { say: "You are on the last exercise, so it says Finish workout. Press it - it sends nothing on its own, it opens a short form first.", target: '[data-wt="finish-workout"]', advance: "click", skipIf: function () {
+          try {
+            if (typeof currentView === "undefined" || currentView !== "active-workout" || !activeWorkout) return true;
+            const data = activeAssignmentAndSession();
+            const units = data.session ? activeWorkoutUnits(data.session, activeWorkout.shortened) : [];
+            return !units.length || activeWorkout.unitIndex !== units.length - 1;
+          } catch (_) { return true; }
+        },
         go: function () { if (typeof closeWorkoutReview === "function") closeWorkoutReview(); },
-        settled: function () { const modal = document.getElementById("reviewModal"); return modal && modal.classList.contains("open"); } },
+        settled: function () { const m = document.getElementById("reviewModal"); return !!(m && m.classList.contains("open")); } },
+      { say: "When you finish the last exercise, a short form opens. It asks how hard the session felt, whether anything hurt, and whether you have a question for your coach. Nothing reaches them until you send it.", advance: "next", info: true, skipIf: function () { const m = document.getElementById("reviewModal"); return !!(m && m.classList.contains("open")); } },
       // Opens pre-set to 7, so picking 7 fires nothing and the step would have no way out.
-      { say: "This form is how your coach knows what to change for next time. Set this to the number that matches how the session felt - four is easy, ten is as hard as you can go - then press Next. Honest is more use than brave.", target: "#reviewDifficulty", advance: "next", info: true },
-      { say: "This asks whether anything hurt. Orange or red puts your workouts on hold until your coach has read it and replied, so choose those only when they are true. If nothing hurt, leave it on green.", target: "#reviewPain", advance: "next", info: true },
-      { say: "Anything you write here reaches your coach as a message when you send the form. It is the place for a question you did not want to stop the workout for.", target: "#reviewQuestions", advance: "next", info: true },
-      { say: "This button sends the whole form to your coach and marks the workout done. Nothing has been sent while this guide has been running.", target: "#reviewSaveOnlyBtn", advance: "next", info: true },
+      { say: "This form is how your coach knows what to change for next time. Set this to the number that matches how the session felt - four is easy, ten is as hard as you can go - then press Next. Honest is more use than brave.", target: "#reviewDifficulty", advance: "next", info: true , skipIf: function () { const m = document.getElementById("reviewModal"); return !(m && m.classList.contains("open")); } },
+      { say: "This asks whether anything hurt. Orange or red puts your workouts on hold until your coach has read it and replied, so choose those only when they are true. If nothing hurt, leave it on green.", target: "#reviewPain", advance: "next", info: true , skipIf: function () { const m = document.getElementById("reviewModal"); return !(m && m.classList.contains("open")); } },
+      { say: "Anything you write here reaches your coach as a message when you send the form. It is the place for a question you did not want to stop the workout for.", target: "#reviewQuestions", advance: "next", info: true , skipIf: function () { const m = document.getElementById("reviewModal"); return !(m && m.classList.contains("open")); } },
+      { say: "This button sends the whole form to your coach and marks the workout done. Nothing has been sent while this guide has been running.", target: "#reviewSaveOnlyBtn", advance: "next", info: true , skipIf: function () { const m = document.getElementById("reviewModal"); return !(m && m.classList.contains("open")); } },
     ],
-    done: "The form is still open. Fill it in and send it when you are ready, or close it and come back later.",
+    done: "If the form is open, fill it in and send it when you are ready. If you have not finished today's workout yet, it will open by itself when you do.",
   },
 ];
 
@@ -683,13 +704,22 @@ function walkthroughApplyHighlight(step) {
   if (el && !el.classList.contains("wt-target")) el.classList.add("wt-target");
   return !!el;
 }
-function walkthroughGoToStep(index) {
+function walkthroughGoToStep(index, back) {
   if (!walkthroughRun) return;
   walkthroughClearStep();
   const steps = walkthroughRun.plan.steps;
   if (index >= steps.length) { walkthroughFinish(); return; }
-  walkthroughRun.index = index;
+  if (index < 0) return;
   const step = steps[index];
+  // A step that does not apply where the person is standing is stepped over, rather than
+  // pointed at a control that is not there. Direction matters: skipping forward while they
+  // are pressing Back would pin them at the skip and they could never get past it.
+  if (typeof step.skipIf === "function") {
+    let skip = false;
+    try { skip = !!step.skipIf(); } catch (_) { skip = false; }
+    if (skip) { walkthroughGoToStep(back ? index - 1 : index + 1, back); return; }
+  }
+  walkthroughRun.index = index;
 
   if (typeof step.go === "function") { try { step.go(); } catch (_) {} }
 
@@ -843,7 +873,7 @@ function walkthroughRenderBar() {
    // length of each step's text, so it is re-measured on every render.
   try { document.body.style.setProperty("--wt-bar-h", bar.offsetHeight + "px"); } catch (_) {}
   const back = bar.querySelector("[data-wt-back]");
-  if (back) back.onclick = () => walkthroughGoToStep(walkthroughRun.index - 1);
+  if (back) back.onclick = () => walkthroughGoToStep(walkthroughRun.index - 1, true);
   const next = bar.querySelector("[data-wt-next]");
   if (next) next.onclick = () => walkthroughGoToStep(walkthroughRun.index + 1);
   bar.querySelector("[data-wt-exit]").onclick = () => endWalkthrough(false);
