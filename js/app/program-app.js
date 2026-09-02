@@ -407,7 +407,11 @@ function saveClientPainReport() {
   if (!area) { showToast("Choose where you felt it"); byId("clientPainArea").focus(); return null; }
   if (info.rank >= PAIN_LEVELS.orange.rank && !exercise) { showToast("Name the movement or exercise that changed"); byId("clientPainExercise").focus(); return null; }
   if (info.rank >= PAIN_LEVELS.orange.rank && details.length < 5) { showToast("Briefly describe what changed and whether you stopped"); byId("clientPainDetails").focus(); return null; }
-  const data = {area,injuryArea:area,level,pain:info.legacy,movementChanged,exercise,details,painScore:rawScore === "" ? null : Math.max(0,Math.min(10,Number(rawScore))),coachNotice:true,safetyHold:info.rank >= PAIN_LEVELS.orange.rank};
+  const data = {area,injuryArea:area,level,pain:info.legacy,movementChanged,exercise,details,painScore:rawScore === "" ? null : Math.max(0,Math.min(10,Number(rawScore))),coachNotice:true,safetyHold:activeAssignmentSupervision() !== "trainer" && info.rank >= PAIN_LEVELS.orange.rank};
+  /* A hold exists because nobody was there to answer. On a trainer-led session somebody was -
+     out loud, before this got typed - so it is still recorded and still raises a coach task,
+     but it does not lock the next workout. Floor hours still holds: the trainer is in the room
+     but may not have been at this rack when it happened. */
   const record = addProgressEntry({type:"pain",profileId:profile.id,client:profile.name,sessionId:activeWorkout && activeWorkout.sessionId || "",label:info.label,value:INJURY_LABELS[area] || area,note:(exercise ? exercise + " · " : "") + (details || info.action),data});
   if (!record) return null;
   if (data.safetyHold && activeWorkout) {
@@ -461,6 +465,42 @@ function startActiveWorkout(profileId,shortened,assignmentId) {
   activeWorkout = saved && saved.assignmentId === assignment.id ? saved : {assignmentId:assignment.id,profileId:profile.id,sessionId:session.sessionId,unitIndex:0,pairIndex:0,setByExercise:{},extraSets:{},warmups:{},skippedSets:{},skippedExercises:{},supersetMode:{},shortened:Boolean(shortened),startedAt:new Date().toISOString()};
   activeWorkout.setByExercise = activeWorkout.setByExercise || {}; activeWorkout.editingSetByExercise = activeWorkout.editingSetByExercise || {}; activeWorkout.extraSets = activeWorkout.extraSets || {}; activeWorkout.warmups = activeWorkout.warmups || {}; activeWorkout.skippedSets = activeWorkout.skippedSets || {}; activeWorkout.skippedExercises = activeWorkout.skippedExercises || {}; activeWorkout.supersetMode = activeWorkout.supersetMode || {};
   if (shortened) activeWorkout.shortened = true; restoreRestTimerSnapshot(activeWorkout.restTimer); saveActiveWorkoutState(); portalRole = 'client'; show('active-workout'); renderActiveWorkout(); return activeWorkout;
+}
+/* How this session is being run: "trainer", "floor" or "solo". Chosen at assign time and
+   carried on the assignment. Older assignments have no answer, and are treated as trainer-led
+   because that is what the app assumed before the question existed. */
+/* Opens a client's running workout on the TRAINER's own device, from that client's page.
+   Deliberately not the owner preview, which hands the whole portal over to the client shell:
+   the trainer stays in their own workspace and this is the one client screen they are let
+   into. The same rendering and the same logging code run, so a set the trainer enters is the
+   same kind of record as one the client enters, and the two merge. */
+function openTrainerLiveWorkout(profileId) {
+  if (typeof requireTrainerMutation === "function" && !requireTrainerMutation("fill in a client's workout")) return false;
+  const live = typeof window.fit4lifeLiveWorkoutFor === "function" ? window.fit4lifeLiveWorkoutFor(profileId) : null;
+  if (!live) { showToast("They are not in a workout right now"); return false; }
+  if (live.finishedAt) { showToast("That workout has already been finished"); return false; }
+  try { localStorage.setItem(ACTIVE_CLIENT_KEY, profileId); } catch (_) {}
+  activeWorkout = live;
+  saveActiveWorkoutState();
+  trainerLiveWorkoutProfileId = profileId;
+  show("active-workout");
+  renderActiveWorkout();
+  showToast("Filling in with them \u2014 they can keep logging on their phone");
+  return true;
+}
+function closeTrainerLiveWorkout() {
+  trainerLiveWorkoutProfileId = "";
+  activeWorkout = null;
+  try { localStorage.removeItem(ACTIVE_WORKOUT_KEY); } catch (_) {}
+  if (typeof show === "function") show("trainer");
+  return true;
+}
+function activeAssignmentSupervision() {
+  try {
+    const data = activeAssignmentAndSession();
+    const value = data && data.assignment && data.assignment.supervision;
+    return value === "solo" || value === "floor" || value === "trainer" ? value : "trainer";
+  } catch (_) { return "trainer"; }
 }
 function activeAssignmentAndSession() {
   if (!activeWorkout) activeWorkout = loadActiveWorkoutState(); if (!activeWorkout) return {};
@@ -669,7 +709,45 @@ function skipCurrentActiveRound() {
    Only two of the fifteen redraw paths saved the draft first. Now none of them can forget. */
 function renderActiveWorkout() {
   stashActiveSetDraft();
+  document.body.classList.toggle("trainer-live-workout", Boolean(trainerLiveWorkoutProfileId));
+  if (renderWorkoutEndedElsewhere()) return;
   renderActiveWorkoutInner();
+  renderTrainerFillingBanner();
+}
+/* The workout screen is the client's screen. A trainer filling in on it needs to be told
+   whose it is and given a way back, or they are one tap from logging a set against the wrong
+   person and no way to tell they are not in their own app. */
+function renderTrainerFillingBanner() {
+  if (!trainerLiveWorkoutProfileId) return;
+  const out = byId('activeWorkoutContent'); if (!out) return;
+  const profile = loadProfiles().find((item) => item.id === trainerLiveWorkoutProfileId);
+  const banner = document.createElement('div');
+  banner.className = 'trainer-filling-banner';
+  banner.innerHTML = '<div><b>Filling in for ' + escapeHtml(profile ? profile.name : 'this client') + '</b>'
+    + '<span>They can keep logging on their own phone. Whatever either of you enters lands in the same workout.</span></div>'
+    + '<button class="small-btn" onclick="closeTrainerLiveWorkout()">Back to their page</button>';
+  out.insertBefore(banner, out.firstChild);
+}
+/* The other person finished it. Without this their screen keeps a live workout open on a
+   session that is over, and anything they log lands nowhere anyone will look. */
+function renderWorkoutEndedElsewhere() {
+  if (!activeWorkout || !activeWorkout.finishedAt) return false;
+  const me = (typeof window !== "undefined" && window.fit4lifeCloudRole === "client") ? "client" : "trainer";
+  if (!activeWorkout.finishedBy || activeWorkout.finishedBy === me) return false;
+  const out = byId('activeWorkoutContent'); if (!out) return false;
+  const whose = activeWorkout.finishedBy === "client" ? "your client\u2019s" : "your trainer\u2019s";
+  out.innerHTML = '<div class="empty-state-polished"><b>This workout was finished on ' + whose + ' device</b>'
+    + '<p>Everything either of you logged was saved together. There is nothing left to fill in here.</p>'
+    + '<div class="tool-actions"><button class="small-btn primary" onclick="leaveFinishedWorkout()">Done</button></div></div>';
+  return true;
+}
+function leaveFinishedWorkout() {
+  if (trainerLiveWorkoutProfileId) return closeTrainerLiveWorkout();
+  activeWorkout = null;
+  try { localStorage.removeItem(ACTIVE_WORKOUT_KEY); } catch (_) {}
+  const client = (typeof window !== "undefined" && window.fit4lifeCloudRole === "client");
+  if (typeof show === "function") show(client ? "client-home" : "trainer-menu");
+  return true;
 }
 function renderActiveWorkoutInner() {
   const out = byId('activeWorkoutContent'), data = activeAssignmentAndSession(); if (!out || !data.session || !data.profile) { if (out) out.innerHTML = '<div class="empty-state-polished"><b>Workout unavailable</b><p>Return to Workout and reopen the current assignment.</p></div>'; return; }
@@ -814,7 +892,10 @@ function replaceActiveExercise() { const data = activeAssignmentAndSession(), un
 async function recordActiveNote() { const data = activeAssignmentAndSession(), unit = activeWorkoutUnits(data.session,activeWorkout.shortened)[activeWorkout.unitIndex], exercise = unit.items[activeWorkout.pairIndex], note = await askForText('Add a short note for this exercise',"",{ multiline:true }); if (!note) return; addProgressEntry({type:'note',client:data.profile.name,profileId:data.profile.id,sessionId:data.session.sessionId,label:exercise.name,value:'Workout note',note}); showToast('Exercise note saved'); }
 function moveActiveUnit(direction) { const data = activeAssignmentAndSession(), units = activeWorkoutUnits(data.session,activeWorkout.shortened), current = units[activeWorkout.unitIndex]; if (direction > 0 && !activeUnitIsDone(data.session,current,activeWorkout.unitIndex)) { showToast('Log or skip the current sets before continuing'); return; } if (direction > 0 && activeWorkout.unitIndex >= units.length - 1) { finishActiveWorkout(); return; } activeWorkout.unitIndex = Math.max(0,Math.min(units.length - 1,activeWorkout.unitIndex + direction)); activeWorkout.pairIndex = 0; saveActiveWorkoutState(); renderActiveWorkout(); }
 function leaveActiveWorkout() { saveActiveWorkoutState(); openClientTab('program'); showToast('Workout progress preserved'); }
-function finishActiveWorkout() { const data = activeAssignmentAndSession(); if (!data.assignment || !data.session) return; state.session = {type:"solo",data:JSON.parse(JSON.stringify(data.session)),edits:{}}; openWorkoutReview(); }
+/* Either of them may end the workout. Stamped before the review opens so the other device
+   learns who did on its next pull, rather than sitting on a session that is already over.
+   The merge keeps whichever finish came first, so a race resolves the same way on both. */
+function finishActiveWorkout() { if (activeWorkout && !activeWorkout.finishedAt) { activeWorkout.finishedAt = new Date().toISOString(); activeWorkout.finishedBy = (typeof window !== "undefined" && window.fit4lifeCloudRole === "client") ? "client" : "trainer"; saveActiveWorkoutState(); } const data = activeAssignmentAndSession(); if (!data.assignment || !data.session) return; state.session = {type:"solo",data:JSON.parse(JSON.stringify(data.session)),edits:{}}; openWorkoutReview(); }
 function approveCurrentWorkoutDraft() {
   if (!requireTrainerMutation("approve generated workouts") || !state.session) return false;
   const plans = workoutPlans(state.session), failures = [];
@@ -851,6 +932,22 @@ async function assignCurrentWorkout() {
   if (workoutName === null) return null;
   const finalName = String(workoutName || suggested).trim().slice(0,80) || suggested;
 
+  /* Asked at ASSIGN rather than at build, because at build you often do not know yet: a week
+     gets programmed on Sunday and whether Thursday has a trainer on it depends on a booking
+     that may not exist. The build-time answer is the default here and can be changed.
+     Three states, not two - floor hours is its own thing. The trainer is in the room and with
+     them for about half of it, which is neither of the other two. */
+  const soloAtBuild = Boolean(firstSpec.soloDay);
+  const supervision = await (typeof askForChoice === "function"
+    ? askForChoice("Who is running this workout?", [
+        { value:"trainer", label:"With a trainer" },
+        { value:"floor",   label:"Floor hours \u2014 trainer nearby, with them part of the time" },
+        { value:"solo",    label:"On their own" },
+      ], { selected: soloAtBuild ? "solo" : "trainer", confirmLabel:"Assign",
+           note:"This decides how the app behaves during the session - who can fill it in, and whether a pain report holds the next workout." })
+    : Promise.resolve(soloAtBuild ? "solo" : "trainer"));
+  if (supervision === null) return null;
+
   const assignments = loadAssignedWorkouts(), saved = [], blocked = [];
   workoutPlans(state.session).forEach((plan) => {
     const spec = plan.session.spec || {}, profile = loadProfiles().find((item) => item.id === spec.profileId) || loadProfiles().find((item) => clientMatches(item.name,spec.client));
@@ -858,7 +955,11 @@ async function assignCurrentWorkout() {
     if (unresolvedClientSafetyHold(profile)) { blocked.push(profile.name + ": recent pain or discomfort still needs trainer review"); return; }
     const conflicts = sessionSafetyConflictsForProfile(plan.session,profile);
     if (conflicts.length) { blocked.push(profile.name + ": " + conflicts.join("; ")); return; }
-    const session = { type:"solo", data:JSON.parse(JSON.stringify(plan.session)), edits:JSON.parse(JSON.stringify(state.session.edits || {})) }, assignment = { id:"assignment-" + Date.now() + "-" + Math.random().toString(16).slice(2), profileId:profile.id, client:profile.name, assignedAt:new Date().toISOString(), status:"assigned", programDayName:finalName, session };
+    const session = { type:"solo", data:JSON.parse(JSON.stringify(plan.session)), edits:JSON.parse(JSON.stringify(state.session.edits || {})) }, assignment = { id:"assignment-" + Date.now() + "-" + Math.random().toString(16).slice(2), profileId:profile.id, client:profile.name, assignedAt:new Date().toISOString(), status:"assigned", programDayName:finalName,
+      // Carried onto the assignment so the client's device knows too. Without it the supervision
+      // answer stayed on the trainer's screen and the client's app behaved identically whether
+      // somebody was standing next to them or not.
+      supervision, session };
     // Built from a calendar session: land it on that date and link it back to the booking.
     if (typeof linkPendingAppointment === "function") linkPendingAppointment(assignment);
     const existing = assignments.findIndex((item) => item.profileId === profile.id && !item.programId && assignmentStatus(item) === "assigned");

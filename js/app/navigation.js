@@ -1,6 +1,9 @@
 /* ---------- navigation ---------- */
 let portalRole = "";
 let currentView = "home";
+// Set only while a trainer has a client's live workout open from that client's page. It is what
+// distinguishes "filling in for a client" from "wandered into the client app".
+let trainerLiveWorkoutProfileId = "";
 const CLIENT_APP_VIEWS = ["client-home","client-program","client-progress","client-coach","client-more"];
 const COACH_SHELL_VIEWS = ["trainer-menu","trainer","builder","programs","tools","readiness","advanced","coach-module"];
 const ACTIVE_CLIENT_KEY = "fit4life_active_client_v1";
@@ -21,7 +24,13 @@ function show(view) {
   const signedInRole = window.fit4lifeCloudRole || "";
   const clientOnlyView = CLIENT_APP_VIEWS.includes(view) || ["client-menu","client-workout","client-consultation","active-workout","checkin"].includes(view);
   if (signedInRole === "client" && activeClientProfile() && view !== "client-consultation" && clientOnlyView && typeof clientNeedsRequiredConsultation === "function" && clientNeedsRequiredConsultation()) { openClientConsultation(true); return; }
-  if (signedInRole === "trainer" && clientOnlyView) { portalRole = "trainer"; view = "trainer-menu"; showToast("Trainer accounts use the coaching workspace only"); }
+  /* A trainer is bounced out of the client shell, which is right - except when they have
+     deliberately opened a client's running workout from that client's page to fill a set in.
+     They stay a trainer throughout; this is the one client view they are allowed into, and
+     only while that session is open. */
+  if (view !== "active-workout") trainerLiveWorkoutProfileId = "";
+  const trainerInLiveWorkout = view === "active-workout" && Boolean(trainerLiveWorkoutProfileId);
+  if (signedInRole === "trainer" && clientOnlyView && !trainerInLiveWorkout) { portalRole = "trainer"; view = "trainer-menu"; showToast("Trainer accounts use the coaching workspace only"); }
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
   const target = document.getElementById("view-" + view); if (target) target.classList.add("active");
   currentView = view;

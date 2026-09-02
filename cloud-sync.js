@@ -411,12 +411,87 @@
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
+  // Local cache, deliberately not in CLOUD_KEYS: it is rebuilt from every pull and must never
+  // be pushed back up as though the trainer's device were the author of it.
+  const LIVE_WORKOUTS_KEY = "fit4life_live_workouts_v1";
+  window.fit4lifeLiveWorkoutFor = function fit4lifeLiveWorkoutFor(profileId) {
+    if (!profileId) return null;
+    const all = readJson(LIVE_WORKOUTS_KEY, {});
+    return all && all[profileId] ? all[profileId] : null;
+  };
+  window.fit4lifeLiveWorkoutProfiles = function fit4lifeLiveWorkoutProfiles() {
+    const all = readJson(LIVE_WORKOUTS_KEY, {});
+    return Object.keys(all || {}).filter((id) => all[id] && !all[id].finishedAt);
+  };
+
   function newestObject(current, incoming) {
     if (!current) return incoming || null;
     if (!incoming) return current;
     const currentTime = recordTime(current.updatedAt || current.savedAt || current.completedAt || current.createdAt);
     const incomingTime = recordTime(incoming.updatedAt || incoming.savedAt || incoming.completedAt || incoming.createdAt);
     return incomingTime >= currentTime ? { ...current, ...incoming } : { ...incoming, ...current };
+  }
+
+  /* One workout, two devices - the trainer filling in a set from their phone while the client
+     holds theirs. newestObject merged the whole thing as a blob, so the later push replaced the
+     earlier device's work outright: a set the trainer marked skipped, a warm-up the client
+     added, an exercise either of them skipped, simply gone. The logged SETS were always safe
+     (they are individual records in the progress log and merge by id) - this is everything
+     else the screen remembers.
+
+     Cursors take whichever device is further along. Anything that is a record of something
+     somebody did is merged key by key, so neither side loses theirs. */
+  function mergeActiveWorkout(left, right) {
+    if (!left) return right || null;
+    if (!right) return left;
+    // Two different workouts is not a merge. Keep the newer rather than blending two sessions.
+    if (left.assignmentId && right.assignmentId && left.assignmentId !== right.assignmentId) {
+      return newestObject(left, right);
+    }
+    const furthest = (a, b) => Math.max(Number(a) || 0, Number(b) || 0);
+    // extraSets, warmups and setByExercise are counts: the higher number is the one that has
+    // seen more work, whichever device did it.
+    const mergeCounts = (a, b) => {
+      const out = { ...(a || {}) };
+      Object.keys(b || {}).forEach((key) => { out[key] = furthest(out[key], b[key]); });
+      return out;
+    };
+    // skippedSets, skippedExercises and supersetMode are marks: present on either side means
+    // it happened, and a mark is never unset by the other device not knowing about it.
+    const mergeMarks = (a, b) => {
+      const out = { ...(a || {}) };
+      Object.keys(b || {}).forEach((key) => { if (b[key]) out[key] = b[key]; });
+      return out;
+    };
+    const earlier = (a, b) => {
+      if (!a) return b || null;
+      if (!b) return a;
+      return recordTime(a) <= recordTime(b) ? a : b;
+    };
+    return {
+      ...left,
+      ...right,
+      unitIndex: furthest(left.unitIndex, right.unitIndex),
+      pairIndex: furthest(left.pairIndex, right.pairIndex),
+      setByExercise: mergeCounts(left.setByExercise, right.setByExercise),
+      extraSets: mergeCounts(left.extraSets, right.extraSets),
+      warmups: mergeCounts(left.warmups, right.warmups),
+      skippedSets: mergeMarks(left.skippedSets, right.skippedSets),
+      skippedExercises: mergeMarks(left.skippedExercises, right.skippedExercises),
+      supersetMode: mergeMarks(left.supersetMode, right.supersetMode),
+      // Either device may shorten the workout, and shortening is not undone by the other
+      // device not having heard about it.
+      shortened: Boolean(left.shortened || right.shortened),
+      startedAt: earlier(left.startedAt, right.startedAt),
+      // Either side may end it. Whoever got there first owns it, so the other device can say
+      // who finished rather than silently reopening a workout that is over.
+      finishedAt: earlier(left.finishedAt, right.finishedAt),
+      finishedBy: recordTime(left.finishedAt) && (!right.finishedAt || recordTime(left.finishedAt) <= recordTime(right.finishedAt))
+        ? (left.finishedBy || "") : (right.finishedBy || left.finishedBy || ""),
+      // Purely local UI state. Carrying another device's half-typed row across would put a
+      // stray edit box on someone's screen.
+      editingSetByExercise: {},
+    };
   }
 
   function mergeBundlePayload(recordType, current, incoming) {
@@ -463,7 +538,7 @@
         progressReceiptResponses: mergeRecords(left.progressReceiptResponses, right.progressReceiptResponses),
         workoutRequests: mergeRecords(left.workoutRequests, right.workoutRequests),
         daily: { ...(left.daily || {}), ...(right.daily || {}) },
-        activeWorkout: newestObject(left.activeWorkout, right.activeWorkout),
+        activeWorkout: mergeActiveWorkout(left.activeWorkout, right.activeWorkout),
         assignmentStates: mergeRecords(leftStates, rightStates),
         savedAt: recordTime(right.savedAt) >= recordTime(left.savedAt) ? right.savedAt : left.savedAt
       };
@@ -1303,6 +1378,11 @@
     let calendarEvents = [];
     let workoutRequests = [];
     let clientActiveWorkout = null;
+    /* One slot could only ever hold one client's live workout, so with two people training at
+       once - normal in a rec gym - a trainer saw whichever arrived first and had no way to
+       reach the other. Collected per client instead. Derived from the pull and never pushed:
+       it is a read-only view of what each client's own device is doing. */
+    const liveWorkoutsByProfile = {};
 
     profileRows.forEach((row) => { if (row.status === "archived") archivedExternalIds.add(String(row.external_id)); });
     profileRows.filter((row) => row.status === "active").forEach((row) => {
@@ -1341,7 +1421,10 @@
       progressReceiptResponses = mergeRecords(progressReceiptResponses, activity.progressReceiptResponses);
       workoutRequests = mergeRecords(workoutRequests, activity.workoutRequests);
       clientDaily = Object.assign(clientDaily, activity.daily || {});
-      if (activity.activeWorkout && (!clientActiveWorkout || profile.auth_user_id === cloudUser.id)) clientActiveWorkout = activity.activeWorkout;
+      if (activity.activeWorkout) {
+        liveWorkoutsByProfile[profile.id] = activity.activeWorkout;
+        if (!clientActiveWorkout || profile.auth_user_id === cloudUser.id) clientActiveWorkout = activity.activeWorkout;
+      }
 
       const assignmentStates = Array.isArray(activity.assignmentStates) ? activity.assignmentStates : activity.assignmentState ? [activity.assignmentState] : [];
       assignmentStates.forEach((assignmentState) => {
@@ -1371,7 +1454,11 @@
     writeJson(CLOUD_KEYS.coachNotes, coachNotes);
     writeJson(CLOUD_KEYS.calendarEvents, calendarEvents);
     writeJson(CLOUD_KEYS.workoutRequests, workoutRequests);
-    writeJson(CLOUD_KEYS.activeWorkout, clientActiveWorkout);
+    writeJson(LIVE_WORKOUTS_KEY, liveWorkoutsByProfile);
+    /* Only a client's own device may have its active workout replaced by the pull. Doing it on
+       a trainer's device overwrote whatever slot their own app was using with a client's
+       session, which is not theirs to hold. */
+    if (cloudRole === "client") writeJson(CLOUD_KEYS.activeWorkout, clientActiveWorkout);
 
     if (cloudRole === "client" && profiles.length) {
       let existingActiveId = "";

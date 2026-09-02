@@ -1956,6 +1956,16 @@ body.walkthrough-client .client-bottom-nav.show{box-shadow:0 18px 48px rgba(0,0,
 /* A tour that cannot run yet reads as unavailable rather than looking broken when tapped. */
 .wt-card-blocked{opacity:.55;cursor:not-allowed}
 .wt-card-blocked b{color:var(--text-faint)}
+/* A client's workout in progress, on the trainer's own client page. */
+.live-workout-panel{border-color:var(--blue)}
+.live-badge{background:var(--blue-glow);border-color:var(--blue);color:var(--blue-bright)}
+/* A trainer filling in for someone needs to know at a glance that this is not their own
+   screen and not their own workout. */
+body.trainer-live-workout #view-active-workout{box-shadow:inset 0 0 0 2px var(--blue)}
+.trainer-filling-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  margin:0 0 12px;padding:10px 14px;border:1px solid var(--blue);border-radius:9px;background:var(--blue-glow)}
+.trainer-filling-banner b{font-family:var(--display);letter-spacing:.04em;text-transform:uppercase;font-size:12.5px}
+.trainer-filling-banner span{color:var(--text-dim);font-size:14px}
 /* An informational step is locked: reading about a setting must not change it,
    and it should not look like something waiting to be tapped. */
 .wt-target.wt-info{pointer-events:none!important;animation:none!important;

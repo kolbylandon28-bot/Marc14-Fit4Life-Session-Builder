@@ -96,8 +96,9 @@ function trainerSessionGroups(entries) {
 function trainerClientNames() {
   // A walkthrough runs on one practice client. The directory otherwise unions six stores,
   // so a real client whose name sorts first would be highlighted and opened instead.
-  if (typeof walkthroughActive === "function" && walkthroughActive()) {
-    return loadProfiles().filter((profile) => profile.id === PRACTICE_CLIENT_ID).map((profile) => profile.name);
+  if (typeof practiceModeActive === "function" && practiceModeActive()) {
+    const practice = typeof practiceProfileIds === "function" ? practiceProfileIds() : [PRACTICE_CLIENT_ID];
+    return loadProfiles().filter((profile) => practice.includes(profile.id)).map((profile) => profile.name);
   }
   return [...loadProfiles().map((profile) => profile.name), ...loadProgress().map((entry) => entry.client).filter(Boolean), ...loadInBodyScans().map((scan) => scan.client).filter(Boolean), ...loadBodyGoals().map((goal) => goal.client).filter(Boolean), ...loadCheckIns().map((item) => item.client).filter(Boolean), ...loadAthleteMetrics().map((item) => item.client).filter(Boolean)]
     .filter((name) => name && name !== "Client")
@@ -572,12 +573,38 @@ function trainerClientSafetyReportsContent(analysis) {
 function trainerClientDetailsContent(profile,analysis) {
   if (!profile) return '<section class="analysis-panel"><div class="empty-state">This history-only client does not have a saved profile yet.</div></section>';
   const goalLabels = (profile.goals || []).map((goal) => GOALS[goal] ? GOALS[goal].label : goal).join(' + ') || 'Not recorded';
+/* A client mid-workout, seen from the trainer's own side of the app. Deliberately NOT the
+   owner's client-preview, which swaps the whole portal over to the client's shell - a trainer
+   stays in the trainer workspace and opens this from the client's page.
+   Only shown while a workout is actually running: no card at all the rest of the time, rather
+   than a dead panel on every client. */
+function liveWorkoutCardHtml(profile) {
+  if (!profile || typeof window.fit4lifeLiveWorkoutFor !== "function") return "";
+  const live = window.fit4lifeLiveWorkoutFor(profile.id);
+  if (!live || live.finishedAt) return "";
+  const started = live.startedAt ? new Date(live.startedAt) : null;
+  const minutes = started ? Math.max(0, Math.round((Date.now() - started.getTime()) / 60000)) : null;
+  const logged = Object.keys(live.setByExercise || {}).reduce((total, key) => total + (Number(live.setByExercise[key]) || 0), 0);
+  const supervision = live.supervision || (assignmentForClient(profile.id) || {}).supervision || "trainer";
+  const running = supervision === "solo" ? "On their own"
+    : supervision === "floor" ? "Floor hours" : "With a trainer";
+  return '<section class="analysis-panel live-workout-panel"><div class="analysis-panel-head"><div>'
+    + '<h4 class="analysis-section-title">Working out now</h4>'
+    + '<p>' + escapeHtml(running) + (minutes != null ? ' \u00b7 started ' + minutes + ' min ago' : '')
+    + (logged ? ' \u00b7 ' + logged + ' set' + (logged === 1 ? '' : 's') + ' logged so far' : '') + '</p>'
+    + '</div><span class="tier-badge live-badge">Live</span></div>'
+    + '<p class="storage-note">You can fill this in from here while they hold their own phone. '
+    + 'Whatever either of you enters lands in the same workout.</p>'
+    + '<div class="tool-actions"><button class="small-btn primary" onclick="openTrainerLiveWorkout(\'' + escapeHtml(profile.id) + '\')">Open their workout</button></div>'
+    + '</section>';
+}
+
   const limitations = (profile.injuries || []).map((item) => INJURY_LABELS[item] || item).join(', ') || 'None recorded';
   const equipment = (profile.zones || []).join(', ') || 'Not recorded', contact = [profile.email,profile.phone].filter(Boolean).join(' · ') || 'Not recorded';
   const administration = isFit4LifeOwner()
     ? '<button class="small-btn danger" onclick="deleteClientProfile(\'' + escapeHtml(profile.id) + '\')">Delete profile only</button><button class="small-btn danger" onclick="openCompleteDeleteClient(decodeURIComponent(\'' + encodeURIComponent(profile.name) + '\'))">Delete all client data</button>'
     : '<button class="small-btn" onclick="openOwnerRequestDialog(\'client_archive\',\'' + escapeHtml(profile.id) + '\',\'\',\'Archive or delete this client\')">Request owner action</button>';
-  return (typeof trainerConsultationSummaryHtml === "function" ? trainerConsultationSummaryHtml(profile) : "") + '<section class="analysis-panel client-details-panel"><div class="analysis-panel-head"><div><h4 class="analysis-section-title">Client details</h4><p>The profile facts that affect everyday coaching are grouped here.</p></div><button class="small-btn primary" onclick="openProfileEditor(\'' + escapeHtml(profile.id) + '\')">Edit profile</button></div><div class="client-fact-grid">'
+  return liveWorkoutCardHtml(profile) + (typeof trainerConsultationSummaryHtml === "function" ? trainerConsultationSummaryHtml(profile) : "") + '<section class="analysis-panel client-details-panel"><div class="analysis-panel-head"><div><h4 class="analysis-section-title">Client details</h4><p>The profile facts that affect everyday coaching are grouped here.</p></div><button class="small-btn primary" onclick="openProfileEditor(\'' + escapeHtml(profile.id) + '\')">Edit profile</button></div><div class="client-fact-grid">'
     + [["Primary goal",goalLabels],["Experience",EXP_LABEL(profile.experience)],["Typical session",(profile.minutes || 60) + ' minutes'],["Training frequency",profile.availableDays ? profile.availableDays + ' days/week' : 'Not recorded'],["Limitations",limitations],["Equipment",equipment],["Coaching coverage",trainerClientOwnershipLabel(profile)],["Contact",contact]].map(([label,value]) => '<div class="client-fact"><span>' + escapeHtml(label) + '</span><b>' + escapeHtml(value) + '</b></div>').join('') + '</div></section>'
     + trainerClientSafetyReportsContent(analysis) + trainerNotesTab(analysis) + trainerDocumentsTab(analysis)
     + '<details class="client-admin-zone"><summary>Administrative actions</summary><p>Profile deletion and organization-level changes stay separated from everyday coaching.</p><div class="tool-actions"><button class="small-btn" onclick="openInBodyModal()">Add InBody scan</button><button class="small-btn" onclick="openBodyGoalModal()">Body goals</button>' + administration + '</div></details>';
