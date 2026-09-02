@@ -56,5 +56,43 @@ t("and which request",                      store[0].safetyExceptions.shoulder.r
 t("an unknown client grants nothing",       api.grantSafetyExceptions("nope",["shoulder"],identity,"r"), 0);
 t("no tags grants nothing",                 api.grantSafetyExceptions("p1",[],identity,"r"), 0);
 t("a second grant adds, never replaces",    (api.grantSafetyExceptions("p1",["knee"],identity,"r2"), Object.keys(store[0].safetyExceptions).length), 3);
+console.log("\n--- a client's own account settings ---");
+const appSrc = fs.readFileSync(R + "js/app/program-app.js", "utf8");
+const syncSrc = fs.readFileSync(R + "cloud-sync.js", "utf8");
+const html = fs.readFileSync(R + "index.html", "utf8");
+const render = fs.readFileSync(R + "js/app/rendering.js", "utf8");
+
+// The last step of the consultation has always told clients to come to "More > Account &
+// profile" to update their answers. That screen did not exist.
+t("the promised screen now exists",           /client-account-settings/.test(appSrc), true);
+t("and it is on the More tab",                /clientAccountCardHtml\(profile,trainerPreview\)/.test(appSrc), true);
+t("the consultation still points there",      /More \u2192 Account &amp; profile/.test(html), true);
+
+console.log("\n--- the email is shown, never edited ---");
+// It is both the login and the address a trainer pre-approved them against, so a typo here
+// would lock someone out of their own account with no way back.
+const card = appSrc.slice(appSrc.indexOf("function clientAccountCardHtml"), appSrc.indexOf("async function openClientPasswordDialog"));
+t("the address is displayed",                 /Signing in as/.test(card), true);
+t("but there is no input for it",             /<input[^>]*email/i.test(card), false);
+t("and it says why",                          /could lock you out/.test(card), true);
+
+console.log("\n--- only the account holder may change it ---");
+t("a self-service setter exists",             /fit4lifeCloudSetOwnPassword/.test(syncSrc), true);
+t("it refuses when signed out",               /You are not signed in/.test(syncSrc), true);
+t("and enforces a length",                    /at least 8 characters/.test(syncSrc), true);
+// The decision was explicit: no trainer sets or sees a client's password. Supabase stores a
+// one-way hash, so a readable copy would have to be stored alongside it - putting every
+// client's password, including ones they reuse, one leak from the public.
+t("no trainer-side password reset exists",    /resetClientPassword|setClientPassword|adminSetPassword/.test(appSrc + syncSrc), false);
+t("nothing stores a readable password",       /password:\s*(profile|client|row)\./.test(appSrc + syncSrc), false);
+t("a trainer previewing cannot change it",    /trainerPreview \? '' : '<button[^>]*openClientPasswordDialog/.test(card), true);
+
+console.log("\n--- the dialog itself ---");
+t("the field is a password field",            (appSrc.match(/type:"password"/g) || []).length, 2);
+t("it is confirmed before being applied",     /Those did not match\. Nothing was changed\./.test(appSrc), true);
+t("the prompt supports the note it is given", /settings\.note \? '<p class="storage-note">/.test(render), true);
+// Without this the browser offers the OLD password as the suggestion for the new one.
+t("and does not autofill the old password",   /autocomplete="new-password"/.test(render), true);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);

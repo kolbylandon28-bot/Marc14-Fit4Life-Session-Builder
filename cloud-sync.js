@@ -2205,6 +2205,27 @@
     return { ok:true };
   };
 
+  /* Changing your own password from inside the app, rather than from the sign-in gate. The
+     existing updater reads two inputs that live in the auth panel, which a signed-in person
+     cannot reach without being shown a screen that looks like being logged out.
+
+     Only the account holder can do this. There is deliberately no way for a trainer to set or
+     read a client's password: Supabase stores a one-way hash, so there is nothing to read, and
+     keeping a readable copy so staff could look one up would put every client's password one
+     database leak away from the public - including the ones they reuse elsewhere. */
+  window.fit4lifeCloudSetOwnPassword = async function fit4lifeCloudSetOwnPassword(password) {
+    if (!cloudClient || !cloudUser) return { ok:false, error:"You are not signed in." };
+    const value = String(password || "");
+    if (value.length < 8) return { ok:false, error:"Use a password with at least 8 characters." };
+    try {
+      const response = await cloudClient.auth.updateUser({ password: value });
+      if (response.error) return { ok:false, error:response.error.message || "The password could not be changed." };
+      return { ok:true };
+    } catch (error) {
+      return { ok:false, error:(error && error.message) || "The password could not be changed." };
+    }
+  };
+
   window.fit4lifeCloudSignOut = async function fit4lifeCloudSignOut() {
     // Attempt the save before asking anyone to choose between signing out and losing work.
     // The warning existed but nothing ever tried the push first, so a trainer whose last save

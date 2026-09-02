@@ -363,9 +363,59 @@ function renderClientMoreLegacy(profile) {
 function clientSessionUsesLoadedBar(session) {
   return clientSessionExercises(session).some(({exercise}) => ["rack","platform","barbell"].includes(exercise.zone) || /barbell/i.test(exercise.name || ""));
 }
+/* "Account & profile" - the screen the last step of the consultation has always told clients
+   to come to, and which did not exist. More held tools, habits, the library, nutrition and
+   education, and nothing about their own account at all.
+
+   The email is shown and not editable on purpose: it is what they sign in with AND what a
+   trainer pre-approved them against, so a typo here would lock them out of their own account
+   with no way back. Changing it is a trainer job.
+
+   Goals, preferences and limitations are not duplicated here - the consultation card directly
+   below already opens all of that with "Review or update", and two places to edit the same
+   answers is how they end up disagreeing. */
+function clientAccountCardHtml(profile,trainerPreview) {
+  if (!profile) return "";
+  const identity = typeof currentAccountIdentity === "function" ? currentAccountIdentity() : {};
+  const email = profile.email || identity.email || "";
+  const phone = profile.phone || profile.contactPhone || "";
+  return '<section class="client-card wide" id="client-account-settings"><div class="client-section-label">Account &amp; profile</div>'
+    + '<h3>Your account</h3>'
+    + '<div class="client-fact"><span>Signing in as</span><b>' + escapeHtml(email || 'Not recorded') + '</b></div>'
+    + '<p class="storage-note">Your email is how you sign in, and it is the address your trainer has on file for you. '
+    + 'Ask them if it needs changing \u2014 changing it here could lock you out of your own account.</p>'
+    + (phone ? '<div class="client-fact"><span>Phone</span><b>' + escapeHtml(phone) + '</b></div>' : '')
+    + '<div class="tool-actions">'
+    + (trainerPreview ? '' : '<button class="small-btn primary" onclick="openClientPasswordDialog()">Change my password</button>')
+    + '<button class="small-btn" onclick="openClientIntake(\'' + escapeHtml(profile.id) + '\',\'client\')">Update my details</button>'
+    + '</div>'
+    + (trainerPreview ? '<p class="storage-note">You are previewing this client, so their password cannot be changed from here.</p>' : '')
+    + '</section>';
+}
+
+/* Only the account holder can do this, which is the decision that was made deliberately: no
+   trainer can set or see it. The cost is that a forgotten password can only be recovered by
+   the emailed reset link, so that email has to keep working. */
+async function openClientPasswordDialog() {
+  if (typeof window.fit4lifeCloudSetOwnPassword !== "function") { showToast("The secure connection is not ready yet"); return false; }
+  if (typeof askForText !== "function") { showToast("This is not available on this screen"); return false; }
+  const first = await askForText("Choose a new password", "", { type:"password", confirmLabel:"Continue",
+    note:"At least 8 characters. You will use this every time you sign in." });
+  if (first === null) return false;
+  const password = String(first || "");
+  if (password.length < 8) { showToast("Use a password with at least 8 characters"); return false; }
+  const again = await askForText("Type it once more", "", { type:"password", confirmLabel:"Change password",
+    note:"Making sure it is what you meant \u2014 a mistyped password would lock you out." });
+  if (again === null) return false;
+  if (String(again) !== password) { showToast("Those did not match. Nothing was changed."); return false; }
+  const result = await window.fit4lifeCloudSetOwnPassword(password);
+  if (!result || !result.ok) { showToast((result && result.error) || "The password could not be changed"); return false; }
+  showToast("Password changed. Use it next time you sign in.");
+  return true;
+}
 function renderClientMore(profile) {
   const out = byId('clientMoreContent'), trainerPreview = trainerClientPreviewActive(), assignment = assignmentForClient(profile.id), session = clientAssignedSession(assignment,profile), showPlateMath = clientSessionUsesLoadedBar(session); if (!out) return;
-  out.innerHTML = '<div class="client-grid">' + (typeof clientConsultationClientCardHtml === 'function' ? clientConsultationClientCardHtml(profile,trainerPreview) : '') + '<section class="client-card wide" id="client-more-tools"><div class="client-section-label">Workout help</div><h3>Only the tools that support your current workout</h3><p>Rest timing is already built into the active workout. Your trainer handles max-strength estimates and programming decisions.</p><div class="client-grid client-more-tool-grid"><div class="client-action-row"><span><b>RPE / RIR guide</b><span>Understand how hard each working set should feel.</span></span><button class="small-btn" onclick="openTools(\'rpe\')">Open guide</button></div>'
+  out.innerHTML = '<div class="client-grid">' + clientAccountCardHtml(profile,trainerPreview) + (typeof clientConsultationClientCardHtml === 'function' ? clientConsultationClientCardHtml(profile,trainerPreview) : '') + '<section class="client-card wide" id="client-more-tools"><div class="client-section-label">Workout help</div><h3>Only the tools that support your current workout</h3><p>Rest timing is already built into the active workout. Your trainer handles max-strength estimates and programming decisions.</p><div class="client-grid client-more-tool-grid"><div class="client-action-row"><span><b>RPE / RIR guide</b><span>Understand how hard each working set should feel.</span></span><button class="small-btn" onclick="openTools(\'rpe\')">Open guide</button></div>'
     + (showPlateMath ? '<div class="client-action-row"><span><b>Plate calculator</b><span>Your current workout uses loaded bar equipment.</span></span><button class="small-btn" onclick="openTools(\'plate\')">Open calculator</button></div>' : '') + '</div></section>'
     + '<section class="client-card wide"><div class="client-section-label">Exercise guidance</div><h3>Cues and substitutions appear where you need them</h3><p>Open your workout to see the coach’s instructions, prior performance, set-by-set logging, and safe replacement options for each movement.</p><div class="tool-actions"><button class="small-btn" onclick="openClientTab(\'program\')">Open my workout</button></div></section>'
     + '<section class="client-card wide"><div class="client-section-label">' + (trainerPreview ? 'Owner preview controls' : 'Account & settings') + '</div><div class="client-action-row"><span><b>' + escapeHtml(profile.name) + '</b><span>@' + escapeHtml(profileUsername(profile)) + ' · ' + EXP_LABEL(profile.experience) + '</span></span><button class="small-btn" onclick="' + (trainerPreview ? 'exitTrainerClientPreview()' : 'fit4lifeCloudSignOut()') + '">' + (trainerPreview ? 'Return to owner workspace' : 'Sign out') + '</button></div><p style="margin-top:10px">' + (trainerPreview ? 'You are signed in as an owner and viewing this selected client’s live experience. Use the preview selector above to switch clients.' : 'This client account opens only its connected profile. All approved trainers may review this record and cover normal coaching work; a primary coach, when assigned, leads routine follow-up. When cloud status says “Saved across devices,” workouts, completed sets, messages, check-ins, and progress are synchronized.') + '</p></section></div>';

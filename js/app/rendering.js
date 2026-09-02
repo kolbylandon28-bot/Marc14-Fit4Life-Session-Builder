@@ -127,9 +127,35 @@ function sessionActions(isGroup) {
     const save = el("button","mini-btn","\u2606 Save workout");
     save.onclick = () => openSaveWorkoutDialog();
     bar.appendChild(save);
-    const approved = workoutPlans(state.session).every((plan) => plan.session.approval && plan.session.approval.status === "approved");
-    if (!approved) { const approve = el("button","mini-btn primary",isGroup ? "Coach approve both drafts" : "Coach approve draft"); approve.dataset.wt = "approve-draft"; approve.onclick = () => approveCurrentWorkoutDraft(); bar.appendChild(approve); }
-    else { const assign = el("button","mini-btn primary",isGroup ? "Assign both workouts" : "Assign to client"); assign.dataset.wt = "assign"; assign.onclick = () => assignCurrentWorkout(); bar.appendChild(assign); }
+    const plans = workoutPlans(state.session);
+    const approved = plans.every((plan) => plan.session.approval && plan.session.approval.status === "approved");
+    // Rendered in both states. Removing it once approved left the walkthrough's Back button
+    // pointing at a control that no longer existed, and stripped the only on-screen evidence
+    // that approval had happened.
+    const approve = el("button","mini-btn" + (approved ? "" : " primary"),
+      approved ? (isGroup ? "Drafts approved" : "Draft approved") : (isGroup ? "Coach approve both drafts" : "Coach approve draft"));
+    approve.dataset.wt = "approve-draft";
+    if (approved) { approve.disabled = true; approve.title = "Already approved \u2014 assign it with the button to the right."; }
+    else approve.onclick = () => approveCurrentWorkoutDraft();
+    bar.appendChild(approve);
+    // Assign is rendered whether or not the draft is approved. It used to appear only AFTER
+    // approving, so a trainer hunting for how to send a workout found nothing on screen and
+    // concluded the app could not do it. A disabled button that says why is discoverable; an
+    // absent one is not. The reason names the failing audit, because approval refuses outright
+    // below 80 or on a safety conflict and otherwise offers no next step.
+    const assign = el("button","mini-btn primary",isGroup ? "Assign both workouts" : "Assign to client");
+    assign.dataset.wt = "assign";
+    if (approved) assign.onclick = () => assignCurrentWorkout();
+    else {
+      assign.disabled = true;
+      const blocked = plans.filter((plan) => plan.session.audit && plan.session.audit.pass === false);
+      assign.title = blocked.length
+        ? "Approve the draft first. Approval is currently blocked: " + blocked.map((plan) =>
+            plan.label + " scores " + plan.session.audit.score + "/100"
+            + (plan.session.audit.safety && plan.session.audit.safety.length ? " and has a safety conflict" : "")).join("; ")
+        : "Approve the draft first \u2014 the button to the left of this one.";
+    }
+    bar.appendChild(assign);
   }
   const review = el("button", "mini-btn primary", "Finish & Review");
   review.onclick = () => openWorkoutReview();
@@ -840,7 +866,7 @@ function swapWarnings(exercise, spec, block, currentEx) {
   if (constraintIssues.some((issue) => issue.code === "cardio_equipment")) warnings.push("Cardio-machine override");
   if (constraintIssues.some((issue) => ["limitation","pregnancy","postpartum","balance","pelvicfloor"].includes(issue.code))) warnings.push("Limitation override");
   if (block && currentEx && exercise.pattern !== currentEx.pattern) warnings.push("Different movement pattern");
-  if (block && block.key === "strength" && !isPrimaryAnchor(exercise)) warnings.push("Not categorized as a primary lift");
+  if (block && block.key === "strength" && !acceptsAsPrimaryAnchor(exercise)) warnings.push("Not categorized as a primary lift");
   if (block && block.key === "finisher" && exercise.finisher !== true) warnings.push("Not categorized as a finisher");
   if (block && block.key !== "finisher" && exercise.finisher === true) warnings.push("Finisher used outside the finisher phase");
   return [...new Set(warnings)];
@@ -1085,9 +1111,11 @@ function askForText(question, initialValue, options) {
   return new Promise((resolve) => {
     const backdrop = el("div","modal-backdrop open ask-backdrop");
     backdrop.innerHTML = '<div class="ask-dialog"><h4>' + escapeHtml(question) + '</h4>'
+      + (settings.note ? '<p class="storage-note">' + escapeHtml(settings.note) + '</p>' : '')
       + (settings.multiline
         ? '<textarea id="askForTextInput" rows="3"></textarea>'
-        : '<input id="askForTextInput" type="' + escapeHtml(settings.type || "text") + '">')
+        : '<input id="askForTextInput" type="' + escapeHtml(settings.type || "text") + '"'
+          + (settings.type === "password" ? ' autocomplete="new-password"' : '') + '>')
       + '<div class="tool-actions"><button class="small-btn" data-ask-cancel>Cancel</button>'
       + '<button class="small-btn primary" data-ask-ok>' + escapeHtml(settings.confirmLabel || "Save") + '</button></div></div>';
     document.body.appendChild(backdrop);

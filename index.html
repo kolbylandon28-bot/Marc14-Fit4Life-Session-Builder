@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20260902-v105-preapproved-signup-r1">
+<link rel="manifest" href="manifest.webmanifest?v=20260902-v107-client-account-r1">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20260902-v105-preapproved-signup-r1">
+<link rel="stylesheet" href="styles.css?v=20260902-v107-client-account-r1">
 </head>
 <body>
 
@@ -59,15 +59,15 @@
           <label>Full name<input id="cloudSignUpName" type="text" autocomplete="name" placeholder="Jordan Smith" maxlength="80"></label>
           <label>Username<input id="cloudSignUpUsername" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="jordan-smith" maxlength="40"></label>
         </div>
-        <label>BYU-I email address<input id="cloudSignUpEmail" type="email" autocomplete="email" inputmode="email" placeholder="name@byui.edu"></label>
+        <label>Email address<input id="cloudSignUpEmail" type="email" autocomplete="email" inputmode="email" placeholder="the address your trainer has on file"></label>
         <div class="cloud-auth-row">
           <label>Password<input id="cloudSignUpPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>
           <label>Confirm password<input id="cloudSignUpConfirm" type="password" autocomplete="new-password" placeholder="Repeat password" onkeydown="if(event.key==='Enter')fit4lifeCloudSignUp()"></label>
         </div>
-        <label class="cloud-auth-checkbox"><input id="cloudSignUpConsent" type="checkbox"><span>I understand that this creates a client account. I will verify the message sent to my BYU-I email before accessing the client workspace.</span></label>
+        <label class="cloud-auth-checkbox"><input id="cloudSignUpConsent" type="checkbox"><span>I understand that this creates a client account at FIT4LIFE, and that my trainer can see the workouts and check-ins I record in it.</span></label>
       </div>
       <button class="cloud-auth-submit" id="cloudSignUpSubmit" onclick="fit4lifeCloudSignUp()">Create client account</button>
-      <div class="cloud-auth-note">Client accounts require a BYU-I email ending in @byui.edu. After email verification, the login connects to one protected client profile and opens the required Trainer Consultation. Trainer access can use a personal or BYU-I email, but must be requested separately and approved by gym staff.</div>
+      <div class="cloud-auth-note">Use the address your trainer already has on file for you \u2014 an account can only be created for an address they have added. If it is refused, check the spelling or ask them to add it. You go straight in afterwards and complete a short consultation. Trainer access is requested separately and approved by gym staff.</div>
     </div>
     <div class="cloud-auth-panel" id="cloudTrainerSignUpPanel">
       <div class="cloud-auth-fields">
@@ -106,7 +106,7 @@
       </div>
     </div>
     <div class="cloud-auth-message" id="cloudAuthMessage" role="status" aria-live="polite">Connecting to your gym’s secure records…</div>
-    <p class="cloud-auth-help">Clients verify their own email and enter the client workspace. An approved trainer or owner must confirm a pending trainer request; only the owner can manually grant or remove staff access. <button class="cloud-auth-retry" onclick="fit4lifeCloudRetry()">Retry connection</button></p>
+    <p class="cloud-auth-help">Your trainer adds you first, then you create your account here with a password of your own. An approved trainer or owner must confirm a pending trainer request; only the owner can manually grant or remove staff access. <button class="cloud-auth-retry" onclick="fit4lifeCloudRetry()">Retry connection</button></p>
   </div>
 </div>
 
@@ -1284,28 +1284,28 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/engine/exercise-library.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/engine/session-engine.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/engine/session-builders.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/engine/personalization.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/engine/booking-import.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/app/navigation.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/app/program-app.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/app/forms.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/engine/generation.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/app/rendering.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/app/calculations-timers.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/engine/multiweek-programs.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/app/readiness-progress.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/app/client-consultation.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/trainer/trainer-hub.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/trainer/coaching-support.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/app/role-governance.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/app/action-calendar.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/app/workout-feedback-reports.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/app/booking-import-ui.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/app/walkthrough.js?v=20260902-v105-preapproved-signup-r1"></script>
-<script src="js/init.js?v=20260902-v105-preapproved-signup-r1"></script>
+<script src="cloud-sync.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/engine/exercise-library.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/engine/session-engine.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/engine/session-builders.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/engine/personalization.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/engine/booking-import.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/app/navigation.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/app/program-app.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/app/forms.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/engine/generation.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/app/rendering.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/app/calculations-timers.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/engine/multiweek-programs.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/app/readiness-progress.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/app/client-consultation.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/trainer/trainer-hub.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/trainer/coaching-support.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/app/role-governance.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/app/action-calendar.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/app/workout-feedback-reports.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/app/booking-import-ui.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/app/walkthrough.js?v=20260902-v107-client-account-r1"></script>
+<script src="js/init.js?v=20260902-v107-client-account-r1"></script>
 </body>
 </html>
