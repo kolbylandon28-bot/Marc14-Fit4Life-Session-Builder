@@ -1,5 +1,5 @@
 /* ============================================================
-   WALKTHROUGHS  ("Trainer Assistance")
+   WALKTHROUGHS  ("Tutorials")
    Step-by-step help that runs on the real screens.
 
    Safety model - nothing done in a walkthrough can reach a real
@@ -192,7 +192,7 @@ const WALKTHROUGHS = [
 
 const CLIENT_WALKTHROUGH_GATES = {
   // Both of these start by tapping the bottom nav, which does not exist on the active-workout
-  // screen - and the "?" is reachable from there, so without this check the tour would start
+  // screen - and the Tutorials button is reachable from there, so without this check the tour would start
   // and strand on step one.
   onClientTab: function () {
     if (typeof activeClientProfile !== "function" || !activeClientProfile()) return "Sign in as yourself first and this guide will open.";
@@ -226,6 +226,13 @@ const CLIENT_WALKTHROUGH_GATES = {
     return "";
   },
 };
+
+// Used by every step that points into the review form: if the form is not open, the step has
+// nothing to point at and is stepped over rather than stranding.
+function REVIEW_SHUT() {
+  const modal = document.getElementById("reviewModal");
+  return !(modal && modal.classList.contains("open"));
+}
 
 const CLIENT_WALKTHROUGHS = [
   {
@@ -263,9 +270,17 @@ const CLIENT_WALKTHROUGHS = [
       { say: "Put in the real number, even when it is under the plan. A real number is far more use to your coach than a tidy one.", target: "#activeSetReps", advance: "next", info: true },
       { say: "This saves the round and moves you to the next. What you type reaches your coach as you go, so press it once the round is genuinely done.", target: '[data-wt="log-set"]', advance: "next", info: true },
       { say: "If you cannot do a round, use Skip set. That is not a failure. Your coach sees the skip and can change the plan, which they cannot do if you leave it blank.", target: '[data-wt="skip-set"]', advance: "next", info: true },
+      // Six buttons under the set row, one step each. Between them they cover almost anything
+      // that goes differently on the day, which is most of what a first-timer needs.
+      { say: "Under the set row are six buttons, and between them they cover almost anything that goes differently on the day. This one, Replace exercise, swaps this movement for another that trains the same thing - use it when the machine is taken or something does not feel right. Your coach sees what you swapped to.", target: '[data-wt="replace-exercise"]', advance: "next", info: true },
+      { say: "Add a warm-up set if you want a lighter round first. It goes in before your working sets and is not counted as one of them.", target: '[data-wt="add-warmup-set"]', advance: "next", info: true },
+      { say: "Add a working set if you have it in you to do another round. Your coach set the number, and doing more than planned is worth telling them about rather than hiding.", target: '[data-wt="add-working-set"]', advance: "next", info: true },
+      { say: "Record note is for anything about this one exercise: a weight that felt wrong, a machine setting you want to remember, or a question. It stays attached to this movement.", target: '[data-wt="record-note"]', advance: "next", info: true },
+      { say: "Report pain does the same thing here as it does on the Coach tab, without making you leave the workout. If something hurts, use it while it is happening.", target: '[data-wt="workout-report-pain"]', advance: "next", info: true },
+      { say: "Skip exercise moves past this movement entirely. Like skipping a set, it is recorded rather than hidden, so your coach can plan around it.", target: '[data-wt="skip-exercise"]', advance: "next", info: true },
       { say: "Once every round here is written down or skipped, this button turns on and takes you to the next exercise. Until then it stays off on purpose, so nothing gets lost.", target: '[data-wt="continue-unit"], [data-wt="finish-workout"]', advance: "next", info: true },
     ],
-    done: "Write down each round as you finish it, then move on. That is all the app asks of you.",
+    done: "Write down each round as you finish it, then move on. If something changes on the day, the six buttons under the set row are how you say so.",
   },
   {
     id: "client-report-pain",
@@ -305,26 +320,28 @@ const CLIENT_WALKTHROUGHS = [
       { say: "Now open today's workout with this button.", target: '[data-wt="client-start-workout"]', advance: "click", skipIf: function () { return typeof currentView !== "undefined" && currentView === "active-workout"; },
         settled: function () { return typeof currentView !== "undefined" && currentView === "active-workout"; } },
       { say: "This button at the bottom of the exercise card moves you on. On every exercise but the last it says Continue. On the last one it says Finish workout instead.", target: '[data-wt="continue-unit"], [data-wt="finish-workout"]', advance: "next", info: true },
-      // Only offered when they are actually on the last exercise. Otherwise the next step
-      // describes the form instead of making them finish a workout to see it.
-      { say: "You are on the last exercise, so it says Finish workout. Press it - it sends nothing on its own, it opens a short form first.", target: '[data-wt="finish-workout"]', advance: "click", skipIf: function () {
+      // The form is opened here for real rather than described, so the client sees the thing
+      // they will actually meet. It is a preview: the session is deep-copied the same way
+      // finishActiveWorkout copies it, nothing is saved, and the last step closes it again.
+      // Describing this form instead of showing it was the whole complaint.
+      { say: "This is the form that opens when you finish. We have opened it early so you can see it - your workout is not finished and nothing here has been sent.", advance: "next", info: true,
+        go: function () {
           try {
-            if (typeof currentView === "undefined" || currentView !== "active-workout" || !activeWorkout) return true;
-            const data = activeAssignmentAndSession();
-            const units = data.session ? activeWorkoutUnits(data.session, activeWorkout.shortened) : [];
-            return !units.length || activeWorkout.unitIndex !== units.length - 1;
-          } catch (_) { return true; }
-        },
-        go: function () { if (typeof closeWorkoutReview === "function") closeWorkoutReview(); },
-        settled: function () { const m = document.getElementById("reviewModal"); return !!(m && m.classList.contains("open")); } },
-      { say: "When you finish the last exercise, a short form opens. It asks how hard the session felt, whether anything hurt, and whether you have a question for your coach. Nothing reaches them until you send it.", advance: "next", info: true, skipIf: function () { const m = document.getElementById("reviewModal"); return !!(m && m.classList.contains("open")); } },
-      // Opens pre-set to 7, so picking 7 fires nothing and the step would have no way out.
-      { say: "This form is how your coach knows what to change for next time. Set this to the number that matches how the session felt - four is easy, ten is as hard as you can go - then press Next. Honest is more use than brave.", target: "#reviewDifficulty", advance: "next", info: true , skipIf: function () { const m = document.getElementById("reviewModal"); return !(m && m.classList.contains("open")); } },
-      { say: "This asks whether anything hurt. Orange or red puts your workouts on hold until your coach has read it and replied, so choose those only when they are true. If nothing hurt, leave it on green.", target: "#reviewPain", advance: "next", info: true , skipIf: function () { const m = document.getElementById("reviewModal"); return !(m && m.classList.contains("open")); } },
-      { say: "Anything you write here reaches your coach as a message when you send the form. It is the place for a question you did not want to stop the workout for.", target: "#reviewQuestions", advance: "next", info: true , skipIf: function () { const m = document.getElementById("reviewModal"); return !(m && m.classList.contains("open")); } },
-      { say: "This button sends the whole form to your coach and marks the workout done. Nothing has been sent while this guide has been running.", target: "#reviewSaveOnlyBtn", advance: "next", info: true , skipIf: function () { const m = document.getElementById("reviewModal"); return !(m && m.classList.contains("open")); } },
+            if (typeof state === "undefined" || !state) return;
+            const data = typeof activeAssignmentAndSession === "function" ? activeAssignmentAndSession() : null;
+            if (!data || !data.session) return;
+            state.session = { type: "solo", data: JSON.parse(JSON.stringify(data.session)), edits: {} };
+            if (typeof openWorkoutReview === "function") openWorkoutReview();
+          } catch (_) {}
+        } },
+      { say: "Set this to the number that matches how the session felt. Four is easy, ten is as hard as you can go. Honest is more use than brave - it is what your coach changes next week from.", target: "#reviewDifficulty", advance: "next", info: true, skipIf: REVIEW_SHUT },
+      { say: "This asks whether anything hurt. Orange or red puts your workouts on hold until your coach has read it and replied, so choose those only when they are true. If nothing hurt, leave it on green.", target: "#reviewPain", advance: "next", info: true, skipIf: REVIEW_SHUT },
+      { say: "Anything you write here reaches your coach as a message. It is the place for a question you did not want to stop the workout for.", target: "#reviewQuestions", advance: "next", info: true, skipIf: REVIEW_SHUT },
+      { say: "Open this for the optional part - how much you got through, how you felt afterwards, and which exercises you liked or did not follow.", target: "#reviewModal .review-more > summary", advance: "click", skipIf: REVIEW_SHUT },
+      { say: "Notes is free writing. Anything that would help your coach: the gym was busy, a machine was taken, you slept badly.", target: "#reviewNotes", advance: "next", info: true, skipIf: REVIEW_SHUT },
+      { say: "This is the button that sends it. We are closing this preview instead of pressing it, because your workout is not actually finished. When you do finish, this same form opens by itself.", target: "#reviewSaveOnlyBtn", advance: "next", info: true, skipIf: REVIEW_SHUT },
     ],
-    done: "If the form is open, fill it in and send it when you are ready. If you have not finished today's workout yet, it will open by itself when you do.",
+    done: "That form opens by itself the moment you finish your last exercise. Fill it in and send it then - it is the main way your coach knows how the session actually went.",
   },
 ];
 
@@ -485,7 +502,7 @@ function startWalkthrough(id) {
   // covering and the reachability probe rejects it.
   document.body.classList.toggle("walkthrough-client", clientRun);
   // show() hides these while a tour runs, but a tour that never changes view never calls it,
-  // so the "?" sat live on top of its own walkthrough.
+  // so the button sat live on top of its own walkthrough.
   ["trainerHelpBtn", "clientHelpBtn"].forEach((id) => {
     const button = document.getElementById(id); if (button) button.classList.remove("show");
   });
@@ -503,11 +520,10 @@ function endWalkthrough(quiet) {
   const bar = document.getElementById("walkthroughBar"); if (bar) bar.remove();
   document.body.classList.remove("walkthrough-on");
   try { document.body.style.removeProperty("--wt-bar-h"); } catch (_) {}
-  // The sweep exists to clear a dialog left over from a previous PRACTICE run. A client run
-  // has no such history, and one of its tours ends with the review form deliberately open -
-  // closing it here made the closing card's "the form is still open" a lie, and quietly threw
-  // away the difficulty the client had just been asked to set.
-  if (!run.client) walkthroughCloseDialogs();
+  // Closed on every exit, client runs included. The finish tour opens the review form as a
+  // PREVIEW on a workout that is not actually finished - leaving it standing would put a live
+  // "Save workout review" in front of someone who has not done the session yet.
+  walkthroughCloseDialogs();
   document.body.classList.remove("walkthrough-client");
   // A client run took no snapshot and moved nobody's data, so there is nothing to put back -
   // restoring here would overwrite their live portal with a snapshot that was never taken.
@@ -517,9 +533,9 @@ function endWalkthrough(quiet) {
   else seedPracticeRoster();
 
   if (run.client) {
-    // Back through show(), which also restores the "?" hidden on the way in.
+    // Back through show(), which also restores the button hidden on the way in.
     // Rather than toggling .active directly: it is what keeps
-    // currentView honest and repaints the bottom nav and the "?" for the view landed on.
+    // currentView honest and repaints the bottom nav and the Tutorials button for the view landed on.
     // The trainer renderers below are not just useless here - renderOutput is the coaching
     // builder, and running it over a client's screen is how the wrong app appears.
     const back = String(run.returnView || "").replace(/^view-/, "");
@@ -808,7 +824,7 @@ function showWalkthroughFinished(plan) {
     + (plan && plan.done ? '<p class="wt-done-line">' + escapeHtml(plan.done) + '</p>' : '')
     + '<p class="wt-done-real">' + (forClient
         ? 'That was your own screens, and nothing was sent to your coach while the guide was running. '
-          + 'You can open this again any time from the question mark at the top.'
+          + 'You can open this again any time from Tutorials at the top of the screen.'
         : sandboxActive
         ? 'That was all on a practice client. You are still in practice mode, so keep exploring - nothing is real until you leave it.'
         : 'Everything you just did was on the practice client and has been thrown away. '
@@ -902,7 +918,7 @@ function trainerAssistancePanelHtml() {
   const seen = walkthroughSeen();
   const cards = walkthroughsForRole("trainer").map((plan) => walkthroughCardHtml(plan, seen)).join("");
   return '<section class="coach-module-card" id="trainerAssistance" style="grid-column:1/-1">'
-    + '<h3>Trainer Assistance</h3>'
+    + '<h3>Tutorials</h3>'
     + '<p>Pick anything you want shown. Each one walks you through it on the real screens, on a practice client, '
     + 'so nothing you do here touches a real person. Leave whenever you have got it.</p>'
     + '<div class="wt-card-grid">' + cards + '</div>'
@@ -934,7 +950,7 @@ function clientAssistanceMarkup() {
   const seen = walkthroughSeen();
   const cards = walkthroughsForRole("client").map((plan) => walkthroughCardHtml(plan, seen)).join("");
   return '<div id="clientAssistanceModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="clientAssistanceTitle">'
-    + '<div class="review-dialog"><h2 id="clientAssistanceTitle">Show me how</h2>'
+    + '<div class="review-dialog"><h2 id="clientAssistanceTitle">Tutorials</h2>'
     + '<p>Pick anything you want walked through. It happens on your own screens, at your pace, '
     + 'and you can stop at any point. Nothing is sent to your coach while a guide is running.</p>'
     + '<div class="wt-card-grid">' + cards + '</div>'

@@ -32,10 +32,10 @@ function show(view) {
   home.textContent = view === "trainer-menu" && signedInTrainerCanPreview() ? "\u2190 Choose side" : CLIENT_APP_VIEWS.includes(view) ? "\u2190 Client home" : view === "active-workout" ? "\u2190 Leave workout" : inMenu ? "\u2190 Workspace" : portalRole ? "\u2190 " + (portalRole === "trainer" ? "Trainer" : "Client") + " workspace" : "\u2190 Home";
   context.textContent = portalRole ? (portalRole === "trainer" ? "Trainer workspace" : view === "client-consultation" ? "Client setup" : trainerClientPreviewActive() ? "Owner preview · client side" : "Client workspace") : "";
   context.classList.toggle("show", Boolean(portalRole) && view !== "home");
-  // Trainer Assistance is only useful to a signed-in trainer, and never on top of a running walkthrough
+  // Tutorials are only useful to a signed-in trainer, and never on top of a running walkthrough
   const helpBtn = document.getElementById("trainerHelpBtn");
   if (helpBtn) helpBtn.classList.toggle("show", portalRole === "trainer" && view !== "home" && !(typeof walkthroughActive === "function" && walkthroughActive()));
-  // The client "?" lives in the topbar rather than the bottom nav, because the bottom nav is
+  // The client Tutorials button lives in the topbar rather than the bottom nav, because the bottom nav is
   // absent from the active workout - the one screen "Log your sets" can be run from. Hidden
   // during the required consultation so it cannot be used to get around that gate.
   const clientHelp = document.getElementById("clientHelpBtn");

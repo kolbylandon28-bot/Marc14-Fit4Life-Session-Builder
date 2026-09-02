@@ -308,7 +308,14 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   .cloud-auth-request-meta b{color:var(--text);font-weight:600;text-align:right}
   @media(max-width:560px){.cloud-auth-card{padding:23px 19px}.cloud-auth-row{grid-template-columns:1fr}.cloud-auth-card h1{font-size:29px}.cloud-auth-brand{font-size:37px}}
 
-  @media(max-width:720px){body::before,body::after,.cloud-auth-gate::before,.cloud-auth-gate::after{font-size:45vw;top:48%}.portal-theme-scene::before{background-position:center calc(100% + 10px);background-size:850px auto}.portal-theme-particles i:nth-child(n+8){display:none}.cloud-status{max-width:105px}.cloud-account-btn{padding:7px 8px;font-size:10px}.topbar-inner{padding-left:12px;padding-right:12px;gap:8px}.brand-sub{display:none}.brand-name{font-size:16px}.portal-context,.portal-theme-badge{display:none!important}}
+  @media(max-width:720px){body::before,body::after,.cloud-auth-gate::before,.cloud-auth-gate::after{font-size:45vw;top:48%}.portal-theme-scene::before{background-position:center calc(100% + 10px);background-size:850px auto}.portal-theme-particles i:nth-child(n+8){display:none}.cloud-status{max-width:105px}.cloud-account-btn{padding:7px 8px;font-size:10px}.topbar-inner{padding-left:12px;padding-right:12px;gap:8px}.brand-sub{display:none}.brand-name{font-size:16px}.portal-context,.portal-theme-badge{display:none!important}
+  /* "Tutorials" is a great deal wider than the single character it replaced, and the topbar
+     already carries a long "Back to client home". Tightened here, and the brand allowed to
+     truncate, so the row cannot push itself sideways on a phone. */
+  .help-btn{padding:7px 10px;font-size:12px;letter-spacing:.03em;margin-left:6px}
+  .home-btn{padding:7px 10px;font-size:12px;letter-spacing:.03em}
+  .brand-txt{min-width:0}
+  .brand-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 
   main{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:26px 20px 90px}
 
@@ -1884,9 +1891,10 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
    is pointing at, so it is pinned to the bottom and the page can
    still scroll behind it.
    ============================================================ */
-.help-btn{display:none;align-items:center;justify-content:center;width:32px;height:32px;margin-left:8px;
-  border:1px solid var(--line);border-radius:50%;background:rgba(19,19,23,.86);color:var(--blue-bright);
-  font:800 15px var(--body);cursor:pointer;transition:border-color .14s,color .14s,background .14s}
+.help-btn{display:none;align-items:center;justify-content:center;gap:6px;margin-left:8px;
+  border:1px solid var(--line);border-radius:7px;background:rgba(19,19,23,.86);color:var(--blue-bright);
+  font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:.06em;text-transform:uppercase;
+  padding:8px 14px;cursor:pointer;transition:border-color .14s,color .14s,background .14s}
 .help-btn.show{display:inline-flex}
 .help-btn:hover{border-color:var(--blue);background:var(--blue-glow);color:#fff}
 
