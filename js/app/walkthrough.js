@@ -267,7 +267,7 @@ const CLIENT_WALKTHROUGHS = [
       { say: "This is the exercise you are on right now. The big line is its name, and underneath is a note from your coach on doing it well.", target: "#activeWorkoutContent .active-exercise-head", advance: "next", info: true },
       { say: "This is the plan for it. Sets is how many rounds you do. Reps is how many times you repeat the movement in one round. Rest is how long you wait between rounds.", target: "#activeWorkoutContent .active-prescription", advance: "next", info: true },
       { say: "This row is where you write down what you actually did. Fill it in after each round rather than at the end. There is a box for how many you did, one for how hard it felt, and one for weight when the exercise uses any.", target: "#activeSetMount .active-set-row", advance: "next", info: true },
-      { say: "Put in the real number, even when it is under the plan. A real number is far more use to your coach than a tidy one.", target: "#activeSetReps", advance: "next", info: true },
+      { say: "Put in the real number, even when it is under the plan. A real number is far more useful to your coach than a tidy one.", target: "#activeSetReps", advance: "next", info: true },
       { say: "This saves the round and moves you to the next. What you type reaches your coach as you go, so press it once the round is genuinely done.", target: '[data-wt="log-set"]', advance: "next", info: true },
       { say: "If you cannot do a round, use Skip set. That is not a failure. Your coach sees the skip and can change the plan, which they cannot do if you leave it blank.", target: '[data-wt="skip-set"]', advance: "next", info: true },
       // Six buttons under the set row, one step each. Between them they cover almost anything
@@ -295,17 +295,17 @@ const CLIENT_WALKTHROUGHS = [
       { say: "Anything you need to tell your coach starts here. Tap Coach.", target: '[data-client-tab="coach"]', advance: "click" },
       { say: "This card is for pain or discomfort. Open it - opening the form sends nothing.", target: '[data-wt="client-report-pain"]', advance: "click",
         go: function () { if (typeof closeClientPainReport === "function") closeClientPainReport(); } },
-      { say: "These four colours are the whole scale. Green is no pain. Yellow is noticing something while everything still moves normally. Orange is when it changes how you move. Red is sharp, severe, or getting worse.", target: "#clientPainModal .pain-level-guide", advance: "next", info: true },
+      { say: "These four colors are the whole scale. Green is no pain. Yellow is noticing something while everything still moves normally. Orange is when it changes how you move. Red is sharp, severe, or getting worse.", target: "#clientPainModal .pain-level-guide", advance: "next", info: true },
       // Deliberately not a change step. The control opens on Green, so a client whose honest
       // answer IS green alters nothing, no event fires, and the step has no Next and no Skip.
-      { say: "Pick the colour that matches what you felt, then press Next. Choosing one sends nothing.", target: "#clientPainLevel", advance: "next", info: true },
+      { say: "Pick the color that matches what you felt, then press Next. Choosing one sends nothing.", target: "#clientPainLevel", advance: "next", info: true },
       { say: "This line now tells you what to do about it, and what your coach will do next. Read it before you go on.", target: "#clientPainAction", advance: "next", info: true },
       { say: "Answering Yes here moves the report up to orange on its own, because something that changes how you move is treated as more serious. That is deliberate, so answer it honestly.", target: "#clientPainMovementChanged", advance: "next", info: true },
       { say: "The note is where you say it in your own words: where you felt it, what you were doing, and whether you stopped. A short honest note is worth more than a long one.", target: "#clientPainDetails", advance: "next", info: true },
       { say: "This button sends the report. Leave it alone for now. When you do send one for real your coach gets it straight away, and if you chose orange or red the app holds your next workout until they have read it and replied.", target: '[data-wt="pain-submit"]', advance: "next", info: true },
       { say: "Cancel closes the form and throws away everything you typed, and nothing reaches your coach. Use it now to leave.", target: '[data-wt="pain-cancel"]', advance: "click" },
     ],
-    done: "Coach tab, Report pain, pick the colour, say what happened, send. Telling someone early is what keeps you training.",
+    done: "Coach tab, Report pain, pick the color, say what happened, send. Telling someone early is what keeps you training.",
   },
   {
     id: "client-finish-review",
@@ -334,10 +334,16 @@ const CLIENT_WALKTHROUGHS = [
             if (typeof openWorkoutReview === "function") openWorkoutReview();
           } catch (_) {}
         } },
-      { say: "Set this to the number that matches how the session felt. Four is easy, ten is as hard as you can go. Honest is more use than brave - it is what your coach changes next week from.", target: "#reviewDifficulty", advance: "next", info: true, skipIf: REVIEW_SHUT },
-      { say: "This asks whether anything hurt. Orange or red puts your workouts on hold until your coach has read it and replied, so choose those only when they are true. If nothing hurt, leave it on green.", target: "#reviewPain", advance: "next", info: true, skipIf: REVIEW_SHUT },
-      { say: "Anything you write here reaches your coach as a message. It is the place for a question you did not want to stop the workout for.", target: "#reviewQuestions", advance: "next", info: true, skipIf: REVIEW_SHUT },
-      { say: "Open this for the optional part - how much you got through, how you felt afterwards, and which exercises you liked or did not follow.", target: "#reviewModal .review-more > summary", advance: "click", skipIf: REVIEW_SHUT },
+      { say: "Set this to the number that matches how the session felt. Four is easy, ten is as hard as you can go. Honest is more useful than brave - it is what your coach uses to plan next week.", target: "#reviewDifficulty", advance: "next", info: true, skipIf: REVIEW_SHUT },
+      { say: "This asks whether anything hurt. Tap it and look at the choices. Orange or red puts your workouts on hold until your coach has read it and replied, so pick those only when they are true - if nothing hurt, green is the right answer.", target: "#reviewPain", advance: "click", skipIf: REVIEW_SHUT },
+      { say: "Tap in here and type something - anything at all, it is only a preview. Whatever you write reaches your coach as a message, so this is the place for a question you did not want to stop the workout for.", target: "#reviewQuestions", advance: "click", skipIf: REVIEW_SHUT },
+      { say: "Open this for the optional part - how much you got through, how you felt afterwards, and which exercises you liked and which you did not.", target: "#reviewModal .review-more > summary", advance: "click", skipIf: REVIEW_SHUT },
+      { say: "Workout completed is how much of it you actually got through. If you ran out of time or stopped early, say so here rather than leaving your coach to guess from the sets.", target: "#reviewCompletion", advance: "next", info: true, skipIf: REVIEW_SHUT },
+      { say: "Energy afterward is how you felt walking out, not how hard the session was. Wiped out after an easy session is worth knowing, and so is finishing a hard one feeling good.", target: "#reviewEnergy", advance: "next", info: true, skipIf: REVIEW_SHUT },
+      { say: "Did it fit the time you had? If your sessions keep running long, your coach can make them shorter rather than you rushing the last exercise.", target: "#reviewTimeFit", advance: "next", info: true, skipIf: REVIEW_SHUT },
+      { say: "Reps left on your hardest set asks how many more you could have managed when you stopped. Zero means there was nothing left in you. This is how your coach decides whether to add weight next time.", target: "#reviewRir", advance: "next", info: true, skipIf: REVIEW_SHUT },
+      { say: "Form quality is your own honest read on whether the movements held together, especially on the last few reps. Nobody is marking you - it tells your coach whether to add weight or hold steady.", target: "#reviewForm", advance: "next", info: true, skipIf: REVIEW_SHUT },
+      { say: "Pain-free range of motion is how far you could move before anything complained. Shortening the range to avoid a twinge is useful information, not a failure.", target: "#reviewRange", advance: "next", info: true, skipIf: REVIEW_SHUT },
       { say: "Notes is free writing. Anything that would help your coach: the gym was busy, a machine was taken, you slept badly.", target: "#reviewNotes", advance: "next", info: true, skipIf: REVIEW_SHUT },
       { say: "This is the button that sends it. We are closing this preview instead of pressing it, because your workout is not actually finished. When you do finish, this same form opens by itself.", target: "#reviewSaveOnlyBtn", advance: "next", info: true, skipIf: REVIEW_SHUT },
     ],
@@ -838,7 +844,7 @@ function showWalkthroughFinished(plan) {
   backdrop.querySelector("[data-wt-done-ok]").addEventListener("click", close);
   backdrop.querySelector("[data-wt-done-more]").addEventListener("click", () => {
     close();
-    // Sending a client to the trainer's settings page was the old behaviour of this button.
+    // Sending a client to the trainer's settings page was the old behavior of this button.
     if (forClient) { if (typeof openClientAssistance === "function") openClientAssistance(); }
     else if (typeof openTrainerAssistance === "function") openTrainerAssistance();
   });

@@ -406,7 +406,7 @@ function trainerConsultationSummaryHtml(profile) {
       ["Interested in",consultationListLabels(CLIENT_CONSULTATION_INTERESTS,data.interests)],
       ["Past activity",data.pastActivities || ""],
       ["Favourites",data.favoriteExercises || ""],
-      ["Least favourite",data.leastFavoriteExercises || ""],
+      ["Least favorite",data.leastFavoriteExercises || ""],
       ["Has not done before",data.unfamiliarExercises || ""],
       ["Also mentioned",data.supportOther || ""]]
       .filter(([,value]) => String(value || "").trim() && String(value).trim() !== "None reported" || false)
