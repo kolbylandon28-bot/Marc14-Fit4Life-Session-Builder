@@ -135,12 +135,15 @@ t("and cleared on exit",                       /removeProperty\("--wt-bar-h"\)/.
 
 // One tour ends with the review form deliberately open. Sweeping every dialog closed on exit
 // made its closing line a lie and discarded the difficulty the client had just been asked for.
-t("a client exit leaves dialogs standing",     /if \(!run\.client\) walkthroughCloseDialogs\(\)/.test(wt), true);
+// The finish tour opens the review form as a preview on an unfinished workout, so leaving it
+// open would put a live Save in front of someone who has not done the session.
+t("every exit closes dialogs, clients too",   /if \(!run\.client\) walkthroughCloseDialogs/.test(wt), false);
+t("the sweep still runs",                     /\n  walkthroughCloseDialogs\(\);/.test(end), true);
 const finishPlan = clientBlock.slice(clientBlock.indexOf("client-finish-review"));
-// The closing line must hold whether or not the form ended up open - the tour now runs even
-// when the client is nowhere near the last exercise, so an unconditional claim would be false.
-t("the closing line never assumes the form",  /done:\s*"If the form is open/.test(finishPlan), true);
-t("and does not state it outright",           /done:\s*"The form is still open/.test(finishPlan), false);
+// The preview is closed on the way out, so the closing line must not imply a form is sitting
+// there waiting - it points at the real one that opens when they actually finish.
+t("the closing line does not claim it is open", /done:\s*"(If )?[Tt]he form is (still )?open/.test(finishPlan), false);
+t("it points at the real one instead",        /done:\s*"That form opens by itself/.test(finishPlan), true);
 
 // The "?" is reachable from the active workout, and show() hides it while a tour runs - but a
 // tour that never changes view never calls show().
@@ -165,7 +168,23 @@ t("Back is passed the direction",             /walkthroughGoToStep\(walkthroughR
 const navSteps = (clientBlock.match(/skipIf/g) || []).length;
 t("conditional steps are actually used",      navSteps >= 8, true);
 // A form step pointed at a dialog that is not open would strand; they are conditional on it.
-t("the review form steps wait for the form",  (clientBlock.match(/reviewModal[\s\S]{0,80}classList\.contains\("open"\)/g) || []).length >= 4, true);
+t("the review form steps wait for the form",  (clientBlock.match(/skipIf:\s*REVIEW_SHUT/g) || []).length >= 5, true);
+t("and the form is opened for real, not described", /openWorkoutReview\(\)/.test(clientBlock), true);
+t("on a deep copy, so nothing real is touched", /JSON\.parse\(JSON\.stringify\(data\.session\)\)/.test(clientBlock), true);
+
+console.log("\n--- a step must never be a dead end ---");
+// Clicking a <select> opens the browser's own dropdown on mousedown and the mouseup lands on
+// that popup, which is not part of the page - so no click event reaches us and a step waiting
+// for one waits forever. Reported from a real run stuck on the pain dropdown.
+t("click steps also accept change and input", /\["click", "change", "input"\]\.forEach\(\(name\) => document\.addEventListener/.test(wt), true);
+t("and all three are unbound again",          /\["click", "change", "input"\]\.forEach\(\(name\) => document\.removeEventListener/.test(wt), true);
+// Skip only appears when the target is MISSING. A present but unreachable control offered
+// nothing at all, which is how someone ends up reloading the page to escape a tutorial.
+t("a stalled step is detected",               /walkthroughRun\.stalled = true/.test(wt), true);
+t("after a bounded wait",                     /waitingSince > 15000/.test(wt), true);
+t("the wait resets on every step",            /walkthroughRun\.waitingSince = \(step\.advance/.test(wt), true);
+t("and stalling reveals a way forward",       /const waiting = \(step\.advance === "click" \|\| step\.advance === "change"\) && !missing && !stalled/.test(wt), true);
+t("with a line saying so",                    /If that is not doing anything, carry on with Next/.test(wt), true);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

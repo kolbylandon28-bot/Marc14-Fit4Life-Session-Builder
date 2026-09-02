@@ -569,9 +569,13 @@ function walkthroughCloseDialogs() {
 }
 
 function walkthroughClearStep(run) {
+  // Registered for three event names, so all three come off again.
   const state = run || walkthroughRun; if (!state) return;
   if (state.timer) { clearInterval(state.timer); state.timer = null; }
-  if (state.onClick) { document.removeEventListener("click", state.onClick, true); state.onClick = null; }
+  if (state.onClick) {
+    ["click", "change", "input"].forEach((name) => document.removeEventListener(name, state.onClick, true));
+    state.onClick = null;
+  }
   if (state.onChange) { document.removeEventListener("change", state.onChange, true); state.onChange = null; }
   document.querySelectorAll(".wt-target").forEach((el) => el.classList.remove("wt-target", "wt-info"));
 }
@@ -750,6 +754,8 @@ function walkthroughGoToStep(index, back) {
   walkthroughRun.missing = false;
   walkthroughRun.missingSince = null;
   walkthroughRun.scrolled = false;
+  walkthroughRun.stalled = false;
+  walkthroughRun.waitingSince = (step.advance === "click" || step.advance === "change") ? Date.now() : null;
   walkthroughApplyHighlight(step);
   walkthroughRun.timer = setInterval(() => {
     if (!walkthroughRun) return;
@@ -762,6 +768,15 @@ function walkthroughGoToStep(index, back) {
       const bar = document.getElementById("walkthroughBar");
       const find = bar && bar.querySelector("[data-wt-find]");
       if (find) find.hidden = !walkthroughOffScreen(document.querySelector(".wt-target"));
+      // The Skip button only appears when the target is MISSING. A step waiting on a tap that
+      // the browser will not deliver - a select being the case that caught us out - leaves the
+      // target present, correct and unreachable, with no way forward at all. After a while,
+      // offer to move on regardless. A tour is not worth being trapped in.
+      if (!walkthroughRun.stalled && walkthroughRun.waitingSince
+          && Date.now() - walkthroughRun.waitingSince > 15000) {
+        walkthroughRun.stalled = true;
+        walkthroughRenderBar();
+      }
       return;
     }
     if (!walkthroughRun.missingSince) walkthroughRun.missingSince = Date.now();
@@ -782,6 +797,11 @@ function walkthroughGoToStep(index, back) {
     document.addEventListener("change", walkthroughRun.onChange, true);
   }
   if (step.advance === "click" && step.target) {
+    // Bound to change and input as well as click. Clicking a <select> opens the browser's own
+    // dropdown on mousedown and the mouseup lands on that popup, which is not part of the
+    // page - so no click event ever reaches us and a step waiting for one waits forever. The
+    // select announces itself with "change" instead. Typing in a textarea gives us "input".
+    // A button fires none of the extra two, so nothing is affected by listening for them.
     walkthroughRun.onClick = (event) => {
       if (!walkthroughRun) return;
       const hit = event.target && event.target.closest && event.target.closest(step.target);
@@ -802,7 +822,7 @@ function walkthroughGoToStep(index, back) {
         if (settled || waited >= 4000) { clearInterval(poll); advance(); }
       }, 160);
     };
-    document.addEventListener("click", walkthroughRun.onClick, true);
+    ["click", "change", "input"].forEach((name) => document.addEventListener(name, walkthroughRun.onClick, true));
   }
   walkthroughRenderBar();
 }
@@ -876,12 +896,14 @@ function walkthroughRenderBar() {
   }
   const steps = walkthroughRun.plan.steps, step = steps[walkthroughRun.index];
   const missing = !!walkthroughRun.missing;
-  const waiting = (step.advance === "click" || step.advance === "change") && !missing;
+  const stalled = !!walkthroughRun.stalled;
+  const waiting = (step.advance === "click" || step.advance === "change") && !missing && !stalled;
   bar.innerHTML = '<div class="wt-bar-inner' + (missing ? ' wt-stuck' : '') + '">'
     + '<div class="wt-bar-copy"><span class="wt-count">Step ' + (walkthroughRun.index + 1) + ' of ' + steps.length + '</span>'
     + '<p>' + escapeHtml(step.say) + '</p>'
     + (waiting ? '<span class="wt-waiting">' + (step.advance === "change" ? "Waiting for you to change it" : "Waiting for you to tap it") + '</span>' : '')
     + (step.info && !missing ? '<span class="wt-info-note">Reading only \u2014 nothing to change here</span>' : '')
+    + (stalled && !missing ? '<span class="wt-missing">If that is not doing anything, carry on with Next.</span>' : '')
     + (missing ? '<span class="wt-missing">' + (walkthroughBlockedHint
         ? escapeHtml(walkthroughBlockedHint)
         : 'That control is not on this screen right now \u2014 skip past it or step back.') + '</span>' : '') + '</div>'
