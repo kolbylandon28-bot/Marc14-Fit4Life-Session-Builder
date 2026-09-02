@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-09-02-v103-fill-in-with-them-r1";
+const CACHE_NAME = "fit4life-shell-2026-09-02-v104-live-card-visible-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20260902-v103-fill-in-with-them-r1";
+const ASSET_VERSION = "20260902-v104-live-card-visible-r1";
 const SHELL = [
   "/",
   "/index.html",
