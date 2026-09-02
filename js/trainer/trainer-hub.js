@@ -573,6 +573,16 @@ function trainerClientSafetyReportsContent(analysis) {
 function trainerClientDetailsContent(profile,analysis) {
   if (!profile) return '<section class="analysis-panel"><div class="empty-state">This history-only client does not have a saved profile yet.</div></section>';
   const goalLabels = (profile.goals || []).map((goal) => GOALS[goal] ? GOALS[goal].label : goal).join(' + ') || 'Not recorded';
+  const limitations = (profile.injuries || []).map((item) => INJURY_LABELS[item] || item).join(', ') || 'None recorded';
+  const equipment = (profile.zones || []).join(', ') || 'Not recorded', contact = [profile.email,profile.phone].filter(Boolean).join(' · ') || 'Not recorded';
+  const administration = isFit4LifeOwner()
+    ? '<button class="small-btn danger" onclick="deleteClientProfile(\'' + escapeHtml(profile.id) + '\')">Delete profile only</button><button class="small-btn danger" onclick="openCompleteDeleteClient(decodeURIComponent(\'' + encodeURIComponent(profile.name) + '\'))">Delete all client data</button>'
+    : '<button class="small-btn" onclick="openOwnerRequestDialog(\'client_archive\',\'' + escapeHtml(profile.id) + '\',\'\',\'Archive or delete this client\')">Request owner action</button>';
+  return (typeof trainerConsultationSummaryHtml === "function" ? trainerConsultationSummaryHtml(profile) : "") + '<section class="analysis-panel client-details-panel"><div class="analysis-panel-head"><div><h4 class="analysis-section-title">Client details</h4><p>The profile facts that affect everyday coaching are grouped here.</p></div><button class="small-btn primary" onclick="openProfileEditor(\'' + escapeHtml(profile.id) + '\')">Edit profile</button></div><div class="client-fact-grid">'
+    + [["Primary goal",goalLabels],["Experience",EXP_LABEL(profile.experience)],["Typical session",(profile.minutes || 60) + ' minutes'],["Training frequency",profile.availableDays ? profile.availableDays + ' days/week' : 'Not recorded'],["Limitations",limitations],["Equipment",equipment],["Coaching coverage",trainerClientOwnershipLabel(profile)],["Contact",contact]].map(([label,value]) => '<div class="client-fact"><span>' + escapeHtml(label) + '</span><b>' + escapeHtml(value) + '</b></div>').join('') + '</div></section>'
+    + trainerClientSafetyReportsContent(analysis) + trainerNotesTab(analysis) + trainerDocumentsTab(analysis)
+    + '<details class="client-admin-zone"><summary>Administrative actions</summary><p>Profile deletion and organization-level changes stay separated from everyday coaching.</p><div class="tool-actions"><button class="small-btn" onclick="openInBodyModal()">Add InBody scan</button><button class="small-btn" onclick="openBodyGoalModal()">Body goals</button>' + administration + '</div></details>';
+}
 /* A client mid-workout, seen from the trainer's own side of the app. Deliberately NOT the
    owner's client-preview, which swaps the whole portal over to the client's shell - a trainer
    stays in the trainer workspace and opens this from the client's page.
@@ -599,16 +609,6 @@ function liveWorkoutCardHtml(profile) {
     + '</section>';
 }
 
-  const limitations = (profile.injuries || []).map((item) => INJURY_LABELS[item] || item).join(', ') || 'None recorded';
-  const equipment = (profile.zones || []).join(', ') || 'Not recorded', contact = [profile.email,profile.phone].filter(Boolean).join(' · ') || 'Not recorded';
-  const administration = isFit4LifeOwner()
-    ? '<button class="small-btn danger" onclick="deleteClientProfile(\'' + escapeHtml(profile.id) + '\')">Delete profile only</button><button class="small-btn danger" onclick="openCompleteDeleteClient(decodeURIComponent(\'' + encodeURIComponent(profile.name) + '\'))">Delete all client data</button>'
-    : '<button class="small-btn" onclick="openOwnerRequestDialog(\'client_archive\',\'' + escapeHtml(profile.id) + '\',\'\',\'Archive or delete this client\')">Request owner action</button>';
-  return (typeof trainerConsultationSummaryHtml === "function" ? trainerConsultationSummaryHtml(profile) : "") + '<section class="analysis-panel client-details-panel"><div class="analysis-panel-head"><div><h4 class="analysis-section-title">Client details</h4><p>The profile facts that affect everyday coaching are grouped here.</p></div><button class="small-btn primary" onclick="openProfileEditor(\'' + escapeHtml(profile.id) + '\')">Edit profile</button></div><div class="client-fact-grid">'
-    + [["Primary goal",goalLabels],["Experience",EXP_LABEL(profile.experience)],["Typical session",(profile.minutes || 60) + ' minutes'],["Training frequency",profile.availableDays ? profile.availableDays + ' days/week' : 'Not recorded'],["Limitations",limitations],["Equipment",equipment],["Coaching coverage",trainerClientOwnershipLabel(profile)],["Contact",contact]].map(([label,value]) => '<div class="client-fact"><span>' + escapeHtml(label) + '</span><b>' + escapeHtml(value) + '</b></div>').join('') + '</div></section>'
-    + trainerClientSafetyReportsContent(analysis) + trainerNotesTab(analysis) + trainerDocumentsTab(analysis)
-    + '<details class="client-admin-zone"><summary>Administrative actions</summary><p>Profile deletion and organization-level changes stay separated from everyday coaching.</p><div class="tool-actions"><button class="small-btn" onclick="openInBodyModal()">Add InBody scan</button><button class="small-btn" onclick="openBodyGoalModal()">Body goals</button>' + administration + '</div></details>';
-}
 function renderTrainerAnalysis(client) {
   const out = byId("trainerReport"); if (!out) return null;
   const analysis = trainerAnalysisData(client), profile = analysis.profile, filtered = filteredTrainerSummary(analysis);

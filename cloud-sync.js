@@ -419,21 +419,18 @@
      roster. Probed once at startup instead, so the app works before the SQL is run and picks
      the column up by itself afterwards. */
   let profilesHaveBookingEmail = true;
-  function profileColumns() {
-    return "id,organization_id,external_id,auth_user_id,full_name,username,email,"
-      + (profilesHaveBookingEmail ? "booking_email," : "") + "status,updated_at";
-  }
-  async function probeBookingEmailColumn() {
-    if (!cloudClient) return;
-    try {
-      const response = await cloudClient.from("client_profiles").select("booking_email").limit(1);
-      // 42703 is "column does not exist". Anything else is a normal failure - a network blip or
-      // an empty table - and must not switch the column off for the whole session.
-      if (response.error && String(response.error.code || "") === "42703") {
-        profilesHaveBookingEmail = false;
-        console.warn("FIT 4 LIFE: client_profiles.booking_email is missing - run RUN-THIS-IN-SUPABASE-PREAPPROVED-EMAILS.sql. Booking addresses will not sync until then.");
-      }
-    } catch (_) {}
+  // Set only by a write that Postgres itself rejected for the column not existing. An earlier
+  // version probed at startup, before there was a session - so RLS answered instead of
+  // Postgres, the missing-column code never appeared, and the reads carried on asking for it.
+  function noteMissingBookingEmail(error) {
+    if (!error) return false;
+    const code = String(error.code || ""), message = String(error.message || "");
+    if (code !== "42703" && !/booking_email/.test(message)) return false;
+    if (profilesHaveBookingEmail) {
+      profilesHaveBookingEmail = false;
+      console.warn("FIT 4 LIFE: client_profiles.booking_email is missing - run RUN-THIS-IN-SUPABASE-PREAPPROVED-EMAILS.sql. Booking addresses will not sync until then.");
+    }
+    return true;
   }
 
   const LIVE_WORKOUTS_KEY = "fit4life_live_workouts_v1";
@@ -1005,11 +1002,22 @@
   async function ensureRemoteProfiles(localProfiles) {
     const profiles = (localProfiles || []).filter((profile) => profile && profile.id && profile.name);
     if (!profiles.length) return [];
-    const rows = profiles.map(tableProfile);
-    const response = await cloudClient
+    let rows = profiles.map(tableProfile);
+    let response = await cloudClient
       .from("client_profiles")
       .upsert(rows, { onConflict: "organization_id,external_id" })
-      .select(profileColumns());
+      .select("*");
+    /* This is the one place the database can tell us the column is not there yet: a write
+       naming it is rejected by Postgres itself, after RLS has already let us through. Retried
+       once without it so a push never fails for a migration that has not been run, and every
+       later push leaves it out too. */
+    if (response.error && noteMissingBookingEmail(response.error)) {
+      rows = profiles.map(tableProfile);
+      response = await cloudClient
+        .from("client_profiles")
+        .upsert(rows, { onConflict: "organization_id,external_id" })
+        .select("*");
+    }
     if (response.error) throw response.error;
     response.data.forEach((row) => remoteProfilesByExternalId.set(row.external_id, row));
     return response.data;
@@ -1018,7 +1026,7 @@
   async function hydrateRemoteProfileMap() {
     const response = await cloudClient
       .from("client_profiles")
-      .select(profileColumns())
+      .select("*")
       .eq("organization_id", cloudOrganizationId);
     if (response.error) throw response.error;
     const visibleRows = accountVisibleProfileRows(response.data, cloudRole, cloudUser && cloudUser.id);
@@ -1598,7 +1606,7 @@
     try {
       let profileResponse = await cloudClient
         .from("client_profiles")
-        .select(profileColumns())
+        .select("*")
         .eq("organization_id", cloudOrganizationId)
         .order("created_at", { ascending: true });
       if (profileResponse.error) throw profileResponse.error;
@@ -1613,7 +1621,7 @@
         localStorage.setItem("fit4life_legacy_migration_complete_v1", "yes");
         profileResponse = await cloudClient
           .from("client_profiles")
-          .select(profileColumns())
+          .select("*")
           .eq("organization_id", cloudOrganizationId)
           .order("created_at", { ascending: true });
         if (profileResponse.error) throw profileResponse.error;
@@ -2339,7 +2347,7 @@
     if (!cloudClient || !cloudOrganizationId || cloudRole !== "owner") return [];
     const response = await cloudClient
       .from("client_profiles")
-      .select("id,external_id,full_name,email," + (profilesHaveBookingEmail ? "booking_email," : "") + "updated_at")
+      .select("*")
       .eq("organization_id", cloudOrganizationId)
       .eq("status", "archived")
       .order("updated_at", { ascending:false })
@@ -2397,7 +2405,6 @@
       cloudClient = sealClientDuringPractice(window.supabase.createClient(config.url, config.key, {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage:fit4lifeAuthStorage }
       }));
-      await probeBookingEmailColumn();
       await loadPortalContext();
       startOrganizationSettingsRefresh();
       installWriterHooks();
