@@ -154,5 +154,29 @@ t("and it cannot get stuck on",               /if \(view !== "active-workout"\) 
 t("with a banner saying whose screen it is",  /Filling in for/.test(app), true);
 t("and a way back to their page",             /closeTrainerLiveWorkout\(\)/.test(app), true);
 
+console.log("\n--- signing up is trainer-initiated ---");
+const sync = fs.readFileSync(R + "cloud-sync.js", "utf8");
+const sql = fs.readFileSync(R + "RUN-THIS-IN-SUPABASE-PREAPPROVED-EMAILS.sql", "utf8");
+t("the address is checked before signup",     /fit4life_email_is_preapproved/.test(sync), true);
+t("a typo is refused, not queued",            /has not added this address yet/.test(sync), true);
+// A public form that could ask "is this address registered?" and get anything richer than a
+// boolean would let anyone read the roster one guess at a time.
+t("the check answers only yes or no",         /returns boolean/.test(sql), true);
+t("and is scoped to one gym",                 /p\.organization_id = target_organization/.test(sql), true);
+t("archived clients do not count",            /status, 'active'\) <> 'archived'/.test(sql), true);
+// Better off than on-but-broken: if the function is missing the app says so and lets people in,
+// rather than locking every client out of a pilot that is already running.
+t("a missing function does not lock anyone out", /pre-approval check unavailable - allowing signup/.test(sync), true);
+
+console.log("\n--- both addresses reach the server ---");
+// V88 put personal addresses in bookingEmail and only pushed the BYU-I one, so a client who
+// came from the booking import with a gmail address had email null on the server - and the
+// claim RPC matches on that column. They could never get in at all.
+t("the booking address is pushed too",        /booking_email: normalizedEmail\(profile\.bookingEmail\)/.test(sync), true);
+t("and read back",                            /bookingEmail: row\.booking_email/.test(sync), true);
+t("every profile select asks for it",         (sync.match(/select\("[^"]*booking_email[^"]*"\)/g) || []).length >= 5, true);
+t("the column is added if missing",           /add column if not exists booking_email/.test(sql), true);
+t("and both are matched on",                  /lower\(p\.email\)[\s\S]{0,80}lower\(p\.booking_email\)/.test(sql), true);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

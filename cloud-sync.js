@@ -941,6 +941,11 @@
       full_name: String(profile.name || "Client").trim(),
       username: String(profile.username || "").replace(/^@/, "").trim().toLowerCase(),
       email: normalizedEmail(profile.email) || null,
+      /* Both addresses reach the server, not just the BYU-I one. A client who came from the
+         booking import with a personal address has that in bookingEmail and nothing in email,
+         so this column was null for them - and claim_my_client_profile_for_org matches on it.
+         They could never claim a profile and so could never get in at all. */
+      booking_email: normalizedEmail(profile.bookingEmail) || null,
       // Never blindly "active". This line un-archived every deleted profile: the delete
       // archives the row, then the next push from ANY device that still holds the client
       // locally upserts it back to active, and the following pull rebuilds it locally.
@@ -959,6 +964,7 @@
       name: row.full_name,
       username: row.username,
       email: row.email || "",
+      bookingEmail: row.booking_email || "",
       goals: ["general"],
       trainingStyle: "auto",
       cardioMode: "any",
@@ -980,7 +986,7 @@
     const response = await cloudClient
       .from("client_profiles")
       .upsert(rows, { onConflict: "organization_id,external_id" })
-      .select("id,organization_id,external_id,auth_user_id,full_name,username,email,status,updated_at");
+      .select("id,organization_id,external_id,auth_user_id,full_name,username,email,booking_email,status,updated_at");
     if (response.error) throw response.error;
     response.data.forEach((row) => remoteProfilesByExternalId.set(row.external_id, row));
     return response.data;
@@ -989,7 +995,7 @@
   async function hydrateRemoteProfileMap() {
     const response = await cloudClient
       .from("client_profiles")
-      .select("id,organization_id,external_id,auth_user_id,full_name,username,email,status,updated_at")
+      .select("id,organization_id,external_id,auth_user_id,full_name,username,email,booking_email,status,updated_at")
       .eq("organization_id", cloudOrganizationId);
     if (response.error) throw response.error;
     const visibleRows = accountVisibleProfileRows(response.data, cloudRole, cloudUser && cloudUser.id);
@@ -1569,7 +1575,7 @@
     try {
       let profileResponse = await cloudClient
         .from("client_profiles")
-        .select("id,organization_id,external_id,auth_user_id,full_name,username,email,status,updated_at")
+        .select("id,organization_id,external_id,auth_user_id,full_name,username,email,booking_email,status,updated_at")
         .eq("organization_id", cloudOrganizationId)
         .order("created_at", { ascending: true });
       if (profileResponse.error) throw profileResponse.error;
@@ -1584,7 +1590,7 @@
         localStorage.setItem("fit4life_legacy_migration_complete_v1", "yes");
         profileResponse = await cloudClient
           .from("client_profiles")
-          .select("id,organization_id,external_id,auth_user_id,full_name,username,email,status,updated_at")
+          .select("id,organization_id,external_id,auth_user_id,full_name,username,email,booking_email,status,updated_at")
           .eq("organization_id", cloudOrganizationId)
           .order("created_at", { ascending: true });
         if (profileResponse.error) throw profileResponse.error;
@@ -1797,6 +1803,26 @@
     }
     if (!clientByuiEmail(email)) {
       authMessage("Client accounts require a BYU-I email ending in @byui.edu. Trainers may use a personal or BYU-I email from the separate trainer request form.", true);
+      return false;
+    }
+    /* Signing up is trainer-initiated: the address has to already be on file as a client.
+       A typo then dies here instead of becoming a convincing-looking row in the approval
+       queue that somebody waves through.
+
+       Asked through a function that answers only yes or no. A public form that could ask
+       "is this address registered?" and get anything richer back would let anyone read the
+       roster one guess at a time.
+
+       If the function is not installed the signup is allowed through rather than blocking
+       everybody - the gate is simply off until the SQL is run, and it says so in the console. */
+    const preapproved = await cloudClient.rpc("fit4life_email_is_preapproved", {
+      check_email: email,
+      target_organization: portalOrganizationId || null
+    });
+    if (preapproved.error) {
+      console.warn("FIT 4 LIFE pre-approval check unavailable - allowing signup", preapproved.error.message || preapproved.error);
+    } else if (preapproved.data === false) {
+      authMessage("Your trainer has not added this address yet. Check the spelling, or ask them to add you.", true);
       return false;
     }
     if (password.length < 8) {
@@ -2269,7 +2295,7 @@
     if (!cloudClient || !cloudOrganizationId || cloudRole !== "owner") return [];
     const response = await cloudClient
       .from("client_profiles")
-      .select("id,external_id,full_name,email,updated_at")
+      .select("id,external_id,full_name,email,booking_email,updated_at")
       .eq("organization_id", cloudOrganizationId)
       .eq("status", "archived")
       .order("updated_at", { ascending:false })
