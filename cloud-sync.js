@@ -210,6 +210,25 @@
     return list.filter((row) => row && row.auth_user_id === userId);
   }
 
+  /* Tried once per session: a failure here must not turn every later sync into two extra
+     round trips. The additive function goes first because it is the one whose behaviour is
+     known - it links only when exactly one unclaimed profile carries the caller's own verified
+     address, on either the personal or the BYU-I field. claim_my_client_profile is the
+     fallback for a database where that function has not been installed yet. */
+  let clientProfileLinkTried = false;
+  async function linkOwnClientProfile() {
+    try {
+      const linked = await cloudClient.rpc("fit4life_link_my_client_profile", {
+        target_organization: cloudOrganizationId || null
+      });
+      if (!linked.error) return Number(linked.data || 0) > 0;
+      const claim = cloudOrganizationId
+        ? await cloudClient.rpc("claim_my_client_profile_for_org", { target_organization: cloudOrganizationId })
+        : await cloudClient.rpc("claim_my_client_profile");
+      return !claim.error;
+    } catch (_) { return false; }
+  }
+
   function accountVisibleSyncRecords(records, profileRows, role) {
     const list = Array.isArray(records) ? records : [];
     if (role === "owner" || role === "trainer") return list;
@@ -1422,7 +1441,7 @@
     const liveWorkoutsByProfile = {};
 
     profileRows.forEach((row) => { if (row.status === "archived") archivedExternalIds.add(String(row.external_id)); });
-    profileRows.filter((row) => row.status === "active").forEach((row) => {
+    profileRows.filter((row) => (row.status || "active") === "active").forEach((row) => {
       archivedExternalIds.delete(String(row.external_id));
       remoteProfilesByExternalId.set(row.external_id, row);
       const plan = byClientAndType.get(row.id + "|client_plan") || {};
@@ -1473,7 +1492,12 @@
     // If a practice client ever reached the server - from a build before the database was
     // sealed - every pull would hand it back and a local purge could never win. Strip them
     // on the way in, so the fix holds no matter what is still sitting in the table.
-    writeJson(CLOUD_KEYS.profiles, stripPracticeProfiles(profiles));
+    /* An empty result for a client means "this account is not linked to a profile yet", not
+       "you have no profiles" - and overwriting with nothing left them with no way back in,
+       because the lookup searches this same list. If a row was visible but archived, the wipe
+       still happens, so archiving a client does take effect on their device. */
+    const clientHasNoVisibleRow = cloudRole === "client" && !profiles.length && !profileRows.length;
+    if (!clientHasNoVisibleRow) writeJson(CLOUD_KEYS.profiles, stripPracticeProfiles(profiles));
     writeJson(CLOUD_KEYS.assignments, assignments);
     writeJson(CLOUD_KEYS.programs, programs);
     writeJson(CLOUD_KEYS.progress, progress);
@@ -1634,7 +1658,26 @@
         .is("deleted_at", null);
       if (recordResponse.error) throw recordResponse.error;
 
-      const visibleProfileRows = accountVisibleProfileRows(profileResponse.data, cloudRole, cloudUser.id);
+      /* A client sees only rows stamped with their auth_user_id. That stamp is applied by
+         claim_my_client_profile, which getMembership() only reaches for an account that has
+         no membership yet - so anyone who got a membership another way was never linked, saw
+         zero profiles, and landed back on the old lookup menu with the questionnaire skipped.
+         Ask for the link here instead, where the symptom actually shows up. */
+      let visibleProfileRows = accountVisibleProfileRows(profileResponse.data, cloudRole, cloudUser.id);
+      if (cloudRole === "client" && !visibleProfileRows.length && !clientProfileLinkTried) {
+        clientProfileLinkTried = true;
+        if (await linkOwnClientProfile()) {
+          const relinked = await cloudClient
+            .from("client_profiles")
+            .select("*")
+            .eq("organization_id", cloudOrganizationId)
+            .order("created_at", { ascending: true });
+          if (!relinked.error) {
+            profileResponse = relinked;
+            visibleProfileRows = accountVisibleProfileRows(relinked.data, cloudRole, cloudUser.id);
+          }
+        }
+      }
       const visibleRecords = accountVisibleSyncRecords(recordResponse.data, visibleProfileRows, cloudRole);
 
       cloudApplying = true;
