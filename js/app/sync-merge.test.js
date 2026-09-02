@@ -174,9 +174,25 @@ console.log("\n--- both addresses reach the server ---");
 // claim RPC matches on that column. They could never get in at all.
 t("the booking address is pushed too",        /booking_email: normalizedEmail\(profile\.bookingEmail\)/.test(sync), true);
 t("and read back",                            /bookingEmail: row\.booking_email/.test(sync), true);
-t("every profile select asks for it",         (sync.match(/select\("[^"]*booking_email[^"]*"\)/g) || []).length >= 5, true);
+// Selects are built rather than literal now, so the property to check is that the built list
+// carries the column when the database has it.
+t("the built column list includes it",        /profilesHaveBookingEmail \? "booking_email," : ""/.test(sync), true);
 t("the column is added if missing",           /add column if not exists booking_email/.test(sql), true);
 t("and both are matched on",                  /lower\(p\.email\)[\s\S]{0,80}lower\(p\.booking_email\)/.test(sql), true);
+
+console.log("\n--- the app must work before the SQL is run ---");
+// Asking Postgres for a column that does not exist rejects the WHOLE query. Four of the
+// profile reads rethrow, so a missing booking_email emptied the entire client roster on the
+// trainer side - the app broke on upload and only recovered once the SQL was run.
+t("the column list is built, not hardcoded",  /function profileColumns\(\)/.test(sync), true);
+t("no read hardcodes the new column",         /select\("id,organization_id[^"]*booking_email/.test(sync), false);
+t("it is probed once at startup",             /probeBookingEmailColumn/.test(sync), true);
+t("and only 42703 switches it off",           /String\(response\.error\.code \|\| ""\) === "42703"/.test(sync), true);
+// A network blip or an empty table must not disable the column for the rest of the session.
+t("other errors leave it alone",              /if \(response\.error && String\(response\.error\.code/.test(sync), true);
+t("the upsert omits it when absent",          /profilesHaveBookingEmail \? \{ booking_email/.test(sync), true);
+t("the probe runs before anything reads",     sync.indexOf("await probeBookingEmailColumn") < sync.indexOf("await loadPortalContext"), true);
+t("and it says which file to run",            /RUN-THIS-IN-SUPABASE-PREAPPROVED-EMAILS\.sql/.test(sync), true);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

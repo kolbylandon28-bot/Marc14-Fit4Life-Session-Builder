@@ -413,6 +413,29 @@
 
   // Local cache, deliberately not in CLOUD_KEYS: it is rebuilt from every pull and must never
   // be pushed back up as though the trainer's device were the author of it.
+  /* booking_email is added by RUN-THIS-IN-SUPABASE-PREAPPROVED-EMAILS.sql. Asking for a column
+     that is not there does not return null - Postgres rejects the whole query, and four of the
+     profile reads rethrow, so the entire client list fails to load and a trainer sees an empty
+     roster. Probed once at startup instead, so the app works before the SQL is run and picks
+     the column up by itself afterwards. */
+  let profilesHaveBookingEmail = true;
+  function profileColumns() {
+    return "id,organization_id,external_id,auth_user_id,full_name,username,email,"
+      + (profilesHaveBookingEmail ? "booking_email," : "") + "status,updated_at";
+  }
+  async function probeBookingEmailColumn() {
+    if (!cloudClient) return;
+    try {
+      const response = await cloudClient.from("client_profiles").select("booking_email").limit(1);
+      // 42703 is "column does not exist". Anything else is a normal failure - a network blip or
+      // an empty table - and must not switch the column off for the whole session.
+      if (response.error && String(response.error.code || "") === "42703") {
+        profilesHaveBookingEmail = false;
+        console.warn("FIT 4 LIFE: client_profiles.booking_email is missing - run RUN-THIS-IN-SUPABASE-PREAPPROVED-EMAILS.sql. Booking addresses will not sync until then.");
+      }
+    } catch (_) {}
+  }
+
   const LIVE_WORKOUTS_KEY = "fit4life_live_workouts_v1";
   window.fit4lifeLiveWorkoutFor = function fit4lifeLiveWorkoutFor(profileId) {
     if (!profileId) return null;
@@ -945,7 +968,7 @@
          booking import with a personal address has that in bookingEmail and nothing in email,
          so this column was null for them - and claim_my_client_profile_for_org matches on it.
          They could never claim a profile and so could never get in at all. */
-      booking_email: normalizedEmail(profile.bookingEmail) || null,
+      ...(profilesHaveBookingEmail ? { booking_email: normalizedEmail(profile.bookingEmail) || null } : {}),
       // Never blindly "active". This line un-archived every deleted profile: the delete
       // archives the row, then the next push from ANY device that still holds the client
       // locally upserts it back to active, and the following pull rebuilds it locally.
@@ -986,7 +1009,7 @@
     const response = await cloudClient
       .from("client_profiles")
       .upsert(rows, { onConflict: "organization_id,external_id" })
-      .select("id,organization_id,external_id,auth_user_id,full_name,username,email,booking_email,status,updated_at");
+      .select(profileColumns());
     if (response.error) throw response.error;
     response.data.forEach((row) => remoteProfilesByExternalId.set(row.external_id, row));
     return response.data;
@@ -995,7 +1018,7 @@
   async function hydrateRemoteProfileMap() {
     const response = await cloudClient
       .from("client_profiles")
-      .select("id,organization_id,external_id,auth_user_id,full_name,username,email,booking_email,status,updated_at")
+      .select(profileColumns())
       .eq("organization_id", cloudOrganizationId);
     if (response.error) throw response.error;
     const visibleRows = accountVisibleProfileRows(response.data, cloudRole, cloudUser && cloudUser.id);
@@ -1575,7 +1598,7 @@
     try {
       let profileResponse = await cloudClient
         .from("client_profiles")
-        .select("id,organization_id,external_id,auth_user_id,full_name,username,email,booking_email,status,updated_at")
+        .select(profileColumns())
         .eq("organization_id", cloudOrganizationId)
         .order("created_at", { ascending: true });
       if (profileResponse.error) throw profileResponse.error;
@@ -1590,7 +1613,7 @@
         localStorage.setItem("fit4life_legacy_migration_complete_v1", "yes");
         profileResponse = await cloudClient
           .from("client_profiles")
-          .select("id,organization_id,external_id,auth_user_id,full_name,username,email,booking_email,status,updated_at")
+          .select(profileColumns())
           .eq("organization_id", cloudOrganizationId)
           .order("created_at", { ascending: true });
         if (profileResponse.error) throw profileResponse.error;
@@ -2316,7 +2339,7 @@
     if (!cloudClient || !cloudOrganizationId || cloudRole !== "owner") return [];
     const response = await cloudClient
       .from("client_profiles")
-      .select("id,external_id,full_name,email,booking_email,updated_at")
+      .select("id,external_id,full_name,email," + (profilesHaveBookingEmail ? "booking_email," : "") + "updated_at")
       .eq("organization_id", cloudOrganizationId)
       .eq("status", "archived")
       .order("updated_at", { ascending:false })
@@ -2374,6 +2397,7 @@
       cloudClient = sealClientDuringPractice(window.supabase.createClient(config.url, config.key, {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage:fit4lifeAuthStorage }
       }));
+      await probeBookingEmailColumn();
       await loadPortalContext();
       startOrganizationSettingsRefresh();
       installWriterHooks();
