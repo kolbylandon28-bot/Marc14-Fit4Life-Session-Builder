@@ -186,5 +186,28 @@ t("the wait resets on every step",            /walkthroughRun\.waitingSince = \(
 t("and stalling reveals a way forward",       /const waiting = \(step\.advance === "click" \|\| step\.advance === "change"\) && !missing && !stalled/.test(wt), true);
 t("with a line saying so",                    /If that is not doing anything, carry on with Next/.test(wt), true);
 
+console.log("\n--- the pain step teaches the difference ---");
+const finish = clientBlock.slice(clientBlock.indexOf("client-finish-review"));
+// The control opens ON green, so asking someone to "pick green" changes nothing, fires no
+// event, and waits forever. They are asked for a color that IS a change, shown what it
+// reveals, then walked back.
+t("it names the color to choose",             /tap it and choose Orange/.test(finish), true);
+t("and walks them back to green",             /put it back to Green/.test(finish), true);
+t("the follow-up questions get their own step", /reviewInjuryAreaField/.test(finish), true);
+t("so does what the app will do about it",    /reviewPainActionField/.test(finish), true);
+// Those fields are hidden while the answer is green, so a client who stays on green steps
+// past them instead of being told the control is not on this screen.
+t("green-only steps skip cleanly",            (finish.match(/skipIf: PAIN_STILL_GREEN/g) || []).length, 3);
+t("the predicate reads the real control",     /getElementById\("reviewPain"\)[\s\S]{0,90}value === "none"/.test(wt), true);
+
+console.log("\n--- movement preferences ---");
+// Verified in workout-feedback-reports.js: these write into profile.exercisePreferences, which
+// the generator weights at favorite +8 / dislike -5. The copy may therefore say it changes
+// what they are given, because it does.
+t("liked is opened, not just described",      /reviewLikedPicker > summary[\s\S]{0,60}advance: "click"/.test(finish), true);
+t("disliked is covered too",                  /reviewDislikedPicker/.test(finish), true);
+t("and says it really changes what you get",  /comes round more often/.test(finish), true);
+t("covering not-understood, not just disliked", /did not understand/.test(finish), true);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

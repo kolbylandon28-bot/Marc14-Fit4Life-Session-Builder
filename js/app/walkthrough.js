@@ -233,6 +233,13 @@ function REVIEW_SHUT() {
   const modal = document.getElementById("reviewModal");
   return !(modal && modal.classList.contains("open"));
 }
+// The pain follow-up questions are hidden while the answer is Green. Someone who leaves it there
+// should step past them rather than be told the control is not on this screen.
+function PAIN_STILL_GREEN() {
+  if (REVIEW_SHUT()) return true;
+  const select = document.getElementById("reviewPain");
+  return !select || select.value === "none" || select.value === "";
+}
 
 const CLIENT_WALKTHROUGHS = [
   {
@@ -335,7 +342,10 @@ const CLIENT_WALKTHROUGHS = [
           } catch (_) {}
         } },
       { say: "Set this to the number that matches how the session felt. Four is easy, ten is as hard as you can go. Honest is more useful than brave - it is what your coach uses to plan next week.", target: "#reviewDifficulty", advance: "next", info: true, skipIf: REVIEW_SHUT },
-      { say: "This asks whether anything hurt. Tap it and look at the choices. Orange or red puts your workouts on hold until your coach has read it and replied, so pick those only when they are true - if nothing hurt, green is the right answer.", target: "#reviewPain", advance: "click", skipIf: REVIEW_SHUT },
+      { say: "This asks whether anything hurt, and it starts on Green because most sessions do not. To see what the other answers do, tap it and choose Orange.", target: "#reviewPain", advance: "click", skipIf: REVIEW_SHUT },
+      { say: "Choosing anything above Green opens these. Your coach cannot act on \u201cit hurt\u201d alone - they need where it was, how bad, and what you were doing when it happened.", target: "#reviewInjuryAreaField", advance: "next", info: true, skipIf: PAIN_STILL_GREEN },
+      { say: "This line tells you what the app will do about it. Orange and Red both hold your next workout until your coach has read it and replied. That is deliberate, and it is why they are worth answering honestly.", target: "#reviewPainActionField", advance: "next", info: true, skipIf: PAIN_STILL_GREEN },
+      { say: "Nothing actually hurt in this preview, so put it back to Green. Those extra questions disappear again - Green never asks them.", target: "#reviewPain", advance: "click", skipIf: PAIN_STILL_GREEN },
       { say: "Tap in here and type something - anything at all, it is only a preview. Whatever you write reaches your coach as a message, so this is the place for a question you did not want to stop the workout for.", target: "#reviewQuestions", advance: "click", skipIf: REVIEW_SHUT },
       { say: "Open this for the optional part - how much you got through, how you felt afterwards, and which exercises you liked and which you did not.", target: "#reviewModal .review-more > summary", advance: "click", skipIf: REVIEW_SHUT },
       { say: "Workout completed is how much of it you actually got through. If you ran out of time or stopped early, say so here rather than leaving your coach to guess from the sets.", target: "#reviewCompletion", advance: "next", info: true, skipIf: REVIEW_SHUT },
@@ -345,6 +355,9 @@ const CLIENT_WALKTHROUGHS = [
       { say: "Form quality is your own honest read on whether the movements held together, especially on the last few reps. Nobody is marking you - it tells your coach whether to add weight or hold steady.", target: "#reviewForm", advance: "next", info: true, skipIf: REVIEW_SHUT },
       { say: "Pain-free range of motion is how far you could move before anything complained. Shortening the range to avoid a twinge is useful information, not a failure.", target: "#reviewRange", advance: "next", info: true, skipIf: REVIEW_SHUT },
       { say: "Notes is free writing. Anything that would help your coach: the gym was busy, a machine was taken, you slept badly.", target: "#reviewNotes", advance: "next", info: true, skipIf: REVIEW_SHUT },
+      { say: "These last two are worth more than they look. Open Exercises you liked.", target: "#reviewLikedPicker > summary", advance: "click", skipIf: REVIEW_SHUT },
+      { say: "It lists what you actually did today, so you tick rather than type. Anything you mark here genuinely comes round more often - it is not just a note your coach reads once.", target: "#reviewLikedPicker", advance: "next", info: true, skipIf: REVIEW_SHUT },
+      { say: "The other list works the same way in reverse, and it covers two different things: movements you did not enjoy, and movements you did not understand. Both are worth saying. One gets you fewer of them, the other gets you shown how.", target: "#reviewDislikedPicker", advance: "next", info: true, skipIf: REVIEW_SHUT },
       { say: "This is the button that sends it. We are closing this preview instead of pressing it, because your workout is not actually finished. When you do finish, this same form opens by itself.", target: "#reviewSaveOnlyBtn", advance: "next", info: true, skipIf: REVIEW_SHUT },
     ],
     done: "That form opens by itself the moment you finish your last exercise. Fill it in and send it then - it is the main way your coach knows how the session actually went.",
