@@ -994,9 +994,14 @@ function clientAssistanceMarkup() {
     + '<div class="review-dialog"><h2 id="clientAssistanceTitle">Tutorials</h2>'
     + '<p>Pick anything you want walked through. It happens on your own screens, at your pace, '
     + 'and you can stop at any point. Nothing is sent to your coach while a guide is running.</p>'
-    + '<div class="wt-card-grid">' + cards + '</div>'
+    + '<div class="wt-card-grid">' + introVideoCardHtml() + cards + '</div>'
     + '<div class="tool-actions"><button class="small-btn" onclick="closeClientAssistance()">Close</button></div>'
     + '</div></div>';
+}
+function introVideoCardHtml() {
+  if (typeof replayIntroVideo !== "function") return "";
+  return '<button class="wt-card wt-card-video" type="button" data-intro-video>'
+    + '<b>Watch the FIT 4 LIFE intro</b><span>A short welcome video. Under a minute.</span></button>';
 }
 function openClientAssistance() {
   let modal = document.getElementById("clientAssistanceModal");
@@ -1013,6 +1018,9 @@ function openClientAssistance() {
   if (!modal) return false;
   modal.querySelectorAll("[data-wt-start]").forEach((button) => {
     button.onclick = () => { closeClientAssistance(); startWalkthrough(button.dataset.wtStart); };
+  });
+  modal.querySelectorAll("[data-intro-video]").forEach((button) => {
+    button.onclick = () => { closeClientAssistance(); replayIntroVideo(); };
   });
   modal.classList.add("open");
   return true;

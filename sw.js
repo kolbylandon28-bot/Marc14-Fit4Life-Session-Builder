@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-09-02-v110-client-link-r1";
+const CACHE_NAME = "fit4life-shell-2026-09-11-v111-intro-video-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20260902-v110-client-link-r1";
+const ASSET_VERSION = "20260911-v111-intro-video-r1";
 const SHELL = [
   "/",
   "/index.html",
@@ -56,6 +56,9 @@ self.addEventListener("fetch", (event) => {
   }
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
+  // Video streams with Range requests; the Cache API cannot store a 206 response.
+  if (request.destination === "video" || request.destination === "audio" || request.headers.has("range")
+    || /\.(mp4|m4v|webm|mov)$/i.test(url.pathname)) return;
 
   if (request.mode === "navigate") {
     event.respondWith(

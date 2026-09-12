@@ -212,6 +212,9 @@ function openClientConsultation(required) {
   installConsultationAutosave();
   if ((window.fit4lifeCloudRole || "") !== "client") { showToast("Only the signed-in client can edit consultation answers"); return false; }
   const profile = activeClientProfile(); if (!profile) { show("client-menu"); return false; }
+  // Every route into the required questionnaire comes through here, so the intro does too.
+  if ((Boolean(required) || !clientConsultationComplete(profile)) && typeof maybePlayIntroVideo === "function"
+    && maybePlayIntroVideo(profile, () => openClientConsultation(required))) return true;
   clientConsultationRequiredMode = Boolean(required) || !clientConsultationComplete(profile);
   populateClientConsultation(profile); show("client-consultation"); showConsultationStep(1);
   if (!isByuiEmail((window.fit4lifeCloudIdentity || {}).email || profile.email)) consultationSetAlert("Client accounts require a verified BYU-I email ending in @byui.edu. Sign out and contact Fit4Life to correct this account before continuing.",true);

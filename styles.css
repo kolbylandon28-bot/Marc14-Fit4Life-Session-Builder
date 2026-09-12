@@ -813,6 +813,16 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   .coach-more-list .coach-attention-badge{right:6px;top:6px;transform:none}
   .modal-backdrop button,.modal-backdrop select,.modal-backdrop input,.modal-backdrop textarea,.modal-backdrop summary{pointer-events:auto;touch-action:manipulation}
   .modal-backdrop :is(button,select,input,textarea):disabled{cursor:not-allowed;opacity:.48}
+  .intro-video-overlay{position:fixed;inset:0;z-index:950;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(4,5,8,.9)}
+  .intro-video-overlay.open{display:flex}
+  .intro-video-card{width:min(960px,100%);max-height:100%;overflow:auto;background:var(--slate-1);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);padding:18px}
+  .intro-video-kicker{display:block;color:var(--text-faint);font:600 10px var(--mono);letter-spacing:.14em;text-transform:uppercase}
+  .intro-video-card h2{margin:4px 0 12px;font:italic 800 26px/1 var(--display);text-transform:uppercase}
+  .intro-video-player{display:block;width:100%;aspect-ratio:16/9;background:#000;border-radius:10px}
+  .intro-video-copy{margin:12px 0 0;color:var(--text-faint)}
+  .intro-video-copy:empty{display:none}
+  .intro-video-actions{justify-content:flex-end;margin-top:14px}
+  body.intro-video-active{overflow:hidden}
   .review-dialog{width:min(820px,100%);max-height:92vh;overflow:auto;background:var(--slate-1);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);padding:22px}
   .review-dialog h2{font-family:var(--display);font-style:italic;font-size:30px;text-transform:uppercase}
   .review-dialog>p{font-size:12.5px;color:var(--text-faint);margin:6px 0 17px}
