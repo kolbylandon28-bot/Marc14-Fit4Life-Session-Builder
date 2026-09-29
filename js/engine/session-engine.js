@@ -157,8 +157,8 @@ function auditWorkout(session) {
   const primary = blocks.find((block) => block.key === "strength" && block.items.length);
   const safety = [];
   if (!exercises.length) safety.push("Workout is empty — add movements before coach approval.");
-  const safePrimaryAvailable = resistance && eligibleFor(spec).some((exercise) => isPrimaryAnchor(exercise));
-  if (safePrimaryAvailable && (!primary || !primary.items.some((exercise) => isPrimaryAnchor(exercise)))) safety.push("Resistance workout needs a categorized primary lift before coach approval.");
+  const safePrimaryAvailable = resistance && eligibleFor(spec).some((exercise) => acceptsAsPrimaryAnchor(exercise));
+  if (safePrimaryAvailable && (!primary || !primary.items.some((exercise) => acceptsAsPrimaryAnchor(exercise)))) safety.push("Resistance workout needs a categorized primary lift before coach approval.");
   if (session.manual && !blocks.some((block) => block.key === "warmup" && block.items.length)) safety.push("From-scratch workout needs a warm-up before coach approval.");
   exercises.forEach((exercise) => {
     exerciseConstraintIssues(exercise,spec,spec.age).filter((issue) => issue.hard).forEach((issue) => safety.push(exercise.name + ": " + issue.label));
@@ -167,7 +167,7 @@ function auditWorkout(session) {
   const detail = [
     ["Goal alignment",15,GOALS[spec.goal] ? 15 : 0],
     ["Client fit",15,safety.length ? 0 : 15],
-    ["Exercise selection",15,!resistance || (primary && primary.items.some((exercise) => isPrimaryAnchor(exercise))) ? 15 : primary ? 11 : 7],
+    ["Exercise selection",15,!resistance || (primary && primary.items.some((exercise) => acceptsAsPrimaryAnchor(exercise))) ? 15 : primary ? 11 : 7],
     ["Session order",10,sessionBlockOrderIsValid(session) && (!blocks.length || ["warmup","primer","conditioning","mobility"].includes(blocks[0].key)) && (powerIndex < 0 || strengthIndex < 0 || powerIndex < strengthIndex) ? 10 : 4],
     ["Volume / intensity",10,session.prescription && session.prescription.reps && session.prescription.rpe ? 10 : 7],
     ["Duration fit",10,exercises.length <= Math.max(5,Math.ceil((Number(spec.minutes) || 60) / 7) + 2) ? 10 : 8],
@@ -214,6 +214,7 @@ function applySavedExerciseProgramming(session) {
   });
   return session;
 }
+const CONSULTATION_PREFIX = /^Trainer Consultation context: [^.]*\.\s*/;
 function finalizeGeneratedSession(session) {
   if (!session) return session;
   applySavedExerciseProgramming(session);
@@ -223,7 +224,15 @@ function finalizeGeneratedSession(session) {
   const consultationNotes = [];
   if (Number(session.spec && session.spec.usualTrainingRpe)) consultationNotes.push("client usually reports training near RPE " + Number(session.spec.usualTrainingRpe));
   if (session.spec && session.spec.coachingPriorities && session.spec.coachingPriorities.length) consultationNotes.push("coach support priorities: " + session.spec.coachingPriorities.join(", ").replace(/_/g," "));
-  if (consultationNotes.length) session.rationale = "Trainer Consultation context: " + consultationNotes.join("; ") + ". " + (session.rationale || "");
+  // Idempotent. finalize runs on the SAME object from buildSession, buildBlendedSession,
+  // buildSessionStateAtSeed and again for calibration programs, so an unguarded prepend
+  // stacked this sentence three and four deep - into the client's printed card. Stripping
+  // first also repairs sessions that already accumulated copies.
+  let baseRationale = String(session.rationale || "");
+  while (CONSULTATION_PREFIX.test(baseRationale)) baseRationale = baseRationale.replace(CONSULTATION_PREFIX, "");
+  session.rationale = consultationNotes.length
+    ? "Trainer Consultation context: " + consultationNotes.join("; ") + ". " + baseRationale
+    : baseRationale;
   session.approval = { status:"draft", required:true, policy:PROGRAMMING_POLICY.approvalMode, generatedAt:new Date().toISOString() };
   session.audit = auditWorkout(session);
   session.internalRationale = "Goal, client fit, exercise order, duration, equipment, history, and substitution purpose were audited before coach review.";
@@ -765,6 +774,19 @@ function isPrimaryAnchor(ex) {
   if (ex.pattern === "carry") return true;
   if (["core","rotation"].includes(ex.pattern)) return !name.includes("throw") && /pallof|ab wheel|rollout|landmine rotation|cable chop|cable lift|woodchop|rotation/.test(name);
   return ex.pattern === "olympic";
+}
+// isPrimaryAnchor keys on the exercise NAME, so a loaded lat pulldown fails while a TRX row
+// passes - and movementFamily below groups pulldowns WITH pull-ups. Two functions in one file
+// disagreeing blocked trainers from approving a safe swap. Widening isPrimaryAnchor itself
+// would change what the GENERATOR selects mid-pilot, so the wider net is used only where a
+// trainer's own choice is being judged: the approval audit, the swap picker and the warning.
+function acceptsAsPrimaryAnchor(ex) {
+  if (isPrimaryAnchor(ex)) return true;
+  if (!ex || !ex.name) return false;
+  const name = String(ex.name).toLowerCase();
+  if (ex.pattern === "v_pull") return /pulldown|pull down|lat pull/.test(name);
+  if (ex.pattern === "v_push") return /arnold press|z-press|z press|push press|military press/.test(name);
+  return false;
 }
 function primaryAnchorFamily(ex) {
   if (!ex) return "lead";

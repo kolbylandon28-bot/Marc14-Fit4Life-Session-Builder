@@ -2145,3 +2145,14 @@ body.sandbox-on .cloud-auth-tabs{background:var(--slate-2);border-color:var(--li
 body.sandbox-on .message-bubble{background:#fff;border:1px solid var(--line);color:var(--text)}
 body.sandbox-on .consultation-option span{background:#fff;border-color:var(--line);color:var(--text)}
 body.sandbox-on .consultation-option small{color:var(--text-faint)}
+
+/* Trainer audits */
+.inline-check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim)}
+.inline-check input{width:auto;margin:0}
+.pill{display:inline-flex;align-items:center;padding:4px 10px;border:1px solid var(--line);border-radius:999px;font:600 11px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--text-dim);white-space:nowrap}
+.pill.warn{color:var(--warn);border-color:rgba(240,179,90,.45)}
+.trainer-account-row.warn{border-left:3px solid var(--warn)}
+.audit-scale,.audit-look{margin-top:8px;font-size:12px;color:var(--text-dim)}
+.audit-scale summary,.audit-look summary{cursor:pointer;font-weight:600}
+.audit-scale ul,.audit-look ul{margin:8px 0 0;padding-left:18px;line-height:1.5}
+.audit-scale li,.audit-look li{margin-bottom:4px}

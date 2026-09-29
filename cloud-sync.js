@@ -38,7 +38,9 @@
     progressReceipts: "fit4life_progress_receipts_v1",
     progressReceiptResponses: "fit4life_progress_receipt_responses_v1",
     activeWorkout: "fit4life_active_workout_v1",
-    activeClient: "fit4life_active_client_v1"
+    activeClient: "fit4life_active_client_v1",
+    trainerAudits: "fit4life_trainer_audits_v1",
+    auditTrainers: "fit4life_audit_trainers_v1"
   };
 
   const ARRAY_KEYS = new Set([
@@ -1310,7 +1312,7 @@
   }
 
   function queueCloudSync(scope) {
-    if (cloudApplying) return;
+    if (cloudApplying || scope === "none") return;
     pendingScopes.add(scope || "all");
     persistPendingScopes();
     clearTimeout(cloudPushTimer);
@@ -2197,6 +2199,69 @@
     return window.fit4lifeCloudTrainers;
   }
 
+  /* ---------- trainer audits (owner only) ----------
+     Their own table with owner-only policies, because the shared organization snapshot is
+     readable by every trainer device. Undefined until the RPC has been tried; false means the
+     SQL has not been run and the app says so rather than pretending the audits are shared. */
+  window.fit4lifeTrainerAuditsAvailable = undefined;
+
+  function mergeAuditRows(localKey, rows) {
+    const local = (function () { try { const data = JSON.parse(localStorage.getItem(localKey) || "[]"); return Array.isArray(data) ? data : []; } catch (_) { return []; } })();
+    const byId = new Map();
+    local.concat(rows).forEach((row) => {
+      if (!row || !row.id) return;
+      const held = byId.get(row.id);
+      if (!held || String(row.updatedAt || "") > String(held.updatedAt || "")) byId.set(row.id, row);
+    });
+    const merged = [...byId.values()].sort((a, b) => String(b.date || b.updatedAt || "").localeCompare(String(a.date || a.updatedAt || "")));
+    try { localStorage.setItem(localKey, JSON.stringify(merged)); } catch (_) { /* a full disk must not lose the cloud copy */ }
+    return merged;
+  }
+
+  window.fit4lifeCloudListTrainerAudits = async function fit4lifeCloudListTrainerAudits() {
+    if (!cloudClient || cloudRole !== "owner") return null;
+    let audits, trainers;
+    try {
+      [audits, trainers] = await Promise.all([
+        cloudClient.rpc("list_fit4life_trainer_audits"),
+        cloudClient.rpc("list_fit4life_audit_trainers")
+      ]);
+      if (audits.error) throw audits.error;
+      if (trainers.error) throw trainers.error;
+    } catch (error) {
+      window.fit4lifeTrainerAuditsAvailable = false;
+      return null;
+    }
+    window.fit4lifeTrainerAuditsAvailable = true;
+    mergeAuditRows(CLOUD_KEYS.trainerAudits, (audits.data || []).map((row) => row.payload || row));
+    mergeAuditRows(CLOUD_KEYS.auditTrainers, (trainers.data || []).map((row) => row.payload || row));
+    if (typeof window.renderTrainerAuditsModule === "function" && typeof openCoachDestination === "function" && openCoachDestination.current === "audits") window.renderTrainerAuditsModule();
+    return true;
+  };
+
+  async function saveAuditRow(rpcName, payload) {
+    if (!cloudClient || cloudRole !== "owner") return false;
+    if (window.fit4lifeTrainerAuditsAvailable === false) return false;
+    const response = await cloudClient.rpc(rpcName, { target_organization: cloudOrganizationId, payload });
+    if (response.error) {
+      window.fit4lifeTrainerAuditsAvailable = false;
+      if (typeof showToast === "function") showToast("Saved on this device. The audit tables are not in Supabase yet.");
+      return false;
+    }
+    return true;
+  }
+
+  window.fit4lifeCloudSaveTrainerAudit = function fit4lifeCloudSaveTrainerAudit(audit) { return saveAuditRow("save_fit4life_trainer_audit", audit); };
+  window.fit4lifeCloudSaveAuditTrainer = function fit4lifeCloudSaveAuditTrainer(trainer) { return saveAuditRow("save_fit4life_audit_trainer", trainer); };
+
+  async function deleteAuditRow(rpcName, id) {
+    if (!cloudClient || cloudRole !== "owner" || window.fit4lifeTrainerAuditsAvailable === false) return false;
+    const response = await cloudClient.rpc(rpcName, { target_organization: cloudOrganizationId, target_id: id });
+    return !response.error;
+  }
+  window.fit4lifeCloudDeleteTrainerAudit = function fit4lifeCloudDeleteTrainerAudit(id) { return deleteAuditRow("delete_fit4life_trainer_audit", id); };
+  window.fit4lifeCloudDeleteAuditTrainer = function fit4lifeCloudDeleteAuditTrainer(key) { return deleteAuditRow("delete_fit4life_audit_trainer", key); };
+
   window.fit4lifeCloudSetTrainerTier = async function fit4lifeCloudSetTrainerTier(userId, tier) {
     if (!cloudClient || cloudRole !== "owner") { if (typeof showToast === "function") showToast("Only an owner can change a trainer's tier"); return false; }
     if (!userId || !["staff_standard","staff_premium"].includes(tier)) return false;
@@ -2351,6 +2416,9 @@
     if ([CLOUD_KEYS.profiles, CLOUD_KEYS.assignments, CLOUD_KEYS.programs, CLOUD_KEYS.summaryMeta, CLOUD_KEYS.scans, CLOUD_KEYS.goals, CLOUD_KEYS.metrics, CLOUD_KEYS.mentalPlans, CLOUD_KEYS.wearableConnections, CLOUD_KEYS.progressReceipts, CLOUD_KEYS.calendarEvents].includes(key)) return cloudRole === "client" ? "activity" : "plan";
     if ([CLOUD_KEYS.requests, CLOUD_KEYS.gymBrand, CLOUD_KEYS.gymEquipment, CLOUD_KEYS.teams, CLOUD_KEYS.marketPrograms, CLOUD_KEYS.automations, CLOUD_KEYS.automationAlerts, CLOUD_KEYS.attentionState, CLOUD_KEYS.exerciseLibraryEdits, CLOUD_KEYS.ownerRequests, CLOUD_KEYS.coachTaskClaims, CLOUD_KEYS.calendarAudit, CLOUD_KEYS.calendarNotices].includes(key)) return "organization";
     if (key === CLOUD_KEYS.coachNotes) return "all";
+    // Audits have their own owner-only table and push themselves; they must never ride the
+    // organization snapshot, which every trainer device can read and write back.
+    if ([CLOUD_KEYS.trainerAudits, CLOUD_KEYS.auditTrainers].includes(key)) return "none";
     return "all";
   }
 

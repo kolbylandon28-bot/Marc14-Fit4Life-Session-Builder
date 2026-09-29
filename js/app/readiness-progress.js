@@ -1361,6 +1361,11 @@ function logExerciseSet(session, exercise, loadInput, repsInput, unitSelect, rpe
     id: existingEntryId || Date.now() + "-" + Math.random().toString(16).slice(2), date: now,
     type: "set", client: session.spec.client || "Client", profileId:session.spec.profileId || "", sessionId: session.sessionId, label: exercise.name,
     value: pieces.join(" · "), note: calibration ? "Logged from embedded calibration" : "Logged from workout",
+    // Who typed it. A trainer and a client can both be filling in the same workout from their
+    // own phones, and the client's screen has to be able to say "logged by your trainer"
+    // rather than offering to edit an entry that is not theirs.
+    loggedByRole: (typeof window !== "undefined" && window.fit4lifeCloudRole) || "",
+    loggedByName: (typeof currentAccountIdentity === "function" ? (currentAccountIdentity().displayName || "") : ""),
     data: { load, reps, unit, rpe, setNumber:Number(setNumber) || null, prescribed: exercise.rx || null, goal: session.goalLabel, profileId:session.spec.profileId || "", calibration, baselineDomains:calibrationDomains, baselinePlanId:exercise.baselinePlanId || session.calibration && session.calibration.planId || "", baselineConfidence, baselinePain, baselineStopped:baselinePain === 3 },
   };
   const existingIndex = existingEntryId ? entries.findIndex((entry) => entry.id === existingEntryId) : -1;
