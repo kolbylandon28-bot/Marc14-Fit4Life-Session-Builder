@@ -11,14 +11,24 @@ const WORK_AREA_DEFAULTS = [
   ["pool", "Pool"],
   ["gym", "Gym"]
 ];
-const WORK_ROLES = [["trainer", "Trainer", "Trains clients. Gets the client screens, programming and audits."],
-  ["staff", "Staff", "Clock, schedule and tasks for their area. No client records."]];
+/* Two switches, deliberately apart: the job decides whether they touch client records at
+   all, the areas decide only where they clock in, whose schedule they see and whose tasks
+   they pick up. A lifeguard cleared for the gym desk still gets no client records. */
+const WORK_ROLES = [["trainer", "Trainer", "Trains clients. Client records, programming and the builder."],
+  ["staff", "Staff", "Clock, schedule and tasks. Never sees a client record."]];
+const ALL_AREAS_KEY = "*";
 
 let areaAdminState = { invite: { role: "trainer", areas: [] }, editing: "" };
 
 const workAreas = () => (window.fit4lifeWorkAreas || []).filter((area) => area.is_active !== false);
-const workAreaName = (key) => (workAreas().find((area) => area.area_key === key) || { name: key }).name;
-const myWorkAreas = () => (window.fit4lifeMyAreas || []);
+const workAreaName = (key) => key === ALL_AREAS_KEY ? "All areas" : (workAreas().find((area) => area.area_key === key) || { name: key }).name;
+const hasEveryArea = (keys) => (keys || []).includes(ALL_AREAS_KEY);
+const myWorkAreas = () => {
+  const mine = window.fit4lifeMyAreas || [];
+  return hasEveryArea(mine) ? workAreas().map((area) => area.area_key) : mine;
+};
+// The job, not the area, is what opens a client record.
+const canEditClientRecords = () => ["owner", "trainer"].includes(window.fit4lifeCloudRole);
 
 function activeWorkArea() {
   let stored = "";
@@ -128,7 +138,9 @@ async function toggleWorkArea(key, makeActive) {
 function renderAreaInviteCard() {
   const areas = workAreas();
   const roleButtons = WORK_ROLES.map(([value, label, detail]) => '<button class="small-btn ' + (areaAdminState.invite.role === value ? "primary" : "") + '" onclick="setInviteRole(\'' + value + '\')" title="' + escapeHtml(detail) + '">' + label + '</button>').join('');
-  const areaChips = areas.length ? areas.map((area) => '<button class="chip ' + (areaAdminState.invite.areas.includes(area.area_key) ? "on" : "") + '" onclick="toggleInviteArea(\'' + escapeHtml(area.area_key) + '\')" aria-pressed="' + areaAdminState.invite.areas.includes(area.area_key) + '">' + escapeHtml(area.name) + '</button>').join('')
+  const everywhere = hasEveryArea(areaAdminState.invite.areas);
+  const chipFor = (key, label) => '<button class="chip ' + (key === ALL_AREAS_KEY ? (everywhere ? "on" : "") : (!everywhere && areaAdminState.invite.areas.includes(key) ? "on" : "")) + '" onclick="toggleInviteArea(\'' + escapeHtml(key) + '\')" aria-pressed="' + (key === ALL_AREAS_KEY ? everywhere : areaAdminState.invite.areas.includes(key)) + '">' + escapeHtml(label) + '</button>';
+  const areaChips = areas.length ? chipFor(ALL_AREAS_KEY, "All areas") + areas.map((area) => chipFor(area.area_key, area.name)).join('')
     : '<span class="storage-note">Add an area above first.</span>';
   const pending = (window.fit4lifeStaffInvites || []).filter((invite) => !invite.accepted_at && !invite.revoked_at);
   const pendingRows = pending.length ? '<div class="advanced-list" style="margin-top:12px">' + pending.map((invite) => '<div class="trainer-account-row"><div><b>' + escapeHtml(invite.full_name || invite.email) + '</b><span>'
@@ -141,14 +153,22 @@ function renderAreaInviteCard() {
     + '<div class="compact-grid"><div class="compact-field"><label for="inviteName">Name</label><input id="inviteName" placeholder="Jordan R"></div>'
     + '<div class="compact-field"><label for="inviteEmail">Personal email</label><input id="inviteEmail" type="email" autocapitalize="none" placeholder="jordan@example.com"></div></div>'
     + '<div class="compact-field"><label>Job</label><div class="tool-actions">' + roleButtons + '</div></div>'
-    + '<div class="compact-field"><label>Areas they work in</label><div class="chips">' + areaChips + '</div></div>'
+    + '<div class="compact-field"><label>Where they can clock in</label><div class="chips">' + areaChips + '</div>'
+    + '<span class="storage-note">Areas cover the clock, the schedule and that area\'s tasks. Client records come from the job above, never from an area.</span></div>'
     + '<div class="tool-actions"><button class="small-btn primary" onclick="sendAreaInvite()">Send invite</button></div>' + pendingRows + '</section>';
 }
 
 function setInviteRole(role) { areaAdminState.invite.role = role; renderWorkAreasModule(); }
 function toggleInviteArea(key) {
-  const list = areaAdminState.invite.areas, at = list.indexOf(key);
-  if (at >= 0) list.splice(at, 1); else list.push(key);
+  const list = areaAdminState.invite.areas;
+  if (key === ALL_AREAS_KEY) {
+    areaAdminState.invite.areas = hasEveryArea(list) ? [] : [ALL_AREAS_KEY];
+    renderWorkAreasModule();
+    return;
+  }
+  const without = list.filter((item) => item !== ALL_AREAS_KEY), at = without.indexOf(key);
+  if (at >= 0) without.splice(at, 1); else without.push(key);
+  areaAdminState.invite.areas = without;
   renderWorkAreasModule();
 }
 
@@ -198,9 +218,12 @@ function renderAreaPeopleCard() {
   if (!people.length) return '<section class="coach-module-card" style="grid-column:1/-1"><h3>Who works where</h3><div class="empty-state">Nobody yet. Invite someone above.</div></section>';
   const rows = people.map((person) => {
     const editing = areaAdminState.editing === person.userId;
-    const chips = areas.map((area) => '<button class="chip ' + (person.areas.includes(area.area_key) ? "on" : "") + '" onclick="toggleStaffArea(\'' + escapeHtml(person.userId) + '\',\'' + escapeHtml(area.area_key) + '\')" aria-pressed="' + person.areas.includes(area.area_key) + '">' + escapeHtml(area.name) + '</button>').join('');
+    const everyArea = hasEveryArea(person.areas);
+    const chip = (key, label, on) => '<button class="chip ' + (on ? "on" : "") + '" onclick="toggleStaffArea(\'' + escapeHtml(person.userId) + '\',\'' + escapeHtml(key) + '\')" aria-pressed="' + Boolean(on) + '">' + escapeHtml(label) + '</button>';
+    const chips = chip(ALL_AREAS_KEY, "All areas", everyArea) + areas.map((area) => chip(area.area_key, area.name, !everyArea && person.areas.includes(area.area_key))).join('');
     return '<div class="trainer-account-row"><div><b>' + escapeHtml(person.name) + '</b><span>' + escapeHtml(person.role) + (person.email ? ' · ' + escapeHtml(person.email) : '')
-      + ' · ' + (person.areas.length ? person.areas.map((key) => escapeHtml(workAreaName(key))).join(", ") : "no area") + '</span>'
+      + ' · ' + (hasEveryArea(person.areas) ? "all areas" : person.areas.length ? person.areas.map((key) => escapeHtml(workAreaName(key))).join(", ") : "no area")
+      + (canEditClientRecords() && person.role === "trainer" ? "" : person.role === "staff" ? " · no client records" : "") + '</span>'
       + (editing ? '<div class="chips" style="margin-top:8px">' + chips + '</div>' : '') + '</div>'
       + '<div class="tool-actions"><button class="small-btn" onclick="editStaffAreas(\'' + escapeHtml(person.userId) + '\')">' + (editing ? "Done" : "Change areas") + '</button></div></div>';
   }).join('');
@@ -217,7 +240,12 @@ function editStaffAreas(userId) {
 async function toggleStaffArea(userId, key) {
   const person = areaPeople().find((row) => row.userId === userId);
   if (!person) return;
-  const next = person.areas.includes(key) ? person.areas.filter((area) => area !== key) : person.areas.concat([key]);
+  let next;
+  if (key === ALL_AREAS_KEY) next = hasEveryArea(person.areas) ? [] : [ALL_AREAS_KEY];
+  else {
+    const without = person.areas.filter((area) => area !== ALL_AREAS_KEY);
+    next = without.includes(key) ? without.filter((area) => area !== key) : without.concat([key]);
+  }
   const done = await window.fit4lifeCloudSetStaffAreas(userId, next);
   renderWorkAreasModule();
   renderWorkAreaPicker();
