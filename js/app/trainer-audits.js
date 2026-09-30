@@ -43,6 +43,32 @@ const AUDIT_SAFETY = [
   ["flagged","Trained through a flagged condition with no modification"]
 ];
 
+/* Floor conduct, logged in seconds while they are on shift rather than mid-session. */
+const AUDIT_CHECK_ITEMS = [
+  ["station","At the desk and on their feet"],
+  ["greeted","Greeted people coming in"],
+  ["phone","Phone away"],
+  ["tidy","Area and equipment tidy"],
+  ["uniform","In uniform"],
+  ["rounds","Doing rounds or the daily challenge"]
+];
+
+/* One tap each. These are things you know rather than things you watch. */
+const AUDIT_LOG_TYPES = [
+  ["on_time","On time",true],
+  ["late","Late",false],
+  ["no_show","No-show",false],
+  ["covered","Covered a shift",true],
+  ["log_missing","Session log missing",false],
+  ["notes_stale","Client notes out of date",false],
+  ["message_unanswered","Message left unanswered",false]
+];
+
+const AUDIT_CERT_STATUS = [["none","Not started"],["in_progress","In progress"],["certified","Certified"]];
+const AUDIT_CERT_BODIES = [["nasm","NASM"],["nsca","NSCA"],["acsm","ACSM"],["issa","ISSA"],["other","Other"]];
+/* Owner only. Never emailed, never shown to a trainer. */
+const AUDIT_GRADES = [["ready","Ready to promote"],["solid","Solid"],["developing","Developing"],["needs_work","Needs work"],["at_risk","At risk"]];
+
 const AUDIT_KINDS = [
   ["developmental","Developmental","You can coach in the moment. The score is for tracking, not for record."],
   ["scored","Scored for record","Watch only. Step in for a safety risk and nothing else, then debrief afterwards."]
@@ -53,7 +79,12 @@ let auditView = { tab:"audits", trainerKey:"", auditId:"", draft:null };
 let auditFilters = { trainer:"", kind:"", from:"", to:"", flagged:false, follow:false, search:"" };
 
 /* ---------- records ---------- */
-function loadTrainerAudits() { return loadLocalArray(TRAINER_AUDITS_KEY); }
+/* One store holds audits, quick checks and log entries; type tells them apart. */
+function loadAuditRecords() { return loadLocalArray(TRAINER_AUDITS_KEY); }
+const auditRecordType = (row) => row.type || "audit";
+function loadTrainerAudits() { return loadAuditRecords().filter((row) => auditRecordType(row) === "audit"); }
+function loadTrainerChecks() { return loadAuditRecords().filter((row) => auditRecordType(row) === "check"); }
+function loadTrainerLog() { return loadAuditRecords().filter((row) => auditRecordType(row) === "log"); }
 function writeTrainerAudits(items) { return writeLocalArray(TRAINER_AUDITS_KEY, items, 4000); }
 function loadAuditTrainers() { return loadLocalArray(AUDIT_TRAINERS_KEY); }
 function writeAuditTrainers(items) { return writeLocalArray(AUDIT_TRAINERS_KEY, items, 400); }
@@ -112,7 +143,7 @@ function auditTrend(list) {
 
 /* ---------- saving ---------- */
 function saveTrainerAudit(audit) {
-  const rows = loadTrainerAudits(), index = rows.findIndex((row) => row.id === audit.id);
+  const rows = loadAuditRecords(), index = rows.findIndex((row) => row.id === audit.id);
   if (index >= 0) rows[index] = audit; else rows.unshift(audit);
   if (!writeTrainerAudits(rows)) return false;
   if (typeof window.fit4lifeCloudSaveTrainerAudit === "function") window.fit4lifeCloudSaveTrainerAudit(audit);
@@ -143,7 +174,7 @@ function removeAuditTrainer(key) {
 
 function deleteTrainerAudit(id) {
   if (!window.confirm("Delete this audit? It goes for every device and cannot be undone.")) return;
-  writeTrainerAudits(loadTrainerAudits().filter((audit) => audit.id !== id));
+  writeTrainerAudits(loadAuditRecords().filter((audit) => audit.id !== id));
   if (typeof window.fit4lifeCloudDeleteTrainerAudit === "function") window.fit4lifeCloudDeleteTrainerAudit(id);
   auditView = { tab:"audits", trainerKey:auditView.trainerKey, auditId:"", draft:null };
   renderTrainerAuditsModule();
@@ -151,7 +182,7 @@ function deleteTrainerAudit(id) {
 }
 
 function resolveAuditFollowUp(id) {
-  const rows = loadTrainerAudits(), audit = rows.find((row) => row.id === id);
+  const rows = loadAuditRecords(), audit = rows.find((row) => row.id === id);
   if (!audit || !audit.followUp) return;
   const identity = currentAccountIdentity();
   audit.followUp.resolvedAt = new Date().toISOString();
@@ -188,6 +219,11 @@ function auditEmailText(audit) {
       const item = AUDIT_SAFETY.find((row) => row[0] === key), note = audit.safety[key].note;
       lines.push(" - " + (item ? item[1] : key) + (note ? ": " + note : ""));
     });
+  }
+  if (audit.question) {
+    lines.push("");
+    lines.push("I asked: " + audit.question);
+    if (audit.answer) lines.push("You said: " + audit.answer);
   }
   if (audit.wentWell) { lines.push(""); lines.push("What went well: " + audit.wentWell); }
   if (audit.changeOne) { lines.push(""); lines.push("One thing to change: " + audit.changeOne); }
@@ -265,6 +301,7 @@ function auditTabsHtml() {
   return '<div class="tool-actions" style="grid-column:1/-1">'
     + '<button class="small-btn ' + (tab === "audits" ? "primary" : "") + '" onclick="openAuditTab(\'audits\')">Audits</button>'
     + '<button class="small-btn ' + (tab === "new" ? "primary" : "") + '" onclick="openAuditTab(\'new\')">New audit</button>'
+    + '<button class="small-btn ' + (tab === "check" ? "primary" : "") + '" onclick="openAuditTab(\'check\')">Quick check</button>'
     + '<button class="small-btn ' + (tab === "trainers" ? "primary" : "") + '" onclick="openAuditTab(\'trainers\')">Trainers</button>'
     + '<button class="small-btn" onclick="exportTrainerAuditsCsv()">Export CSV</button></div>';
 }
@@ -345,26 +382,66 @@ function addAuditTrainerFromForm() {
   renderTrainerAuditsModule();
 }
 
+function trainerScorecardHtml(trainer) {
+  const list = auditsForTrainer(trainer.key), scored = list.map(auditScore).filter((value) => value != null);
+  const check = trainerCheckScore(trainer.key), counts = trainerLogCounts(trainer.key), cert = trainer.cert || {}, grade = trainer.grade || {};
+  const certLabel = (AUDIT_CERT_STATUS.find((row) => row[0] === cert.status) || ["","Not recorded"])[1];
+  const strip = '<div class="rx-strip">'
+    + '<div class="rx-cell"><div class="rx-k">Audits</div><div class="rx-v">' + (scored.length ? Math.round(scored.reduce((sum, value) => sum + value, 0) / scored.length) + "%" : "—") + '</div></div>'
+    + '<div class="rx-cell"><div class="rx-k">Floor checks</div><div class="rx-v">' + (check.pct == null ? "—" : check.pct + "%") + '</div></div>'
+    + '<div class="rx-cell"><div class="rx-k">Late / no-show</div><div class="rx-v">' + ((counts.late || 0) + " / " + (counts.no_show || 0)) + '</div></div>'
+    + '<div class="rx-cell"><div class="rx-k">Certification</div><div class="rx-v">' + escapeHtml(certLabel) + '</div></div></div>';
+  const adminOpen = (counts.log_missing || 0) + (counts.notes_stale || 0) + (counts.message_unanswered || 0);
+  const detail = '<p class="storage-note">' + list.length + ' audit' + (list.length === 1 ? '' : 's') + ' · ' + check.checks + ' floor check' + (check.checks === 1 ? '' : 's')
+    + ' · on time ' + (counts.on_time || 0) + ' · covered ' + (counts.covered || 0) + ' · admin flags ' + adminOpen
+    + (cert.expires ? ' · ' + escapeHtml(certExpiryNote(cert)) : '') + '</p>';
+  const logButtons = '<div class="compact-field"><label for="logNote">Note for the next entry (optional)</label><input id="logNote" placeholder="Swapped with Braxton"></div><div class="tool-actions">'
+    + AUDIT_LOG_TYPES.map(([type, label]) => '<button class="small-btn" onclick="logTrainerEvent(\'' + escapeHtml(trainer.key) + '\',\'' + type + '\')">' + escapeHtml(label) + '</button>').join('') + '</div>';
+  const certForm = '<div class="compact-grid">'
+    + '<div class="compact-field"><label for="certStatus">Certification</label><select id="certStatus">' + AUDIT_CERT_STATUS.map(([value, label]) => '<option value="' + value + '"' + (cert.status === value ? ' selected' : '') + '>' + label + '</option>').join('') + '</select></div>'
+    + '<div class="compact-field"><label for="certBody">Through</label><select id="certBody">' + AUDIT_CERT_BODIES.map(([value, label]) => '<option value="' + value + '"' + (cert.body === value ? ' selected' : '') + '>' + label + '</option>').join('') + '</select></div>'
+    + '<div class="compact-field"><label for="certOn">Certified on</label><input id="certOn" type="date" value="' + escapeHtml(cert.certifiedOn || "") + '"></div>'
+    + '<div class="compact-field"><label for="certExpires">Expires</label><input id="certExpires" type="date" value="' + escapeHtml(cert.expires || "") + '"></div>'
+    + '<div class="compact-field"><label for="certCeus">CEUs done</label><input id="certCeus" value="' + escapeHtml(cert.ceus || "") + '" placeholder="1.2 of 2.0"></div>'
+    + '<div class="compact-field"><label for="certTrainings">Trainings and tutorials</label><input id="certTrainings" value="' + escapeHtml(cert.trainings || "") + '" placeholder="Spotting clinic, builder walkthrough"></div></div>';
+  const gradeForm = '<div class="compact-grid"><div class="compact-field"><label for="gradeBand">Where they are</label><select id="gradeBand"><option value="">Not graded</option>'
+    + AUDIT_GRADES.map(([value, label]) => '<option value="' + value + '"' + (grade.band === value ? ' selected' : '') + '>' + label + '</option>').join('') + '</select></div></div>'
+    + '<div class="compact-field"><label for="gradeNote">Your read on them</label><textarea id="gradeNote" rows="3">' + escapeHtml(grade.note || "") + '</textarea></div>'
+    + '<p class="storage-note">Owner only. This never appears in an audit you send them, in their app, or anywhere a trainer can reach.'
+    + (grade.updatedAt ? ' Last written ' + escapeHtml(String(grade.updatedAt).slice(0, 10)) + '.' : '') + '</p>'
+    + '<div class="tool-actions"><button class="small-btn primary" onclick="saveTrainerExtras(\'' + escapeHtml(trainer.key) + '\')">Save certification and read</button></div>';
+  return { strip: strip + detail, logButtons, certForm, gradeForm };
+}
+
 function renderAuditTrainerPage() {
   const trainer = auditTrainerRoster().find((row) => row.key === auditView.trainerKey);
   if (!trainer) { auditView.tab = "audits"; return renderAuditsList(); }
   const list = auditsForTrainer(trainer.key), averages = auditAreaAverages(list), trend = auditTrend(list);
-  const scored = list.map(auditScore).filter((value) => value != null);
-  const flagged = list.filter(auditIsFlagged).length;
   const weakest = AUDIT_AREAS.filter((area) => averages[area.key] != null).sort((a, b) => averages[a.key] - averages[b.key])[0];
-  const strip = '<div class="rx-strip">'
-    + '<div class="rx-cell"><div class="rx-k">Audits</div><div class="rx-v">' + list.length + '</div></div>'
-    + '<div class="rx-cell"><div class="rx-k">Average</div><div class="rx-v">' + (scored.length ? Math.round(scored.reduce((sum, value) => sum + value, 0) / scored.length) + "%" : "—") + '</div></div>'
-    + '<div class="rx-cell"><div class="rx-k">Flagged</div><div class="rx-v">' + flagged + '</div></div>'
-    + '<div class="rx-cell"><div class="rx-k">Last audited</div><div class="rx-v">' + (list[0] ? escapeHtml(list[0].date) : "—") + '</div></div></div>';
+  const card = trainerScorecardHtml(trainer);
   const areaRows = AUDIT_AREAS.map((area) => '<div class="trainer-account-row"><div><b>' + escapeHtml(area.title) + '</b><span>' + escapeHtml(area.source) + '</span></div>'
     + '<div class="tool-actions"><span class="pill">' + (averages[area.key] == null ? "not observed" : averages[area.key] + " / 5") + '</span></div></div>').join('');
   const note = list.length < 3
     ? '<p class="storage-note">' + (list.length === 1 ? "One look." : list.length + " looks.") + ' A single observation is weak evidence — three or more before you read anything into the average.</p>'
     : '<p class="storage-note">Trend across ' + list.length + ' audits: ' + (trend == null ? "not enough scored audits yet" : (trend > 0 ? "up " + trend + " points" : trend < 0 ? "down " + Math.abs(trend) + " points" : "flat")) + (weakest ? ' · weakest area: ' + escapeHtml(weakest.title) : '') + '</p>';
+  const checks = loadTrainerChecks().filter((row) => row.trainerKey === trainer.key).slice(0, 6);
+  const checkRows = checks.length ? '<div class="advanced-list">' + checks.map((check) => {
+    const missed = AUDIT_CHECK_ITEMS.filter(([key]) => check.items && check.items[key] === "no").map(([, label]) => label);
+    return '<div class="trainer-account-row"><div><b>' + escapeHtml(String(check.at).slice(0, 10)) + '</b><span>' + (missed.length ? escapeHtml(missed.join(" · ")) : "everything met") + (check.note ? ' · ' + escapeHtml(check.note) : '') + '</span></div></div>';
+  }).join('') + '</div>' : '<div class="empty-state">No floor checks yet.</div>';
+  const logRows = loadTrainerLog().filter((row) => row.trainerKey === trainer.key).slice(0, 8);
+  const logHtml = logRows.length ? '<div class="advanced-list" style="margin-top:10px">' + logRows.map((row) => {
+    const item = AUDIT_LOG_TYPES.find((entry) => entry[0] === row.event);
+    return '<div class="trainer-account-row' + (item && item[2] === false ? ' warn' : '') + '"><div><b>' + escapeHtml(item ? item[1] : row.event) + '</b><span>' + escapeHtml(String(row.at).slice(0, 10)) + (row.note ? ' · ' + escapeHtml(row.note) : '') + '</span></div></div>';
+  }).join('') + '</div>' : '';
   return '<div class="tool-actions" style="grid-column:1/-1"><button class="small-btn" onclick="openAuditTab(\'audits\')">← All audits</button>'
-    + '<button class="small-btn primary" onclick="startAuditFor(\'' + escapeHtml(trainer.key) + '\')">New audit for ' + escapeHtml(trainer.name) + '</button></div>'
-    + auditCard(escapeHtml(trainer.name), strip + note + '<div class="advanced-list" style="margin-top:10px">' + areaRows + '</div>', true)
+    + '<button class="small-btn primary" onclick="startAuditFor(\'' + escapeHtml(trainer.key) + '\')">New audit</button>'
+    + '<button class="small-btn" onclick="openAuditTab(\'check\')">Quick check</button></div>'
+    + auditCard(escapeHtml(trainer.name), card.strip + note + '<div class="advanced-list" style="margin-top:10px">' + areaRows + '</div>', true)
+    + auditCard("Reliability and admin", card.logButtons + logHtml, true)
+    + auditCard("Floor checks", checkRows, true)
+    + auditCard("Certification", card.certForm, true)
+    + auditCard("Where they are · owner only", card.gradeForm, true)
     + auditCard("Their audits", list.length ? '<div class="advanced-list">' + list.map(auditRowHtml).join('') + '</div>' : '<div class="empty-state">No audits yet.</div>', true);
 }
 
@@ -404,7 +481,7 @@ function renderNewAuditForm() {
   if (!auditView.draft) auditView.draft = { trainerKey:auditView.trainerKey || trainers[0].key, date:auditToday(), kind:"developmental", sessionType:"one_to_one", ratings:{} };
   const draft = auditView.draft;
   const head = '<div class="compact-grid">'
-    + '<div class="compact-field"><label for="auditFormTrainer">Trainer</label><select id="auditFormTrainer" onchange="auditView.draft.trainerKey=this.value">'
+    + '<div class="compact-field"><label for="auditFormTrainer">Trainer</label><select id="auditFormTrainer" onchange="auditView.draft.trainerKey=this.value;renderTrainerAuditsModule()">'
     + trainers.map((trainer) => '<option value="' + escapeHtml(trainer.key) + '"' + (draft.trainerKey === trainer.key ? ' selected' : '') + '>' + escapeHtml(trainer.name) + '</option>').join('') + '</select></div>'
     + '<div class="compact-field"><label for="auditFormDate">Date</label><input id="auditFormDate" type="date" value="' + escapeHtml(draft.date) + '"></div>'
     + '<div class="compact-field"><label for="auditFormSession">Session</label><select id="auditFormSession">'
@@ -412,11 +489,14 @@ function renderNewAuditForm() {
     + '<div class="compact-field"><label for="auditFormClient">Client handle (optional)</label><input id="auditFormClient" placeholder="squat-42"></div></div>'
     + '<div class="tool-actions" style="margin-top:8px">' + AUDIT_KINDS.map(([value, label, detail]) => '<button class="small-btn ' + (draft.kind === value ? "primary" : "") + '" onclick="setAuditKind(\'' + value + '\')" title="' + escapeHtml(detail) + '">' + label + '</button>').join('') + '</div>'
     + '<p class="storage-note" id="auditKindNote">' + escapeHtml((AUDIT_KINDS.find((row) => row[0] === draft.kind) || [])[2] || "") + '</p>'
+    + auditLastTimeHtml(draft.trainerKey)
     + auditScaleHelpHtml();
   const safety = '<p class="storage-note">Tick only what actually happened. Anything ticked flags the audit whatever the score says, and needs a line saying what happened.</p>'
     + AUDIT_SAFETY.map(([key, label]) => '<div class="compact-field"><label class="inline-check"><input type="checkbox" id="auditSafety_' + key + '"> ' + escapeHtml(label) + '</label>'
     + '<input id="auditSafetyNote_' + key + '" placeholder="What happened"></div>').join('');
-  const closing = '<div class="compact-field"><label for="auditWentWell">What went well</label><textarea id="auditWentWell" rows="2"></textarea></div>'
+  const closing = '<div class="compact-field"><label for="auditQuestion">A question you asked afterwards</label><input id="auditQuestion" placeholder="Why that exercise for her? What if his knee had hurt?"></div>'
+    + '<div class="compact-field"><label for="auditAnswer">What they said</label><textarea id="auditAnswer" rows="2"></textarea></div>'
+    + '<div class="compact-field"><label for="auditWentWell">What went well</label><textarea id="auditWentWell" rows="2"></textarea></div>'
     + '<div class="compact-field"><label for="auditChangeOne">One thing to change</label><textarea id="auditChangeOne" rows="2"></textarea></div>'
     + '<div class="compact-grid"><div class="compact-field"><label class="inline-check"><input type="checkbox" id="auditFollowNeeded"> Needs a follow-up</label></div>'
     + '<div class="compact-field"><label for="auditFollowBy">Follow up by</label><input id="auditFollowBy" type="date"></div></div>'
@@ -471,7 +551,9 @@ function saveAuditFromForm() {
     trainerKey: trainer.key, trainerName: trainer.name, trainerUserId: trainer.userId || "",
     auditorUserId: identity.id, auditorName: identity.displayName,
     date: value("auditFormDate") || auditToday(), kind, sessionType: byId("auditFormSession") ? byId("auditFormSession").value : "one_to_one",
-    clientHandle: value("auditFormClient"), ratings, safety,
+    type: "audit", clientHandle: value("auditFormClient"), ratings, safety,
+    actedOnLast: byId("auditActedOn") ? byId("auditActedOn").value : "",
+    question: value("auditQuestion"), answer: value("auditAnswer"),
     wentWell: value("auditWentWell"), changeOne: value("auditChangeOne"),
     followUp: { needed: checked("auditFollowNeeded"), by: value("auditFollowBy"), resolvedAt:"", resolvedBy:"" }
   };
@@ -527,6 +609,7 @@ function renderTrainerAuditsModule() {
   }
   let body = "";
   if (auditView.tab === "new") body = renderNewAuditForm();
+  else if (auditView.tab === "check") body = renderQuickCheck();
   else if (auditView.tab === "trainer") body = renderAuditTrainerPage();
   else if (auditView.tab === "detail") body = renderAuditDetail();
   else if (auditView.tab === "trainers") body = renderAuditTrainersCard() + renderAuditCoverage();
@@ -562,4 +645,112 @@ window.openCoachDestination = function auditsOpenCoachDestination(destination) {
 
 if (typeof window.fit4lifeCloudListTrainerAudits === "function") {
   window.fit4lifeCloudListTrainerAudits();
+}
+
+/* ---------- following through on the last audit ---------- */
+function auditLastTimeHtml(trainerKey) {
+  const last = auditsForTrainer(trainerKey)[0];
+  if (!last || !last.changeOne) return "";
+  return '<div class="compact-field" style="margin-top:10px"><label for="auditActedOn">Last time you asked for: “' + escapeHtml(last.changeOne) + '”</label>'
+    + '<select id="auditActedOn"><option value="">Did they act on it?</option><option value="yes">Yes, it showed up today</option>'
+    + '<option value="partly">Partly</option><option value="no">No change</option><option value="na">No chance to tell</option></select></div>';
+}
+
+/* ---------- quick check ---------- */
+function renderQuickCheck() {
+  const trainers = auditTrainerRoster();
+  if (!trainers.length) return auditCard("Add a trainer first", '<p>Quick checks are filed against a trainer. Add them on the Trainers tab.</p><div class="tool-actions"><button class="small-btn primary" onclick="openAuditTab(\'trainers\')">Open Trainers</button></div>', true);
+  const picker = '<div class="compact-grid"><div class="compact-field"><label for="checkTrainer">Trainer</label><select id="checkTrainer">'
+    + trainers.map((trainer) => '<option value="' + escapeHtml(trainer.key) + '"' + (auditView.trainerKey === trainer.key ? ' selected' : '') + '>' + escapeHtml(trainer.name) + '</option>').join('') + '</select></div></div>';
+  const items = AUDIT_CHECK_ITEMS.map(([key, label]) => '<div class="compact-field"><label>' + escapeHtml(label) + '</label><div class="tool-actions">'
+    + '<button class="small-btn" data-check="' + key + '" data-check-value="yes" onclick="setQuickCheck(\'' + key + '\',\'yes\')">Yes</button>'
+    + '<button class="small-btn" data-check="' + key + '" data-check-value="no" onclick="setQuickCheck(\'' + key + '\',\'no\')">No</button>'
+    + '<button class="small-btn" data-check="' + key + '" data-check-value="na" onclick="setQuickCheck(\'' + key + '\',\'na\')">N/A</button></div></div>').join('');
+  const recent = loadTrainerChecks().slice(0, 8);
+  const history = recent.length ? '<div class="advanced-list" style="margin-top:12px">' + recent.map((check) => {
+    const met = AUDIT_CHECK_ITEMS.filter(([key]) => check.items[key] === "yes").length, counted = AUDIT_CHECK_ITEMS.filter(([key]) => check.items[key] && check.items[key] !== "na").length;
+    return '<div class="trainer-account-row"><div><b>' + escapeHtml(check.trainerName) + '</b><span>' + escapeHtml(String(check.at).slice(0, 16).replace("T", " ")) + (check.note ? ' · ' + escapeHtml(check.note) : '') + '</span></div>'
+      + '<div class="tool-actions"><span class="pill' + (counted && met < counted ? ' warn' : '') + '">' + met + ' of ' + counted + '</span></div></div>';
+  }).join('') + '</div>' : '';
+  return auditCard("Quick check", picker + items
+    + '<div class="compact-field"><label for="checkNote">Note (optional)</label><input id="checkNote" placeholder="Sat on the counter again"></div>'
+    + '<div class="tool-actions"><button class="small-btn primary" onclick="saveQuickCheck()">Save check</button></div>'
+    + '<p class="storage-note">Thirty seconds, as many times a shift as you like. Kept apart from session audits.</p>' + history, true);
+}
+
+let quickCheckDraft = {};
+function setQuickCheck(key, value) {
+  quickCheckDraft[key] = quickCheckDraft[key] === value ? "" : value;
+  document.querySelectorAll('[data-check="' + key + '"]').forEach((button) => button.classList.toggle("primary", button.dataset.checkValue === quickCheckDraft[key]));
+}
+
+function saveQuickCheck() {
+  if (!isFit4LifeOwner()) { showToast("Only an owner can save a check"); return; }
+  const key = byId("checkTrainer") ? byId("checkTrainer").value : "", trainer = auditTrainerRoster().find((row) => row.key === key);
+  if (!trainer) { showToast("Pick the trainer"); return; }
+  const answered = Object.keys(quickCheckDraft).filter((item) => quickCheckDraft[item]);
+  if (!answered.length) { showToast("Answer at least one line"); return; }
+  const identity = currentAccountIdentity(), now = new Date().toISOString();
+  const check = { id: auditNewId("trainer-check"), type: "check", trainerKey: trainer.key, trainerName: trainer.name,
+    at: now, date: now.slice(0, 10), createdAt: now, updatedAt: now, auditorName: identity.displayName,
+    items: { ...quickCheckDraft }, note: byId("checkNote") ? String(byId("checkNote").value || "").trim() : "" };
+  if (!saveTrainerAudit(check)) return;
+  quickCheckDraft = {};
+  renderTrainerAuditsModule();
+  showToast("Check saved for " + trainer.name);
+}
+
+/* ---------- reliability and admin ---------- */
+function logTrainerEvent(key, type) {
+  if (!isFit4LifeOwner()) { showToast("Only an owner can log this"); return; }
+  const trainer = auditTrainerRoster().find((row) => row.key === key), item = AUDIT_LOG_TYPES.find((row) => row[0] === type);
+  if (!trainer || !item) return;
+  const identity = currentAccountIdentity(), now = new Date().toISOString();
+  const entry = { id: auditNewId("trainer-log"), type: "log", event: type, trainerKey: trainer.key, trainerName: trainer.name,
+    at: now, date: now.slice(0, 10), createdAt: now, updatedAt: now, auditorName: identity.displayName,
+    note: byId("logNote") ? String(byId("logNote").value || "").trim() : "" };
+  if (!saveTrainerAudit(entry)) return;
+  renderTrainerAuditsModule();
+  showToast(item[1] + " logged for " + trainer.name);
+}
+
+function trainerLogCounts(key) {
+  const counts = {};
+  loadTrainerLog().filter((row) => row.trainerKey === key).forEach((row) => { counts[row.event] = (counts[row.event] || 0) + 1; });
+  return counts;
+}
+
+function trainerCheckScore(key) {
+  const checks = loadTrainerChecks().filter((row) => row.trainerKey === key);
+  let met = 0, counted = 0;
+  checks.forEach((check) => AUDIT_CHECK_ITEMS.forEach(([item]) => {
+    const value = check.items && check.items[item];
+    if (!value || value === "na") return;
+    counted++;
+    if (value === "yes") met++;
+  }));
+  return { checks: checks.length, met, counted, pct: counted ? Math.round((met / counted) * 100) : null };
+}
+
+/* ---------- certification and the owner's own read ---------- */
+function saveTrainerExtras(key) {
+  const rows = loadAuditTrainers(), record = rows.find((row) => row.key === key);
+  if (!record) return;
+  const value = (id) => { const field = byId(id); return field ? String(field.value || "").trim() : ""; };
+  record.cert = { status: value("certStatus"), body: value("certBody"), certifiedOn: value("certOn"), expires: value("certExpires"), ceus: value("certCeus"), trainings: value("certTrainings") };
+  record.grade = { band: value("gradeBand"), note: value("gradeNote"), updatedAt: new Date().toISOString(), updatedBy: currentAccountIdentity().displayName };
+  record.updatedAt = record.grade.updatedAt;
+  if (!writeAuditTrainers(rows)) return;
+  if (typeof window.fit4lifeCloudSaveAuditTrainer === "function") window.fit4lifeCloudSaveAuditTrainer(record);
+  renderTrainerAuditsModule();
+  showToast("Saved");
+}
+
+function certExpiryNote(cert) {
+  if (!cert || !cert.expires) return "";
+  const days = Math.round((new Date(cert.expires + "T12:00:00").getTime() - Date.now()) / 86400000);
+  if (isNaN(days)) return "";
+  if (days < 0) return "expired " + Math.abs(days) + " days ago";
+  if (days < 60) return "expires in " + days + " days";
+  return "expires " + cert.expires;
 }
