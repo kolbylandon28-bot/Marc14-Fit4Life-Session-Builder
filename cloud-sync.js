@@ -765,6 +765,24 @@
       if (selected) return selected;
     }
 
+    // An invited trainer has no membership until they arrive. The invite carries the gym
+    // and the role; the database checks the address against the signed-in account, not the
+    // browser, so a link forwarded to someone else is worth nothing.
+    const staffClaim = await cloudClient.rpc("claim_my_fit4life_staff_invite");
+    if (!staffClaim.error && staffClaim.data === true) {
+      const afterInvite = await cloudClient
+        .from("memberships")
+        .select("organization_id, role, is_active")
+        .eq("user_id", cloudUser.id)
+        .eq("is_active", true);
+      if (!afterInvite.error && Array.isArray(afterInvite.data)) {
+        const claimed = portalOrganizationId
+          ? afterInvite.data.find((membership) => membership.organization_id === portalOrganizationId)
+          : afterInvite.data[0];
+        if (claimed) return claimed;
+      }
+    }
+
     const claim = portalOrganizationId
       ? await cloudClient.rpc("claim_my_client_profile_for_org", { target_organization: portalOrganizationId })
       : await cloudClient.rpc("claim_my_client_profile");
@@ -2198,6 +2216,103 @@
     }));
     return window.fit4lifeCloudTrainers;
   }
+
+  /* ---------- staff invites (owner only) ----------
+     The owner names the trainer and the app sends a sign-in link. The membership is created
+     when they arrive, by the database, from the invite matching their signed-in address. */
+  window.fit4lifeStaffInvitesAvailable = undefined;
+
+  window.fit4lifeCloudListStaffInvites = async function fit4lifeCloudListStaffInvites() {
+    if (!cloudClient || cloudRole !== "owner") return null;
+    const response = await cloudClient.rpc("list_fit4life_staff_invites");
+    if (response.error) { window.fit4lifeStaffInvitesAvailable = false; return null; }
+    window.fit4lifeStaffInvitesAvailable = true;
+    window.fit4lifeStaffInvites = Array.isArray(response.data) ? response.data : [];
+    return window.fit4lifeStaffInvites;
+  };
+
+  window.fit4lifeCloudInviteStaff = async function fit4lifeCloudInviteStaff(email, fullName, role, areas) {
+    if (practiceSealed()) return { ok:false, error:"Practice mode: no invite was sent." };
+    if (!cloudClient || cloudRole !== "owner" || !cloudOrganizationId) return { ok:false, error:"Only an owner can invite a trainer" };
+    const address = String(email || "").trim().toLowerCase();
+    if (!address || address.indexOf("@") < 1) return { ok:false, error:"That is not an email address" };
+    const recorded = await cloudClient.rpc("invite_fit4life_staff", {
+      target_organization: cloudOrganizationId, invite_email: address, invite_name: fullName || "",
+      invite_role: role === "staff" ? "staff" : "trainer", invite_areas: Array.isArray(areas) ? areas : []
+    });
+    if (recorded.error) {
+      window.fit4lifeStaffInvitesAvailable = false;
+      return { ok:false, error:"The invite tables are not in Supabase yet. Run RUN-THIS-IN-SUPABASE-STAFF-INVITES.sql." };
+    }
+    // The address is on the invite list either way; the email is only how they find the door.
+    const sent = await cloudClient.auth.signInWithOtp({
+      email: address,
+      options: {
+        emailRedirectTo: authRedirectUrl(),
+        shouldCreateUser: true,
+        data: {
+          full_name: fullName || "",
+          requested_role: role === "staff" ? "staff" : "trainer",
+          registration_source: "fit4life_staff_invite",
+          organization_slug: portalOrganizationSlug || "fit-4-life"
+        }
+      }
+    });
+    await window.fit4lifeCloudListStaffInvites();
+    if (sent && sent.error) return { ok:false, invited:true, error:sent.error.message || "Saved, but the email did not go out" };
+    return { ok:true, invited:true };
+  };
+
+  window.fit4lifeCloudRevokeStaffInvite = async function fit4lifeCloudRevokeStaffInvite(email) {
+    if (!cloudClient || cloudRole !== "owner" || !cloudOrganizationId) return false;
+    const response = await cloudClient.rpc("revoke_fit4life_staff_invite", { target_organization: cloudOrganizationId, invite_email: String(email || "").trim().toLowerCase() });
+    if (response.error) return false;
+    await window.fit4lifeCloudListStaffInvites();
+    return true;
+  };
+
+  /* ---------- work areas ----------
+     A gym decides its own areas. Everyone signed in can read the list; only an owner writes
+     it, and only an owner sets who works where. Staff see their own rows and nobody else's. */
+  window.fit4lifeWorkAreasAvailable = undefined;
+  window.fit4lifeWorkAreas = [];
+  window.fit4lifeStaffAreas = [];
+  window.fit4lifeMyAreas = [];
+
+  window.fit4lifeCloudListWorkAreas = async function fit4lifeCloudListWorkAreas() {
+    if (!cloudClient || !cloudUser) return null;
+    const [areas, staff] = await Promise.all([
+      cloudClient.rpc("list_fit4life_work_areas"),
+      cloudClient.rpc("list_fit4life_staff_areas")
+    ]);
+    if (areas.error) { window.fit4lifeWorkAreasAvailable = false; return null; }
+    window.fit4lifeWorkAreasAvailable = true;
+    window.fit4lifeWorkAreas = Array.isArray(areas.data) ? areas.data : [];
+    window.fit4lifeStaffAreas = !staff.error && Array.isArray(staff.data) ? staff.data : [];
+    window.fit4lifeMyAreas = window.fit4lifeStaffAreas.filter((row) => row.user_id === cloudUser.id).map((row) => row.area_key);
+    return window.fit4lifeWorkAreas;
+  };
+
+  window.fit4lifeCloudSaveWorkArea = async function fit4lifeCloudSaveWorkArea(areaKey, name, sortOrder, active) {
+    if (!cloudClient || cloudRole !== "owner" || !cloudOrganizationId) return false;
+    const response = await cloudClient.rpc("save_fit4life_work_area", {
+      target_organization: cloudOrganizationId, area: areaKey || "", area_name: name || "",
+      position_in_list: Number(sortOrder) || 0, active: active !== false
+    });
+    if (response.error) { window.fit4lifeWorkAreasAvailable = false; return false; }
+    await window.fit4lifeCloudListWorkAreas();
+    return true;
+  };
+
+  window.fit4lifeCloudSetStaffAreas = async function fit4lifeCloudSetStaffAreas(userId, areaKeys) {
+    if (!cloudClient || cloudRole !== "owner" || !cloudOrganizationId) return false;
+    const response = await cloudClient.rpc("set_fit4life_staff_areas", {
+      target_organization: cloudOrganizationId, target_user: userId, areas: Array.isArray(areaKeys) ? areaKeys : []
+    });
+    if (response.error) return false;
+    await window.fit4lifeCloudListWorkAreas();
+    return true;
+  };
 
   /* ---------- trainer audits (owner only) ----------
      Their own table with owner-only policies, because the shared organization snapshot is

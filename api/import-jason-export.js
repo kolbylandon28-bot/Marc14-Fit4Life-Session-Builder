@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 /* Receives Jason's booking report and parks it for the app to apply.
    Deliberately does NOT parse or apply the CSV. That logic lives in
    js/engine/booking-import.js with tests against it, and duplicating it here would give
@@ -18,8 +19,16 @@ module.exports = async function importJasonExport(request, response) {
   // otherwise park a file that a trainer would later be shown as if it came from Jason.
   const expected = process.env.BOOKING_IMPORT_SECRET || "";
   const offered = request.headers["x-fit4life-secret"] || "";
+  // This value was published in a file the site served; it can never be a valid secret again.
+  const retired = "e9a72960e11cb38c2b9e406c45f0af4cc4fa0541bde1253cb5f06014f2cb4da5";
+  if (crypto.createHash("sha256").update(expected).digest("hex") === retired) {
+    return bad(response, 503, "This import secret was published and must be rotated before the endpoint will run.");
+  }
   if (!expected) return bad(response, 503, "BOOKING_IMPORT_SECRET is not set on this deployment.");
-  if (offered !== expected) return bad(response, 401, "Bad or missing secret.");
+  // Constant time, so the endpoint does not leak the secret one character at a time.
+  const offeredBuffer = Buffer.from(String(offered)), expectedBuffer = Buffer.from(String(expected));
+  const matches = offeredBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(offeredBuffer, expectedBuffer);
+  if (!matches) return bad(response, 401, "Bad or missing secret.");
 
   let body = request.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch (_) { return bad(response, 400, "Body was not JSON."); } }

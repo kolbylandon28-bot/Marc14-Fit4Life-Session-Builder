@@ -367,12 +367,54 @@ function renderAuditTrainersCard() {
     + '<div class="compact-field"><label for="auditTrainerEmail">Email</label><input id="auditTrainerEmail" type="email" placeholder="zach@example.com" autocapitalize="none"></div></div>'
     + '<div class="tool-actions"><button class="small-btn primary" onclick="addAuditTrainerFromForm()">Add trainer</button></div>'
     + '<p class="storage-note">The email keeps every audit attached to the same person, is where "Send to trainer" addresses, and links the audit to their FIT4LIFE account when it matches.</p>';
-  const rows = trainers.length ? '<div class="advanced-list" style="margin-top:12px">' + trainers.map((trainer) => '<div class="trainer-account-row"><div><b>' + escapeHtml(trainer.name) + '</b><span>'
-    + escapeHtml(trainer.email) + (trainer.linked ? ' · linked to their app account' : ' · no app account with that email') + ' · ' + auditsForTrainer(trainer.key).length + ' audits</span></div>'
-    + '<div class="tool-actions"><button class="small-btn" onclick="openAuditTrainer(\'' + escapeHtml(trainer.key) + '\')">Audits</button>'
-    + '<button class="small-btn" onclick="removeAuditTrainer(\'' + escapeHtml(trainer.key) + '\')">Remove</button></div></div>').join('') + '</div>'
+  const rows = trainers.length ? '<div class="advanced-list" style="margin-top:12px">' + trainers.map((trainer) => {
+    const invite = trainerInviteFor(trainer.key);
+    return '<div class="trainer-account-row"><div><b>' + escapeHtml(trainer.name) + '</b><span>'
+      + escapeHtml(trainer.email) + ' · ' + escapeHtml(inviteStatusText(trainer, invite)) + ' · ' + auditsForTrainer(trainer.key).length + ' audits</span></div>'
+      + '<div class="tool-actions">' + inviteButtonsHtml(trainer, invite)
+      + '<button class="small-btn" onclick="openAuditTrainer(\'' + escapeHtml(trainer.key) + '\')">Audits</button>'
+      + '<button class="small-btn" onclick="removeAuditTrainer(\'' + escapeHtml(trainer.key) + '\')">Remove</button></div></div>';
+  }).join('') + '</div>'
     : '<div class="empty-state">No trainers yet. Add the ones you are auditing this semester.</div>';
   return auditCard("Trainers", add + rows, true);
+}
+
+/* ---------- getting them into the app ---------- */
+const trainerInviteFor = (key) => (window.fit4lifeStaffInvites || []).find((invite) => String(invite.email || "").toLowerCase() === key) || null;
+
+function inviteStatusText(trainer, invite) {
+  if (trainer.linked) return "has an app account";
+  if (!invite || invite.revoked_at) return "not invited yet";
+  if (invite.accepted_at) return "joined " + String(invite.accepted_at).slice(0, 10);
+  return "invited " + String(invite.created_at).slice(0, 10) + ", waiting";
+}
+
+function inviteButtonsHtml(trainer, invite) {
+  if (trainer.linked) return "";
+  if (window.fit4lifeStaffInvitesAvailable === false) return "";
+  const pending = invite && !invite.accepted_at && !invite.revoked_at;
+  return '<button class="small-btn ' + (pending ? "" : "primary") + '" onclick="inviteTrainerToApp(\'' + escapeHtml(trainer.key) + '\')">' + (pending ? "Send again" : "Invite to the app") + '</button>'
+    + (pending ? '<button class="small-btn" onclick="revokeTrainerInvite(\'' + escapeHtml(trainer.key) + '\')">Cancel invite</button>' : '');
+}
+
+async function inviteTrainerToApp(key) {
+  const trainer = auditTrainerRoster().find((row) => row.key === key);
+  if (!trainer) return;
+  if (typeof window.fit4lifeCloudInviteStaff !== "function") { showToast("Sign in to the gym account first"); return; }
+  showToast("Sending " + trainer.name + " an invite…");
+  const result = await window.fit4lifeCloudInviteStaff(trainer.key, trainer.name);
+  renderTrainerAuditsModule();
+  if (result && result.ok) showToast(trainer.name + " has been invited. They sign in with the link and land straight in your gym.");
+  else if (result && result.invited) showToast("Added to the invite list, but the email did not go out: " + (result.error || "unknown"));
+  else showToast((result && result.error) || "The invite could not be sent");
+}
+
+async function revokeTrainerInvite(key) {
+  if (typeof window.fit4lifeCloudRevokeStaffInvite !== "function") return;
+  if (!window.confirm("Cancel this invite? Their link stops working.")) return;
+  const done = await window.fit4lifeCloudRevokeStaffInvite(key);
+  renderTrainerAuditsModule();
+  showToast(done ? "Invite cancelled" : "That invite could not be cancelled");
 }
 
 function addAuditTrainerFromForm() {
@@ -615,6 +657,10 @@ function renderTrainerAuditsModule() {
   else if (auditView.tab === "trainers") body = renderAuditTrainersCard() + renderAuditCoverage();
   else body = renderAuditsList() + renderAuditCoverage();
   out.innerHTML = auditTabsHtml() + body;
+  if (window.fit4lifeStaffInvites === undefined && typeof window.fit4lifeCloudListStaffInvites === "function") {
+    window.fit4lifeStaffInvites = [];
+    window.fit4lifeCloudListStaffInvites().then((invites) => { if (invites) renderTrainerAuditsModule(); });
+  }
   if (window.fit4lifeTrainerAuditsAvailable === false) {
     out.insertAdjacentHTML("afterbegin", auditCard("Saved on this device only", '<p>The audit tables are not in Supabase yet, so these stay on this computer. Run RUN-THIS-IN-SUPABASE-TRAINER-AUDITS.sql and they will publish to every owner device.</p>', true));
   }

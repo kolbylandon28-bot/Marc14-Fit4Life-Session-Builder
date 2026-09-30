@@ -2156,3 +2156,8 @@ body.sandbox-on .consultation-option small{color:var(--text-faint)}
 .audit-scale summary,.audit-look summary{cursor:pointer;font-weight:600}
 .audit-scale ul,.audit-look ul{margin:8px 0 0;padding-left:18px;line-height:1.5}
 .audit-scale li,.audit-look li{margin-bottom:4px}
+
+/* Work areas */
+.coach-area-picker{display:grid;gap:4px;padding:10px 12px;margin-bottom:6px;border:1px solid var(--line);border-radius:10px;background:var(--slate-0,#0f1014)}
+.coach-area-picker label{font:600 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
+.coach-area-picker select{width:100%;font-size:13px}
