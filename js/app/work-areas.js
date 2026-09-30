@@ -103,7 +103,7 @@ function renderAreaListCard() {
 async function addStandardWorkAreas() {
   for (let index = 0; index < WORK_AREA_DEFAULTS.length; index++) {
     const [key, name] = WORK_AREA_DEFAULTS[index];
-    await window.fit4lifeCloudSaveWorkArea(key, name, index, true);
+    await window.fit4lifeCloudSaveWorkArea(key, name, index, true, COACHING_DEFAULTS.includes(key));
   }
   renderWorkAreasModule();
   showToast("Five areas added");
@@ -283,3 +283,124 @@ window.show = function areasShow(view) {
 if (typeof window.fit4lifeCloudListWorkAreas === "function") {
   window.fit4lifeCloudListWorkAreas().then(() => renderWorkAreaPicker()).catch(() => {});
 }
+
+/* ---------- the front door ----------
+   One question, answered once: where are you today. What shows after that is whatever
+   belongs to that area, and nothing else. */
+const COACHING_DEFAULTS = ["gym", "pool"];
+const areaIsCoaching = (key) => {
+  const area = (window.fit4lifeWorkAreas || []).find((row) => row.area_key === key);
+  return area ? area.is_coaching === true : COACHING_DEFAULTS.includes(key);
+};
+const activeAreaIsCoaching = () => { const key = activeWorkArea(); return !key || areaIsCoaching(key); };
+
+function enterWorkArea(key) {
+  setActiveWorkArea(key);
+  // The area home first, so the tap always lands somewhere even if the coaching workspace
+  // asks to be unlocked and the person changes their mind.
+  show("area");
+  renderAreaHome();
+  if (areaIsCoaching(key) && canEditClientRecords()) openCoachDestination("dashboard");
+}
+
+function leaveWorkArea() {
+  try { localStorage.removeItem(WORK_AREA_ACTIVE_KEY); } catch (_) { /* nothing to undo */ }
+  show("home");
+  renderHomeChoices();
+}
+
+function areaTileHtml(key) {
+  const name = workAreaName(key), coaching = areaIsCoaching(key);
+  return '<button class="tool-card role-card" onclick="enterWorkArea(\'' + escapeHtml(key) + '\')">'
+    + '<span class="tc-tag">' + (coaching ? "Coaching" : "Shift") + '</span>'
+    + '<div class="tc-icon" aria-hidden="true">' + (coaching ? "&#127947;" : "&#128337;") + '</div>'
+    + '<div class="tc-title">' + escapeHtml(name) + '</div>'
+    + '<div class="tc-desc">' + (coaching ? "Clients, programming and the floor." : "Your shift here: clock, schedule and tasks.") + '</div>'
+    + '<span class="role-action">Start here →</span></button>';
+}
+
+/* Rebuilt on every visit home, because who you are and where you can work both change. */
+function renderHomeChoices() {
+  const grid = byId("roleChoiceGrid");
+  if (!grid) return;
+  const mine = myWorkAreas(), owner = isFit4LifeOwner();
+  if (!mine.length) return;
+  const heading = byId("roleHeroCopy"), path = byId("roleLevelPath");
+  if (heading) heading.innerHTML = '<h1>Where are you<br><span class="grad-text">working today?</span></h1>'
+    + '<p>' + (owner ? "Pick an area to work in, or open the coaching workspace. Your choice sets the clock, the schedule and the tasks you see."
+      : "Pick where you are. Your clock, your schedule and your tasks follow that choice.") + '</p>';
+  if (path) path.innerHTML = '<span class="active">1 · Where are you</span><i>›</i><span>2 · Choose task</span><i>›</i><span>3 · Do the work</span>';
+  const tiles = mine.map(areaTileHtml);
+  if (owner) tiles.push('<button class="tool-card role-card" onclick="selectPortalRole(\'client\')">'
+    + '<span class="tc-tag">Owner preview</span><div class="tc-icon" aria-hidden="true">&#128100;</div>'
+    + '<div class="tc-title">Client side</div><div class="tc-desc">See exactly what a client sees. Trainer accounts cannot enter this side.</div>'
+    + '<span class="role-action">Open client workspace →</span></button>');
+  grid.innerHTML = tiles.join("");
+}
+
+function renderAreaHome() {
+  const out = byId("areaHomeContent"), key = activeWorkArea();
+  if (!out) return;
+  const title = byId("areaHomeTitle"), copy = byId("areaHomeCopy"), levelOne = byId("areaLevelOne");
+  if (!key) { show("home"); renderHomeChoices(); return; }
+  if (title) title.textContent = workAreaName(key);
+  if (levelOne) levelOne.textContent = "1 · " + workAreaName(key);
+  if (copy) copy.textContent = areaIsCoaching(key) ? "Coaching happens here, alongside the shift." : "Your shift here.";
+  const card = (title, description, action, onclick, tag) => '<button class="tool-card' + (action ? "" : " disabled") + '"' + (onclick ? ' onclick="' + onclick + '"' : ' disabled') + '>'
+    + (tag ? '<span class="tc-tag">' + tag + '</span>' : '') + '<div class="tc-title">' + title + '</div><span class="portal-note">' + description + '</span></button>';
+  const tiles = [];
+  if (areaIsCoaching(key) && canEditClientRecords()) {
+    tiles.push(card("Coaching workspace", "Clients, programming, reports.", true, "openCoachDestination('dashboard')"));
+    tiles.push(card("Build a workout", "Straight into the builder.", true, "openBuilder()"));
+  }
+  if (isFit4LifeOwner()) tiles.push(card("Areas &amp; people", "Who works here, and who is invited.", true, "openCoachDestination('areas')"));
+  tiles.push(card("Clock in", "Coming next: clocking in and out on an approved device.", false, "", "Soon"));
+  tiles.push(card("Who is working", "Coming next: the schedule for this area.", false, "", "Soon"));
+  tiles.push(card("Tasks", "Coming next: what needs doing on this shift.", false, "", "Soon"));
+  out.innerHTML = tiles.join("");
+}
+
+/* ---------- the sidebar, in three groups ---------- */
+const COACH_NAV_GROUPS = [
+  ["Work here", ["dashboard", "actions", "calendar", "messages"]],
+  ["Coaching", ["clients", "programming", "team", "library", "assessments", "reports"]],
+  ["Managing", ["areas", "audits", "approvals", "access", "settings"]]
+];
+
+function groupCoachSidebar() {
+  const bar = byId("coachSidebar");
+  if (!bar) return;
+  const coachingHere = activeAreaIsCoaching() && canEditClientRecords();
+  COACH_NAV_GROUPS.forEach(([label, keys]) => {
+    const first = bar.querySelector('[data-coach-nav="' + keys[0] + '"]');
+    if (!first) return;
+    let heading = bar.querySelector('[data-nav-group="' + label + '"]');
+    if (!heading) {
+      heading = document.createElement("div");
+      heading.className = "coach-nav-group";
+      heading.dataset.navGroup = label;
+      heading.textContent = label;
+      first.parentNode.insertBefore(heading, first);
+    }
+    const shown = keys.filter((key) => {
+      const button = bar.querySelector('[data-coach-nav="' + key + '"]');
+      if (!button) return false;
+      const coachingOnly = COACH_NAV_GROUPS[1][1].includes(key);
+      const hide = coachingOnly && !coachingHere;
+      button.hidden = hide;
+      return !hide && !(button.hasAttribute("data-owner-only") && !isFit4LifeOwner());
+    });
+    heading.hidden = !shown.length;
+  });
+}
+
+const legacyShowBeforeAreaHome = window.show;
+window.show = function areaHomeShow(view) {
+  const result = legacyShowBeforeAreaHome.apply(this, arguments);
+  try {
+    if (view === "home") renderHomeChoices();
+    if (view === "area") renderAreaHome();
+    groupCoachSidebar();
+  } catch (_) { /* navigation must never be blocked by the trimmings */ }
+  return result;
+};

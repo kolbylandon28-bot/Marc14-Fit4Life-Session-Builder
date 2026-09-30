@@ -2161,3 +2161,6 @@ body.sandbox-on .consultation-option small{color:var(--text-faint)}
 .coach-area-picker{display:grid;gap:4px;padding:10px 12px;margin-bottom:6px;border:1px solid var(--line);border-radius:10px;background:var(--slate-0,#0f1014)}
 .coach-area-picker label{font:600 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
 .coach-area-picker select{width:100%;font-size:13px}
+.coach-nav-group{margin:14px 0 4px;padding:0 4px;font:700 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint)}
+.coach-nav-group:first-of-type{margin-top:4px}
+.tool-card.disabled{opacity:.55;cursor:default}

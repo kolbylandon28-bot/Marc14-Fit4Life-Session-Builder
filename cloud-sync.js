@@ -2293,11 +2293,11 @@
     return window.fit4lifeWorkAreas;
   };
 
-  window.fit4lifeCloudSaveWorkArea = async function fit4lifeCloudSaveWorkArea(areaKey, name, sortOrder, active) {
+  window.fit4lifeCloudSaveWorkArea = async function fit4lifeCloudSaveWorkArea(areaKey, name, sortOrder, active, coaching) {
     if (!cloudClient || cloudRole !== "owner" || !cloudOrganizationId) return false;
     const response = await cloudClient.rpc("save_fit4life_work_area", {
       target_organization: cloudOrganizationId, area: areaKey || "", area_name: name || "",
-      position_in_list: Number(sortOrder) || 0, active: active !== false
+      position_in_list: Number(sortOrder) || 0, active: active !== false, coaching: coaching === true
     });
     if (response.error) { window.fit4lifeWorkAreasAvailable = false; return false; }
     await window.fit4lifeCloudListWorkAreas();

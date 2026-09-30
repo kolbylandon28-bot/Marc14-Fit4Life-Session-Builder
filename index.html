@@ -138,13 +138,13 @@
   <section class="view active" id="view-home">
     <div class="role-hero hero">
       <div class="granite-logo-lockup" aria-label="FIT 4 LIFE"><div class="granite-logo-main">FIT 4 LIFE</div><div class="granite-logo-sub">Professional Training System</div></div>
-      <div class="level-path"><span class="active">1 · Choose role</span><i>›</i><span>2 · Choose task</span><i>›</i><span>3 · Do the work</span></div>
-      <div class="role-hero-copy">
+      <div class="level-path" id="roleLevelPath"><span class="active">1 · Choose role</span><i>›</i><span>2 · Choose task</span><i>›</i><span>3 · Do the work</span></div>
+      <div class="role-hero-copy" id="roleHeroCopy">
         <h1>How are you using<br><span class="grad-text">FIT4LIFE today?</span></h1>
         <p>Owners can open the coaching workspace or verify the client experience. Trainer accounts open the coaching workspace directly, and clients open only their own record.</p>
       </div>
     </div>
-    <div class="role-choice-grid">
+    <div class="role-choice-grid" id="roleChoiceGrid">
       <button class="tool-card role-card primary" onclick="selectPortalRole('trainer')">
         <span class="tc-tag">Approved account</span>
         <div class="tc-icon" aria-hidden="true">&#128274;</div>
@@ -161,6 +161,16 @@
       </button>
     </div>
     <div class="portal-note" style="max-width:780px;margin-left:auto;margin-right:auto">Client names are never shown as a public directory. Clients search by name or username; only an unlocked trainer can create, edit, or delete profiles.</div>
+  </section>
+
+  <!-- LEVEL 2: AREA HOME -->
+  <section class="view" id="view-area">
+    <div class="portal-menu-head">
+      <div><div class="level-path" style="justify-content:flex-start"><span id="areaLevelOne">1 · Area</span><i>›</i><span class="active">2 · Choose task</span><i>›</i><span>3 · Do the work</span></div>
+      <h1 id="areaHomeTitle">Your area</h1><p id="areaHomeCopy"></p></div>
+      <button class="small-btn" onclick="leaveWorkArea()">Switch area</button>
+    </div>
+    <div class="tools-grid" id="areaHomeContent"></div>
   </section>
 
   <!-- LEVEL 2: TRAINER MENU -->
