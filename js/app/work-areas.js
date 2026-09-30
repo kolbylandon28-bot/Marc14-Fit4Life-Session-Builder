@@ -319,23 +319,45 @@ function areaTileHtml(key) {
     + '<span class="role-action">Start here →</span></button>';
 }
 
-/* Rebuilt on every visit home, because who you are and where you can work both change. */
+/* Rebuilt on every visit home, because who you are and where you can work both change.
+   The areas are the whole question now; the coaching workspace and the client view are
+   places you reach from an area, not a fork in the road before it. */
 function renderHomeChoices() {
   const grid = byId("roleChoiceGrid");
   if (!grid) return;
-  const mine = myWorkAreas(), owner = isFit4LifeOwner();
-  if (!mine.length) return;
-  const heading = byId("roleHeroCopy"), path = byId("roleLevelPath");
-  if (heading) heading.innerHTML = '<h1>Where are you<br><span class="grad-text">working today?</span></h1>'
-    + '<p>' + (owner ? "Pick an area to work in, or open the coaching workspace. Your choice sets the clock, the schedule and the tasks you see."
-      : "Pick where you are. Your clock, your schedule and your tasks follow that choice.") + '</p>';
+  if (window.fit4lifeWorkAreasAvailable === false) return;
+  const mine = myWorkAreas(), owner = isFit4LifeOwner(), heading = byId("roleHeroCopy"), path = byId("roleLevelPath");
+  const areasExist = (window.fit4lifeWorkAreas || []).length > 0;
+  if (!mine.length && !(owner && !areasExist)) return;
   if (path) path.innerHTML = '<span class="active">1 · Where are you</span><i>›</i><span>2 · Choose task</span><i>›</i><span>3 · Do the work</span>';
-  const tiles = mine.map(areaTileHtml);
-  if (owner) tiles.push('<button class="tool-card role-card" onclick="selectPortalRole(\'client\')">'
-    + '<span class="tc-tag">Owner preview</span><div class="tc-icon" aria-hidden="true">&#128100;</div>'
-    + '<div class="tc-title">Client side</div><div class="tc-desc">See exactly what a client sees. Trainer accounts cannot enter this side.</div>'
-    + '<span class="role-action">Open client workspace →</span></button>');
+  if (heading) heading.innerHTML = '<h1>Where are you<br><span class="grad-text">working today?</span></h1>'
+    + '<p>' + (mine.length ? "Pick where you are. Your clock, your schedule and your tasks follow that choice."
+      : "Set up your areas and everyone can pick where they are working.") + '</p>';
+  const tiles = mine.length ? mine.map(areaTileHtml)
+    : ['<button class="tool-card role-card primary" onclick="openCoachDestination(\'areas\')">'
+       + '<span class="tc-tag">First run</span><div class="tc-icon" aria-hidden="true">&#9776;</div>'
+       + '<div class="tc-title">Set up your areas</div><div class="tc-desc">Maintenance, I-Center, Equipment Center, Pool and Gym — then invite people into them.</div>'
+       + '<span class="role-action">Open areas &amp; people →</span></button>'];
   grid.innerHTML = tiles.join("");
+  renderHomeSideDoors(owner);
+}
+
+/* The client view is a thing an owner checks, not one of the ways in. */
+function renderHomeSideDoors(owner) {
+  const grid = byId("roleChoiceGrid");
+  if (!grid || !grid.parentNode) return;
+  let doors = byId("homeSideDoors");
+  if (!owner) { if (doors) doors.remove(); return; }
+  if (!doors) {
+    doors = document.createElement("div");
+    doors.id = "homeSideDoors";
+    doors.className = "home-side-doors";
+    grid.parentNode.insertBefore(doors, grid.nextSibling);
+  }
+  doors.innerHTML = '<span>Owner:</span>'
+    + '<button class="small-btn" onclick="openCoachDestination(\'dashboard\')">Coaching workspace</button>'
+    + '<button class="small-btn" onclick="selectPortalRole(\'client\')">See the client view</button>'
+    + '<button class="small-btn" onclick="openCoachDestination(\'areas\')">Areas &amp; people</button>';
 }
 
 function renderAreaHome() {
