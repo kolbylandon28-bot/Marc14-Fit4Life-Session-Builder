@@ -635,6 +635,49 @@
     target.classList.toggle("error", Boolean(isError));
   }
 
+  const INVITE_SOURCES = ["fit4life_staff_invite", "fit4life_trainer_invite"];
+  let claimedInviteThisSession = false;
+
+  // Only an account that was created by an invite is asked, and only until it has one.
+  function needsFirstPassword() {
+    if (!cloudUser) return false;
+    const meta = cloudUser.user_metadata || {};
+    if (meta.fit4life_password_set === true) return false;
+    return claimedInviteThisSession || INVITE_SOURCES.includes(meta.registration_source);
+  }
+
+  window.fit4lifeCloudSaveFirstPassword = async function fit4lifeCloudSaveFirstPassword() {
+    const first = document.getElementById("cloudFirstPassword");
+    const again = document.getElementById("cloudFirstPasswordConfirm");
+    const button = document.getElementById("cloudFirstPasswordSubmit");
+    const password = first ? String(first.value || "") : "";
+    if (password.length < 8) { authMessage("Use a password with at least 8 characters.", true); return false; }
+    if (!again || password !== String(again.value || "")) { authMessage("The two passwords do not match.", true); return false; }
+    if (button) { button.disabled = true; button.textContent = "Saving…"; }
+    try {
+      // The flag rides along with the password so the two can never disagree.
+      const response = await cloudClient.auth.updateUser({ password, data: { fit4life_password_set: true } });
+      if (response.error) {
+        authMessage(response.error.message || "That password could not be saved.", true);
+        return false;
+      }
+      if (response.data && response.data.user) cloudUser = response.data.user;
+      claimedInviteThisSession = false;
+      if (first) first.value = "";
+      if (again) again.value = "";
+      authMessage("", false);
+      showAuthGate(false);
+      if (typeof routeAuthenticatedWorkspace === "function") routeAuthenticatedWorkspace();
+      if (typeof showToast === "function") showToast("Password saved. Use it with your email from now on.");
+      return true;
+    } catch (error) {
+      authMessage((error && error.message) || "That password could not be saved.", true);
+      return false;
+    } finally {
+      if (button) { button.disabled = false; button.textContent = "Save password and continue"; }
+    }
+  };
+
   function showAuthGate(show) {
     const gate = document.getElementById("cloudAuthGate");
     if (gate) gate.classList.toggle("open", Boolean(show));
@@ -654,12 +697,15 @@
       trainer_signup: "cloudTrainerSignUpPanel",
       reset: "cloudResetPanel",
       update: "cloudUpdatePasswordPanel",
+      first_password: "cloudFirstPasswordPanel",
       pending: "cloudPendingPanel"
     };
     Object.keys(panels).forEach((key) => {
       const panel = document.getElementById(panels[key]);
       if (panel) panel.classList.toggle("open", key === authMode);
     });
+    // The sign-in explainer is about creating an account; they already have one.
+    document.body.classList.toggle("cloud-first-password", authMode === "first_password");
     const tabs = document.getElementById("cloudAuthTabs");
     if (tabs) {
       tabs.style.display = ["signin", "signup"].includes(authMode) ? "grid" : "none";
@@ -671,6 +717,7 @@
       trainer_signup: ["Request trainer access", "Create a verified login, then wait for an approved gym trainer or owner to confirm trainer permissions."],
       reset: ["Reset your password", "We will email you a secure link to choose a new password."],
       update: ["Choose a new password", "Enter a new password for your training account."],
+      first_password: ["Choose your password", "You are signed in. Set a password now so you can get back in on any device."],
       pending: ["Account status", "Your secure login is active while your client access is reviewed."]
     }[authMode] || ["Training account", "Secure shared training system."];
     setText("cloudAuthTitle", copy[0]);
@@ -774,6 +821,7 @@
     // browser, so a link forwarded to someone else is worth nothing.
     const staffClaim = await cloudClient.rpc("claim_my_fit4life_staff_invite");
     if (!staffClaim.error && staffClaim.data === true) {
+      claimedInviteThisSession = true;
       const afterInvite = await cloudClient
         .from("memberships")
         .select("organization_id, role, is_active")
@@ -1840,6 +1888,11 @@
     subscribeToChanges();
     startOrganizationSettingsRefresh();
     authMessage("", false);
+    if (needsFirstPassword()) {
+      showAuthMode("first_password");
+      showAuthGate(true);
+      return;
+    }
     showAuthGate(false);
 
     if (typeof routeAuthenticatedWorkspace === "function") routeAuthenticatedWorkspace();
@@ -2264,7 +2317,17 @@
       }
     });
     await window.fit4lifeCloudListStaffInvites();
-    if (sent && sent.error) return { ok:false, invited:true, error:sent.error.message || "Saved, but the email did not go out" };
+    if (sent && sent.error) {
+      const raw = sent.error.message || "";
+      // Supabase's own sender allows only a handful an hour, which reads as a failure but is not one.
+      const throttled = /rate limit|too many|429|security purposes|only request/i.test(raw) || sent.error.status === 429;
+      return {
+        ok: false, invited: true, throttled,
+        error: throttled
+          ? "They are on the list, but the email service is at its hourly limit. Press Send again in an hour, or they can create an account with this address and the invite still applies."
+          : "Saved to the list, but the email did not go out: " + raw
+      };
+    }
     return { ok:true, invited:true };
   };
 

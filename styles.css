@@ -2209,3 +2209,6 @@ body.sandbox-on .consultation-option small{color:var(--text-faint)}
   .area-card .tc-title{font-size:26px}
   .area-card .area-art{width:214px;height:134px;right:-30px;bottom:-24px}
 }
+
+.cloud-auth-fineprint{margin-top:14px;font-size:12px;line-height:1.55;color:var(--text-faint);text-align:center}
+body.cloud-first-password .cloud-auth-help{display:none}

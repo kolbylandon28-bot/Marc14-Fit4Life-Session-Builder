@@ -194,17 +194,30 @@ function renderAreaInviteCard() {
   const pending = (window.fit4lifeStaffInvites || []).filter((invite) => !invite.accepted_at && !invite.revoked_at);
   const pendingRows = pending.length ? '<div class="advanced-list" style="margin-top:12px">' + pending.map((invite) => '<div class="trainer-account-row"><div><b>' + escapeHtml(invite.full_name || invite.email) + '</b><span>'
     + escapeHtml(invite.email) + ' · invited as ' + escapeHtml(invite.role || "trainer") + ((invite.areas || []).length ? ' · ' + invite.areas.map((key) => escapeHtml(workAreaName(key))).join(", ") : ' · no area yet')
-    + ' · sent ' + escapeHtml(String(invite.created_at).slice(0, 10)) + '</span></div>'
+    + ' · ' + escapeHtml(inviteLinkState(invite.created_at)) + '</span></div>'
     + '<div class="tool-actions"><button class="small-btn" onclick="resendAreaInvite(\'' + escapeHtml(invite.email) + '\')">Send again</button>'
     + '<button class="small-btn" onclick="cancelAreaInvite(\'' + escapeHtml(invite.email) + '\')">Cancel</button></div></div>').join('') + '</div>' : '';
   return '<section class="coach-module-card" style="grid-column:1/-1"><h3>Invite someone</h3>'
-    + '<p class="storage-note">You pick their name, their job and their areas. They get a sign-in link and land exactly where you put them.</p>'
+    + '<p class="storage-note">You pick their name, their job and their areas. They get one email with a sign-in link that opens the app already signed in and asks them to choose a password. The link is good for about an hour &mdash; after that, press Send again.</p>'
     + '<div class="compact-grid"><div class="compact-field"><label for="inviteName">Name</label><input id="inviteName" placeholder="Jordan R"></div>'
     + '<div class="compact-field"><label for="inviteEmail">Personal email</label><input id="inviteEmail" type="email" autocapitalize="none" placeholder="jordan@example.com"></div></div>'
     + '<div class="compact-field"><label>Job</label><div class="tool-actions">' + roleButtons + '</div></div>'
     + '<div class="compact-field"><label>Where they can clock in</label><div class="chips">' + areaChips + '</div>'
     + '<span class="storage-note">Areas cover the clock, the schedule and that area\'s tasks. Client records come from the job above, never from an area.</span></div>'
     + '<div class="tool-actions"><button class="small-btn primary" onclick="sendAreaInvite()">Send invite</button></div>' + pendingRows + '</section>';
+}
+
+const INVITE_LINK_MINUTES = 60;
+function inviteLinkState(createdAt) {
+  const sent = createdAt ? new Date(createdAt) : null;
+  if (!sent || isNaN(sent.getTime())) return "link sent";
+  const minutes = Math.floor((Date.now() - sent.getTime()) / 60000);
+  if (minutes < 1) return "link sent just now, good for about an hour";
+  if (minutes < INVITE_LINK_MINUTES) return "link sent " + minutes + (minutes === 1 ? " minute" : " minutes") + " ago, expires in " + (INVITE_LINK_MINUTES - minutes);
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return "link expired " + hours + (hours === 1 ? " hour" : " hours") + " ago";
+  const days = Math.floor(hours / 24);
+  return "link expired " + days + (days === 1 ? " day" : " days") + " ago";
 }
 
 function setInviteRole(role) { areaAdminState.invite.role = role; renderWorkAreasModule(); }
@@ -230,8 +243,8 @@ async function sendAreaInvite() {
   const result = await window.fit4lifeCloudInviteStaff(email, name, areaAdminState.invite.role, areaAdminState.invite.areas.slice());
   areaAdminState.invite = { role: areaAdminState.invite.role, areas: [] };
   renderWorkAreasModule();
-  if (result && result.ok) showToast(name + " invited as " + areaAdminState.invite.role);
-  else if (result && result.invited) showToast("On the list, but the email did not go out: " + (result.error || "unknown"));
+  if (result && result.ok) showToast(name + " invited. Their link is good for about an hour.");
+  else if (result && result.invited) showToast(result.error || "On the list, but the email did not go out.");
   else showToast((result && result.error) || "The invite could not be sent");
 }
 
