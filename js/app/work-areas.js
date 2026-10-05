@@ -88,8 +88,9 @@ function renderWorkAreasModule() {
 function renderAreaListCard() {
   const areas = window.fit4lifeWorkAreas || [];
   const rows = areas.length ? '<div class="advanced-list">' + areas.map((area) => '<div class="trainer-account-row"><div><b>' + escapeHtml(area.name) + '</b><span>'
-    + escapeHtml(area.area_key) + ' · ' + area.people + (Number(area.people) === 1 ? ' person' : ' people') + (area.is_active === false ? ' · hidden' : '') + '</span></div>'
-    + '<div class="tool-actions"><button class="small-btn" onclick="renameWorkArea(\'' + escapeHtml(area.area_key) + '\')">Rename</button>'
+    + area.people + (Number(area.people) === 1 ? ' person' : ' people') + (area.is_coaching ? ' · coaching area' : ' · shift area') + (area.is_active === false ? ' · hidden' : '') + '</span></div>'
+    + '<div class="tool-actions"><button class="small-btn" onclick="toggleWorkAreaCoaching(\'' + escapeHtml(area.area_key) + '\',' + (area.is_coaching ? 'false' : 'true') + ')" title="Coaching areas get clients, programming and the builder">' + (area.is_coaching ? 'Make shift only' : 'Make coaching') + '</button>'
+    + '<button class="small-btn" onclick="renameWorkArea(\'' + escapeHtml(area.area_key) + '\')">Rename</button>'
     + '<button class="small-btn" onclick="toggleWorkArea(\'' + escapeHtml(area.area_key) + '\',' + (area.is_active === false ? 'true' : 'false') + ')">' + (area.is_active === false ? 'Show' : 'Hide') + '</button></div></div>').join('') + '</div>'
     : '<div class="empty-state">No areas yet.</div>';
   const seed = areas.length ? '' : '<div class="tool-actions"><button class="small-btn primary" onclick="addStandardWorkAreas()">Add the standard five</button></div>';
@@ -115,6 +116,15 @@ async function addWorkAreaFromForm() {
   const done = await window.fit4lifeCloudSaveWorkArea("", name, (window.fit4lifeWorkAreas || []).length, true);
   renderWorkAreasModule();
   showToast(done ? name + " added" : "That area could not be saved");
+}
+
+async function toggleWorkAreaCoaching(key, makeCoaching) {
+  const area = (window.fit4lifeWorkAreas || []).find((row) => row.area_key === key);
+  if (!area) return;
+  await window.fit4lifeCloudSaveWorkArea(key, area.name, area.sort_order, area.is_active !== false, Boolean(makeCoaching));
+  renderWorkAreasModule();
+  groupCoachSidebar();
+  showToast(area.name + (makeCoaching ? " now has the coaching tools" : " is a shift area only"));
 }
 
 async function renameWorkArea(key) {
@@ -392,17 +402,42 @@ function renderAreaHome() {
   if (typeof loadAreaTools === "function") loadAreaTools(key, false);
 }
 
-/* ---------- the sidebar, in three groups ---------- */
+/* ---------- the sidebar, area by area ----------
+   An area only shows its own tools. The client-facing ones — the calendar, messages, the
+   action queue, clients, programming — belong to coaching, so the Equipment Center never
+   sees them. */
 const COACH_NAV_GROUPS = [
-  ["Work here", ["dashboard", "actions", "calendar", "messages"]],
-  ["Coaching", ["clients", "programming", "team", "library", "assessments", "reports"]],
+  ["This area", ["area-home"]],
+  ["Coaching", ["dashboard", "actions", "clients", "programming", "team", "calendar", "messages", "library", "assessments", "reports"]],
   ["Managing", ["areas", "audits", "approvals", "access", "settings"]]
 ];
+const COACHING_NAV_KEYS = COACH_NAV_GROUPS[1][1];
+
+function ensureAreaHomeNav() {
+  const bar = byId("coachSidebar");
+  if (!bar || byId("areaHomeNav")) return;
+  const first = bar.querySelector("[data-coach-nav]");
+  if (!first) return;
+  const button = document.createElement("button");
+  button.id = "areaHomeNav";
+  button.dataset.coachNav = "area-home";
+  button.onclick = () => { show("area"); renderAreaHome(); };
+  button.innerHTML = '<span class="nav-icon">◱</span><span class="nav-label">Area home</span>';
+  first.parentNode.insertBefore(button, first);
+}
 
 function groupCoachSidebar() {
   const bar = byId("coachSidebar");
   if (!bar) return;
-  const coachingHere = activeAreaIsCoaching() && canEditClientRecords();
+  ensureAreaHomeNav();
+  const key = activeWorkArea();
+  const coachingHere = (!key || areaIsCoaching(key)) && canEditClientRecords();
+  const homeNav = byId("areaHomeNav");
+  if (homeNav) {
+    homeNav.hidden = !key;
+    const label = homeNav.querySelector(".nav-label");
+    if (label && key) label.textContent = workAreaName(key);
+  }
   COACH_NAV_GROUPS.forEach(([label, keys]) => {
     const first = bar.querySelector('[data-coach-nav="' + keys[0] + '"]');
     if (!first) return;
@@ -414,11 +449,10 @@ function groupCoachSidebar() {
       heading.textContent = label;
       first.parentNode.insertBefore(heading, first);
     }
-    const shown = keys.filter((key) => {
-      const button = bar.querySelector('[data-coach-nav="' + key + '"]');
+    const shown = keys.filter((navKey) => {
+      const button = bar.querySelector('[data-coach-nav="' + navKey + '"]');
       if (!button) return false;
-      const coachingOnly = COACH_NAV_GROUPS[1][1].includes(key);
-      const hide = coachingOnly && !coachingHere;
+      const hide = (COACHING_NAV_KEYS.includes(navKey) && !coachingHere) || (navKey === "area-home" && !key);
       button.hidden = hide;
       return !hide && !(button.hasAttribute("data-owner-only") && !isFit4LifeOwner());
     });
