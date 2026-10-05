@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-09-30-v113-work-areas-r1";
+const CACHE_NAME = "fit4life-shell-2026-10-05-v114-area-tools-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20260930-v113-work-areas-r1";
+const ASSET_VERSION = "20261005-v114-area-tools-r1";
 const SHELL = [
   "/",
   "/index.html",
@@ -11,6 +11,7 @@ const SHELL = [
   "/js/app/action-calendar.js?v=" + ASSET_VERSION,
   "/js/app/trainer-audits.js?v=" + ASSET_VERSION,
   "/js/app/work-areas.js?v=" + ASSET_VERSION,
+  "/js/app/area-tools.js?v=" + ASSET_VERSION,
   "/js/app/walkthrough.js?v=" + ASSET_VERSION,
   "/js/app/workout-feedback-reports.js?v=" + ASSET_VERSION,
   "/dark-rock-background-v2.jpg",

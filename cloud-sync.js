@@ -2271,6 +2271,80 @@
     return true;
   };
 
+  /* ---------- the clock, the schedule and the devices that may punch ----------
+     Hours are wage records, so the server stamps every time and keeps what changed. */
+  const DEVICE_KEY = "fit4life_device_id_v1";
+  window.fit4lifeAreaToolsAvailable = undefined;
+
+  function deviceId() {
+    let id = "";
+    try { id = localStorage.getItem(DEVICE_KEY) || ""; } catch (_) { id = ""; }
+    if (!id) {
+      id = "dev-" + Date.now().toString(36) + "-" + Math.random().toString(16).slice(2, 10);
+      try { localStorage.setItem(DEVICE_KEY, id); } catch (_) { /* a private window simply asks again next time */ }
+    }
+    return id;
+  }
+  window.fit4lifeDeviceId = deviceId;
+
+  async function areaRpc(name, args) {
+    if (!cloudClient || !cloudUser) return { error: { message: "Not signed in" } };
+    const response = await cloudClient.rpc(name, args || {});
+    if (response.error && /could not find the function|schema cache/i.test(String(response.error.message || ""))) {
+      window.fit4lifeAreaToolsAvailable = false;
+    } else if (!response.error) {
+      window.fit4lifeAreaToolsAvailable = true;
+    }
+    return response;
+  }
+
+  window.fit4lifeCloudRegisterDevice = async function fit4lifeCloudRegisterDevice(name) {
+    return areaRpc("register_fit4life_device", { device: deviceId(), device_name: name || (navigator.platform || "device") });
+  };
+  window.fit4lifeCloudListDevices = async function fit4lifeCloudListDevices() {
+    const response = await areaRpc("list_fit4life_devices");
+    window.fit4lifeDevices = response.error ? [] : (response.data || []);
+    return window.fit4lifeDevices;
+  };
+  window.fit4lifeCloudSetDevice = async function fit4lifeCloudSetDevice(device, name, area, approved) {
+    const response = await areaRpc("set_fit4life_device", { device, device_name: name || "", area: area || "", approved: approved === true });
+    return !response.error;
+  };
+  window.fit4lifeCloudClockIn = async function fit4lifeCloudClockIn(area) {
+    const response = await areaRpc("fit4life_clock_in", { area, device: deviceId() });
+    return response.error ? { ok: false, error: response.error.message } : response.data;
+  };
+  window.fit4lifeCloudClockOut = async function fit4lifeCloudClockOut(note) {
+    const response = await areaRpc("fit4life_clock_out", { device: deviceId(), entry_note: note || "" });
+    return response.error ? { ok: false, error: response.error.message } : response.data;
+  };
+  window.fit4lifeCloudListTimeEntries = async function fit4lifeCloudListTimeEntries(fromDay, toDay) {
+    const response = await areaRpc("list_fit4life_time_entries", { from_day: fromDay || null, to_day: toDay || null });
+    window.fit4lifeTimeEntries = response.error ? [] : (response.data || []);
+    return window.fit4lifeTimeEntries;
+  };
+  window.fit4lifeCloudConfirmTimeEntry = async function fit4lifeCloudConfirmTimeEntry(entry, newIn, newOut) {
+    const response = await areaRpc("confirm_fit4life_time_entry", { entry, new_in: newIn || null, new_out: newOut || null });
+    return !response.error;
+  };
+  window.fit4lifeCloudCloseOpenEntries = async function fit4lifeCloudCloseOpenEntries(maxHours) {
+    const response = await areaRpc("close_fit4life_open_entries", { max_hours: Number(maxHours) || 8 });
+    return response.error ? 0 : response.data;
+  };
+  window.fit4lifeCloudListShifts = async function fit4lifeCloudListShifts(area, fromDay, toDay) {
+    const response = await areaRpc("list_fit4life_shifts", { area: area || null, from_day: fromDay || null, to_day: toDay || null });
+    window.fit4lifeShifts = response.error ? [] : (response.data || []);
+    return window.fit4lifeShifts;
+  };
+  window.fit4lifeCloudSaveShift = async function fit4lifeCloudSaveShift(area, userId, label, starts, ends, note, shiftId) {
+    const response = await areaRpc("save_fit4life_shift", { area, staff: userId || null, staff_label: label || "", starts, ends, shift_note: note || "", shift_id: shiftId || null });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true, id: response.data };
+  };
+  window.fit4lifeCloudDeleteShift = async function fit4lifeCloudDeleteShift(shiftId) {
+    const response = await areaRpc("delete_fit4life_shift", { shift_id: shiftId });
+    return !response.error;
+  };
+
   /* ---------- work areas ----------
      A gym decides its own areas. Everyone signed in can read the list; only an owner writes
      it, and only an owner sets who works where. Staff see their own rows and nobody else's. */

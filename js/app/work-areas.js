@@ -363,23 +363,33 @@ function renderHomeSideDoors(owner) {
 function renderAreaHome() {
   const out = byId("areaHomeContent"), key = activeWorkArea();
   if (!out) return;
-  const title = byId("areaHomeTitle"), copy = byId("areaHomeCopy"), levelOne = byId("areaLevelOne");
   if (!key) { show("home"); renderHomeChoices(); return; }
+  const title = byId("areaHomeTitle"), copy = byId("areaHomeCopy"), levelOne = byId("areaLevelOne");
   if (title) title.textContent = workAreaName(key);
   if (levelOne) levelOne.textContent = "1 · " + workAreaName(key);
   if (copy) copy.textContent = areaIsCoaching(key) ? "Coaching happens here, alongside the shift." : "Your shift here.";
-  const card = (title, description, action, onclick, tag) => '<button class="tool-card' + (action ? "" : " disabled") + '"' + (onclick ? ' onclick="' + onclick + '"' : ' disabled') + '>'
-    + (tag ? '<span class="tc-tag">' + tag + '</span>' : '') + '<div class="tc-title">' + title + '</div><span class="portal-note">' + description + '</span></button>';
-  const tiles = [];
+
+  const cards = [];
   if (areaIsCoaching(key) && canEditClientRecords()) {
-    tiles.push(card("Coaching workspace", "Clients, programming, reports.", true, "openCoachDestination('dashboard')"));
-    tiles.push(card("Build a workout", "Straight into the builder.", true, "openBuilder()"));
+    cards.push('<section class="coach-module-card"><h3>Coaching</h3><p>Clients, programming and the floor.</p>'
+      + '<div class="tool-actions"><button class="small-btn primary" onclick="openCoachDestination(\'dashboard\')">Coaching workspace</button>'
+      + '<button class="small-btn" onclick="openBuilder()">Build a workout</button>'
+      + (isFit4LifeOwner() ? '<button class="small-btn" onclick="openCoachDestination(\'audits\')">Trainer audits</button>' : '') + '</div></section>');
   }
-  if (isFit4LifeOwner()) tiles.push(card("Areas &amp; people", "Who works here, and who is invited.", true, "openCoachDestination('areas')"));
-  tiles.push(card("Clock in", "Coming next: clocking in and out on an approved device.", false, "", "Soon"));
-  tiles.push(card("Who is working", "Coming next: the schedule for this area.", false, "", "Soon"));
-  tiles.push(card("Tasks", "Coming next: what needs doing on this shift.", false, "", "Soon"));
-  out.innerHTML = tiles.join("");
+  if (window.fit4lifeAreaToolsAvailable === false) {
+    cards.push('<section class="coach-module-card" style="grid-column:1/-1"><h3>Clock and schedule not set up</h3>'
+      + '<p>Run RUN-THIS-IN-SUPABASE-AREA-TOOLS.sql in Supabase, then reload. Until then this area has no clock, schedule or device list.</p></section>');
+  } else {
+    cards.push(areaClockCardHtml(key));
+    cards.push(areaTodayCardHtml(key));
+    cards.push(areaScheduleCardHtml(key));
+    if (isFit4LifeOwner()) {
+      cards.push(areaHoursCardHtml());
+      cards.push(areaDevicesCardHtml(key));
+    }
+  }
+  out.innerHTML = cards.join("");
+  if (typeof loadAreaTools === "function") loadAreaTools(key, false);
 }
 
 /* ---------- the sidebar, in three groups ---------- */
