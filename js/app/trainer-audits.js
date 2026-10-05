@@ -90,11 +90,28 @@ const AUDIT_GRADES = [["ready","Ready to promote"],["solid","Solid"],["developin
 
 /* Two different events, not two forms. The questions are identical so the standard is
    identical; what changes is how much is required and what comes out the other end. */
+/* Two different jobs, not two versions of one form. A coaching note is a conversation you
+   had and what you want to see next; nothing is scored and nothing goes in a file. An audit
+   for record is evidence. They share a trainer's timeline and nothing else. */
 const AUDIT_KINDS = [
-  ["developmental","Developmental","Ten minutes on the floor. Coach in the moment, rate only what you watched, and leave them one thing to work on. Nothing goes in their file."],
-  ["scored","Scored for record","Watch only, safety aside. Every area answered, how long you watched recorded, and they sign that they have seen it. This one goes in their file."]
+  ["developmental","Coaching note","Something you saw, something you said, and the one thing to work on. Nothing is scored."],
+  ["scored","Audit for record","Every area answered with evidence, signed as seen. This one goes in their file."]
 ];
 const auditIsScored = (kind) => kind === "scored";
+
+/* One tap, so you can see later that you have coached Zach on technique four times and never
+   once on how he talks to people. It is a subject, not a score. */
+const COACH_MOMENT = [
+  ["yes", "Coached it there and then"],
+  ["after", "Said it afterwards"],
+  ["left", "Left it this time"]
+];
+const COACH_STUCK = [
+  ["stuck", "Yes, it showed up today"],
+  ["partly", "Partly"],
+  ["not_yet", "Not yet"],
+  ["na", "No chance to tell"]
+];
 const AUDIT_SESSION_TYPES = [["one_to_one","One to one"],["small_group","Small group"],["assessment","Assessment or intake"],["other","Other"]];
 
 /* Forgetting an area and deliberately skipping one used to be stored the same way - as the
@@ -418,7 +435,7 @@ function auditTabsHtml() {
   const tab = auditView.tab;
   return '<div class="tool-actions" style="grid-column:1/-1">'
     + '<button class="small-btn ' + (tab === "audits" ? "primary" : "") + '" onclick="openAuditTab(\'audits\')">Audits</button>'
-    + '<button class="small-btn ' + (tab === "new" ? "primary" : "") + '" onclick="openAuditTab(\'new\')">New audit</button>'
+    + '<button class="small-btn ' + (tab === "new" ? "primary" : "") + '" onclick="openAuditTab(\'new\')">New note or audit</button>'
     + '<button class="small-btn ' + (tab === "check" ? "primary" : "") + '" onclick="openAuditTab(\'check\')">Quick check</button>'
     + '<button class="small-btn ' + (tab === "trainers" ? "primary" : "") + '" onclick="openAuditTab(\'trainers\')">Trainers</button>'
     + '<button class="small-btn" onclick="exportTrainerAuditsCsv()">Export CSV</button></div>';
@@ -458,7 +475,7 @@ function renderAuditsList() {
     + '<label class="inline-check"><input type="checkbox" id="auditFilterFlagged" ' + (auditFilters.flagged ? 'checked' : '') + ' onchange="readAuditFilters()"> Flagged only</label>'
     + '<label class="inline-check"><input type="checkbox" id="auditFilterFollow" ' + (auditFilters.follow ? 'checked' : '') + ' onchange="readAuditFilters()"> Follow-up open</label></div>';
   const rows = list.length ? '<div class="advanced-list" style="margin-top:12px">' + list.map(auditRowHtml).join('') + '</div>'
-    : '<div class="empty-state">No audits match. ' + (loadTrainerAudits().length ? 'Widen the filters.' : 'Start with New audit.') + '</div>';
+    : '<div class="empty-state">No audits match. ' + (loadTrainerAudits().length ? 'Widen the filters.' : 'Start with New note or audit.') + '</div>';
   return auditCard("Audits · " + list.length, filters + rows, true);
 }
 
@@ -606,7 +623,7 @@ function renderAuditTrainerPage() {
     return '<div class="trainer-account-row' + (item && item[2] === false ? ' warn' : '') + '"><div><b>' + escapeHtml(item ? item[1] : row.event) + '</b><span>' + escapeHtml(String(row.at).slice(0, 10)) + (row.note ? ' · ' + escapeHtml(row.note) : '') + '</span></div></div>';
   }).join('') + '</div>' : '';
   return '<div class="tool-actions" style="grid-column:1/-1"><button class="small-btn" onclick="openAuditTab(\'audits\')">← All audits</button>'
-    + '<button class="small-btn primary" onclick="startAuditFor(\'' + escapeHtml(trainer.key) + '\')">New audit</button>'
+    + '<button class="small-btn primary" onclick="startAuditFor(\'' + escapeHtml(trainer.key) + '\')">New note or audit</button>'
     + '<button class="small-btn" onclick="openAuditTab(\'check\')">Quick check</button></div>'
     + auditCard(escapeHtml(trainer.name), card.strip + note + '<div class="advanced-list" style="margin-top:10px">' + areaRows + '</div>', true)
     + auditCard("Reliability and admin", card.logButtons + logHtml, true)
@@ -733,13 +750,7 @@ function renderNewAuditForm() {
   const saveRow = '<div class="tool-actions"><button class="small-btn primary" onclick="saveAuditFromForm()">'
     + (scored ? "Save to their file" : "Save") + '</button><button class="small-btn" onclick="openAuditTab(\'audits\')">Cancel</button></div>';
 
-  if (!scored) {
-    return auditCard("Developmental look", head, true)
-      + auditCard("The three questions", '<p class="storage-note">This is the part that changes anything. The ratings are for your trend.</p>' + takeaway + followUp, true)
-      + AUDIT_AREAS.map(auditAreaFieldHtml).join('')
-      + auditCard("Safety", safety, true)
-      + auditCard("Finish", probe + saveRow, true);
-  }
+  if (!scored) return renderCoachingNote(draft, trainers);
   return auditCard("Audit for record", head, true)
     + AUDIT_AREAS.map(auditAreaFieldHtml).join('')
     + auditCard("Safety", safety, true)
@@ -764,8 +775,80 @@ function renderSafetyCloseOut() {
     + '<textarea id="auditSafetyActionNote" rows="2" placeholder="Called the set, reset the pins, watched the next two">' + escapeHtml(note) + '</textarea></div></div>';
 }
 
+/* Five short cards and no scoring. What you saw, what you said, what you want next. */
+function renderCoachingNote(draft, trainers) {
+  const who = '<div class="compact-grid">'
+    + '<div class="compact-field"><label for="auditFormTrainer">Trainer</label><select id="auditFormTrainer" onchange="auditView.draft.trainerKey=this.value;renderTrainerAuditsModule()">'
+    + trainers.map((trainer) => '<option value="' + escapeHtml(trainer.key) + '"' + (draft.trainerKey === trainer.key ? ' selected' : '') + '>' + escapeHtml(trainer.name) + '</option>').join('') + '</select></div>'
+    + '<div class="compact-field"><label for="auditFormDate">Date</label><input id="auditFormDate" type="date" value="' + escapeHtml(draft.date) + '"></div></div>'
+    + '<div class="tool-actions" style="margin-top:8px">' + AUDIT_KINDS.map(([value, label, detail]) =>
+        '<button class="small-btn ' + (draft.kind === value ? "primary" : "") + '" onclick="setAuditKind(\'' + value + '\')" title="' + escapeHtml(detail) + '">' + escapeHtml(label) + '</button>').join('') + '</div>'
+    + '<p class="storage-note">' + escapeHtml((AUDIT_KINDS.find((row) => row[0] === draft.kind) || [])[2] || "") + '</p>';
+
+  const good = '<div class="compact-field"><label for="coachStrength">Be specific enough that they believe you</label>'
+    + '<textarea id="coachStrength" rows="2" placeholder="Caught the knee cave on set 2 before I did, and cued it without making a thing of it">' + escapeHtml(draft.coachStrength || "") + '</textarea></div>';
+
+  const focus = draft.focusArea || "";
+  const oneThing = '<div class="compact-field"><label>Which part of the job</label><div class="chips">'
+    + AUDIT_AREAS.map((area) => '<button type="button" class="chip' + (focus === area.key ? " on" : "") + '"'
+      + ' onclick="setCoachFocus(\'' + area.key + '\')" aria-pressed="' + (focus === area.key) + '">' + escapeHtml(area.title) + '</button>').join('')
+    + '</div></div>'
+    + '<div class="compact-field"><label for="coachOneThing">The one thing to work on</label>'
+    + '<textarea id="coachOneThing" rows="2" placeholder="Stand on the rack side when she benches so you can reach the bar">' + escapeHtml(draft.coachOneThing || "") + '</textarea></div>'
+    + '<div class="compact-field"><label>Did you say something at the time</label><div class="chips">'
+    + COACH_MOMENT.map(([value, label]) => '<button type="button" class="chip' + (draft.moment === value ? " on" : "") + '"'
+      + ' onclick="setCoachMoment(\'' + value + '\')" aria-pressed="' + (draft.moment === value) + '">' + escapeHtml(label) + '</button>').join('')
+    + '</div></div>'
+    + '<div class="compact-field"><label for="coachSaid">What you said, and how they took it</label>'
+    + '<textarea id="coachSaid" rows="2" placeholder="Told him to move round the bench. Did it straight away, asked why on the next set">' + escapeHtml(draft.coachSaid || "") + '</textarea></div>';
+
+  const previous = auditsForTrainer(draft.trainerKey).find((row) => row.changeOne || row.oneThing);
+  const lastThing = previous ? (previous.oneThing || previous.changeOne) : "";
+  const lastCard = lastThing ? auditCard("Last time you asked for this", '<p class="audit-last-thing">&ldquo;' + escapeHtml(lastThing) + '&rdquo;</p>'
+    + '<div class="chips">' + COACH_STUCK.map(([value, label]) => '<button type="button" class="chip' + (draft.stuck === value ? " on" : "") + '"'
+      + ' onclick="setCoachStuck(\'' + value + '\')" aria-pressed="' + (draft.stuck === value) + '">' + escapeHtml(label) + '</button>').join('') + '</div>', true) : "";
+
+  const next = '<div class="compact-field"><label for="coachNextWatch">Next time I am watching for</label>'
+    + '<input id="coachNextWatch" type="text" placeholder="Whether he sets up on the rack side without being told" value="' + escapeHtml(draft.coachNextWatch || "") + '"></div>'
+    + '<div class="tool-actions"><label class="inline-check"><input type="checkbox" id="auditFollowNeeded"> Put a reminder on it</label>'
+    + '<input id="auditFollowBy" type="date" style="max-width:190px"></div>';
+
+  const unsafe = Boolean(draft.sawUnsafe);
+  const safetyBlock = '<div class="tool-actions"><button class="small-btn' + (unsafe ? " primary" : "") + '" onclick="toggleCoachUnsafe()">'
+    + (unsafe ? "Yes — something was unsafe" : "Nothing unsafe happened") + '</button></div>'
+    + (unsafe ? '<p class="storage-note">Safety is the same bar whichever kind of visit this is.</p>'
+      + AUDIT_SAFETY.map(([key, label]) => '<div class="compact-field"><label class="inline-check"><input type="checkbox" id="auditSafety_' + key + '" onchange="renderSafetyCloseOut()"> ' + escapeHtml(label) + '</label>'
+      + '<input id="auditSafetyNote_' + key + '" type="text" placeholder="What happened"></div>').join('')
+      + '<div id="auditSafetyCloseOut"></div>' : '');
+
+  return auditCard("Coaching note", who, true)
+    + auditCard("What they did well", good, true)
+    + auditCard("The one thing", oneThing, true)
+    + lastCard
+    + auditCard("Next time", next, true)
+    + auditCard("Anything unsafe", safetyBlock, true)
+    + auditCard("", '<div class="tool-actions"><button class="small-btn primary" onclick="saveAuditFromForm()">Save coaching note</button>'
+      + '<button class="small-btn" onclick="openAuditTab(\'audits\')">Cancel</button></div>', true);
+}
+
+function setCoachFocus(key) { if (!auditView.draft) return; auditView.draft.focusArea = auditView.draft.focusArea === key ? "" : key; captureCoachingDraft(); renderTrainerAuditsModule(); }
+function setCoachMoment(value) { if (!auditView.draft) return; auditView.draft.moment = auditView.draft.moment === value ? "" : value; captureCoachingDraft(); renderTrainerAuditsModule(); }
+function setCoachStuck(value) { if (!auditView.draft) return; auditView.draft.stuck = auditView.draft.stuck === value ? "" : value; captureCoachingDraft(); renderTrainerAuditsModule(); }
+function toggleCoachUnsafe() { if (!auditView.draft) return; auditView.draft.sawUnsafe = !auditView.draft.sawUnsafe; captureCoachingDraft(); renderTrainerAuditsModule(); }
+
+// A chip tap re-renders the card, so what is already typed is kept first.
+function captureCoachingDraft() {
+  if (!auditView.draft) return;
+  const grab = (id) => { const field = byId(id); return field ? String(field.value || "") : undefined; };
+  ["coachStrength", "coachOneThing", "coachSaid", "coachNextWatch"].forEach((id) => {
+    const value = grab(id);
+    if (value !== undefined) auditView.draft[id] = value;
+  });
+}
+
 function setAuditKind(kind) {
   if (!auditView.draft) return;
+  captureCoachingDraft();
   auditView.draft.kind = kind;
   renderTrainerAuditsModule();
 }
@@ -779,6 +862,7 @@ function saveAuditFromForm() {
   const checked = (id) => { const field = byId(id); return Boolean(field && field.checked); };
   const trainer = auditTrainerRoster().find((row) => row.key === (byId("auditFormTrainer") ? byId("auditFormTrainer").value : draft.trainerKey));
   if (!trainer) { showToast("Pick the trainer this audit is for"); return; }
+  if (!auditIsScored(draft.kind)) return saveCoachingNote(trainer, draft);
   const ratings = {}, missingEvidence = [];
   AUDIT_AREAS.forEach((area) => {
     const score = Number(draft.ratings[area.key]) || 0, evidence = value("auditEvidence_" + area.key);
@@ -881,9 +965,94 @@ function auditScopeLine(audit) {
   return audit.minutes ? "Based on " + audit.minutes + " minutes." : part + ".";
 }
 
+// Reads like the conversation it was, not like a scorecard with the numbers removed.
+function renderCoachingNoteDetail(note) {
+  const area = AUDIT_AREAS.find((row) => row.key === note.focusArea);
+  const moment = (COACH_MOMENT.find((row) => row[0] === note.moment) || [])[1] || "";
+  const stuck = (COACH_STUCK.find((row) => row[0] === note.stuck) || [])[1] || "";
+  const flags = auditFlags(note);
+  const line = (label, body) => body ? '<div class="trainer-account-row"><div><b>' + escapeHtml(label) + '</b><span>' + escapeHtml(body) + '</span></div></div>' : "";
+  const body = '<div class="rx-strip">'
+    + '<div class="rx-cell"><div class="rx-k">Date</div><div class="rx-v">' + escapeHtml(note.date) + '</div></div>'
+    + '<div class="rx-cell"><div class="rx-k">Focus</div><div class="rx-v">' + escapeHtml(area ? area.title.split(" ")[0] : "—") + '</div></div>'
+    + '<div class="rx-cell"><div class="rx-k">Said at the time</div><div class="rx-v">' + escapeHtml(note.moment === "yes" ? "Yes" : note.moment === "after" ? "After" : "No") + '</div></div>'
+    + '<div class="rx-cell"><div class="rx-k">By</div><div class="rx-v">' + escapeHtml(note.auditorName || "") + '</div></div></div>'
+    + (flags.length ? '<p class="audit-band warn"><b>Flagged on safety.</b> See below.</p>' : '')
+    + '<div class="advanced-list" style="margin-top:10px">'
+    + line("What they did well", note.strength)
+    + line("The one thing", note.oneThing || note.changeOne)
+    + (area ? line("Which part of the job", area.title) : "")
+    + line("What you said", note.said)
+    + (moment ? line("When you said it", moment) : "")
+    + (stuck ? line("Last time's thing", stuck) : "")
+    + line("Watching for next time", note.nextWatch)
+    + '</div>';
+  const safetyHtml = flags.length
+    ? '<div class="advanced-list">' + flags.map((key) => { const item = AUDIT_SAFETY.find((row) => row[0] === key);
+        return '<div class="trainer-account-row warn"><div><b>' + escapeHtml(item ? item[1] : key) + '</b><span>' + escapeHtml(note.safety[key].note || "") + '</span></div></div>'; }).join('') + '</div>'
+      + (note.safetyAction ? '<p class="storage-note">What you did: '
+        + escapeHtml((AUDIT_SAFETY_ACTIONS.find((row) => row[0] === note.safetyAction.action) || [])[1] || note.safetyAction.action)
+        + (note.safetyAction.note ? ' — ' + escapeHtml(note.safetyAction.note) : '') + '</p>' : '')
+    : "";
+  const actions = '<div class="tool-actions"><button class="small-btn" onclick="openAuditTrainer(\'' + escapeHtml(note.trainerKey) + '\')">All of ' + escapeHtml(String(note.trainerName).split(" ")[0]) + '</button>'
+    + '<button class="small-btn" onclick="openAuditTab(\'audits\')">Back</button>'
+    + '<button class="small-btn" onclick="deleteTrainerAudit(\'' + note.id + '\')">Delete</button></div>';
+  return auditCard("Coaching note · " + note.trainerName, body + actions, true)
+    + (flags.length ? auditCard("Safety", safetyHtml, true) : "");
+}
+
+function saveCoachingNote(trainer, draft) {
+  captureCoachingDraft();
+  const value = (id) => { const field = byId(id); return field ? String(field.value || "").trim() : ""; };
+  const checked = (id) => { const field = byId(id); return Boolean(field && field.checked); };
+  const strength = (draft.coachStrength || "").trim(), oneThing = (draft.coachOneThing || "").trim();
+  if (!strength && !oneThing) { showToast("Write what they did well, or the one thing to work on. A note with neither says nothing."); return; }
+
+  const safety = {}, missingNote = [];
+  if (draft.sawUnsafe) {
+    AUDIT_SAFETY.forEach(([key, label]) => {
+      if (!checked("auditSafety_" + key)) return;
+      const note = value("auditSafetyNote_" + key);
+      if (!note) missingNote.push(label);
+      safety[key] = { checked:true, note };
+    });
+    if (missingNote.length) { showToast("Say what happened: " + missingNote[0]); return; }
+  }
+  let safetyAction = null;
+  if (Object.keys(safety).length) {
+    const picked = byId("auditSafetyAction") ? byId("auditSafetyAction").value : "";
+    const how = value("auditSafetyActionNote");
+    if (!picked) { showToast("Say what you did about the safety item before saving"); return; }
+    if (!how) { showToast("Add a line in your own words about what you did"); return; }
+    safetyAction = { action: picked, note: how, at: new Date().toISOString() };
+  }
+
+  const identity = currentAccountIdentity(), now = new Date().toISOString();
+  const note = {
+    id: auditNewId("coaching-note"), createdAt: now, updatedAt: now,
+    trainerKey: trainer.key, trainerName: trainer.name, trainerUserId: trainer.userId || "",
+    auditorUserId: identity.id, auditorName: identity.displayName,
+    date: value("auditFormDate") || auditToday(), kind: "developmental", type: "audit",
+    ratings: {}, safety, safetyAction,
+    strength, oneThing, changeOne: oneThing,
+    focusArea: draft.focusArea || "", moment: draft.moment || "",
+    said: (draft.coachSaid || "").trim(),
+    nextWatch: (draft.coachNextWatch || "").trim(),
+    stuck: draft.stuck || "",
+    followUp: { needed: checked("auditFollowNeeded"), by: value("auditFollowBy"), resolvedAt:"", resolvedBy:"" }
+  };
+  note.scorePct = null;
+  note.flagged = auditIsFlagged(note);
+  if (!saveTrainerAudit(note)) return;
+  auditView = { tab:"detail", trainerKey:trainer.key, auditId:note.id, draft:null };
+  renderTrainerAuditsModule();
+  showToast("Coaching note saved for " + trainer.name);
+}
+
 function renderAuditDetail() {
   const audit = loadTrainerAudits().find((row) => row.id === auditView.auditId);
   if (!audit) { auditView.tab = "audits"; return renderAuditsList(); }
+  if (!auditIsScored(audit.kind)) return renderCoachingNoteDetail(audit);
   const score = auditScore(audit), flags = auditFlags(audit);
   const areas = AUDIT_AREAS.map((area) => {
     const rating = audit.ratings && audit.ratings[area.key];
@@ -962,7 +1131,7 @@ window.renderCoachModule = function auditsRenderCoachModule(destination) {
     const title = byId("coachModuleTitle"), eyebrow = byId("coachModuleEyebrow"), copy = byId("coachModuleCopy");
     if (title) title.textContent = "Trainer audits";
     if (eyebrow) eyebrow.textContent = "Coach workspace";
-    if (copy) copy.textContent = "Watch a session, score it against what NASM and NSCA publish, and keep every audit in one place.";
+    if (copy) copy.textContent = "Coaching notes for the week-to-week, audits against what NASM and NSCA publish for the record, and every one of them in one place per trainer.";
     renderTrainerAuditsModule();
     return;
   }

@@ -2237,3 +2237,4 @@ body.cloud-first-password .cloud-auth-help{display:none}
   .audit-rating-btn{min-width:0;flex:1 1 30%}
   .audit-rating-end{display:none}
 }
+.audit-last-thing{margin:0 0 11px;padding:11px 13px;border-left:3px solid var(--blue);border-radius:0 8px 8px 0;background:var(--blue-glow);font-size:14px;line-height:1.5;color:var(--text)}
