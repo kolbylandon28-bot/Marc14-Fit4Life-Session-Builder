@@ -2175,3 +2175,37 @@ body.sandbox-on .consultation-option small{color:var(--text-faint)}
   margin: 14px 0 6px;
 }
 .advanced-subhead:first-child { margin-top: 0; }
+
+/* ---------- WORK AREA TILES ---------- */
+.area-group-stack{display:block;max-width:1060px;margin:0 auto}
+.area-group+.area-group{margin-top:30px}
+.area-group-label{display:flex;align-items:center;gap:11px;margin:0 2px 13px;font:600 10px var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--text-faint)}
+.area-group-label span{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 5px;border:1px solid var(--line);border-radius:999px;font-size:9px;letter-spacing:0;color:var(--text-dim)}
+.area-group-label::after{content:"";flex:1;height:1px;background:var(--line)}
+.area-group-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(252px,1fr));gap:16px;margin:0 auto}
+
+.area-card{min-height:214px;display:flex;flex-direction:column;align-items:flex-start;isolation:isolate}
+.area-card>*{position:relative;z-index:1}
+.area-card .area-art{position:absolute;z-index:0;right:-26px;bottom:-22px;width:252px;height:158px;color:var(--blue-bright);opacity:.07;
+  -webkit-mask-image:linear-gradient(295deg,#000 18%,rgba(0,0,0,.45) 56%,transparent 86%);
+  mask-image:linear-gradient(295deg,#000 18%,rgba(0,0,0,.45) 56%,transparent 86%);
+  transition:opacity .22s cubic-bezier(.2,.8,.2,1),transform .22s cubic-bezier(.2,.8,.2,1)}
+.area-card:hover .area-art{opacity:.15;transform:translate3d(-5px,-5px,0) scale(1.03)}
+.area-card .tc-icon{margin-bottom:14px}
+.area-card .tc-icon svg{width:24px;height:24px}
+.area-card.is-coaching .tc-icon{background:var(--slate-2);color:var(--blue-bright);border-color:var(--blue)}
+.area-card.is-coaching .tc-tag{color:var(--blue-bright);border-color:var(--blue);background:var(--blue-glow)}
+.area-card.is-coaching .area-art{opacity:.09}
+.area-card.is-coaching:hover .area-art{opacity:.18}
+.area-card .tc-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:11px}
+.area-card .tc-chips span{font:600 9.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);background:var(--slate-2);border:1px solid var(--line);border-radius:4px;padding:3px 7px}
+.area-card .role-action{margin-top:auto;padding-top:16px}
+@media(max-width:900px){
+  .area-group-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;max-width:none!important}
+}
+@media(max-width:620px){
+  .area-group-grid{grid-template-columns:1fr!important}
+  .area-card{min-height:0}
+  .area-card .tc-title{font-size:26px}
+  .area-card .area-art{width:214px;height:134px;right:-30px;bottom:-24px}
+}

@@ -335,14 +335,42 @@ function leaveWorkArea() {
   renderHomeChoices();
 }
 
+function areaToolChips(key) {
+  const chips = ["Clock", "Tasks", "Schedule"];
+  if (areaIsCoaching(key) && canEditClientRecords()) chips.unshift("Clients", "Programming");
+  if (areaHasEvents(key)) chips.push("Lessons");
+  return chips;
+}
+
 function areaTileHtml(key) {
   const name = workAreaName(key), coaching = areaIsCoaching(key);
-  return '<button class="tool-card role-card" onclick="enterWorkArea(\'' + escapeHtml(key) + '\')">'
+  return '<button class="tool-card role-card area-card' + (coaching ? ' is-coaching' : '') + '" onclick="enterWorkArea(\'' + escapeHtml(key) + '\')">'
+    + (typeof areaSceneSvg === "function" ? areaSceneSvg(key, name) : '')
     + '<span class="tc-tag">' + (coaching ? "Coaching" : "Shift") + '</span>'
-    + '<div class="tc-icon" aria-hidden="true">' + (coaching ? "&#127947;" : "&#128337;") + '</div>'
+    + '<div class="tc-icon" aria-hidden="true">' + (typeof areaGlyphSvg === "function" ? areaGlyphSvg(key, name) : '') + '</div>'
     + '<div class="tc-title">' + escapeHtml(name) + '</div>'
-    + '<div class="tc-desc">' + (coaching ? "Clients, programming and the floor." : "Your shift here: clock, schedule and tasks.") + '</div>'
+    + '<div class="tc-chips">' + areaToolChips(key).map((chip) => '<span>' + escapeHtml(chip) + '</span>').join('') + '</div>'
     + '<span class="role-action">Start here →</span></button>';
+}
+
+/* Grouped so the rows come out full instead of one card stranded on its own line.
+   Three across reads best, so the count drops only when three would leave a widow. */
+function areaGridColumns(count) {
+  if (count <= 3) return Math.max(1, count);
+  for (const cols of [3, 2, 4]) {
+    const last = count % cols;
+    if (last === 0 || (cols >= 3 && last >= cols - 1)) return cols;
+  }
+  return 3;
+}
+
+function areaGroupHtml(label, keys) {
+  if (!keys.length) return '';
+  const cols = areaGridColumns(keys.length);
+  return '<div class="area-group">'
+    + '<div class="area-group-label">' + escapeHtml(label) + '<span>' + keys.length + '</span></div>'
+    + '<div class="area-group-grid" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr));max-width:' + (cols * 354) + 'px">'
+    + keys.map(areaTileHtml).join('') + '</div></div>';
 }
 
 /* Rebuilt on every visit home, because who you are and where you can work both change.
@@ -359,12 +387,18 @@ function renderHomeChoices() {
   if (heading) heading.innerHTML = '<h1>Where are you<br><span class="grad-text">working today?</span></h1>'
     + '<p>' + (mine.length ? "Pick where you are. Your clock, your schedule and your tasks follow that choice."
       : "Set up your areas and everyone can pick where they are working.") + '</p>';
-  const tiles = mine.length ? mine.map(areaTileHtml)
-    : ['<button class="tool-card role-card primary" onclick="openCoachDestination(\'areas\')">'
-       + '<span class="tc-tag">First run</span><div class="tc-icon" aria-hidden="true">&#9776;</div>'
-       + '<div class="tc-title">Set up your areas</div><div class="tc-desc">Maintenance, I-Center, Equipment Center, Pool and Gym — then invite people into them.</div>'
-       + '<span class="role-action">Open areas &amp; people →</span></button>'];
-  grid.innerHTML = tiles.join("");
+  if (mine.length) {
+    grid.className = "area-group-stack";
+    grid.innerHTML = areaGroupHtml("Coaching floors", mine.filter(areaIsCoaching))
+      + areaGroupHtml("Shift areas", mine.filter((key) => !areaIsCoaching(key)));
+  } else {
+    grid.className = "role-choice-grid";
+    grid.innerHTML = '<button class="tool-card role-card primary" onclick="openCoachDestination(\'areas\')">'
+      + '<span class="tc-tag">First run</span>'
+      + '<div class="tc-icon" aria-hidden="true">' + (typeof areaGlyphSvg === "function" ? areaGlyphSvg("default", "") : '') + '</div>'
+      + '<div class="tc-title">Set up your areas</div><div class="tc-desc">Maintenance, I-Center, Equipment Center, Pool and Gym — then invite people into them.</div>'
+      + '<span class="role-action">Open areas &amp; people →</span></button>';
+  }
   renderHomeSideDoors(owner);
 }
 

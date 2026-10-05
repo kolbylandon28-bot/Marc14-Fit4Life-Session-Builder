@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-10-05-v117-area-tasks-events-r1";
+const CACHE_NAME = "fit4life-shell-2026-10-05-v118-area-artwork-r2";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20261005-v117-area-tasks-events-r1";
+const ASSET_VERSION = "20261005-v118-area-artwork-r2";
 const SHELL = [
   "/",
   "/index.html",
@@ -10,6 +10,7 @@ const SHELL = [
   "/js/app/role-governance.js?v=" + ASSET_VERSION,
   "/js/app/action-calendar.js?v=" + ASSET_VERSION,
   "/js/app/trainer-audits.js?v=" + ASSET_VERSION,
+  "/js/app/area-art.js?v=" + ASSET_VERSION,
   "/js/app/work-areas.js?v=" + ASSET_VERSION,
   "/js/app/area-tools.js?v=" + ASSET_VERSION,
   "/js/app/walkthrough.js?v=" + ASSET_VERSION,
