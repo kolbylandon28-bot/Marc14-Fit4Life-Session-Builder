@@ -85,6 +85,10 @@
 
   window.fit4lifeCloudRole = "";
   window.fit4lifeCloudReady = false;
+  // Anything needing a signed-in session waits on this instead of firing at page load.
+  function announceCloudReady() {
+    try { window.dispatchEvent(new CustomEvent("fit4life-cloud-ready")); } catch (_) {}
+  }
   window.fit4lifeCloudRegistrationRequests = [];
   window.fit4lifeCloudOrganizationId = "";
 
@@ -183,7 +187,7 @@
     try { localStorage.setItem(CLOUD_KEYS.activeClient,profileId); } catch (_) {}
     cloudUser = interactionRole === "client" ? {id:"interaction-test-client-user",email:"interaction@byui.edu",user_metadata:{display_name:"Interaction Test Client"}} : {id:"interaction-test-owner",email:"owner@interaction.test",user_metadata:{display_name:savedStaffName}};
     cloudRole = interactionRole; cloudReady = true;
-    window.fit4lifeCloudRole = interactionRole; window.fit4lifeCloudReady = true;
+    window.fit4lifeCloudRole = interactionRole; window.fit4lifeCloudReady = true; announceCloudReady();
     window.fit4lifeCloudIdentity = {id:cloudUser.id,email:cloudUser.email,role:interactionRole,displayName:interactionRole === "client" ? "Interaction Test Client" : savedStaffName};
     window.fit4lifeCloudTrainers = [{user_id:cloudUser.id,display_name:savedStaffName,email:cloudUser.email,role:"owner",is_active:true}];
     showAuthGate(false); cloudStatus("Local interaction test", "offline"); authMessage("", false);
@@ -1820,6 +1824,7 @@
     updateAccountUi();
     cloudReady = true;
     window.fit4lifeCloudReady = true;
+    announceCloudReady();
     let safeToPull = true;
     try {
       await hydrateRemoteProfileMap();
@@ -2414,10 +2419,15 @@
 
   window.fit4lifeCloudSaveWorkArea = async function fit4lifeCloudSaveWorkArea(areaKey, name, sortOrder, active, coaching, events) {
     if (!cloudClient || cloudRole !== "owner" || !cloudOrganizationId) return false;
-    const response = await cloudClient.rpc("save_fit4life_work_area", {
+    const base = {
       target_organization: cloudOrganizationId, area: areaKey || "", area_name: name || "",
-      position_in_list: Number(sortOrder) || 0, active: active !== false, coaching: coaching === true, events: events === true
-    });
+      position_in_list: Number(sortOrder) || 0, active: active !== false, coaching: coaching === true
+    };
+    let response = await cloudClient.rpc("save_fit4life_work_area", Object.assign({ events: events === true }, base));
+    // The calendar flag arrived in a later migration; a gym that has not run it yet still saves.
+    if (response.error && /events|function|schema/i.test(response.error.message || "")) {
+      response = await cloudClient.rpc("save_fit4life_work_area", base);
+    }
     if (response.error) { window.fit4lifeWorkAreasAvailable = false; return false; }
     await window.fit4lifeCloudListWorkAreas();
     return true;

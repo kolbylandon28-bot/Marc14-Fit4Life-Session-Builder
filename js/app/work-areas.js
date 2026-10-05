@@ -104,13 +104,41 @@ function renderAreaListCard() {
     + '<div class="tool-actions"><button class="small-btn" onclick="addWorkAreaFromForm()">Add area</button></div></section>';
 }
 
-async function addStandardWorkAreas() {
+let workAreasRequested = false, standardAreasSeeded = false;
+
+function loadWorkAreasOnce(force) {
+  if (typeof window.fit4lifeCloudListWorkAreas !== "function") return;
+  if (!window.fit4lifeCloudReady) return;
+  if (workAreasRequested && !force) return;
+  workAreasRequested = true;
+  window.fit4lifeCloudListWorkAreas()
+    .then(() => seedStandardAreasIfEmpty())
+    .then(() => {
+      renderWorkAreaPicker();
+      renderHomeChoices();
+      if (typeof renderWorkAreasModule === "function") renderWorkAreasModule();
+      if (typeof renderAreaHome === "function" && activeWorkArea()) renderAreaHome();
+    })
+    .catch(() => { workAreasRequested = false; });
+}
+
+async function seedStandardAreasIfEmpty() {
+  if (standardAreasSeeded) return;
+  if (window.fit4lifeWorkAreasAvailable !== true) return;
+  if (!isFit4LifeOwner()) return;
+  if ((window.fit4lifeWorkAreas || []).length) return;
+  standardAreasSeeded = true;
+  await addStandardWorkAreas(true);
+}
+
+async function addStandardWorkAreas(quiet) {
   for (let index = 0; index < WORK_AREA_DEFAULTS.length; index++) {
     const [key, name] = WORK_AREA_DEFAULTS[index];
     await window.fit4lifeCloudSaveWorkArea(key, name, index, true, COACHING_DEFAULTS.includes(key), EVENT_DEFAULTS.includes(key));
   }
   renderWorkAreasModule();
-  showToast("Five areas added");
+  renderHomeChoices();
+  if (!quiet) showToast("Five areas added");
 }
 
 async function addWorkAreaFromForm() {
@@ -301,9 +329,7 @@ window.show = function areasShow(view) {
   return result;
 };
 
-if (typeof window.fit4lifeCloudListWorkAreas === "function") {
-  window.fit4lifeCloudListWorkAreas().then(() => renderWorkAreaPicker()).catch(() => {});
-}
+
 
 /* ---------- the front door ----------
    One question, answered once: where are you today. What shows after that is whatever
@@ -380,6 +406,15 @@ function renderHomeChoices() {
   const grid = byId("roleChoiceGrid");
   if (!grid) return;
   if (window.fit4lifeWorkAreasAvailable === false) return;
+  // Still fetching: say so rather than flashing the first-run card at someone whose areas exist.
+  if (window.fit4lifeWorkAreasAvailable === undefined) {
+    loadWorkAreasOnce();
+    if (!["owner", "trainer", "staff"].includes(window.fit4lifeCloudRole)) return;
+    grid.className = "role-choice-grid";
+    grid.innerHTML = '<div class="tool-card role-card"><div class="tc-title">Loading your areas</div>'
+      + '<div class="tc-desc">One moment.</div></div>';
+    return;
+  }
   const mine = myWorkAreas(), owner = isFit4LifeOwner(), heading = byId("roleHeroCopy"), path = byId("roleLevelPath");
   const areasExist = (window.fit4lifeWorkAreas || []).length > 0;
   if (!mine.length && !(owner && !areasExist)) return;
@@ -522,3 +557,7 @@ window.show = function areaHomeShow(view) {
   } catch (_) { /* navigation must never be blocked by the trimmings */ }
   return result;
 };
+
+/* The areas need a signed-in session, so the fetch waits for one instead of racing the page. */
+window.addEventListener("fit4life-cloud-ready", () => loadWorkAreasOnce(true));
+if (window.fit4lifeCloudReady) loadWorkAreasOnce();
