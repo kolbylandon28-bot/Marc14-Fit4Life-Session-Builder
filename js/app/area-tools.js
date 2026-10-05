@@ -4,7 +4,7 @@
    marked estimated until someone confirms it, and every correction keeps what it replaced. */
 
 const AREA_MAX_SHIFT_HOURS = 8;
-let areaToolsState = { entries: [], shifts: [], loadedFor: "", busy: false };
+let areaToolsState = { entries: [], shifts: [], tasks: [], events: [], loadedFor: "", busy: false };
 
 const asDate = (value) => value ? new Date(value) : null;
 const dayKey = (value) => { const date = asDate(value); return date ? date.toISOString().slice(0, 10) : ""; };
@@ -26,12 +26,17 @@ async function loadAreaTools(areaKey, force) {
   if (areaToolsState.loadedFor === areaKey && !force) return;
   areaToolsState.loadedFor = areaKey;
   const from = dayKey(weekStart()), to = dayKey(new Date(Date.now() + 13 * 86400000));
-  const [entries, shifts] = await Promise.all([
+  const wantsEvents = typeof areaHasEvents === "function" && areaHasEvents(areaKey);
+  const [entries, shifts, tasks, events] = await Promise.all([
     window.fit4lifeCloudListTimeEntries(from, to),
-    window.fit4lifeCloudListShifts(areaKey, from, to)
+    window.fit4lifeCloudListShifts(areaKey, from, to),
+    typeof window.fit4lifeCloudListAreaTasks === "function" ? window.fit4lifeCloudListAreaTasks(areaKey, dayKey(new Date())) : [],
+    wantsEvents && typeof window.fit4lifeCloudListAreaEvents === "function" ? window.fit4lifeCloudListAreaEvents(areaKey, from, to) : []
   ]);
   areaToolsState.entries = entries || [];
   areaToolsState.shifts = shifts || [];
+  areaToolsState.tasks = tasks || [];
+  areaToolsState.events = events || [];
   if (typeof window.fit4lifeCloudRegisterDevice === "function") await window.fit4lifeCloudRegisterDevice();
   if (isFit4LifeOwner() && typeof window.fit4lifeCloudListDevices === "function") await window.fit4lifeCloudListDevices();
   renderAreaHome();
@@ -193,4 +198,147 @@ async function setDeviceApproval(device, areaKey, approve) {
   await window.fit4lifeCloudListDevices();
   renderAreaHome();
   showToast(approve ? "Device approved" : "Device revoked");
+}
+
+/* ---------- the task list ----------
+   One list per area. An owner writes it, anyone working in the area ticks it off, and a
+   repeating task is ticked per day so yesterday's tick does not hide today's job. */
+const TASK_REPEATS = [["once", "One off"], ["daily", "Every day"], ["weekly", "Every week"]];
+const repeatLabel = (value) => (TASK_REPEATS.find((row) => row[0] === value) || TASK_REPEATS[0])[1];
+const todayKey = () => dayKey(new Date());
+
+function taskIsDue(task, onDay) {
+  if (task.repeats === "daily") return true;
+  if (task.repeats === "weekly") {
+    if (!task.due_on) return true;
+    const due = asDate(task.due_on), day = asDate(onDay);
+    return !due || !day || due.getUTCDay() === day.getUTCDay();
+  }
+  return !task.due_on || dayKey(task.due_on) <= onDay;
+}
+
+const taskIsDone = (task) => Boolean(task.done_on);
+
+function areaTasksCardHtml(areaKey) {
+  const day = todayKey();
+  const all = (areaToolsState.tasks || []).filter((task) => task.area_key === areaKey);
+  const due = all.filter((task) => taskIsDue(task, day));
+  const done = due.filter(taskIsDone).length;
+  const owner = isFit4LifeOwner();
+  const mine = (window.fit4lifeCloudIdentity || {}).id;
+
+  const rows = due.length ? due.map((task) => {
+    const finished = taskIsDone(task);
+    const forWho = task.assigned_to ? (task.assigned_to === mine ? "You" : (task.assigned_name || peopleName(task.assigned_to))) : "Anyone on shift";
+    return '<div class="trainer-account-row' + (finished ? ' ok' : '') + '"><div><b>' + (finished ? '&#10003; ' : '') + escapeHtml(task.title) + '</b><span>'
+      + escapeHtml(repeatLabel(task.repeats)) + ' · ' + escapeHtml(forWho)
+      + (task.due_on && task.repeats === "once" ? ' · due ' + escapeHtml(dayLabel(task.due_on)) : '')
+      + (finished ? ' · done by ' + escapeHtml(peopleName(task.done_by)) + ' at ' + escapeHtml(clockTime(task.done_at)) : '')
+      + (task.detail ? '<br>' + escapeHtml(task.detail) : '') + '</span></div>'
+      + '<div class="tool-actions"><button class="small-btn' + (finished ? '' : ' primary') + '" onclick="setTaskDone(\'' + task.id + '\',' + (finished ? 'false' : 'true') + ')">'
+      + (finished ? 'Undo' : 'Mark done') + '</button>'
+      + (owner ? '<button class="small-btn" onclick="removeAreaTask(\'' + task.id + '\')">Remove</button>' : '') + '</div></div>';
+  }).join('') : '<div class="empty-state">Nothing on the list for today.</div>';
+
+  const add = owner ? '<div class="compact-grid" style="margin-top:12px">'
+    + '<div class="compact-field"><label for="taskTitle">Task</label><input id="taskTitle" placeholder="Wipe down the squat racks"></div>'
+    + '<div class="compact-field"><label for="taskRepeats">How often</label><select id="taskRepeats">'
+    + TASK_REPEATS.map((row) => '<option value="' + row[0] + '">' + row[1] + '</option>').join('') + '</select></div>'
+    + '<div class="compact-field"><label for="taskDue">Day</label><input id="taskDue" type="date"></div>'
+    + '<div class="compact-field"><label for="taskPerson">Who</label><select id="taskPerson"><option value="">Anyone on shift</option>'
+    + (window.fit4lifeCloudTrainers || []).map((person) => '<option value="' + escapeHtml(person.user_id) + '">' + escapeHtml(person.display_name || person.email) + '</option>').join('')
+    + '</select></div>'
+    + '<div class="compact-field" style="grid-column:1/-1"><label for="taskDetail">How it is done</label><input id="taskDetail" placeholder="Spray, wipe, check the pins"></div></div>'
+    + '<div class="tool-actions"><button class="small-btn primary" onclick="addAreaTask(\'' + escapeHtml(areaKey) + '\')">Add task</button></div>' : '';
+
+  return '<section class="coach-module-card" style="grid-column:1/-1"><h3>Tasks</h3>'
+    + '<p class="storage-note">' + (due.length ? escapeHtml(done + " of " + due.length + " done today") : "Nothing due today")
+    + (all.length > due.length ? ' · ' + escapeHtml((all.length - due.length) + " not due today") : '') + '</p>'
+    + '<div class="advanced-list">' + rows + '</div>' + add + '</section>';
+}
+
+async function setTaskDone(taskId, done) {
+  const result = await window.fit4lifeCloudCompleteAreaTask(taskId, todayKey(), done, "");
+  if (!result || !result.ok) { showToast((result && result.error) || "That could not be saved"); return; }
+  await loadAreaTools(activeWorkArea(), true);
+  showToast(done ? "Ticked off" : "Put back on the list");
+}
+
+async function addAreaTask(areaKey) {
+  const title = byId("taskTitle"), detail = byId("taskDetail"), repeats = byId("taskRepeats"), due = byId("taskDue"), person = byId("taskPerson");
+  if (!title || !title.value.trim()) { showToast("Give the task a name"); return; }
+  const label = person && person.value && person.options[person.selectedIndex] ? person.options[person.selectedIndex].textContent : "";
+  const result = await window.fit4lifeCloudSaveAreaTask(areaKey, title.value.trim(), detail ? detail.value : "",
+    repeats ? repeats.value : "once", due && due.value ? due.value : null, person ? person.value : "", label,
+    (areaToolsState.tasks || []).length, null);
+  if (!result || !result.ok) { showToast((result && result.error) || "That task could not be saved"); return; }
+  showToast("Task added");
+  await loadAreaTools(areaKey, true);
+}
+
+async function removeAreaTask(taskId) {
+  if (!window.confirm("Take this off the list?")) return;
+  await window.fit4lifeCloudDeleteAreaTask(taskId);
+  await loadAreaTools(activeWorkArea(), true);
+}
+
+/* ---------- lessons, clinics and trainings ----------
+   Only areas that run them get this card, so the Equipment Center is not asked about swim
+   lessons. An owner sets the calendar; everyone working there reads it. */
+const EVENT_KINDS = [["lesson", "Lesson"], ["clinic", "Clinic"], ["training", "Staff training"], ["event", "Event"], ["closure", "Closed"]];
+const eventKindLabel = (value) => (EVENT_KINDS.find((row) => row[0] === value) || EVENT_KINDS[3])[1];
+
+function areaEventsCardHtml(areaKey) {
+  const events = (areaToolsState.events || []).filter((row) => row.area_key === areaKey)
+    .slice().sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)));
+  const owner = isFit4LifeOwner();
+  const byDay = new Map();
+  events.forEach((row) => {
+    const key = dayKey(row.starts_at);
+    if (!byDay.has(key)) byDay.set(key, []);
+    byDay.get(key).push(row);
+  });
+  const days = [...byDay.entries()].map(([key, list]) => '<div class="advanced-subhead">' + escapeHtml(dayLabel(key)) + '</div>'
+    + list.map((row) => '<div class="trainer-account-row"><div><b>' + escapeHtml(eventKindLabel(row.kind) + ": " + row.title) + '</b><span>'
+      + escapeHtml(clockTime(row.starts_at) + "–" + clockTime(row.ends_at)
+        + (row.location ? " · " + row.location : "")
+        + (row.lead_name || row.lead_user_id ? " · " + (row.lead_name || peopleName(row.lead_user_id)) : "")
+        + (row.capacity ? " · " + row.capacity + " spots" : "")) + '</span></div>'
+      + (owner ? '<div class="tool-actions"><button class="small-btn" onclick="removeAreaEvent(\'' + row.id + '\')">Remove</button></div>' : '') + '</div>').join('')).join('');
+
+  const add = owner ? '<div class="compact-grid" style="margin-top:12px">'
+    + '<div class="compact-field"><label for="eventTitle">What</label><input id="eventTitle" placeholder="Beginner swim lesson"></div>'
+    + '<div class="compact-field"><label for="eventKind">Kind</label><select id="eventKind">'
+    + EVENT_KINDS.map((row) => '<option value="' + row[0] + '">' + row[1] + '</option>').join('') + '</select></div>'
+    + '<div class="compact-field"><label for="eventStart">Starts</label><input id="eventStart" type="datetime-local" value="' + localInput(new Date(Date.now() + 86400000)) + '"></div>'
+    + '<div class="compact-field"><label for="eventEnd">Ends</label><input id="eventEnd" type="datetime-local" value="' + localInput(new Date(Date.now() + 86400000 + 3600000)) + '"></div>'
+    + '<div class="compact-field"><label for="eventWhere">Where</label><input id="eventWhere" placeholder="Lap lanes 1–3"></div>'
+    + '<div class="compact-field"><label for="eventSpots">Spots</label><input id="eventSpots" type="number" min="1" placeholder="12"></div>'
+    + '<div class="compact-field"><label for="eventLead">Who runs it</label><select id="eventLead"><option value="">Not set</option>'
+    + (window.fit4lifeCloudTrainers || []).map((person) => '<option value="' + escapeHtml(person.user_id) + '">' + escapeHtml(person.display_name || person.email) + '</option>').join('')
+    + '</select></div></div>'
+    + '<div class="tool-actions"><button class="small-btn primary" onclick="addAreaEvent(\'' + escapeHtml(areaKey) + '\')">Add to the calendar</button></div>' : '';
+
+  return '<section class="coach-module-card" style="grid-column:1/-1"><h3>Lessons, clinics and trainings</h3>'
+    + (days ? '<div class="advanced-list">' + days + '</div>' : '<div class="empty-state">Nothing booked in the next two weeks.</div>') + add + '</section>';
+}
+
+async function addAreaEvent(areaKey) {
+  const title = byId("eventTitle"), kind = byId("eventKind"), starts = byId("eventStart"), ends = byId("eventEnd");
+  const where = byId("eventWhere"), spots = byId("eventSpots"), lead = byId("eventLead");
+  if (!title || !title.value.trim()) { showToast("Give it a name"); return; }
+  if (!starts || !ends || !starts.value || !ends.value) { showToast("Pick a start and an end"); return; }
+  const label = lead && lead.value && lead.options[lead.selectedIndex] ? lead.options[lead.selectedIndex].textContent : "";
+  const result = await window.fit4lifeCloudSaveAreaEvent(areaKey, title.value.trim(), kind ? kind.value : "event",
+    new Date(starts.value).toISOString(), new Date(ends.value).toISOString(), where ? where.value : "",
+    spots ? spots.value : "", lead ? lead.value : "", label, "", null);
+  if (!result || !result.ok) { showToast((result && result.error) || "That could not be saved"); return; }
+  showToast("On the calendar");
+  await loadAreaTools(areaKey, true);
+}
+
+async function removeAreaEvent(eventId) {
+  if (!window.confirm("Take this off the calendar?")) return;
+  await window.fit4lifeCloudDeleteAreaEvent(eventId);
+  await loadAreaTools(activeWorkArea(), true);
 }

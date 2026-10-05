@@ -2345,6 +2345,51 @@
     return !response.error;
   };
 
+  /* ---------- tasks and the events calendar ----------
+     An owner writes both. Anyone who works in the area ticks a task off, and a repeating task
+     is ticked per day, so yesterday's tick does not hide today's job. */
+  window.fit4lifeAreaTasks = [];
+  window.fit4lifeAreaEvents = [];
+
+  window.fit4lifeCloudListAreaTasks = async function fit4lifeCloudListAreaTasks(area, onDay) {
+    const response = await areaRpc("list_fit4life_area_tasks", { area: area || null, on_day: onDay || null });
+    window.fit4lifeAreaTasks = response.error ? [] : (response.data || []);
+    return window.fit4lifeAreaTasks;
+  };
+  window.fit4lifeCloudSaveAreaTask = async function fit4lifeCloudSaveAreaTask(area, title, detail, repeats, due, assigned, assignedName, sort, taskId) {
+    const response = await areaRpc("save_fit4life_area_task", {
+      area, task_title: title, task_detail: detail || "", task_repeats: repeats || "once", task_due: due || null,
+      task_assigned: assigned || null, task_assigned_name: assignedName || "", task_sort: sort || 0, task_id: taskId || null
+    });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true, id: response.data };
+  };
+  window.fit4lifeCloudDeleteAreaTask = async function fit4lifeCloudDeleteAreaTask(taskId) {
+    const response = await areaRpc("delete_fit4life_area_task", { task_id: taskId });
+    return !response.error;
+  };
+  window.fit4lifeCloudCompleteAreaTask = async function fit4lifeCloudCompleteAreaTask(taskId, onDay, done, note) {
+    const response = await areaRpc("complete_fit4life_area_task", { task: taskId, on_day: onDay || null, done: done !== false, done_note: note || "" });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true };
+  };
+
+  window.fit4lifeCloudListAreaEvents = async function fit4lifeCloudListAreaEvents(area, fromDay, toDay) {
+    const response = await areaRpc("list_fit4life_area_events", { area: area || null, from_day: fromDay || null, to_day: toDay || null });
+    window.fit4lifeAreaEvents = response.error ? [] : (response.data || []);
+    return window.fit4lifeAreaEvents;
+  };
+  window.fit4lifeCloudSaveAreaEvent = async function fit4lifeCloudSaveAreaEvent(area, title, kind, starts, ends, location, capacity, lead, leadName, note, eventId) {
+    const response = await areaRpc("save_fit4life_area_event", {
+      area, event_title: title, event_kind: kind || "event", starts, ends, event_location: location || "",
+      event_capacity: Number.isFinite(Number(capacity)) && Number(capacity) > 0 ? Number(capacity) : null,
+      event_lead: lead || null, event_lead_name: leadName || "", event_note: note || "", event_id: eventId || null
+    });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true, id: response.data };
+  };
+  window.fit4lifeCloudDeleteAreaEvent = async function fit4lifeCloudDeleteAreaEvent(eventId) {
+    const response = await areaRpc("delete_fit4life_area_event", { event_id: eventId });
+    return !response.error;
+  };
+
   /* ---------- work areas ----------
      A gym decides its own areas. Everyone signed in can read the list; only an owner writes
      it, and only an owner sets who works where. Staff see their own rows and nobody else's. */
@@ -2367,11 +2412,11 @@
     return window.fit4lifeWorkAreas;
   };
 
-  window.fit4lifeCloudSaveWorkArea = async function fit4lifeCloudSaveWorkArea(areaKey, name, sortOrder, active, coaching) {
+  window.fit4lifeCloudSaveWorkArea = async function fit4lifeCloudSaveWorkArea(areaKey, name, sortOrder, active, coaching, events) {
     if (!cloudClient || cloudRole !== "owner" || !cloudOrganizationId) return false;
     const response = await cloudClient.rpc("save_fit4life_work_area", {
       target_organization: cloudOrganizationId, area: areaKey || "", area_name: name || "",
-      position_in_list: Number(sortOrder) || 0, active: active !== false, coaching: coaching === true
+      position_in_list: Number(sortOrder) || 0, active: active !== false, coaching: coaching === true, events: events === true
     });
     if (response.error) { window.fit4lifeWorkAreasAvailable = false; return false; }
     await window.fit4lifeCloudListWorkAreas();

@@ -25,7 +25,9 @@ const workAreaName = (key) => key === ALL_AREAS_KEY ? "All areas" : (workAreas()
 const hasEveryArea = (keys) => (keys || []).includes(ALL_AREAS_KEY);
 const myWorkAreas = () => {
   const mine = window.fit4lifeMyAreas || [];
-  return hasEveryArea(mine) ? workAreas().map((area) => area.area_key) : mine;
+  // An owner can stand anywhere in their own building, so they never wait to be assigned.
+  if (isFit4LifeOwner() || hasEveryArea(mine)) return workAreas().map((area) => area.area_key);
+  return mine;
 };
 // The job, not the area, is what opens a client record.
 const canEditClientRecords = () => ["owner", "trainer"].includes(window.fit4lifeCloudRole);
@@ -88,8 +90,9 @@ function renderWorkAreasModule() {
 function renderAreaListCard() {
   const areas = window.fit4lifeWorkAreas || [];
   const rows = areas.length ? '<div class="advanced-list">' + areas.map((area) => '<div class="trainer-account-row"><div><b>' + escapeHtml(area.name) + '</b><span>'
-    + area.people + (Number(area.people) === 1 ? ' person' : ' people') + (area.is_coaching ? ' · coaching area' : ' · shift area') + (area.is_active === false ? ' · hidden' : '') + '</span></div>'
+    + area.people + (Number(area.people) === 1 ? ' person' : ' people') + (area.is_coaching ? ' · coaching area' : ' · shift area') + (area.has_events ? ' · calendar' : '') + (area.is_active === false ? ' · hidden' : '') + '</span></div>'
     + '<div class="tool-actions"><button class="small-btn" onclick="toggleWorkAreaCoaching(\'' + escapeHtml(area.area_key) + '\',' + (area.is_coaching ? 'false' : 'true') + ')" title="Coaching areas get clients, programming and the builder">' + (area.is_coaching ? 'Make shift only' : 'Make coaching') + '</button>'
+    + '<button class="small-btn" onclick="toggleWorkAreaEvents(\'' + escapeHtml(area.area_key) + '\',' + (area.has_events ? 'false' : 'true') + ')" title="A calendar for lessons, clinics and trainings">' + (area.has_events ? 'Drop the calendar' : 'Add a calendar') + '</button>'
     + '<button class="small-btn" onclick="renameWorkArea(\'' + escapeHtml(area.area_key) + '\')">Rename</button>'
     + '<button class="small-btn" onclick="toggleWorkArea(\'' + escapeHtml(area.area_key) + '\',' + (area.is_active === false ? 'true' : 'false') + ')">' + (area.is_active === false ? 'Show' : 'Hide') + '</button></div></div>').join('') + '</div>'
     : '<div class="empty-state">No areas yet.</div>';
@@ -104,7 +107,7 @@ function renderAreaListCard() {
 async function addStandardWorkAreas() {
   for (let index = 0; index < WORK_AREA_DEFAULTS.length; index++) {
     const [key, name] = WORK_AREA_DEFAULTS[index];
-    await window.fit4lifeCloudSaveWorkArea(key, name, index, true, COACHING_DEFAULTS.includes(key));
+    await window.fit4lifeCloudSaveWorkArea(key, name, index, true, COACHING_DEFAULTS.includes(key), EVENT_DEFAULTS.includes(key));
   }
   renderWorkAreasModule();
   showToast("Five areas added");
@@ -118,10 +121,18 @@ async function addWorkAreaFromForm() {
   showToast(done ? name + " added" : "That area could not be saved");
 }
 
+async function toggleWorkAreaEvents(key, makeEvents) {
+  const area = (window.fit4lifeWorkAreas || []).find((row) => row.area_key === key);
+  if (!area) return;
+  await window.fit4lifeCloudSaveWorkArea(key, area.name, area.sort_order, area.is_active !== false, area.is_coaching === true, Boolean(makeEvents));
+  renderWorkAreasModule();
+  showToast(area.name + (makeEvents ? " now has a calendar" : " no longer has a calendar"));
+}
+
 async function toggleWorkAreaCoaching(key, makeCoaching) {
   const area = (window.fit4lifeWorkAreas || []).find((row) => row.area_key === key);
   if (!area) return;
-  await window.fit4lifeCloudSaveWorkArea(key, area.name, area.sort_order, area.is_active !== false, Boolean(makeCoaching));
+  await window.fit4lifeCloudSaveWorkArea(key, area.name, area.sort_order, area.is_active !== false, Boolean(makeCoaching), area.has_events === true);
   renderWorkAreasModule();
   groupCoachSidebar();
   showToast(area.name + (makeCoaching ? " now has the coaching tools" : " is a shift area only"));
@@ -298,6 +309,11 @@ if (typeof window.fit4lifeCloudListWorkAreas === "function") {
    One question, answered once: where are you today. What shows after that is whatever
    belongs to that area, and nothing else. */
 const COACHING_DEFAULTS = ["gym", "pool"];
+const EVENT_DEFAULTS = ["gym", "pool"];
+const areaHasEvents = (key) => {
+  const area = (window.fit4lifeWorkAreas || []).find((row) => row.area_key === key);
+  return area ? area.has_events === true : EVENT_DEFAULTS.includes(key);
+};
 const areaIsCoaching = (key) => {
   const area = (window.fit4lifeWorkAreas || []).find((row) => row.area_key === key);
   return area ? area.is_coaching === true : COACHING_DEFAULTS.includes(key);
@@ -392,7 +408,9 @@ function renderAreaHome() {
   } else {
     cards.push(areaClockCardHtml(key));
     cards.push(areaTodayCardHtml(key));
+    if (typeof areaTasksCardHtml === "function") cards.push(areaTasksCardHtml(key));
     cards.push(areaScheduleCardHtml(key));
+    if (areaHasEvents(key) && typeof areaEventsCardHtml === "function") cards.push(areaEventsCardHtml(key));
     if (isFit4LifeOwner()) {
       cards.push(areaHoursCardHtml());
       cards.push(areaDevicesCardHtml(key));
