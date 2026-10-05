@@ -96,14 +96,71 @@ function auditsForTrainer(key) {
   return loadTrainerAudits().filter((audit) => audit.trainerKey === key).sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
 
-// The hand-entered trainer stays the source of truth; an app account is attached when the
-// email matches, so audits still work for staff who have never signed in.
+// Every trainer the gym has is auditable without being typed in twice: the ones with an
+// account, the ones still sitting on an invite, and the hand-entered ones for people who
+// will never sign in. The email is the key throughout, so old audits stay attached.
+const AUDIT_HIDDEN_KEY = "fit4life_audit_hidden_trainers_v1";
+const loadHiddenAuditTrainers = () => loadLocalArray(AUDIT_HIDDEN_KEY);
+const writeHiddenAuditTrainers = (keys) => writeLocalArray(AUDIT_HIDDEN_KEY, keys, 400);
+
 function auditTrainerRoster() {
-  const roster = window.fit4lifeCloudTrainers || [];
-  return loadAuditTrainers().map((trainer) => {
-    const match = roster.find((row) => auditTrainerKey(row.email) === trainer.key);
-    return { ...trainer, userId: match ? match.user_id : trainer.userId || "", linked: Boolean(match), accountName: match ? match.display_name : "" };
-  }).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  const accounts = (window.fit4lifeCloudTrainers || []).filter((row) => row.role === "trainer" && row.is_active !== false);
+  const invites = (window.fit4lifeStaffInvites || []).filter((row) =>
+    String(row.role || "trainer") === "trainer" && !row.accepted_at && !row.revoked_at);
+  const hidden = loadHiddenAuditTrainers().map((row) => (row && row.key) || row);
+  const byKey = new Map();
+
+  loadAuditTrainers().forEach((trainer) => {
+    if (trainer && trainer.key) byKey.set(trainer.key, { ...trainer, source: "manual" });
+  });
+
+  accounts.forEach((row) => {
+    const key = auditTrainerKey(row.email);
+    if (!key || key.indexOf("@") < 1) return;
+    const existing = byKey.get(key) || { id: "audit-trainer-account-" + key, key, email: key, active: true };
+    byKey.set(key, { ...existing,
+      name: existing.name || row.display_name || row.email,
+      userId: row.user_id || existing.userId || "",
+      linked: true,
+      accountName: row.display_name || "",
+      source: existing.source === "manual" ? "manual" : "account" });
+  });
+
+  invites.forEach((row) => {
+    const key = auditTrainerKey(row.email);
+    if (!key || key.indexOf("@") < 1 || byKey.has(key)) return;
+    byKey.set(key, { id: "audit-trainer-invite-" + key, key, email: key, active: true,
+      name: row.full_name || row.email, userId: "", linked: false, accountName: "", source: "invite" });
+  });
+
+  return [...byKey.values()]
+    .filter((trainer) => hidden.indexOf(trainer.key) < 0)
+    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+}
+
+const AUDIT_SOURCE_TEXT = {
+  manual: "added by hand",
+  account: "from their account",
+  invite: "invited, not signed in yet"
+};
+
+// A trainer who comes from an account cannot be deleted - the next load would bring them
+// back - so they are hidden instead, and only while they have no audits against them.
+function hideAuditTrainer(key) {
+  const audits = auditsForTrainer(key);
+  if (audits.length) { showToast("That trainer has " + audits.length + " audit" + (audits.length === 1 ? "" : "s") + ". Delete those first if you really want them off the list."); return; }
+  if (!window.confirm("Hide this trainer from the audit list? They stay a trainer in the app.")) return;
+  const hidden = loadHiddenAuditTrainers().map((row) => (row && row.key) || row);
+  if (hidden.indexOf(key) < 0) hidden.push(key);
+  writeHiddenAuditTrainers(hidden);
+  renderTrainerAuditsModule();
+  showToast("Hidden from the audit list");
+}
+
+function unhideAuditTrainers() {
+  writeHiddenAuditTrainers([]);
+  renderTrainerAuditsModule();
+  showToast("Everyone is back on the list");
 }
 
 /* ---------- scoring ---------- */
@@ -366,17 +423,26 @@ function renderAuditTrainersCard() {
   const add = '<div class="compact-grid"><div class="compact-field"><label for="auditTrainerName">Name</label><input id="auditTrainerName" placeholder="Zach B"></div>'
     + '<div class="compact-field"><label for="auditTrainerEmail">Email</label><input id="auditTrainerEmail" type="email" placeholder="zach@example.com" autocapitalize="none"></div></div>'
     + '<div class="tool-actions"><button class="small-btn primary" onclick="addAuditTrainerFromForm()">Add trainer</button></div>'
-    + '<p class="storage-note">The email keeps every audit attached to the same person, is where "Send to trainer" addresses, and links the audit to their FIT4LIFE account when it matches.</p>';
+    + '<p class="storage-note">Everyone you invited as a trainer is already on this list. Add someone by hand only if they will never have an account. The email keeps every audit attached to the same person and is where "Send to trainer" addresses.</p>';
   const rows = trainers.length ? '<div class="advanced-list" style="margin-top:12px">' + trainers.map((trainer) => {
     const invite = trainerInviteFor(trainer.key);
+    const count = auditsForTrainer(trainer.key).length;
     return '<div class="trainer-account-row"><div><b>' + escapeHtml(trainer.name) + '</b><span>'
-      + escapeHtml(trainer.email) + ' · ' + escapeHtml(inviteStatusText(trainer, invite)) + ' · ' + auditsForTrainer(trainer.key).length + ' audits</span></div>'
+      + escapeHtml(trainer.email) + ' · ' + escapeHtml(AUDIT_SOURCE_TEXT[trainer.source] || "on the list")
+      + ' · ' + escapeHtml(inviteStatusText(trainer, invite)) + ' · ' + count + (count === 1 ? ' audit' : ' audits') + '</span></div>'
       + '<div class="tool-actions">' + inviteButtonsHtml(trainer, invite)
       + '<button class="small-btn" onclick="openAuditTrainer(\'' + escapeHtml(trainer.key) + '\')">Audits</button>'
-      + '<button class="small-btn" onclick="removeAuditTrainer(\'' + escapeHtml(trainer.key) + '\')">Remove</button></div></div>';
+      + (trainer.source === "manual"
+        ? '<button class="small-btn" onclick="removeAuditTrainer(\'' + escapeHtml(trainer.key) + '\')">Remove</button>'
+        : '<button class="small-btn" onclick="hideAuditTrainer(\'' + escapeHtml(trainer.key) + '\')">Hide</button>')
+      + '</div></div>';
   }).join('') + '</div>'
-    : '<div class="empty-state">No trainers yet. Add the ones you are auditing this semester.</div>';
-  return auditCard("Trainers", add + rows, true);
+    : '<div class="empty-state">No trainers yet. Invite someone as a trainer and they appear here on their own.</div>';
+  const hiddenCount = loadHiddenAuditTrainers().length;
+  const hiddenNote = hiddenCount ? '<div class="tool-actions" style="margin-top:10px"><span class="storage-note">'
+    + hiddenCount + (hiddenCount === 1 ? ' trainer is' : ' trainers are') + ' hidden from this list.</span>'
+    + '<button class="small-btn" onclick="unhideAuditTrainers()">Show them again</button></div>' : '';
+  return auditCard("Trainers · " + trainers.length, add + rows + hiddenNote, true);
 }
 
 /* ---------- getting them into the app ---------- */
