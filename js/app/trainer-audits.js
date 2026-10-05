@@ -16,20 +16,34 @@ const AUDIT_SCALE = [
 ];
 
 /* Weights follow the published exam blueprints: NASM Exercise Technique and Training
-   Instruction is 24% and NSCA Program Execution is 36%, the heaviest domain in each. */
+   Instruction is 24% and NSCA Program Execution is 36%, the heaviest domain in each. The
+   order is the session's, not the blueprint's, so the auditor meets each area roughly when
+   it happens. Weights are unchanged by that ordering. */
 const AUDIT_AREAS = [
-  { key:"technique", weight:30, title:"Technique instruction and correction", source:"NASM Domain 5 (24%) · NSCA Program Execution (36%)",
-    look:["Demonstrated the movement, not just described it","Watched the working set from where they could see it","Corrected during the set, not only after","Cued breathing on loaded work","Regressed what the client could not do cleanly, progressed what they owned, and said why","Set the equipment up for this client's body"] },
-  { key:"supervision", weight:20, title:"Supervision and spotting", source:"NSCA Professional Standards 3.1 and 3.2",
-    look:["Within reach and in line of sight while the client was under load","Attentive spot on anything held over the trunk or head","Pins set, collars on","Rep count or a say-when agreed before the set","Phone away, attention on the client","Did not leave the floor mid-session without a handoff"] },
-  { key:"structure", weight:20, title:"Session and program structure", source:"NSCA Program Planning (29%) · NASM Program Design (20%)",
-    look:["Followed a written program rather than improvising","Exercise order made sense for the goal","Rest was managed, not left to drift","Tempo or effort target given where it mattered","Adjusted the plan from what they saw in front of them"] },
-  { key:"fit", weight:10, title:"Fit to this client", source:"NASM Assessment (16%) · NSCA Client Consultation and Assessment (23%)",
+  { key:"manner", weight:10, title:"Client manner", phase:"First two minutes",
+    why:"The first two minutes decide whether the client mentions the shoulder that has been bothering them. A trainer who does not ask does not find out.",
+    source:"NASM Client Relations and Behavioral Coaching (15%)",
+    look:["Greeted by name and picked up from last session","Checked sleep, stress or soreness, not only today's sets","Asked open questions and let the client finish","Energy matched the client rather than flat or performative","Was honest about what the client can expect"] },
+  { key:"fit", weight:10, title:"Fit to this client", phase:"Before the first set",
+    why:"A good session for the wrong person is still the wrong session. This is where their goals and their health screen have to actually show up.",
+    source:"NASM Assessment (16%) · NSCA Client Consultation and Assessment (23%)",
     look:["Session matched the client's stated goals","Anything flagged on their health screen showed up as a modification","Referred back to an assessment result","A reassessment date exists"] },
-  { key:"manner", weight:10, title:"Client manner", source:"NASM Client Relations and Behavioral Coaching (15%)",
-    look:["Greeted by name and picked up from last session","Asked open questions and let the client finish","Energy matched the client rather than flat or performative","Checked sleep, stress or soreness, not only today's sets","Was honest about what the client can expect"] },
-  { key:"professionalism", weight:10, title:"Professionalism and scope", source:"NASM Domain 6 (10%) · NSCA Safety, Emergency and Legal (12%)",
-    look:["Stayed out of diagnosing, treating pain, meal plans and supplements","Named a referral where one was warranted","Said before putting hands on, and the client agreed","Logged the session","Left the area and the equipment as they found it"] }
+  { key:"structure", weight:20, title:"Session and program structure", phase:"The shape of the hour",
+    why:"The difference between a trainer and someone making it up is whether there was a plan before the client walked in.",
+    source:"NSCA Program Planning (29%) · NASM Program Design (20%)",
+    look:["Followed a written program rather than improvising","Exercise order made sense for the goal","Tempo or effort target given where it mattered","Rest was managed, not left to drift","Adjusted the plan from what they saw in front of them"] },
+  { key:"technique", weight:30, title:"Technique instruction and correction", phase:"During the sets",
+    why:"Worth the most because it is most of the job, and because it is where people get hurt.",
+    source:"NASM Domain 5 (24%) · NSCA Program Execution (36%)",
+    look:["Set the equipment up for this client's body","Demonstrated the movement, not just described it","Watched the working set from where they could see it","Cued breathing on loaded work","Corrected during the set, not only after","Regressed what the client could not do cleanly, progressed what they owned, and said why"] },
+  { key:"supervision", weight:20, title:"Supervision and spotting", phase:"During the sets",
+    why:"Almost every serious gym injury happens when nobody was close enough to stop it.",
+    source:"NSCA Professional Standards 3.1 and 3.2",
+    look:["Pins set, collars on","Rep count or a say-when agreed before the set","Within reach and in line of sight while the client was under load","Attentive spot on anything held over the trunk or head","Phone away, attention on the client","Did not leave the floor mid-session without a handoff"] },
+  { key:"professionalism", weight:10, title:"Professionalism and scope", phase:"Throughout, and the close",
+    why:"Where the gym's liability actually lives. Diagnosing pain or writing a meal plan is outside what a CPT is covered to do.",
+    source:"NASM Domain 6 (10%) · NSCA Safety, Emergency and Legal (12%)",
+    look:["Said before putting hands on, and the client agreed","Stayed out of diagnosing, treating pain, meal plans and supplements","Named a referral where one was warranted","Left the area and the equipment as they found it","Logged the session"] }
 ];
 
 /* Kept apart from the scores on purpose: a tick here flags the audit whatever the total says.
@@ -65,15 +79,50 @@ const AUDIT_LOG_TYPES = [
 ];
 
 const AUDIT_CERT_STATUS = [["none","Not started"],["in_progress","In progress"],["certified","Certified"]];
+/* CPR and AED is its own card with its own date. NASM and NSCA both require a current one to
+   hold the credential, and it is the first document anyone asks for after an incident, so a
+   trainer certified until 2028 with a lapsed card must not read as covered. */
+const AUDIT_CPR_STATUS = [["unknown","Not on file"],["current","Current"],["expired","Expired"]];
+const AUDIT_CPR_BODIES = [["aha","American Heart Association"],["redcross","Red Cross"],["other","Other"]];
 const AUDIT_CERT_BODIES = [["nasm","NASM"],["nsca","NSCA"],["acsm","ACSM"],["issa","ISSA"],["other","Other"]];
 /* Owner only. Never emailed, never shown to a trainer. */
 const AUDIT_GRADES = [["ready","Ready to promote"],["solid","Solid"],["developing","Developing"],["needs_work","Needs work"],["at_risk","At risk"]];
 
+/* Two different events, not two forms. The questions are identical so the standard is
+   identical; what changes is how much is required and what comes out the other end. */
 const AUDIT_KINDS = [
-  ["developmental","Developmental","You can coach in the moment. The score is for tracking, not for record."],
-  ["scored","Scored for record","Watch only. Step in for a safety risk and nothing else, then debrief afterwards."]
+  ["developmental","Developmental","Ten minutes on the floor. Coach in the moment, rate only what you watched, and leave them one thing to work on. Nothing goes in their file."],
+  ["scored","Scored for record","Watch only, safety aside. Every area answered, how long you watched recorded, and they sign that they have seen it. This one goes in their file."]
 ];
+const auditIsScored = (kind) => kind === "scored";
 const AUDIT_SESSION_TYPES = [["one_to_one","One to one"],["small_group","Small group"],["assessment","Assessment or intake"],["other","Other"]];
+
+/* Forgetting an area and deliberately skipping one used to be stored the same way - as the
+   absence of a press - so neither the auditor nor the trainer could tell them apart. */
+const AUDIT_NOT_SEEN_REASONS = [
+  ["nothing_came_up", "Nothing came up this session"],
+  ["ran_out", "Ran out of time"],
+  ["not_this_session", "Not part of this session type"]
+];
+
+/* A five minute walk-past and a watched hour used to be stored as equally authoritative. */
+const AUDIT_OBSERVED_PARTS = [
+  ["whole", "The whole session"],
+  ["working_sets", "The working sets"],
+  ["warm_up", "Warm-up only"],
+  ["dropped_in", "Dropped in partway"]
+];
+
+/* A ticked safety item used to flag the audit and nothing else. The documented response is
+   what protects the gym, not the observation on its own. */
+const AUDIT_SAFETY_ACTIONS = [
+  ["stopped", "Stopped the set there and then"],
+  ["coached", "Coached it in the moment and watched the next set"],
+  ["after", "Raised it with them straight after the session"],
+  ["removed", "Took them off the floor"],
+  ["report", "Filed an incident report"],
+  ["none", "Did nothing at the time"]
+];
 
 let auditView = { tab:"audits", trainerKey:"", auditId:"", draft:null };
 let auditFilters = { trainer:"", kind:"", from:"", to:"", flagged:false, follow:false, search:"" };
@@ -258,14 +307,26 @@ function auditEmailText(audit) {
   const lines = [];
   lines.push("Audit of your session on " + audit.date + (audit.kind === "scored" ? " (scored for record)" : " (developmental)"));
   lines.push("");
-  const score = auditScore(audit);
-  if (score != null) lines.push("Overall: " + score + "%" + (auditIsFlagged(audit) ? " — flagged, see safety below" : ""));
+  const band = auditBand(audit), covered = auditCoveredCount(audit), mustFix = auditMustFix(audit);
+  if (band) {
+    lines.push(band.title + " — " + band.detail);
+    lines.push(covered + " of " + AUDIT_AREAS.length + " areas coached or better.");
+  }
+  if (auditIsFlagged(audit)) lines.push("Flagged on safety — see below. That stands whatever else this says.");
+  mustFix.forEach((area) => lines.push("Fix before the next session: " + area.title + "."));
+  const scope = auditScopeLine(audit);
+  if (scope) lines.push(scope);
   lines.push("");
   AUDIT_AREAS.forEach((area) => {
     const rating = audit.ratings && audit.ratings[area.key];
-    if (!rating || !Number(rating.score)) { lines.push(area.title + ": not observed"); return; }
+    if (!rating || !Number(rating.score)) {
+      const why = (audit.notSeen || {})[area.key];
+      const whyLabel = why ? (AUDIT_NOT_SEEN_REASONS.find((row) => row[0] === why) || [])[1] : "";
+      lines.push(area.title + ": " + (whyLabel || "not observed"));
+      return;
+    }
     const anchor = AUDIT_SCALE.find((row) => row[0] === Number(rating.score));
-    lines.push(area.title + ": " + rating.score + "/5 — " + (anchor ? anchor[1] : ""));
+    lines.push(area.title + ": " + (anchor ? anchor[1] : rating.score));
     if (rating.evidence) lines.push("   What I saw: " + rating.evidence);
   });
   const flags = auditFlags(audit);
@@ -498,7 +559,8 @@ function trainerScorecardHtml(trainer) {
     + '<div class="rx-cell"><div class="rx-k">Audits</div><div class="rx-v">' + (scored.length ? Math.round(scored.reduce((sum, value) => sum + value, 0) / scored.length) + "%" : "—") + '</div></div>'
     + '<div class="rx-cell"><div class="rx-k">Floor checks</div><div class="rx-v">' + (check.pct == null ? "—" : check.pct + "%") + '</div></div>'
     + '<div class="rx-cell"><div class="rx-k">Late / no-show</div><div class="rx-v">' + ((counts.late || 0) + " / " + (counts.no_show || 0)) + '</div></div>'
-    + '<div class="rx-cell"><div class="rx-k">Certification</div><div class="rx-v">' + escapeHtml(certLabel) + '</div></div></div>';
+    + '<div class="rx-cell"><div class="rx-k">Certification</div><div class="rx-v">' + escapeHtml(certLabel) + '</div></div>'
+    + '<div class="rx-cell' + (cprState(trainer.cpr).warn ? ' warn' : '') + '"><div class="rx-k">CPR / AED</div><div class="rx-v">' + escapeHtml(cprState(trainer.cpr).short) + '</div></div></div>';
   const adminOpen = (counts.log_missing || 0) + (counts.notes_stale || 0) + (counts.message_unanswered || 0);
   const detail = '<p class="storage-note">' + list.length + ' audit' + (list.length === 1 ? '' : 's') + ' · ' + check.checks + ' floor check' + (check.checks === 1 ? '' : 's')
     + ' · on time ' + (counts.on_time || 0) + ' · covered ' + (counts.covered || 0) + ' · admin flags ' + adminOpen
@@ -511,7 +573,8 @@ function trainerScorecardHtml(trainer) {
     + '<div class="compact-field"><label for="certOn">Certified on</label><input id="certOn" type="date" value="' + escapeHtml(cert.certifiedOn || "") + '"></div>'
     + '<div class="compact-field"><label for="certExpires">Expires</label><input id="certExpires" type="date" value="' + escapeHtml(cert.expires || "") + '"></div>'
     + '<div class="compact-field"><label for="certCeus">CEUs done</label><input id="certCeus" value="' + escapeHtml(cert.ceus || "") + '" placeholder="1.2 of 2.0"></div>'
-    + '<div class="compact-field"><label for="certTrainings">Trainings and tutorials</label><input id="certTrainings" value="' + escapeHtml(cert.trainings || "") + '" placeholder="Spotting clinic, builder walkthrough"></div></div>';
+    + '<div class="compact-field"><label for="certTrainings">Trainings and tutorials</label><input id="certTrainings" value="' + escapeHtml(cert.trainings || "") + '" placeholder="Spotting clinic, builder walkthrough"></div></div>'
+    + cprFormHtml(trainer.cpr || {});
   const gradeForm = '<div class="compact-grid"><div class="compact-field"><label for="gradeBand">Where they are</label><select id="gradeBand"><option value="">Not graded</option>'
     + AUDIT_GRADES.map(([value, label]) => '<option value="' + value + '"' + (grade.band === value ? ' selected' : '') + '>' + label + '</option>').join('') + '</select></div></div>'
     + '<div class="compact-field"><label for="gradeNote">Your read on them</label><textarea id="gradeNote" rows="3">' + escapeHtml(grade.note || "") + '</textarea></div>'
@@ -562,25 +625,71 @@ function startAuditFor(key) {
 function setAuditRating(areaKey, score) {
   if (!auditView.draft) return;
   auditView.draft.ratings[areaKey] = auditView.draft.ratings[areaKey] === score ? 0 : score;
-  document.querySelectorAll('[data-audit-rating="' + areaKey + '"]').forEach((button) => {
-    button.classList.toggle("primary", Number(button.dataset.auditScore) === auditView.draft.ratings[areaKey]);
-  });
+  if (auditView.draft.notSeen) delete auditView.draft.notSeen[areaKey];
+  renderTrainerAuditsModule();
+}
+
+function setAuditNotSeen(areaKey) {
+  if (!auditView.draft) return;
+  auditView.draft.notSeen = auditView.draft.notSeen || {};
+  if (auditView.draft.notSeen[areaKey]) delete auditView.draft.notSeen[areaKey];
+  else {
+    auditView.draft.notSeen[areaKey] = AUDIT_NOT_SEEN_REASONS[0][0];
+    if (auditView.draft.ratings) delete auditView.draft.ratings[areaKey];
+  }
+  renderTrainerAuditsModule();
+}
+
+function setAuditNotSeenReason(areaKey, reason) {
+  if (!auditView.draft || !auditView.draft.notSeen) return;
+  auditView.draft.notSeen[areaKey] = reason;
 }
 
 function auditScaleHelpHtml() {
-  return '<details class="audit-scale"><summary>What the numbers mean</summary><ul>'
+  return '<p class="audit-scale-direction"><b>1 is worst, 5 is best.</b> The higher the number, the less you would have changed.</p>'
+    + '<details class="audit-scale"><summary>What the numbers mean</summary><ul>'
     + AUDIT_SCALE.map(([value, label, detail]) => '<li><b>' + value + ' · ' + label + '</b> — ' + detail + '</li>').join('') + '</ul></details>';
+}
+
+// Jump straight to the area you need; something that happens at minute three gets logged
+// at minute three instead of after a scroll.
+function auditJumpChipsHtml() {
+  return '<div class="audit-jump">' + AUDIT_AREAS.map((area) =>
+    '<button type="button" class="audit-jump-chip" onclick="jumpToAuditArea(\'' + area.key + '\')">'
+    + escapeHtml(area.title.split(" ")[0]) + '</button>').join('') + '</div>';
+}
+
+function jumpToAuditArea(key) {
+  const target = byId("auditArea_" + key);
+  if (target && target.scrollIntoView) target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function auditAreaFieldHtml(area) {
   const draft = auditView.draft || { ratings:{} }, chosen = draft.ratings[area.key] || 0;
-  return '<section class="coach-module-card" style="grid-column:1/-1"><h3>' + escapeHtml(area.title) + ' <span class="pill">' + area.weight + '%</span></h3>'
-    + '<p class="storage-note">' + escapeHtml(area.source) + '</p>'
+  const skipped = (draft.notSeen || {})[area.key];
+  const forRecord = auditIsScored(draft.kind);
+  // The anchor word sits on the button. In a tooltip it was invisible on a phone, which is
+  // where this is filled in.
+  const buttons = AUDIT_SCALE.map(([value, label]) =>
+    '<button class="small-btn audit-rating-btn' + (chosen === value ? " primary" : "") + '" data-audit-rating="' + area.key + '"'
+    + ' data-audit-score="' + value + '" onclick="setAuditRating(\'' + area.key + '\',' + value + ')">'
+    + '<b>' + value + '</b><span>' + escapeHtml(label) + '</span></button>').join('');
+  const notSeen = '<button class="small-btn audit-rating-btn skip' + (skipped ? " primary" : "") + '"'
+    + ' onclick="setAuditNotSeen(\'' + area.key + '\')"><b>—</b><span>Didn\'t see it</span></button>';
+  const reason = skipped ? '<div class="compact-field" style="margin-top:8px"><label for="auditNotSeen_' + area.key + '">Why not</label>'
+    + '<select id="auditNotSeen_' + area.key + '" onchange="setAuditNotSeenReason(\'' + area.key + '\',this.value)">'
+    + AUDIT_NOT_SEEN_REASONS.map(([value, label]) => '<option value="' + value + '"' + (skipped === value ? ' selected' : '') + '>' + escapeHtml(label) + '</option>').join('')
+    + '</select></div>' : '';
+  return '<section class="coach-module-card" id="auditArea_' + area.key + '" style="grid-column:1/-1">'
+    + '<h3>' + escapeHtml(area.title) + (forRecord ? ' <span class="pill">' + area.weight + '%</span>' : '') + '</h3>'
+    + '<p class="audit-area-phase">' + escapeHtml(area.phase) + '</p>'
+    + '<p class="audit-area-why">' + escapeHtml(area.why) + '</p>'
+    + (forRecord ? '<p class="storage-note">' + escapeHtml(area.source) + '</p>' : '')
     + '<details class="audit-look"><summary>What to look for</summary><ul>' + area.look.map((item) => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul></details>'
     + '<div class="compact-field" style="margin-top:10px"><label for="auditEvidence_' + area.key + '">What I saw — a count or a quote, before you score it</label>'
     + '<textarea id="auditEvidence_' + area.key + '" rows="2" placeholder="cued knee position twice on set 2 · said: drive through the floor"></textarea></div>'
-    + '<div class="tool-actions">' + AUDIT_SCALE.map(([value, label]) => '<button class="small-btn ' + (chosen === value ? "primary" : "") + '" data-audit-rating="' + area.key + '" data-audit-score="' + value + '" onclick="setAuditRating(\'' + area.key + '\',' + value + ')" title="' + escapeHtml(label) + '">' + value + '</button>').join('')
-    + '<span class="storage-note">Leave every number unpicked for “not observed”.</span></div></section>';
+    + '<div class="audit-rating-row"><span class="audit-rating-end">worst</span>' + buttons
+    + '<span class="audit-rating-end">best</span>' + notSeen + '</div>' + reason + '</section>';
 }
 
 function renderNewAuditForm() {
@@ -594,25 +703,65 @@ function renderNewAuditForm() {
     + '<div class="compact-field"><label for="auditFormDate">Date</label><input id="auditFormDate" type="date" value="' + escapeHtml(draft.date) + '"></div>'
     + '<div class="compact-field"><label for="auditFormSession">Session</label><select id="auditFormSession">'
     + AUDIT_SESSION_TYPES.map(([value, label]) => '<option value="' + value + '"' + (draft.sessionType === value ? ' selected' : '') + '>' + label + '</option>').join('') + '</select></div>'
-    + '<div class="compact-field"><label for="auditFormClient">Client handle (optional)</label><input id="auditFormClient" placeholder="squat-42"></div></div>'
+    + '<div class="compact-field"><label for="auditFormClient">Client handle (optional)</label><input id="auditFormClient" placeholder="squat-42"></div>'
+    + '<div class="compact-field"><label for="auditFormMinutes">Watched for (minutes)</label><input id="auditFormMinutes" type="number" min="1" max="240" placeholder="12" value="' + escapeHtml(draft.minutes || "") + '"></div>'
+    + '<div class="compact-field"><label for="auditFormPart">What you saw</label><select id="auditFormPart">'
+    + AUDIT_OBSERVED_PARTS.map(([value, label]) => '<option value="' + value + '"' + (draft.part === value ? ' selected' : '') + '>' + escapeHtml(label) + '</option>').join('')
+    + '</select></div></div>'
     + '<div class="tool-actions" style="margin-top:8px">' + AUDIT_KINDS.map(([value, label, detail]) => '<button class="small-btn ' + (draft.kind === value ? "primary" : "") + '" onclick="setAuditKind(\'' + value + '\')" title="' + escapeHtml(detail) + '">' + label + '</button>').join('') + '</div>'
     + '<p class="storage-note" id="auditKindNote">' + escapeHtml((AUDIT_KINDS.find((row) => row[0] === draft.kind) || [])[2] || "") + '</p>'
     + auditLastTimeHtml(draft.trainerKey)
-    + auditScaleHelpHtml();
-  const safety = '<p class="storage-note">Tick only what actually happened. Anything ticked flags the audit whatever the score says, and needs a line saying what happened.</p>'
-    + AUDIT_SAFETY.map(([key, label]) => '<div class="compact-field"><label class="inline-check"><input type="checkbox" id="auditSafety_' + key + '"> ' + escapeHtml(label) + '</label>'
-    + '<input id="auditSafetyNote_' + key + '" placeholder="What happened"></div>').join('');
-  const closing = '<div class="compact-field"><label for="auditQuestion">A question you asked afterwards</label><input id="auditQuestion" placeholder="Why that exercise for her? What if his knee had hurt?"></div>'
-    + '<div class="compact-field"><label for="auditAnswer">What they said</label><textarea id="auditAnswer" rows="2"></textarea></div>'
-    + '<div class="compact-field"><label for="auditWentWell">What went well</label><textarea id="auditWentWell" rows="2"></textarea></div>'
-    + '<div class="compact-field"><label for="auditChangeOne">One thing to change</label><textarea id="auditChangeOne" rows="2"></textarea></div>'
-    + '<div class="compact-grid"><div class="compact-field"><label class="inline-check"><input type="checkbox" id="auditFollowNeeded"> Needs a follow-up</label></div>'
-    + '<div class="compact-field"><label for="auditFollowBy">Follow up by</label><input id="auditFollowBy" type="date"></div></div>'
-    + '<div class="tool-actions"><button class="small-btn primary" onclick="saveAuditFromForm()">Save audit</button><button class="small-btn" onclick="openAuditTab(\'audits\')">Cancel</button></div>';
-  return auditCard("New audit", head, true)
+    + auditScaleHelpHtml()
+    + auditJumpChipsHtml();
+  const safety = '<p class="storage-note">Tick only what actually happened. Anything ticked flags the audit whatever the score says, and needs a line saying what happened and what you did about it.</p>'
+    + AUDIT_SAFETY.map(([key, label]) => '<div class="compact-field"><label class="inline-check"><input type="checkbox" id="auditSafety_' + key + '" onchange="renderSafetyCloseOut()"> ' + escapeHtml(label) + '</label>'
+    + '<input id="auditSafetyNote_' + key + '" type="text" placeholder="What happened"></div>').join('')
+    + '<div id="auditSafetyCloseOut"></div>';
+  const scored = auditIsScored(draft.kind);
+  // The three questions carry a developmental audit, so they lead rather than trail it.
+  const takeaway = '<div class="compact-field"><label for="auditWentWell">What went well</label><textarea id="auditWentWell" rows="2" placeholder="Caught the knee cave on set 2 before I did"></textarea></div>'
+    + '<div class="compact-field"><label for="auditChangeOne">One thing to change</label><textarea id="auditChangeOne" rows="2" placeholder="Stand on the rack side when she benches"></textarea></div>';
+  const probe = '<div class="compact-field"><label for="auditQuestion">A question you asked afterwards</label><input id="auditQuestion" type="text" placeholder="Why that exercise for her? What if his knee had hurt?"></div>'
+    + '<div class="compact-field"><label for="auditAnswer">What they said</label><textarea id="auditAnswer" rows="2"></textarea></div>';
+  const followUp = '<div class="compact-grid"><div class="compact-field"><label class="inline-check"><input type="checkbox" id="auditFollowNeeded"> Needs a follow-up</label></div>'
+    + '<div class="compact-field"><label for="auditFollowBy">Follow up by</label><input id="auditFollowBy" type="date"></div></div>';
+  const sign = scored ? '<div class="audit-ack"><h4 class="audit-subhead">They have seen it</h4>'
+    + '<p class="storage-note">A record audit is an employment record. Go through it with them and record that you did.</p>'
+    + '<div class="compact-grid"><div class="compact-field"><label class="inline-check"><input type="checkbox" id="auditAckDone"> Went through it with them</label></div>'
+    + '<div class="compact-field"><label for="auditAckOn">On</label><input id="auditAckOn" type="date" value="' + escapeHtml(auditToday()) + '"></div></div>'
+    + '<div class="compact-field"><label for="auditAckNote">Anything they said back</label><textarea id="auditAckNote" rows="2" placeholder="Disagreed about the rest timing — noted"></textarea></div></div>' : '';
+  const saveRow = '<div class="tool-actions"><button class="small-btn primary" onclick="saveAuditFromForm()">'
+    + (scored ? "Save to their file" : "Save") + '</button><button class="small-btn" onclick="openAuditTab(\'audits\')">Cancel</button></div>';
+
+  if (!scored) {
+    return auditCard("Developmental look", head, true)
+      + auditCard("The three questions", '<p class="storage-note">This is the part that changes anything. The ratings are for your trend.</p>' + takeaway + followUp, true)
+      + AUDIT_AREAS.map(auditAreaFieldHtml).join('')
+      + auditCard("Safety", safety, true)
+      + auditCard("Finish", probe + saveRow, true);
+  }
+  return auditCard("Audit for record", head, true)
     + AUDIT_AREAS.map(auditAreaFieldHtml).join('')
     + auditCard("Safety", safety, true)
-    + auditCard("Finish", closing, true);
+    + auditCard("Finish", takeaway + probe + followUp + sign + saveRow, true);
+}
+
+// Shown only once something is ticked, so a clean audit is not asked to explain itself.
+function renderSafetyCloseOut() {
+  const host = byId("auditSafetyCloseOut");
+  if (!host) return;
+  const ticked = AUDIT_SAFETY.filter(([key]) => { const box = byId("auditSafety_" + key); return box && box.checked; });
+  if (!ticked.length) { host.innerHTML = ""; return; }
+  const chosen = byId("auditSafetyAction") ? byId("auditSafetyAction").value : "";
+  const note = byId("auditSafetyActionNote") ? byId("auditSafetyActionNote").value : "";
+  host.innerHTML = '<div class="audit-safety-closeout"><h4>What you did about it</h4>'
+    + '<p class="storage-note">' + ticked.length + (ticked.length === 1 ? ' item' : ' items') + ' ticked. This audit cannot be saved without saying what you did.</p>'
+    + '<div class="compact-field"><label for="auditSafetyAction">Action taken</label><select id="auditSafetyAction">'
+    + '<option value="">Pick one</option>'
+    + AUDIT_SAFETY_ACTIONS.map(([value, label]) => '<option value="' + value + '"' + (chosen === value ? ' selected' : '') + '>' + escapeHtml(label) + '</option>').join('')
+    + '</select></div>'
+    + '<div class="compact-field"><label for="auditSafetyActionNote">In your words</label>'
+    + '<textarea id="auditSafetyActionNote" rows="2" placeholder="Called the set, reset the pins, watched the next two">' + escapeHtml(note) + '</textarea></div></div>';
 }
 
 function setAuditKind(kind) {
@@ -639,6 +788,15 @@ function saveAuditFromForm() {
   });
   if (!Object.keys(ratings).length) { showToast("Score at least one area, or this is not an audit"); return; }
   if (missingEvidence.length) { showToast("Write what you saw before scoring: " + missingEvidence[0]); return; }
+  const scoredForRecord = auditIsScored(draft.kind);
+  if (scoredForRecord) {
+    const unanswered = AUDIT_AREAS.filter((area) => !ratings[area.key] && !(draft.notSeen || {})[area.key]);
+    if (unanswered.length) {
+      showToast("A record audit answers every area. Rate " + unanswered[0].title.toLowerCase() + ", or tap Didn't see it.");
+      return;
+    }
+    if (!Number(value("auditFormMinutes"))) { showToast("Say how many minutes you watched — a record audit is only as good as what it saw"); return; }
+  }
   const safety = {}, missingNote = [];
   AUDIT_SAFETY.forEach(([key, label]) => {
     if (!checked("auditSafety_" + key)) return;
@@ -647,6 +805,14 @@ function saveAuditFromForm() {
     safety[key] = { checked:true, note };
   });
   if (missingNote.length) { showToast("Say what happened: " + missingNote[0]); return; }
+  let safetyAction = null;
+  if (Object.keys(safety).length) {
+    const picked = byId("auditSafetyAction") ? byId("auditSafetyAction").value : "";
+    const how = value("auditSafetyActionNote");
+    if (!picked) { showToast("Say what you did about the safety item before saving"); return; }
+    if (!how) { showToast("Add a line in your own words about what you did"); return; }
+    safetyAction = { action: picked, note: how, at: new Date().toISOString() };
+  }
   const kind = draft.kind;
   const steppedIn = Object.keys(ratings).some((key) => ratings[key].score === 1);
   if (kind === "scored" && steppedIn && !Object.keys(safety).length) {
@@ -659,8 +825,13 @@ function saveAuditFromForm() {
     trainerKey: trainer.key, trainerName: trainer.name, trainerUserId: trainer.userId || "",
     auditorUserId: identity.id, auditorName: identity.displayName,
     date: value("auditFormDate") || auditToday(), kind, sessionType: byId("auditFormSession") ? byId("auditFormSession").value : "one_to_one",
-    type: "audit", clientHandle: value("auditFormClient"), ratings, safety,
+    type: "audit", clientHandle: value("auditFormClient"), ratings, safety, safetyAction,
+    notSeen: Object.assign({}, draft.notSeen || {}),
+    minutes: Number(value("auditFormMinutes")) || 0,
+    observedPart: byId("auditFormPart") ? byId("auditFormPart").value : "whole",
     actedOnLast: byId("auditActedOn") ? byId("auditActedOn").value : "",
+    acknowledged: scoredForRecord && checked("auditAckDone")
+      ? { on: value("auditAckOn") || auditToday(), note: value("auditAckNote"), by: identity.displayName } : null,
     question: value("auditQuestion"), answer: value("auditAnswer"),
     wentWell: value("auditWentWell"), changeOne: value("auditChangeOne"),
     followUp: { needed: checked("auditFollowNeeded"), by: value("auditFollowBy"), resolvedAt:"", resolvedBy:"" }
@@ -673,6 +844,43 @@ function saveAuditFromForm() {
   showToast("Audit saved for " + trainer.name);
 }
 
+const AUDIT_BANDS = [
+  [85, "Coached it throughout", "Nothing I would have changed."],
+  [70, "Meets the standard", "One thing to sharpen."],
+  [50, "Needs development", "Several things to work on before the next one."],
+  [0, "Not acceptable this session", "This needs addressing now."]
+];
+
+function auditBand(audit) {
+  if (!auditIsScored(audit.kind)) return null;
+  const pct = auditScore(audit);
+  if (pct === null) return null;
+  const mustFix = auditMustFix(audit);
+  if (mustFix.length) return { title: "Below standard in " + mustFix[0].title.toLowerCase(), detail: "The rest of the session does not cancel this out.", mustFix: true };
+  const row = AUDIT_BANDS.find(([floor]) => pct >= floor) || AUDIT_BANDS[AUDIT_BANDS.length - 1];
+  return { title: row[1], detail: row[2], mustFix: false };
+}
+
+// Anything you stepped in on, or would have, is named rather than averaged away.
+function auditMustFix(audit) {
+  return AUDIT_AREAS.filter((area) => {
+    const rating = audit.ratings && audit.ratings[area.key];
+    return rating && Number(rating.score) > 0 && Number(rating.score) <= 2;
+  });
+}
+
+const auditCoveredCount = (audit) => AUDIT_AREAS.filter((area) => {
+  const rating = audit.ratings && audit.ratings[area.key];
+  return rating && Number(rating.score) >= 4;
+}).length;
+
+function auditScopeLine(audit) {
+  const part = (AUDIT_OBSERVED_PARTS.find((row) => row[0] === audit.observedPart) || [])[1] || "";
+  if (!audit.minutes && !part) return "";
+  if (audit.minutes && part) return "Based on " + audit.minutes + " minutes · " + part.toLowerCase() + ".";
+  return audit.minutes ? "Based on " + audit.minutes + " minutes." : part + ".";
+}
+
 function renderAuditDetail() {
   const audit = loadTrainerAudits().find((row) => row.id === auditView.auditId);
   if (!audit) { auditView.tab = "audits"; return renderAuditsList(); }
@@ -680,18 +888,33 @@ function renderAuditDetail() {
   const areas = AUDIT_AREAS.map((area) => {
     const rating = audit.ratings && audit.ratings[area.key];
     const anchor = rating && AUDIT_SCALE.find((row) => row[0] === Number(rating.score));
-    return '<div class="trainer-account-row"><div><b>' + escapeHtml(area.title) + '</b><span>' + (rating && rating.evidence ? escapeHtml(rating.evidence) : "not observed") + '</span></div>'
-      + '<div class="tool-actions"><span class="pill">' + (rating && rating.score ? rating.score + " · " + escapeHtml(anchor ? anchor[1] : "") : "—") + '</span></div></div>';
+    const why = (audit.notSeen || {})[area.key];
+    const whyLabel = why ? (AUDIT_NOT_SEEN_REASONS.find((row) => row[0] === why) || [])[1] : "";
+    const low = rating && Number(rating.score) > 0 && Number(rating.score) <= 2;
+    return '<div class="trainer-account-row' + (low ? ' warn' : '') + '"><div><b>' + escapeHtml(area.title) + '</b><span>'
+      + (rating && rating.evidence ? escapeHtml(rating.evidence) : escapeHtml(whyLabel || "not observed")) + '</span></div>'
+      + '<div class="tool-actions"><span class="pill' + (low ? ' warn' : '') + '">' + (rating && rating.score ? rating.score + " · " + escapeHtml(anchor ? anchor[1] : "") : "—") + '</span></div></div>';
   }).join('');
+  const actionHtml = audit.safetyAction ? '<p class="storage-note">What you did: '
+    + escapeHtml((AUDIT_SAFETY_ACTIONS.find((row) => row[0] === audit.safetyAction.action) || [])[1] || audit.safetyAction.action)
+    + (audit.safetyAction.note ? ' — ' + escapeHtml(audit.safetyAction.note) : '') + '</p>' : '';
   const safetyHtml = flags.length
     ? '<div class="advanced-list">' + flags.map((key) => { const item = AUDIT_SAFETY.find((row) => row[0] === key);
-        return '<div class="trainer-account-row warn"><div><b>' + escapeHtml(item ? item[1] : key) + '</b><span>' + escapeHtml(audit.safety[key].note || "") + '</span></div></div>'; }).join('') + '</div>'
+        return '<div class="trainer-account-row warn"><div><b>' + escapeHtml(item ? item[1] : key) + '</b><span>' + escapeHtml(audit.safety[key].note || "") + '</span></div></div>'; }).join('') + '</div>' + actionHtml
     : '<p class="storage-note">Nothing was ticked in the safety block.</p>';
   const follow = audit.followUp && audit.followUp.needed
     ? (audit.followUp.resolvedAt ? '<p class="storage-note">Follow-up closed by ' + escapeHtml(audit.followUp.resolvedBy || "") + '.</p>'
       : '<div class="tool-actions"><span class="pill warn">Follow-up open' + (audit.followUp.by ? ' · by ' + escapeHtml(audit.followUp.by) : '') + '</span><button class="small-btn" onclick="resolveAuditFollowUp(\'' + audit.id + '\')">Mark done</button></div>')
     : "";
-  const head = '<div class="rx-strip"><div class="rx-cell"><div class="rx-k">Overall</div><div class="rx-v">' + (score == null ? "—" : score + "%") + '</div></div>'
+  const band = auditBand(audit), mustFix = auditMustFix(audit), scope = auditScopeLine(audit);
+  const bandHtml = band ? '<p class="audit-band' + (band.mustFix ? ' warn' : '') + '"><b>' + escapeHtml(band.title) + '</b> — ' + escapeHtml(band.detail) + '</p>' : '';
+  const mustFixHtml = mustFix.length ? '<div class="advanced-list" style="margin-top:8px">' + mustFix.map((area) =>
+      '<div class="trainer-account-row warn"><div><b>Fix before the next session: ' + escapeHtml(area.title) + '</b>'
+      + '<span>' + escapeHtml((audit.ratings[area.key] || {}).evidence || "") + '</span></div></div>').join('') + '</div>' : '';
+  const actedLabel = { yes:"Yes", partly:"Partly", no:"No" }[audit.actedOnLast] || "";
+  const actedHtml = actedLabel ? '<p class="storage-note">Acted on what was asked last time: <b>' + escapeHtml(actedLabel) + '</b></p>' : '';
+  const head = bandHtml + mustFixHtml + (scope ? '<p class="storage-note">' + escapeHtml(scope) + '</p>' : '') + actedHtml
+    + '<div class="rx-strip"><div class="rx-cell"><div class="rx-k">Overall</div><div class="rx-v">' + (score == null ? "—" : score + "%") + '</div></div>'
     + '<div class="rx-cell"><div class="rx-k">Kind</div><div class="rx-v">' + escapeHtml(auditKindLabel(audit.kind)) + '</div></div>'
     + '<div class="rx-cell"><div class="rx-k">Date</div><div class="rx-v">' + escapeHtml(audit.date) + '</div></div>'
     + '<div class="rx-cell"><div class="rx-k">Auditor</div><div class="rx-v">' + escapeHtml(audit.auditorName || "") + '</div></div></div>'
@@ -846,16 +1069,50 @@ function trainerCheckScore(key) {
 
 /* ---------- certification and the owner's own read ---------- */
 function saveTrainerExtras(key) {
-  const rows = loadAuditTrainers(), record = rows.find((row) => row.key === key);
-  if (!record) return;
+  const rows = loadAuditTrainers();
+  let record = rows.find((row) => row.key === key);
+  if (!record) {
+    const known = auditTrainerRoster().find((row) => row.key === key);
+    if (!known) { showToast("That trainer is not on the list any more"); return; }
+    record = { id: auditNewId("audit-trainer"), key, email: key, name: known.name, active: true, createdAt: new Date().toISOString() };
+    rows.push(record);
+  }
   const value = (id) => { const field = byId(id); return field ? String(field.value || "").trim() : ""; };
   record.cert = { status: value("certStatus"), body: value("certBody"), certifiedOn: value("certOn"), expires: value("certExpires"), ceus: value("certCeus"), trainings: value("certTrainings") };
+  record.cpr = { status: value("cprStatus"), body: value("cprBody"), expires: value("cprExpires"), seenOn: value("cprSeenOn"), seenBy: currentAccountIdentity().displayName };
   record.grade = { band: value("gradeBand"), note: value("gradeNote"), updatedAt: new Date().toISOString(), updatedBy: currentAccountIdentity().displayName };
   record.updatedAt = record.grade.updatedAt;
   if (!writeAuditTrainers(rows)) return;
   if (typeof window.fit4lifeCloudSaveAuditTrainer === "function") window.fit4lifeCloudSaveAuditTrainer(record);
   renderTrainerAuditsModule();
   showToast("Saved");
+}
+
+function cprFormHtml(cpr) {
+  const state = cprState(cpr);
+  return '<h4 class="audit-subhead">CPR and AED</h4>'
+    + '<p class="storage-note' + (state.warn ? ' warn' : '') + '">' + escapeHtml(state.line) + '</p>'
+    + '<div class="compact-grid">'
+    + '<div class="compact-field"><label for="cprStatus">Card</label><select id="cprStatus">'
+    + AUDIT_CPR_STATUS.map(([value, label]) => '<option value="' + value + '"' + (cpr.status === value ? ' selected' : '') + '>' + label + '</option>').join('') + '</select></div>'
+    + '<div class="compact-field"><label for="cprBody">Through</label><select id="cprBody">'
+    + AUDIT_CPR_BODIES.map(([value, label]) => '<option value="' + value + '"' + (cpr.body === value ? ' selected' : '') + '>' + label + '</option>').join('') + '</select></div>'
+    + '<div class="compact-field"><label for="cprExpires">Expires</label><input id="cprExpires" type="date" value="' + escapeHtml(cpr.expires || "") + '"></div>'
+    + '<div class="compact-field"><label for="cprSeenOn">Card seen on</label><input id="cprSeenOn" type="date" value="' + escapeHtml(cpr.seenOn || "") + '"></div></div>';
+}
+
+/* A lapsed card is not a warning, it is a reason not to be supervising lifting. */
+function cprState(cpr) {
+  const row = cpr || {};
+  if (!row.expires) {
+    const unknown = row.status !== "current";
+    return { short: unknown ? "Not on file" : "Current", warn: unknown, line: unknown ? "No CPR or AED card on file. Ask to see it." : "Marked current, but no expiry recorded." };
+  }
+  const days = Math.round((new Date(row.expires + "T12:00:00").getTime() - Date.now()) / 86400000);
+  if (isNaN(days)) return { short: "Not on file", warn: true, line: "No CPR or AED card on file. Ask to see it." };
+  if (days < 0) return { short: "Expired", warn: true, line: "CPR expired " + Math.abs(days) + " days ago — not cleared to supervise lifting." };
+  if (days < 60) return { short: days + "d left", warn: true, line: "CPR expires in " + days + " days. Get the renewal booked." };
+  return { short: "Current", warn: false, line: "CPR current until " + row.expires + "." };
 }
 
 function certExpiryNote(cert) {

@@ -668,9 +668,9 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   .compact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:11px}
   .compact-field{display:flex;flex-direction:column;gap:7px}
   .compact-field label{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint)}
-  input[type=text],input[type=password],input[type=date],textarea{width:100%;padding:12px 13px;font-family:var(--body);font-size:14px;font-weight:500;color:var(--text);background:var(--slate-0);border:1px solid var(--line);border-radius:8px;transition:border-color .14s,box-shadow .14s}
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=submit]):not([type=button]):not([type=image]):not([type=reset]),textarea{width:100%;padding:12px 13px;font-family:var(--body);font-size:14px;font-weight:500;color:var(--text);background:var(--slate-0);border:1px solid var(--line);border-radius:8px;color-scheme:dark;transition:border-color .14s,box-shadow .14s}
   textarea{resize:vertical;min-height:76px;line-height:1.45}
-  input[type=text]:focus,input[type=password]:focus,input[type=date]:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-glow)}
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=submit]):not([type=button]):not([type=image]):not([type=reset]):focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-glow)}
   .tool-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
   .small-btn{border:1px solid var(--line);background:var(--slate-2);color:var(--text-dim);font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;padding:10px 14px;border-radius:7px;min-height:40px}
   .small-btn:hover{border-color:var(--blue);color:var(--text)}
@@ -2212,3 +2212,28 @@ body.sandbox-on .consultation-option small{color:var(--text-faint)}
 
 .cloud-auth-fineprint{margin-top:14px;font-size:12px;line-height:1.55;color:var(--text-faint);text-align:center}
 body.cloud-first-password .cloud-auth-help{display:none}
+
+/* ---------- TRAINER AUDIT FORM ---------- */
+.audit-scale-direction{margin:10px 0 0;font-size:12.5px;line-height:1.5;color:var(--text-dim)}
+.audit-scale-direction b{color:var(--blue-bright)}
+.audit-jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.audit-jump-chip{border:1px solid var(--line);background:var(--slate-2);color:var(--text-faint);border-radius:999px;padding:6px 11px;font:600 9px var(--mono);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;min-height:32px}
+.audit-jump-chip:hover{border-color:var(--blue);color:var(--blue-bright);background:var(--blue-glow)}
+.audit-area-phase{margin:2px 0 0;font:600 9px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--blue-bright)}
+.audit-area-why{margin:8px 0 0;font-size:13px;line-height:1.55;color:var(--text-dim)}
+.audit-rating-row{display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;margin-top:12px}
+.audit-rating-end{align-self:center;font:600 8.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint)}
+.audit-rating-btn{display:grid;gap:2px;place-items:center;min-width:92px;min-height:52px;padding:7px 9px;text-align:center;flex:1 1 92px}
+.audit-rating-btn b{font:800 15px/1 var(--mono)}
+.audit-rating-btn span{font-size:9px;line-height:1.2;letter-spacing:.02em;text-transform:none;opacity:.78}
+.audit-rating-btn.skip{flex:0 0 auto;min-width:86px;opacity:.82}
+.audit-band{margin:0 0 10px;font-size:14px;line-height:1.5;color:var(--text)}
+.audit-band b{color:var(--blue-bright)}
+.audit-band.warn b{color:var(--warn,#E2A33C)}
+.audit-subhead{margin:16px 0 6px;font-family:var(--display);font-style:italic;font-weight:800;font-size:16px;text-transform:uppercase;letter-spacing:.01em}
+.audit-safety-closeout,.audit-ack{margin-top:14px;padding:13px;border:1px solid var(--line-bright,var(--line));border-radius:11px;background:var(--slate-2)}
+.audit-safety-closeout h4,.audit-ack h4{margin-top:0}
+@media(max-width:620px){
+  .audit-rating-btn{min-width:0;flex:1 1 30%}
+  .audit-rating-end{display:none}
+}
