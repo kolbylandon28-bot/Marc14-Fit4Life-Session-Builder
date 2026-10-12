@@ -2245,3 +2245,12 @@ body.cloud-first-password .cloud-auth-help{display:none}
 .trainer-toolbar{display:grid;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 .trainer-toolbar .swap-search{width:100%}
 .trainer-account-row .pill.tier-premium{display:inline-flex;align-self:flex-start;width:auto;margin:5px 0 0;padding:3px 9px;font-size:9px;letter-spacing:.1em;color:var(--blue-bright);border-color:var(--blue);background:var(--blue-glow)}
+
+/* ---------- where a trainer stands overall ---------- */
+.trainer-standing{grid-column:1/-1;border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:var(--r);background:linear-gradient(145deg,rgba(29,29,35,.97),rgba(15,15,19,.97));padding:18px 20px;margin-bottom:14px}
+.trainer-standing.warn{border-left-color:var(--warn,#E2A33C)}
+.trainer-standing-main{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.trainer-standing-band{font-family:var(--display);font-style:italic;font-weight:800;font-size:27px;line-height:1;text-transform:uppercase;letter-spacing:.01em}
+.trainer-standing-pct{font:700 20px var(--mono);color:var(--blue-bright)}
+.trainer-standing-sub{margin:8px 0 0;font-size:13px;line-height:1.5;color:var(--text-faint)}
+.trainer-standing-fix{margin:8px 0 0;font-size:13px;line-height:1.5;color:var(--warn,#E2A33C)}

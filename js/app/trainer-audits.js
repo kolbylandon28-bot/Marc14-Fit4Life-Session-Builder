@@ -689,7 +689,6 @@ function renderAuditTrainersCard() {
 
   const rows = trainers.length ? '<div class="advanced-list" style="margin-top:12px">' + trainers.map((trainer) => {
     const invite = trainerInviteFor(trainer);
-    const count = auditsForTrainer(trainer.key).length;
     const asking = auditView.emailFor === trainer.key;
     const renaming = auditView.renameFor === trainer.key;
     const tierId = auditTrainerTier(trainer);
@@ -714,7 +713,8 @@ function renderAuditTrainersCard() {
     if (tierId !== "staff_premium") bits.push(auditTierLabel(trainer));
     bits.push(AUDIT_SOURCE_TEXT[trainer.source] || "on the list");
     bits.push(inviteStatusText(trainer, invite));
-    bits.push(count + (count === 1 ? " audit" : " audits"));
+    const standing = trainerStanding(trainer.key);
+    bits.push(standingLine(standing));
     return '<div class="trainer-account-row" data-trainer-row="' + escapeHtml(haystack) + '"><div><b>' + escapeHtml(trainer.name) + '</b>'
       + (tierId === "staff_premium" ? '<span class="pill tier-premium">Premium</span>' : '') + '<span>'
       + escapeHtml(bits.join(" · ")) + '</span>'
@@ -807,7 +807,7 @@ function trainerScorecardHtml(trainer) {
   const check = trainerCheckScore(trainer.key), counts = trainerLogCounts(trainer.key), cert = trainer.cert || {}, grade = trainer.grade || {};
   const certLabel = (AUDIT_CERT_STATUS.find((row) => row[0] === cert.status) || ["","Not recorded"])[1];
   const strip = '<div class="rx-strip">'
-    + '<div class="rx-cell"><div class="rx-k">Audits</div><div class="rx-v">' + (scored.length ? Math.round(scored.reduce((sum, value) => sum + value, 0) / scored.length) + "%" : "—") + '</div></div>'
+    + '<div class="rx-cell"><div class="rx-k">Audits</div><div class="rx-v">' + list.length + '</div></div>'
     + '<div class="rx-cell"><div class="rx-k">Floor checks</div><div class="rx-v">' + (check.pct == null ? "—" : check.pct + "%") + '</div></div>'
     + '<div class="rx-cell"><div class="rx-k">Late / no-show</div><div class="rx-v">' + ((counts.late || 0) + " / " + (counts.no_show || 0)) + '</div></div>'
     + '<div class="rx-cell"><div class="rx-k">Certification</div><div class="rx-v">' + escapeHtml(certLabel) + '</div></div>'
@@ -840,6 +840,22 @@ function renderAuditTrainerPage() {
   if (!trainer) { auditView.tab = "audits"; return renderAuditsList(); }
   const list = auditsForTrainer(trainer.key), averages = auditAreaAverages(list), trend = auditTrend(list);
   const weakest = AUDIT_AREAS.filter((area) => averages[area.key] != null).sort((a, b) => averages[a.key] - averages[b.key])[0];
+  const standing = trainerStanding(trainer.key);
+  const headline = '<div class="trainer-standing' + (standing.openFix.length || standing.flagged ? ' warn' : '') + '">'
+    + '<div class="trainer-standing-main">'
+    + '<span class="trainer-standing-band">' + escapeHtml(standing.band ? standing.band.title
+        : standing.audits ? "Too early to say" : standing.notes ? "Coaching only so far" : "Never looked at") + '</span>'
+    + (standing.band ? '<span class="trainer-standing-pct">' + standing.average + '%</span>' : '') + '</div>'
+    + '<p class="trainer-standing-sub">' + escapeHtml(standing.band
+        ? "Across " + standing.audits + " audits for record"
+          + (standing.trend == null ? "" : standing.trend > 0 ? ", up " + standing.trend + " points" : standing.trend < 0 ? ", down " + Math.abs(standing.trend) + " points" : ", flat")
+          + (standing.notes ? " \u00b7 " + standing.notes + (standing.notes === 1 ? " coaching note" : " coaching notes") : "")
+        : standing.audits ? standing.audits + (standing.audits === 1 ? " audit so far. Three before the average means anything." : " audits so far. Three before the average means anything.")
+        : standing.notes ? standing.notes + (standing.notes === 1 ? " coaching note. Nothing scored yet." : " coaching notes. Nothing scored yet.")
+        : "No audits and no coaching notes yet.") + '</p>'
+    + (standing.openFix.length ? '<p class="trainer-standing-fix">Open from the last audit: ' + escapeHtml(standing.openFix.map((a) => a.title).join(", ")) + '</p>' : '')
+    + (standing.flagged ? '<p class="trainer-standing-fix">' + standing.flagged + (standing.flagged === 1 ? ' audit is' : ' audits are') + ' flagged on safety.</p>' : '')
+    + '</div>';
   const card = trainerScorecardHtml(trainer);
   const areaRows = AUDIT_AREAS.map((area) => '<div class="trainer-account-row"><div><b>' + escapeHtml(area.title) + '</b><span>' + escapeHtml(area.source) + '</span></div>'
     + '<div class="tool-actions"><span class="pill">' + (averages[area.key] == null ? "not observed" : averages[area.key] + " / 5") + '</span></div></div>').join('');
@@ -856,7 +872,7 @@ function renderAuditTrainerPage() {
     const item = AUDIT_LOG_TYPES.find((entry) => entry[0] === row.event);
     return '<div class="trainer-account-row' + (item && item[2] === false ? ' warn' : '') + '"><div><b>' + escapeHtml(item ? item[1] : row.event) + '</b><span>' + escapeHtml(String(row.at).slice(0, 10)) + (row.note ? ' · ' + escapeHtml(row.note) : '') + '</span></div></div>';
   }).join('') + '</div>' : '';
-  return '<div class="tool-actions" style="grid-column:1/-1"><button class="small-btn" onclick="openAuditTab(\'audits\')">← All audits</button>'
+  return headline + '<div class="tool-actions" style="grid-column:1/-1"><button class="small-btn" onclick="openAuditTab(\'audits\')">← All audits</button>'
     + '<button class="small-btn primary" onclick="startAuditFor(\'' + escapeHtml(trainer.key) + '\')">New note or audit</button>'
     + '<button class="small-btn" onclick="openAuditTab(\'check\')">Quick check</button></div>'
     + auditCard(escapeHtml(trainer.name), card.strip + note + '<div class="advanced-list" style="margin-top:10px">' + areaRows + '</div>', true)
@@ -1203,14 +1219,53 @@ const AUDIT_BANDS = [
   [0, "Not acceptable this session", "This needs addressing now."]
 ];
 
+const bandForPct = (pct) => {
+  if (pct == null) return null;
+  const row = AUDIT_BANDS.find(([floor]) => pct >= floor) || AUDIT_BANDS[AUDIT_BANDS.length - 1];
+  return { title: row[1], detail: row[2], mustFix: false };
+};
+
 function auditBand(audit) {
   if (!auditIsScored(audit.kind)) return null;
   const pct = auditScore(audit);
   if (pct === null) return null;
   const mustFix = auditMustFix(audit);
   if (mustFix.length) return { title: "Below standard in " + mustFix[0].title.toLowerCase(), detail: "The rest of the session does not cancel this out.", mustFix: true };
-  const row = AUDIT_BANDS.find(([floor]) => pct >= floor) || AUDIT_BANDS[AUDIT_BANDS.length - 1];
-  return { title: row[1], detail: row[2], mustFix: false };
+  return bandForPct(pct);
+}
+
+/* Where a trainer stands across everything you have ever filed on them, rather than how one
+   session went. Coaching notes are counted but not scored, because they are not scored. */
+function trainerStanding(key) {
+  const all = auditsForTrainer(key);
+  const scored = all.filter((row) => auditIsScored(row.kind));
+  const pcts = scored.map(auditScore).filter((value) => value != null);
+  const average = pcts.length ? Math.round(pcts.reduce((sum, value) => sum + value, 0) / pcts.length) : null;
+  const openFix = scored.length ? auditMustFix(scored[0]) : [];
+  return {
+    audits: scored.length,
+    notes: all.length - scored.length,
+    average,
+    // Three is where an average stops being one person's bad Tuesday.
+    enough: pcts.length >= 3,
+    band: pcts.length >= 3 ? bandForPct(average) : null,
+    trend: auditTrend(scored),
+    flagged: all.filter(auditIsFlagged).length,
+    openFix,
+    last: all.length ? all[0].date : "",
+    averages: auditAreaAverages(scored)
+  };
+}
+
+function standingLine(standing) {
+  if (!standing.audits && !standing.notes) return "never looked at";
+  const bits = [];
+  bits.push(standing.audits + (standing.audits === 1 ? " audit" : " audits"));
+  if (standing.notes) bits.push(standing.notes + (standing.notes === 1 ? " note" : " notes"));
+  if (standing.band) bits.push(standing.band.title + " \u00b7 " + standing.average + "%");
+  else if (standing.audits) bits.push("too early to average");
+  if (standing.flagged) bits.push(standing.flagged + " flagged");
+  return bits.join(" \u00b7 ");
 }
 
 // Anything you stepped in on, or would have, is named rather than averaged away.
