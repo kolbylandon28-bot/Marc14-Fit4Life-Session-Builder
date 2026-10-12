@@ -2254,3 +2254,13 @@ body.cloud-first-password .cloud-auth-help{display:none}
 .trainer-standing-pct{font:700 20px var(--mono);color:var(--blue-bright)}
 .trainer-standing-sub{margin:8px 0 0;font-size:13px;line-height:1.5;color:var(--text-faint)}
 .trainer-standing-fix{margin:8px 0 0;font-size:13px;line-height:1.5;color:var(--warn,#E2A33C)}
+
+/* ---------- five groups, one open at a time ---------- */
+.coach-sidebar button.coach-nav-group{display:flex;align-items:center;gap:11px;width:100%;text-align:left;border:0;background:transparent;cursor:pointer;padding:11px 13px;margin:6px 0 2px;border-radius:9px;color:var(--text-dim);font:700 11px var(--mono);letter-spacing:.14em;text-transform:uppercase}
+.coach-sidebar button.coach-nav-group:hover{background:var(--slate-2);color:#fff}
+.coach-sidebar button.coach-nav-group.on{color:#fff;background:var(--slate-2)}
+.coach-sidebar button.coach-nav-group.holds-here{box-shadow:inset 3px 0 var(--blue-bright)}
+.coach-sidebar button.coach-nav-group .nav-label{flex:1}
+.coach-sidebar .coach-nav-count{font:600 9px var(--mono);letter-spacing:0;color:var(--text-faint);background:var(--slate-3);border-radius:999px;padding:2px 7px}
+.coach-sidebar button.coach-nav-group.on .coach-nav-count{color:var(--blue-bright)}
+.coach-sidebar button[data-coach-nav]{margin-left:14px}

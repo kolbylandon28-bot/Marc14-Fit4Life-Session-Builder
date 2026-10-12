@@ -472,3 +472,102 @@ async function removeAreaFile(id) {
   await window.fit4lifeCloudDeleteAreaFile(id);
   await loadAreaTools(activeWorkArea(), true);
 }
+
+/* ---------- gym-wide, for the owner ----------
+   Hours are every person across every area for a range you pick, not this Monday onward
+   behind one area's door. Files are all of them in one place to tidy, while the reading
+   still happens in the area the work is in. */
+function renderGymHoursModule() {
+  const out = byId("coachModuleContent");
+  if (!out) return;
+  const from = gymHoursState.from || dayKey(weekStart());
+  const to = gymHoursState.to || dayKey(new Date());
+  const entries = (gymHoursState.entries || []);
+  const byPerson = new Map();
+  entries.forEach((entry) => {
+    const who = peopleName(entry.user_id);
+    const hours = hoursBetween(entry.clock_in, entry.clock_out);
+    const row = byPerson.get(who) || { who, hours: 0, shifts: 0, open: 0, estimated: 0 };
+    row.hours += hours; row.shifts += 1;
+    if (!entry.clock_out) row.open += 1;
+    if (entry.estimated && !entry.confirmed_at) row.estimated += 1;
+    byPerson.set(who, row);
+  });
+  const people = [...byPerson.values()].sort((a, b) => b.hours - a.hours);
+  const total = people.reduce((sum, row) => sum + row.hours, 0);
+  const rows = people.length ? '<div class="advanced-list">' + people.map((row) =>
+    '<div class="trainer-account-row' + (row.open || row.estimated ? ' warn' : '') + '"><div><b>' + escapeHtml(row.who) + '</b><span>'
+    + row.shifts + (row.shifts === 1 ? ' shift' : ' shifts')
+    + (row.open ? ' · ' + row.open + ' still clocked in' : '')
+    + (row.estimated ? ' · ' + row.estimated + ' auto-closed, needs confirming' : '') + '</span></div>'
+    + '<div class="tool-actions"><span class="pill">' + roundHours(row.hours).toFixed(2) + ' h</span></div></div>').join('') + '</div>'
+    : '<div class="empty-state">Nobody clocked any time in that range.</div>';
+  out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><h3>Hours</h3>'
+    + '<p class="storage-note">Everyone, every area, for the range you pick. Payroll happens outside the app; this is the number you take to it.</p>'
+    + '<div class="compact-grid">'
+    + '<div class="compact-field"><label for="gymHoursFrom">From</label><input id="gymHoursFrom" type="date" value="' + escapeHtml(from) + '"></div>'
+    + '<div class="compact-field"><label for="gymHoursTo">To</label><input id="gymHoursTo" type="date" value="' + escapeHtml(to) + '"></div></div>'
+    + '<div class="tool-actions"><button class="small-btn primary" onclick="loadGymHours()">Show these dates</button>'
+    + '<button class="small-btn" onclick="exportGymHours()">Export CSV</button></div>'
+    + '<p class="storage-note">' + people.length + (people.length === 1 ? ' person' : ' people') + ' · '
+    + roundHours(total).toFixed(2) + ' hours in total</p>' + rows + '</section>';
+}
+
+let gymHoursState = { from: "", to: "", entries: [] };
+
+async function loadGymHours() {
+  const from = byId("gymHoursFrom") ? byId("gymHoursFrom").value : "";
+  const to = byId("gymHoursTo") ? byId("gymHoursTo").value : "";
+  gymHoursState.from = from || dayKey(weekStart());
+  gymHoursState.to = to || dayKey(new Date());
+  if (typeof window.fit4lifeCloudListTimeEntries === "function") {
+    gymHoursState.entries = (await window.fit4lifeCloudListTimeEntries(gymHoursState.from, gymHoursState.to)) || [];
+  }
+  renderGymHoursModule();
+}
+
+function exportGymHours() {
+  const rows = [["Person", "Area", "Clocked in", "Clocked out", "Hours", "Estimated", "Confirmed"]];
+  (gymHoursState.entries || []).forEach((entry) => {
+    rows.push([peopleName(entry.user_id), entry.area_key || "", entry.clock_in || "", entry.clock_out || "",
+      roundHours(hoursBetween(entry.clock_in, entry.clock_out)).toFixed(2),
+      entry.estimated ? "yes" : "no", entry.confirmed_at ? "yes" : "no"]);
+  });
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+  downloadTextFile("fit4life-hours-" + gymHoursState.from + "-to-" + gymHoursState.to + ".csv", csv);
+  showToast("Hours exported");
+}
+
+function renderGymFilesModule() {
+  const out = byId("coachModuleContent");
+  if (!out) return;
+  const areas = workAreas();
+  const files = window.fit4lifeAllAreaFiles || [];
+  const blocks = areas.map((area) => {
+    const mine = files.filter((row) => row.area_key === area.area_key);
+    const byCategory = new Map();
+    mine.forEach((row) => {
+      const name = row.category || "General";
+      if (!byCategory.has(name)) byCategory.set(name, []);
+      byCategory.get(name).push(row);
+    });
+    const body = mine.length ? [...byCategory.entries()].map(([name, list]) =>
+      '<div class="advanced-subhead">' + escapeHtml(name) + '</div>'
+      + list.map((row) => '<div class="trainer-account-row"><div><b>' + escapeHtml(row.title) + '</b>'
+        + (row.body ? '<span>' + escapeHtml(String(row.body).slice(0, 120)) + (String(row.body).length > 120 ? "…" : "") + '</span>' : '')
+        + (row.link_url ? '<span><a class="area-file-link" href="' + escapeHtml(row.link_url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(row.link_label || "Open the link") + ' &#8599;</a></span>' : '')
+        + '</div><div class="tool-actions"><button class="small-btn" onclick="removeAreaFile(\'' + row.id + '\')">Remove</button></div></div>').join('')).join('')
+      : '<div class="empty-state">Nothing filed for ' + escapeHtml(area.name) + ' yet.</div>';
+    return '<section class="coach-module-card" style="grid-column:1/-1"><h3>' + escapeHtml(area.name)
+      + ' <span class="pill">' + mine.length + '</span></h3>' + body + '</section>';
+  }).join('');
+  out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><h3>Every area’s files</h3>'
+    + '<p class="storage-note">Written and tidied here; read inside the area they belong to, so nobody scrolls past another room’s procedures. Add one from inside the area.</p></section>'
+    + (blocks || '<div class="empty-state">No areas yet.</div>');
+}
+
+async function loadGymFiles() {
+  if (typeof window.fit4lifeCloudListAreaFiles !== "function") return;
+  window.fit4lifeAllAreaFiles = (await window.fit4lifeCloudListAreaFiles(null)) || [];
+  renderGymFilesModule();
+}

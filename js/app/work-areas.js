@@ -317,6 +317,23 @@ async function toggleStaffArea(userId, key) {
 /* ---------- registration ---------- */
 const legacyRenderCoachModuleBeforeAreas = window.renderCoachModule;
 window.renderCoachModule = function areasRenderCoachModule(destination) {
+  if (destination === "hours" || destination === "files") {
+    const title = byId("coachModuleTitle"), eyebrow = byId("coachModuleEyebrow"), copy = byId("coachModuleCopy");
+    const owner = isFit4LifeOwner();
+    if (eyebrow) eyebrow.textContent = "Managing";
+    if (destination === "hours") {
+      if (title) title.textContent = "Hours & export";
+      if (copy) copy.textContent = "Everyone's clocked time, across every area, for the dates you pick.";
+      if (!owner) { byId("coachModuleContent").innerHTML = '<div class="empty-state">Only an owner can see everyone\u2019s hours.</div>'; return; }
+      if (typeof loadGymHours === "function") loadGymHours();
+    } else {
+      if (title) title.textContent = "All files";
+      if (copy) copy.textContent = "Every area's files in one place, to write and tidy.";
+      if (!owner) { byId("coachModuleContent").innerHTML = '<div class="empty-state">Only an owner can manage the files.</div>'; return; }
+      if (typeof loadGymFiles === "function") loadGymFiles();
+    }
+    return;
+  }
   if (destination === "areas") {
     const title = byId("coachModuleTitle"), eyebrow = byId("coachModuleEyebrow"), copy = byId("coachModuleCopy");
     if (title) title.textContent = "Areas and people";
@@ -508,12 +525,21 @@ function renderAreaHome() {
    An area only shows its own tools. The client-facing ones — the calendar, messages, the
    action queue, clients, programming — belong to coaching, so the Equipment Center never
    sees them. */
+/* Five groups, because five is what a phone's bottom bar holds without a More sheet, and
+   because seventeen flat entries is a list rather than a structure. Every old destination
+   key still works; what changed is where it is found. */
 const COACH_NAV_GROUPS = [
-  ["This area", ["area-home"]],
-  ["Coaching", ["dashboard", "actions", "clients", "builder", "programming", "tools", "team", "calendar", "messages", "library", "assessments", "reports"]],
-  ["Managing", ["areas", "audits", "approvals", "access", "settings"]]
+  ["My area", ["area-home"], "\u25F1"],
+  ["Today", ["dashboard", "actions", "messages", "calendar"], "\u2302"],
+  ["Clients", ["clients", "assessments", "reports"], "\u25CF"],
+  ["Workouts", ["builder", "programming", "library", "tools"], "\u25A4"],
+  ["Managing", ["team", "areas", "audits", "access", "approvals", "hours", "files", "settings"], "\u2699"]
 ];
-const COACHING_NAV_KEYS = COACH_NAV_GROUPS[1][1];
+/* Anything that needs a client is coaching, so a shift area never shows it. */
+const COACHING_NAV_KEYS = ["dashboard", "actions", "messages", "calendar", "clients", "assessments",
+  "reports", "builder", "programming", "library", "tools", "team"];
+const navGroupFor = (key) => (COACH_NAV_GROUPS.find(([, keys]) => keys.includes(key)) || [])[0] || "";
+let openNavGroup = "";
 
 function ensureAreaHomeNav() {
   const bar = byId("coachSidebar");
@@ -540,25 +566,49 @@ function groupCoachSidebar() {
     const label = homeNav.querySelector(".nav-label");
     if (label && key) label.textContent = workAreaName(key);
   }
+  // Work out what each group can actually show before deciding which one to open, so an
+  // empty group never ends up as the open one.
+  const here = (typeof openCoachDestination === "function" && openCoachDestination.current) || "";
+  const allowed = {};
   COACH_NAV_GROUPS.forEach(([label, keys]) => {
+    allowed[label] = keys.filter((navKey) => {
+      const button = bar.querySelector('[data-coach-nav="' + navKey + '"]');
+      if (!button) return false;
+      if (navKey === "area-home") return Boolean(key);
+      if (COACHING_NAV_KEYS.includes(navKey) && !coachingHere) return false;
+      return !(button.hasAttribute("data-owner-only") && !isFit4LifeOwner());
+    });
+  });
+  const holding = navGroupFor(here);
+  if (holding && allowed[holding] && allowed[holding].length) openNavGroup = holding;
+  if (!openNavGroup || !(allowed[openNavGroup] || []).length) {
+    openNavGroup = (COACH_NAV_GROUPS.find(([label]) => (allowed[label] || []).length) || [])[0] || "";
+  }
+
+  COACH_NAV_GROUPS.forEach(([label, keys, icon]) => {
     const first = bar.querySelector('[data-coach-nav="' + keys[0] + '"]');
     if (!first) return;
     let heading = bar.querySelector('[data-nav-group="' + label + '"]');
     if (!heading) {
-      heading = document.createElement("div");
+      heading = document.createElement("button");
+      heading.type = "button";
       heading.className = "coach-nav-group";
       heading.dataset.navGroup = label;
-      heading.textContent = label;
+      heading.onclick = () => { openNavGroup = openNavGroup === label ? "" : label; groupCoachSidebar(); };
       first.parentNode.insertBefore(heading, first);
     }
-    const shown = keys.filter((navKey) => {
+    const shown = allowed[label] || [];
+    const open = openNavGroup === label;
+    keys.forEach((navKey) => {
       const button = bar.querySelector('[data-coach-nav="' + navKey + '"]');
-      if (!button) return false;
-      const hide = (COACHING_NAV_KEYS.includes(navKey) && !coachingHere) || (navKey === "area-home" && !key);
-      button.hidden = hide;
-      return !hide && !(button.hasAttribute("data-owner-only") && !isFit4LifeOwner());
+      if (button) button.hidden = !open || shown.indexOf(navKey) < 0;
     });
     heading.hidden = !shown.length;
+    heading.classList.toggle("on", open);
+    heading.classList.toggle("holds-here", Boolean(here) && keys.includes(here));
+    heading.innerHTML = '<span class="nav-icon">' + (icon || "") + '</span>'
+      + '<span class="nav-label">' + escapeHtml(label === "My area" && key ? workAreaName(key) : label) + '</span>'
+      + '<span class="coach-nav-count">' + shown.length + '</span>';
   });
 }
 
