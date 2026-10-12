@@ -512,10 +512,10 @@ function renderAreaHome() {
     if (typeof areaFilesCardHtml === "function") cards.push(areaFilesCardHtml(key));
     cards.push(areaScheduleCardHtml(key));
     if (areaHasEvents(key) && typeof areaEventsCardHtml === "function") cards.push(areaEventsCardHtml(key));
-    if (isFit4LifeOwner()) {
-      cards.push(areaHoursCardHtml());
-      cards.push(areaDevicesCardHtml(key));
-    }
+    // Each of these is its own permission now, so a future area supervisor can get one
+    // without being handed the others.
+    if (fit4lifeCan("hours.view.all", key)) cards.push(areaHoursCardHtml());
+    if (isFit4LifeOwner()) cards.push(areaDevicesCardHtml(key));
   }
   out.innerHTML = cards.join("");
   if (typeof loadAreaTools === "function") loadAreaTools(key, false);

@@ -121,7 +121,7 @@ function areaScheduleCardHtml(areaKey) {
     if (!byDay.has(key)) byDay.set(key, []);
     byDay.get(key).push(shift);
   });
-  const owner = isFit4LifeOwner();
+  const owner = fit4lifeCan("shifts.create", areaKey);
   const days = [...byDay.entries()].map(([key, list]) => '<div class="trainer-account-row"><div><b>' + escapeHtml(dayLabel(key)) + '</b><span>'
     + list.map((shift) => escapeHtml((shift.staff_name || peopleName(shift.user_id)) + " " + clockTime(shift.starts_at) + "–" + clockTime(shift.ends_at))).join(" · ") + '</span></div>'
     + (owner ? '<div class="tool-actions">' + list.map((shift) => '<button class="small-btn" onclick="removeShift(\'' + shift.id + '\')">Remove ' + escapeHtml((shift.staff_name || peopleName(shift.user_id)).split(" ")[0]) + '</button>').join('') + '</div>' : '') + '</div>').join('');
@@ -156,6 +156,7 @@ async function removeShift(shiftId) {
 
 /* ---------- owner: hours and devices ---------- */
 function areaHoursCardHtml() {
+  if (!fit4lifeCan("hours.view.all")) return "";
   const entries = (areaToolsState.entries || []).slice(0, 40);
   const needsConfirming = entries.filter((entry) => entry.estimated && !entry.confirmed_at);
   const rows = entries.length ? entries.map((entry) => '<div class="trainer-account-row' + (entry.estimated && !entry.confirmed_at ? ' warn' : '') + '"><div><b>' + escapeHtml(peopleName(entry.user_id)) + '</b><span>'

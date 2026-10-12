@@ -318,3 +318,31 @@ protectOwnerMutation("confirmCompleteClientDelete","client_archive","Permanently
 protectOwnerMutation("deleteInBodyScan","client_archive","Delete an InBody record");
 
 document.addEventListener("DOMContentLoaded",syncRoleGovernanceControls);
+
+/* ---------- what you are allowed to do with shifts and timesheets ----------
+   One list of verbs and one check, so widening a permission later is two functions rather
+   than every button and every RPC. The twin of this lives in Postgres as fit4life_can();
+   this copy decides what to draw, that copy decides what is allowed. They must agree, and
+   the server is the one that counts. */
+const FIT4LIFE_CAPABILITIES = [
+  "shifts.view.all", "shifts.view.own", "shifts.create", "shifts.edit.any", "shifts.edit.own", "schedule.publish",
+  "hours.view.own", "hours.view.all", "hours.clock.self", "hours.edit", "hours.confirm", "hours.export"
+];
+/* Everyone signed in to the gym gets these; they are reading, or they are their own. */
+const FIT4LIFE_MEMBER_CAPABILITIES = ["shifts.view.all", "shifts.view.own", "hours.view.own", "hours.clock.self"];
+const FIT4LIFE_SCHEDULE_CAPABILITIES = ["shifts.create", "shifts.edit.any", "shifts.edit.own", "schedule.publish"];
+const FIT4LIFE_HOURS_CAPABILITIES = ["hours.view.all", "hours.edit", "hours.confirm", "hours.export"];
+
+function fit4lifeAreaGrant(areaKey, flag) {
+  const rows = (window.fit4lifeStaffAreas || []).filter((row) => row.user_id === (window.fit4lifeCloudIdentity || {}).id);
+  return rows.some((row) => row[flag] === true && (!areaKey || row.area_key === areaKey || row.area_key === "*"));
+}
+
+function fit4lifeCan(capability, areaKey) {
+  if (!window.fit4lifeCloudRole) return false;
+  if (isFit4LifeOwner()) return true;
+  if (FIT4LIFE_MEMBER_CAPABILITIES.includes(capability)) return true;
+  if (FIT4LIFE_SCHEDULE_CAPABILITIES.includes(capability)) return fit4lifeAreaGrant(areaKey, "can_schedule");
+  if (FIT4LIFE_HOURS_CAPABILITIES.includes(capability)) return fit4lifeAreaGrant(areaKey, "can_edit_hours");
+  return false;
+}
