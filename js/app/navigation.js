@@ -34,22 +34,20 @@ function show(view) {
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
   const target = document.getElementById("view-" + view); if (target) target.classList.add("active");
   currentView = view;
-  const home = document.getElementById("homeBtn"), context = document.getElementById("portalContext");
+  const home = document.getElementById("homeBtn");
   const inMenu = ["trainer-menu","client-menu"].includes(view);
   const requiredConsultation = view === "client-consultation" && typeof clientNeedsRequiredConsultation === "function" && clientNeedsRequiredConsultation();
   home.classList.toggle("show", !requiredConsultation && view !== "home" && view !== "client-home" && (view !== "trainer-menu" || signedInTrainerCanPreview()));
-  home.textContent = view === "trainer-menu" && signedInTrainerCanPreview() ? "\u2190 Choose side" : CLIENT_APP_VIEWS.includes(view) ? "\u2190 Client home" : view === "active-workout" ? "\u2190 Leave workout" : inMenu ? "\u2190 Workspace" : portalRole ? "\u2190 " + (portalRole === "trainer" ? "Trainer" : "Client") + " workspace" : "\u2190 Home";
-  context.textContent = portalRole ? (portalRole === "trainer" ? "Trainer workspace" : view === "client-consultation" ? "Client setup" : trainerClientPreviewActive() ? "Owner preview · client side" : "Client workspace") : "";
-  context.classList.toggle("show", Boolean(portalRole) && view !== "home");
+  // One back button that says where it goes, not which of three retired portals you are in.
+  home.textContent = CLIENT_APP_VIEWS.includes(view) ? "\u2190 Client home"
+    : view === "active-workout" ? "\u2190 Leave workout"
+    : "\u2190 Home";
+
   // Tutorials are only useful to a signed-in trainer, and never on top of a running walkthrough
   const helpBtn = document.getElementById("trainerHelpBtn");
-  if (helpBtn) helpBtn.classList.toggle("show", portalRole === "trainer" && view !== "home" && !(typeof walkthroughActive === "function" && walkthroughActive()));
-  // The client Tutorials button lives in the topbar rather than the bottom nav, because the bottom nav is
-  // absent from the active workout - the one screen "Log your sets" can be run from. Hidden
-  // during the required consultation so it cannot be used to get around that gate.
-  const clientHelp = document.getElementById("clientHelpBtn");
-  if (clientHelp) clientHelp.classList.toggle("show", portalRole === "client" && !requiredConsultation
-    && view !== "home" && !(typeof walkthroughActive === "function" && walkthroughActive()));
+  if (helpBtn) helpBtn.classList.toggle("show", Boolean(portalRole) && view !== "home"
+    && !(view === "client-consultation" && typeof clientNeedsRequiredConsultation === "function" && clientNeedsRequiredConsultation())
+    && !(typeof walkthroughActive === "function" && walkthroughActive()));
   const clientNav = document.getElementById("clientBottomNav"), showClientNav = portalRole === "client" && CLIENT_APP_VIEWS.includes(view);
   if (clientNav) { clientNav.classList.toggle("show",showClientNav); clientNav.querySelectorAll("button").forEach((button) => button.classList.toggle("on",view === "client-" + button.dataset.clientTab)); }
   const coachNav = document.getElementById("coachSidebar"), showCoachNav = portalRole === "trainer" && COACH_SHELL_VIEWS.includes(view) && trainerIsUnlocked();
@@ -829,4 +827,10 @@ function openAssignedWorkout(profileId,assignmentId) {
   banner.append(identity,tools); out.append(banner,assignmentLoopElement(assignment));
   if (["completed","reviewed"].includes(status)) { out.classList.add("assignment-complete"); const note = el("div","assignment-complete-note"); note.innerHTML = status === "reviewed" ? '<b>Your trainer reviewed this workout.</b>' + escapeHtml(assignment.coachNote || "Your next workout direction is saved. Check back when the next plan is assigned.") : '<b>Workout review sent.</b>Your trainer can now review your sets, difficulty, energy, and pain report before adjusting the next plan.'; out.appendChild(note); }
   out.appendChild(renderCard(state.session.data,state.session,null)); return assignment;
+}
+
+// One Tutorials button for everyone; which library it opens follows the role.
+function openAssistanceForRole() {
+  if (portalRole === "client" && typeof openClientAssistance === "function") { openClientAssistance(); return; }
+  if (typeof openTrainerAssistance === "function") openTrainerAssistance();
 }

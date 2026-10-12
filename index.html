@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20261012-v133-five-groups-r4">
+<link rel="manifest" href="manifest.webmanifest?v=20261012-v134-topbar-r1">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20261012-v133-five-groups-r4">
+<link rel="stylesheet" href="styles.css?v=20261012-v134-topbar-r1">
 </head>
 <body>
 
@@ -128,10 +128,8 @@
     <div class="topbar-spacer"></div>
     <span class="cloud-status" id="cloudStatus" data-state="syncing" role="status">Connecting…</span>
     <button class="cloud-account-btn" id="cloudAccountBtn" type="button">Sign in</button>
-    <span class="portal-context" id="portalContext"></span>
     <button class="home-btn" id="homeBtn" onclick="goHome()">&larr; Home</button>
-    <button class="help-btn" id="trainerHelpBtn" type="button" title="Walk me through something" aria-label="Tutorials" onclick="openTrainerAssistance()">Tutorials</button>
-    <button class="help-btn" id="clientHelpBtn" type="button" title="Walk me through something" aria-label="Tutorials" onclick="openClientAssistance()">Tutorials</button>
+    <button class="help-btn" id="trainerHelpBtn" type="button" title="Walk me through something" aria-label="Tutorials" onclick="openAssistanceForRole()">Tutorials</button>
   </div>
 </div>
 
@@ -146,7 +144,6 @@
   <section class="view active" id="view-home">
     <div class="role-hero hero">
       <div class="granite-logo-lockup" aria-label="FIT 4 LIFE"><div class="granite-logo-main">FIT 4 LIFE</div><div class="granite-logo-sub">Professional Training System</div></div>
-      <div class="level-path" id="roleLevelPath"><span class="active">1 · Choose role</span><i>›</i><span>2 · Choose task</span><i>›</i><span>3 · Do the work</span></div>
       <div class="role-hero-copy" id="roleHeroCopy">
         <h1>How are you using<br><span class="grad-text">FIT4LIFE today?</span></h1>
         <p>Owners can open the coaching workspace or verify the client experience. Trainer accounts open the coaching workspace directly, and clients open only their own record.</p>
@@ -174,7 +171,7 @@
   <!-- LEVEL 2: AREA HOME -->
   <section class="view" id="view-area">
     <div class="portal-menu-head">
-      <div><div class="level-path" style="justify-content:flex-start"><span id="areaLevelOne">1 · Area</span><i>›</i><span class="active">2 · Choose task</span><i>›</i><span>3 · Do the work</span></div>
+      <div>
       <h1 id="areaHomeTitle">Your area</h1><p id="areaHomeCopy"></p></div>
       <button class="small-btn" onclick="leaveWorkArea()">Switch area</button>
     </div>
@@ -184,7 +181,7 @@
   <!-- LEVEL 2: TRAINER MENU -->
   <section class="view" id="view-trainer-menu">
     <div class="portal-menu-head">
-      <div><div class="level-path" style="justify-content:flex-start"><span>1 · Trainer</span><i>›</i><span class="active">2 · Choose task</span><i>›</i><span>3 · Workspace</span></div><h1>Trainer <span class="grad-text">workspace</span></h1><p>Start with the job you need to do. Client records stay behind your named, owner-approved trainer account.</p></div>
+      <div><h1>Trainer <span class="grad-text">workspace</span></h1><p>Start with the job you need to do. Client records stay behind your named, owner-approved trainer account.</p></div>
       <button class="small-btn" onclick="lockTrainerHub()">Lock trainer access</button>
     </div>
     <div class="trainer-attention-panel" id="trainerAttentionPanel" aria-live="polite"></div>
@@ -207,7 +204,7 @@
   <!-- LEVEL 2: CLIENT MENU -->
   <section class="view" id="view-client-menu">
     <div class="portal-menu-head">
-      <div><div class="level-path" style="justify-content:flex-start"><span>1 · Client</span><i>›</i><span class="active">2 · Choose task</span><i>›</i><span>3 · Workout</span></div><h1>Client <span class="grad-text">workspace</span></h1><p>Find your own workout and the tools you need without opening the trainer’s client directory.</p></div>
+      <div><h1>Client <span class="grad-text">workspace</span></h1><p>Find your own workout and the tools you need without opening the trainer’s client directory.</p></div>
       <button class="small-btn" onclick="switchPortalRole()">Switch role</button>
     </div>
     <div class="tools-grid">
@@ -1309,33 +1306,33 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/engine/exercise-library.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/engine/session-engine.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/engine/session-builders.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/engine/personalization.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/engine/booking-import.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/navigation.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/program-app.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/forms.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/engine/generation.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/rendering.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/calculations-timers.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/engine/multiweek-programs.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/readiness-progress.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/client-consultation.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/trainer/trainer-hub.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/trainer/coaching-support.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/role-governance.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/action-calendar.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/workout-feedback-reports.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/booking-import-ui.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/trainer-audits.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/area-art.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/work-areas.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/area-tools.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/walkthrough.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/app/intro-video.js?v=20261012-v133-five-groups-r4"></script>
-<script src="js/init.js?v=20261012-v133-five-groups-r4"></script>
+<script src="cloud-sync.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/engine/exercise-library.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/engine/session-engine.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/engine/session-builders.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/engine/personalization.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/engine/booking-import.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/navigation.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/program-app.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/forms.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/engine/generation.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/rendering.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/calculations-timers.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/engine/multiweek-programs.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/readiness-progress.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/client-consultation.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/trainer/trainer-hub.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/trainer/coaching-support.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/role-governance.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/action-calendar.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/workout-feedback-reports.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/booking-import-ui.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/trainer-audits.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/area-art.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/work-areas.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/area-tools.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/walkthrough.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/app/intro-video.js?v=20261012-v134-topbar-r1"></script>
+<script src="js/init.js?v=20261012-v134-topbar-r1"></script>
 </body>
 </html>

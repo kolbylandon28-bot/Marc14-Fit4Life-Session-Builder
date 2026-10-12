@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-10-12-v133-five-groups-r4";
+const CACHE_NAME = "fit4life-shell-2026-10-12-v134-topbar-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20261012-v133-five-groups-r4";
+const ASSET_VERSION = "20261012-v134-topbar-r1";
 const SHELL = [
   "/",
   "/index.html",
