@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20261012-v131-cumulative-standing-r1">
+<link rel="manifest" href="manifest.webmanifest?v=20261012-v132-nav-consolidation-r2">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20261012-v131-cumulative-standing-r1">
+<link rel="stylesheet" href="styles.css?v=20261012-v132-nav-consolidation-r2">
 </head>
 <body>
 
@@ -200,7 +200,7 @@
       <button class="tool-card" onclick="openTrainerHub()"><span class="tc-tag">Private</span><div class="tc-icon">&#128202;</div><div class="tc-title">Clients &amp; summaries</div><div class="tc-desc">Search all clients, review workout history, injuries, strength trends, goals, and InBody analysis.</div></button>
       <button class="tool-card" onclick="openPrograms()"><div class="tc-icon">&#128197;</div><div class="tc-title">Build a program</div><div class="tc-desc">Create progressive multi-week plans with clearly labeled workout blocks and deloads.</div></button>
       <button class="tool-card" onclick="openReadiness()"><div class="tc-icon">&#10003;</div><div class="tc-title">Progress logging</div><div class="tc-desc">Add and review clean set or workout records across clients.</div></button>
-      <button class="tool-card live" onclick="openAdvancedStudio('review')"><span class="tc-tag">5 connected workflows</span><div class="tc-icon">&#10024;</div><div class="tc-title">Coaching support</div><div class="tc-desc">Turn client check-ins, workout results, monitoring, templates, and alerts into a clear trainer action instead of opening disconnected feature demos.</div></button>
+      <button class="tool-card live" onclick="openAdvancedStudio('review')"><div class="tc-icon">&#10024;</div><div class="tc-title">Client review</div><div class="tc-desc">Read a client's check-ins, workout results and monitoring together, then decide the next move.</div></button>
     </div>
   </section>
 
@@ -484,6 +484,7 @@
     <div class="utility-card no-print">
       <div class="utility-head"><div><h3 class="utility-title">Program Setup</h3><p class="utility-sub">Start new clients with a repeatable three-week rhythm, then move into longer progressive phases.</p></div><span class="wave-badge">Wave 3</span></div>
       <div id="programTemplateContext" class="constraint-summary" style="display:none"></div>
+      <div id="programTemplatesHost"></div>
       <div class="program-setup-flow">
         <section class="program-setup-section">
           <div class="program-setup-section-head"><span class="program-setup-step">1</span><div><h4>Select the client</h4><p>Load the saved profile first so goals, limitations, equipment, and prior program details follow the client.</p></div></div>
@@ -618,7 +619,7 @@
 
   <!-- TRAINER CONNECTED COACHING SUPPORT -->
   <section class="view" id="view-advanced">
-    <div class="builder-head"><span class="portal-question">What decision or setup needs attention?</span><h2>Coaching Support</h2><p>Five connected workflows. Client evidence leads to a coach decision, monitoring feeds the client record, templates open the program builder, and alerts return to the trainer dashboard.</p></div>
+    <div class="builder-head"><span class="portal-question">What does this client need next?</span><h2>Client review</h2><p>Check-ins, workout results and monitoring for one client, read together so the next decision has something behind it.</p></div>
     <div class="advanced-shell">
       <nav class="advanced-nav" id="advancedNav" aria-label="Advanced coaching modules"></nav>
       <div class="advanced-main">
@@ -645,6 +646,8 @@
   <button data-coach-nav="dashboard" onclick="openCoachDestination('dashboard')"><span class="nav-icon">⌂</span><span class="nav-label">Dashboard</span></button>
   <button data-coach-nav="actions" onclick="openCoachDestination('actions')"><span class="nav-icon">⚑</span><span class="nav-label">Actions</span><span class="coach-attention-badge" data-attention-badge="actions"></span></button>
   <button data-coach-nav="clients" onclick="openCoachDestination('clients')"><span class="nav-icon">●</span><span class="nav-label">Clients</span><span class="coach-attention-badge" data-attention-badge="client_requests"></span></button>
+  <button data-coach-nav="builder" onclick="openCoachDestination('builder')"><span class="nav-icon">&#9636;</span><span class="nav-label">Build a workout</span></button>
+  <button data-coach-nav="tools" onclick="openCoachDestination('tools')"><span class="nav-icon">&#9201;</span><span class="nav-label">Trainer tools</span></button>
   <button data-coach-nav="programming" onclick="openCoachDestination('programming')"><span class="nav-icon">▤</span><span class="nav-label">Programming</span></button>
   <button data-coach-nav="calendar" onclick="openCoachDestination('calendar')"><span class="nav-icon">□</span><span class="nav-label">Calendar</span><span class="coach-attention-badge" data-attention-badge="schedule"></span></button>
   <button data-coach-nav="messages" onclick="openCoachDestination('messages')"><span class="nav-icon">✉</span><span class="nav-label">Messages</span><span class="coach-attention-badge" data-attention-badge="messages"></span></button>
@@ -1304,33 +1307,33 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/engine/exercise-library.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/engine/session-engine.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/engine/session-builders.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/engine/personalization.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/engine/booking-import.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/navigation.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/program-app.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/forms.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/engine/generation.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/rendering.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/calculations-timers.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/engine/multiweek-programs.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/readiness-progress.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/client-consultation.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/trainer/trainer-hub.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/trainer/coaching-support.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/role-governance.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/action-calendar.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/workout-feedback-reports.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/booking-import-ui.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/trainer-audits.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/area-art.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/work-areas.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/area-tools.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/walkthrough.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/app/intro-video.js?v=20261012-v131-cumulative-standing-r1"></script>
-<script src="js/init.js?v=20261012-v131-cumulative-standing-r1"></script>
+<script src="cloud-sync.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/engine/exercise-library.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/engine/session-engine.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/engine/session-builders.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/engine/personalization.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/engine/booking-import.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/navigation.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/program-app.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/forms.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/engine/generation.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/rendering.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/calculations-timers.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/engine/multiweek-programs.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/readiness-progress.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/client-consultation.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/trainer/trainer-hub.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/trainer/coaching-support.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/role-governance.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/action-calendar.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/workout-feedback-reports.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/booking-import-ui.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/trainer-audits.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/area-art.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/work-areas.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/area-tools.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/walkthrough.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/app/intro-video.js?v=20261012-v132-nav-consolidation-r2"></script>
+<script src="js/init.js?v=20261012-v132-nav-consolidation-r2"></script>
 </body>
 </html>

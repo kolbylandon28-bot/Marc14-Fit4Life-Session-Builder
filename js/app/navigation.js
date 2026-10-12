@@ -53,7 +53,7 @@ function show(view) {
   const clientNav = document.getElementById("clientBottomNav"), showClientNav = portalRole === "client" && CLIENT_APP_VIEWS.includes(view);
   if (clientNav) { clientNav.classList.toggle("show",showClientNav); clientNav.querySelectorAll("button").forEach((button) => button.classList.toggle("on",view === "client-" + button.dataset.clientTab)); }
   const coachNav = document.getElementById("coachSidebar"), showCoachNav = portalRole === "trainer" && COACH_SHELL_VIEWS.includes(view) && trainerIsUnlocked();
-  if (coachNav) { coachNav.classList.toggle("show",showCoachNav); const key = openCoachDestination.current || ({"trainer-menu":"dashboard",trainer:"clients",builder:"programming",programs:"programming",tools:"dashboard",readiness:"assessments",advanced:"business"}[view] || ""); coachNav.querySelectorAll("[data-coach-nav]").forEach((button) => button.classList.toggle("on",button.dataset.coachNav === key)); }
+  if (coachNav) { coachNav.classList.toggle("show",showCoachNav); const key = openCoachDestination.current || ({"trainer-menu":"dashboard",trainer:"clients",builder:"builder",programs:"programming",tools:"tools",readiness:"assessments",advanced:"business"}[view] || ""); coachNav.querySelectorAll("[data-coach-nav]").forEach((button) => button.classList.toggle("on",button.dataset.coachNav === key)); }
   if (document.body && document.body.classList) document.body.classList.toggle("coach-shell-on",showCoachNav);
   if (typeof closeCoachMoreSheet === "function") closeCoachMoreSheet();
   if (typeof syncCoachMoreBadge === "function") syncCoachMoreBadge();

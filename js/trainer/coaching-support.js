@@ -101,13 +101,18 @@ function saveClientCheckIn() {
   return record;
 }
 
+/* Three of these moved to where they belong: templates onto the Programs page, gym setup
+   into Settings, alerts beside the queue they fill. What is left is the two that need a
+   client picked, and they are headed for the client record next. */
 const ADVANCED_TABS = [
   ["review","Client coaching review"],
   ["monitoring","Monitoring & imports"],
-  ["templates","Program templates"],
-  ["organization","Team & gym setup"],
-  ["alerts","Alerts & rules"],
 ];
+const ADVANCED_MOVED = {
+  templates: ["programming", "Program templates are on the Programs page now"],
+  organization: ["settings", "Gym setup is in Settings now"],
+  alerts: ["actions", "Alerts and rules are beside the action queue now"]
+};
 const ADVANCED_TAB_ALIASES = {
   assist:"review",workload:"review",mental:"review",
   athlete:"monitoring",wearables:"monitoring",
@@ -118,6 +123,12 @@ let advancedState = { tab:"review", profileId:"" };
 let currentAiCoachDraft = null;
 function normalizedAdvancedTab(tab) { return ADVANCED_TAB_ALIASES[tab] || tab || "review"; }
 function openAdvancedStudio(tab,profileId) {
+  const moved = ADVANCED_MOVED[tab];
+  if (moved && typeof openCoachDestination === "function") {
+    openCoachDestination(moved[0]);
+    if (typeof showToast === "function") showToast(moved[1]);
+    return;
+  }
   if (!trainerIsUnlocked()) { requestTrainerAccess("advanced"); return; }
   advancedState.tab = normalizedAdvancedTab(tab || advancedState.tab);
   if (profileId) advancedState.profileId = profileId;

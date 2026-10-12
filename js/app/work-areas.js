@@ -510,7 +510,7 @@ function renderAreaHome() {
    sees them. */
 const COACH_NAV_GROUPS = [
   ["This area", ["area-home"]],
-  ["Coaching", ["dashboard", "actions", "clients", "programming", "team", "calendar", "messages", "library", "assessments", "reports"]],
+  ["Coaching", ["dashboard", "actions", "clients", "builder", "programming", "tools", "team", "calendar", "messages", "library", "assessments", "reports"]],
   ["Managing", ["areas", "audits", "approvals", "access", "settings"]]
 ];
 const COACHING_NAV_KEYS = COACH_NAV_GROUPS[1][1];

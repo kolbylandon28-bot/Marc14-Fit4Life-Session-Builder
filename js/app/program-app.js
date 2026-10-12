@@ -1029,6 +1029,12 @@ function syncToolsRoleCopy() {
 function openTools() { syncToolsRoleCopy(); show("tools"); calculateOneRm(); calculatePlates(); buildWarmupRamp(); }
 function openPrograms(preserveTemplate) {
   if (!trainerIsUnlocked()) { requestTrainerAccess("programs"); return; }
+  // Templates were a tab in a second workspace; they are programs, so they live here.
+  const templateHost = byId("programTemplatesHost");
+  if (templateHost && typeof renderMarketplaceModule === "function") {
+    templateHost.innerHTML = '<details class="formal-review-box" style="margin-top:12px"><summary>Program templates</summary>'
+      + renderMarketplaceModule() + '</details>';
+  }
   if (!preserveTemplate) {
     loadedProgramTemplate = null;
     const context = byId("programTemplateContext");
@@ -1106,6 +1112,9 @@ function openCoachDestination(destination) {
   if (destination === 'business') destination = 'settings';
   portalRole = 'trainer'; openCoachDestination.current = destination;
   if (destination === 'dashboard') { show('trainer-menu'); return; }
+  // The builder and the floor tools had no way in except a card on the dashboard.
+  if (destination === 'builder') { openBuilder(); return; }
+  if (destination === 'tools') { openTools(); return; }
   if (destination === 'clients' || destination === 'reports') { show('trainer'); renderTrainerHub(); return; }
   if (destination === 'programming') { openPrograms(); return; }
   if (destination === 'assessments') { openReadiness(); return; }
@@ -1165,9 +1174,11 @@ function renderCoachModule(destination) {
     if (typeof inviteEmailTestPanelHtml === "function") {
       out.insertAdjacentHTML('beforeend', inviteEmailTestPanelHtml());
     }
-    out.insertAdjacentHTML('beforeend',owner ? '<section class="coach-module-card"><h3>Holiday themes, appearance & gym setup</h3><p>Publish one shared holiday theme to every device, adjust brand colors, and manage shared equipment. Theme publishing is owner-only.</p><div class="tool-actions"><button class="small-btn primary" onclick="openAdvancedStudio(\'organization\')">Open holiday themes & appearance</button></div></section>' : '<section class="coach-module-card"><h3>Holiday themes, appearance & gym setup</h3><p>The active theme appears here automatically. Only an owner can publish a different holiday theme or change shared setup.</p><div class="tool-actions"><button class="small-btn" onclick="openOwnerRequestDialog(\'organization_setting\',\'\',\'\',\'Change the shared holiday theme, gym appearance, or shared setup\')">Request a change</button></div></section>');
+    out.insertAdjacentHTML('beforeend', owner && typeof renderOrganizationModule === 'function'
+      ? renderOrganizationModule()
+      : '<section class="coach-module-card"><h3>Gym setup</h3><p>The active theme appears here automatically. Only an owner can publish a different holiday theme or change shared setup.</p><div class="tool-actions"><button class="small-btn" onclick="openOwnerRequestDialog(\'organization_setting\',\'\',\'\',\'Change the shared holiday theme, gym appearance, or shared setup\')">Request a change</button></div></section>');
   } else {
-    out.innerHTML = '<section class="coach-module-card"><h3>Data & backups</h3><p>Export or restore the full local coaching record before changing devices.</p><div class="tool-actions"><button class="small-btn" onclick="exportProgress()">Export backup</button><button class="small-btn" onclick="byId(\'progressImport\').click()">Restore backup</button></div></section><section class="coach-module-card"><h3>Security</h3><p>Hosted accounts and approved Supabase roles control live trainer and client access. There is no shared trainer password.</p><div class="tool-actions"><button class="small-btn" onclick="lockTrainerHub()">Sign out / lock workspace</button></div></section><section class="coach-module-card"><h3>Gym branding</h3><p>Manage gym identity, available equipment, and teams from one organization setup.</p><div class="tool-actions"><button class="small-btn" onclick="openAdvancedStudio(\'organization\')">Open organization setup</button></div></section><section class="coach-module-card"><h3>Monitoring imports</h3><p>Attach optional monitoring exports to a specific client, then review them alongside workout and check-in evidence.</p><div class="tool-actions"><button class="small-btn" onclick="openAdvancedStudio(\'monitoring\')">Open monitoring</button></div></section>';
+    out.innerHTML = '<section class="coach-module-card"><h3>Data & backups</h3><p>Export or restore the full local coaching record before changing devices.</p><div class="tool-actions"><button class="small-btn" onclick="exportProgress()">Export backup</button><button class="small-btn" onclick="byId(\'progressImport\').click()">Restore backup</button></div></section><section class="coach-module-card"><h3>Security</h3><p>Hosted accounts and approved Supabase roles control live trainer and client access. There is no shared trainer password.</p><div class="tool-actions"><button class="small-btn" onclick="lockTrainerHub()">Sign out / lock workspace</button></div></section>' + (typeof renderOrganizationModule === 'function' ? renderOrganizationModule() : '') + '';
   }
 }
 // Inline on* attributes are HTML-decoded before the JavaScript is parsed, so an escaped
