@@ -540,6 +540,7 @@ const COACHING_NAV_KEYS = ["dashboard", "actions", "messages", "calendar", "clie
   "reports", "builder", "programming", "library", "tools", "team"];
 const navGroupFor = (key) => (COACH_NAV_GROUPS.find(([, keys]) => keys.includes(key)) || [])[0] || "";
 let openNavGroup = "";
+let lastNavDestination = null;
 
 function ensureAreaHomeNav() {
   const bar = byId("coachSidebar");
@@ -579,8 +580,13 @@ function groupCoachSidebar() {
       return !(button.hasAttribute("data-owner-only") && !isFit4LifeOwner());
     });
   });
+  // Follow the destination only when it actually changes. Doing it on every render meant a
+  // tap on another group was overwritten before it could paint.
   const holding = navGroupFor(here);
-  if (holding && allowed[holding] && allowed[holding].length) openNavGroup = holding;
+  if (here !== lastNavDestination) {
+    lastNavDestination = here;
+    if (holding && allowed[holding] && allowed[holding].length) openNavGroup = holding;
+  }
   if (!openNavGroup || !(allowed[openNavGroup] || []).length) {
     openNavGroup = (COACH_NAV_GROUPS.find(([label]) => (allowed[label] || []).length) || [])[0] || "";
   }
@@ -599,9 +605,15 @@ function groupCoachSidebar() {
     }
     const shown = allowed[label] || [];
     const open = openNavGroup === label;
+    // The buttons sit in the order the markup was written in, which is not the order of the
+    // groups, so each one is moved to follow its own heading.
+    let anchor = heading;
     keys.forEach((navKey) => {
       const button = bar.querySelector('[data-coach-nav="' + navKey + '"]');
-      if (button) button.hidden = !open || shown.indexOf(navKey) < 0;
+      if (!button) return;
+      button.hidden = !open || shown.indexOf(navKey) < 0;
+      if (anchor.nextSibling !== button) anchor.parentNode.insertBefore(button, anchor.nextSibling);
+      anchor = button;
     });
     heading.hidden = !shown.length;
     heading.classList.toggle("on", open);
