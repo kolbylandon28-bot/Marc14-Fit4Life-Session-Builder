@@ -141,7 +141,15 @@ const AUDIT_SAFETY_ACTIONS = [
   ["none", "Did nothing at the time"]
 ];
 
-let auditView = { tab:"audits", trainerKey:"", auditId:"", draft:null, emailFor:"" };
+let auditView = { tab:"audits", trainerKey:"", auditId:"", draft:null, emailFor:"", renameFor:"", trainerTier:"", trainerSearch:"" };
+
+const AUDIT_TIER_FILTERS = [["", "Everyone"], ["staff_premium", "Premium"], ["staff_standard", "Standard"], ["unset", "No tier"]];
+const auditTrainerTier = (trainer) => (typeof normalizeStaffTier === "function" ? normalizeStaffTier(trainer.tier) : "") || "";
+const auditTierLabel = (trainer) => {
+  const id = auditTrainerTier(trainer);
+  if (!id) return "no tier";
+  return typeof staffTierMeta === "function" ? staffTierMeta(id).label.replace(" trainer", "") : id;
+};
 let auditFilters = { trainer:"", kind:"", from:"", to:"", flagged:false, follow:false, search:"" };
 
 /* ---------- records ---------- */
@@ -197,6 +205,7 @@ function auditTrainerRoster() {
     const key = keyForEmail.get(address) || address;
     const existing = byKey.get(key) || { id: "audit-trainer-account-" + key, key, email: address, active: true };
     byKey.set(key, { ...existing, email: existing.email || address,
+      tier: row.trainer_tier || existing.tier || "",
       name: existing.name || row.display_name || row.email,
       userId: row.user_id || existing.userId || "",
       linked: true,
@@ -554,16 +563,123 @@ function renderAuditCoverage() {
   return auditCard("Who is due", '<p class="storage-note">Oldest first. A trainer needs three audits before the trend below means anything.</p><div class="advanced-list">' + body + '</div>', true);
 }
 
+function filteredAuditTrainers() {
+  const wanted = auditView.trainerTier;
+  return auditTrainerRoster().filter((trainer) => {
+    if (!wanted) return true;
+    const id = auditTrainerTier(trainer);
+    return wanted === "unset" ? !id : id === wanted;
+  });
+}
+
+// The box filters the rows already on screen rather than rebuilding the card, so what you
+// are typing is never taken away mid-word.
+function filterTrainerRows(text) {
+  auditView.trainerSearch = text || "";
+  const needle = String(text || "").trim().toLowerCase();
+  let shown = 0;
+  document.querySelectorAll("[data-trainer-row]").forEach((row) => {
+    const hay = String(row.getAttribute("data-trainer-row") || "");
+    const hit = !needle || hay.indexOf(needle) >= 0;
+    row.hidden = !hit;
+    if (hit) shown++;
+  });
+  const empty = byId("trainerSearchEmpty");
+  if (empty) empty.hidden = shown > 0;
+  const count = byId("trainerShownCount");
+  if (count) count.textContent = shown;
+}
+
+function setTrainerTierFilter(tier) {
+  auditView.trainerTier = auditView.trainerTier === tier ? "" : tier;
+  renderTrainerAuditsModule();
+}
+
+async function setTrainerTier(key, tier) {
+  const trainer = auditTrainerRoster().find((row) => row.key === key);
+  if (!trainer) return;
+  if (trainer.userId && typeof window.fit4lifeCloudSetTrainerTier === "function") {
+    const done = await window.fit4lifeCloudSetTrainerTier(trainer.userId, tier);
+    if (!done) { showToast("That tier could not be saved"); return; }
+    if (typeof window.fit4lifeCloudListTrainers === "function") await window.fit4lifeCloudListTrainers();
+  } else {
+    // No account to hang it on yet, so it rides with the hand-entered record until there is one.
+    const rows = loadAuditTrainers(), record = rows.find((row) => row.key === key);
+    if (!record) { showToast("That trainer is not on the list any more"); return; }
+    record.tier = tier;
+    record.updatedAt = new Date().toISOString();
+    if (!writeAuditTrainers(rows)) return;
+    if (typeof window.fit4lifeCloudSaveAuditTrainer === "function") window.fit4lifeCloudSaveAuditTrainer(record);
+  }
+  renderTrainerAuditsModule();
+  showToast(trainer.name + " is now " + (tier === "staff_premium" ? "premium" : "standard"));
+}
+
+function renameAuditTrainer(key) {
+  auditView.renameFor = auditView.renameFor === key ? "" : key;
+  auditView.emailFor = "";
+  renderTrainerAuditsModule();
+}
+
+function saveTrainerName(key) {
+  const field = byId("trainerName_" + key);
+  const name = field ? String(field.value || "").trim() : "";
+  if (!name) { showToast("A trainer needs a name"); return; }
+  const rows = loadAuditTrainers();
+  let record = rows.find((row) => row.key === key);
+  if (!record) {
+    // Renaming someone who came from their account: keep the correction on our side of it.
+    const known = auditTrainerRoster().find((row) => row.key === key);
+    if (!known) { showToast("That trainer is not on the list any more"); return; }
+    record = { id: auditNewId("audit-trainer"), key, email: known.email || "", active: true, createdAt: new Date().toISOString() };
+    rows.push(record);
+  }
+  record.name = name;
+  record.updatedAt = new Date().toISOString();
+  if (!writeAuditTrainers(rows)) return;
+  if (typeof window.fit4lifeCloudSaveAuditTrainer === "function") window.fit4lifeCloudSaveAuditTrainer(record);
+  auditView.renameFor = "";
+  renderTrainerAuditsModule();
+  showToast("Renamed to " + name);
+}
+
 function renderAuditTrainersCard() {
-  const trainers = auditTrainerRoster();
+  const trainers = filteredAuditTrainers();
   const add = '<div class="compact-grid"><div class="compact-field"><label for="auditTrainerName">Name</label><input id="auditTrainerName" placeholder="Zach B"></div>'
     + '<div class="compact-field"><label for="auditTrainerEmail">Email (optional)</label><input id="auditTrainerEmail" type="email" placeholder="Leave blank and add it later" autocapitalize="none"></div></div>'
     + '<div class="tool-actions"><button class="small-btn primary" onclick="addAuditTrainerFromForm()">Add trainer</button></div>'
     + '<p class="storage-note">A name is enough to start auditing someone. Add their email whenever you have it and the audits already filed stay with them. Everyone you invited as a trainer is on this list already.</p>';
+  const tierCounts = auditTrainerRoster().reduce((acc, row) => {
+    const id = auditTrainerTier(row) || "unset";
+    acc[id] = (acc[id] || 0) + 1;
+    return acc;
+  }, {});
+  const toolbar = '<div class="trainer-toolbar">'
+    + '<input class="swap-search" id="trainerSearch" type="search" placeholder="Find a trainer by name or email…"'
+    + ' value="' + escapeHtml(auditView.trainerSearch || "") + '" oninput="filterTrainerRows(this.value)">'
+    + '<div class="chips">' + AUDIT_TIER_FILTERS.map(([value, label]) => {
+        const n = value ? (tierCounts[value] || 0) : auditTrainerRoster().length;
+        return '<button type="button" class="chip' + (auditView.trainerTier === value ? " on" : "") + '"'
+          + ' onclick="setTrainerTierFilter(\'' + value + '\')" aria-pressed="' + (auditView.trainerTier === value) + '">'
+          + escapeHtml(label) + ' <b>' + n + '</b></button>';
+      }).join('') + '</div></div>';
+
   const rows = trainers.length ? '<div class="advanced-list" style="margin-top:12px">' + trainers.map((trainer) => {
     const invite = trainerInviteFor(trainer);
     const count = auditsForTrainer(trainer.key).length;
     const asking = auditView.emailFor === trainer.key;
+    const renaming = auditView.renameFor === trainer.key;
+    const tierId = auditTrainerTier(trainer);
+    const haystack = (trainer.name + " " + (trainer.email || "")).toLowerCase();
+    const renameForm = renaming ? '<div class="compact-field" style="margin-top:8px"><label for="trainerName_' + escapeHtml(trainer.key) + '">Their name</label>'
+      + '<input id="trainerName_' + escapeHtml(trainer.key) + '" type="text" value="' + escapeHtml(trainer.name) + '"'
+      + ' onkeydown="if(event.key===\'Enter\')saveTrainerName(\'' + escapeHtml(trainer.key) + '\')"></div>'
+      + '<div class="tool-actions"><button class="small-btn primary" onclick="saveTrainerName(\'' + escapeHtml(trainer.key) + '\')">Save name</button>'
+      + '<button class="small-btn" onclick="renameAuditTrainer(\'' + escapeHtml(trainer.key) + '\')">Cancel</button></div>' : '';
+    const tierButton = window.fit4lifeTrainerTiersAvailable === false ? ''
+      : '<button class="small-btn" onclick="setTrainerTier(\'' + escapeHtml(trainer.key) + '\',\''
+        + (tierId === "staff_premium" ? "staff_standard" : "staff_premium") + '\')">'
+        + (tierId === "staff_premium" ? "Make standard" : "Make premium") + '</button>';
     const emailForm = asking ? '<div class="compact-field" style="margin-top:8px"><label for="trainerEmail_' + escapeHtml(trainer.key) + '">Their email</label>'
       + '<input id="trainerEmail_' + escapeHtml(trainer.key) + '" type="email" autocapitalize="none" placeholder="zach@example.com"'
       + ' onkeydown="if(event.key===\'Enter\')addTrainerEmailFromForm(\'' + escapeHtml(trainer.key) + '\')"></div>'
@@ -571,25 +687,28 @@ function renderAuditTrainersCard() {
       + '<button class="small-btn" onclick="askForTrainerEmail(\'' + escapeHtml(trainer.key) + '\')">Not now</button></div>' : '';
     const bits = [];
     if (trainerHasEmail(trainer)) bits.push(trainer.email);
+    bits.push(auditTierLabel(trainer));
     bits.push(AUDIT_SOURCE_TEXT[trainer.source] || "on the list");
     bits.push(inviteStatusText(trainer, invite));
     bits.push(count + (count === 1 ? " audit" : " audits"));
-    return '<div class="trainer-account-row"><div><b>' + escapeHtml(trainer.name) + '</b><span>'
+    return '<div class="trainer-account-row" data-trainer-row="' + escapeHtml(haystack) + '"><div><b>' + escapeHtml(trainer.name) + '</b>'
+      + (tierId === "staff_premium" ? '<span class="pill tier-premium">Premium</span>' : '') + '<span>'
       + escapeHtml(bits.join(" · ")) + '</span>'
-      + emailForm + '</div>'
-      + '<div class="tool-actions">' + inviteButtonsHtml(trainer, invite)
+      + renameForm + emailForm + '</div>'
+      + '<div class="tool-actions">' + inviteButtonsHtml(trainer, invite) + tierButton
+      + '<button class="small-btn" onclick="renameAuditTrainer(\'' + escapeHtml(trainer.key) + '\')">' + (renaming ? "Close" : "Rename") + '</button>'
       + '<button class="small-btn" onclick="openAuditTrainer(\'' + escapeHtml(trainer.key) + '\')">Audits</button>'
       + (trainer.source === "manual"
         ? '<button class="small-btn" onclick="removeAuditTrainer(\'' + escapeHtml(trainer.key) + '\')">Remove</button>'
         : '<button class="small-btn" onclick="hideAuditTrainer(\'' + escapeHtml(trainer.key) + '\')">Hide</button>')
       + '</div></div>';
-  }).join('') + '</div>'
-    : '<div class="empty-state">No trainers yet. Invite someone as a trainer and they appear here on their own.</div>';
+  }).join('') + '<div class="empty-state" id="trainerSearchEmpty" hidden>Nobody matches that.</div></div>'
+    : '<div class="empty-state">' + (auditView.trainerTier ? "Nobody is on that tier." : "No trainers yet. Invite someone as a trainer and they appear here on their own.") + '</div>';
   const hiddenCount = loadHiddenAuditTrainers().length;
   const hiddenNote = hiddenCount ? '<div class="tool-actions" style="margin-top:10px"><span class="storage-note">'
     + hiddenCount + (hiddenCount === 1 ? ' trainer is' : ' trainers are') + ' hidden from this list.</span>'
     + '<button class="small-btn" onclick="unhideAuditTrainers()">Show them again</button></div>' : '';
-  return auditCard("Trainers · " + trainers.length, add + rows + hiddenNote, true);
+  return auditCard("Trainers · " + trainers.length, add + toolbar + rows + hiddenNote, true);
 }
 
 /* ---------- getting them into the app ---------- */
