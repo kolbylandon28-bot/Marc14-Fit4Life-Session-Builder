@@ -1031,12 +1031,43 @@ function closeClientAssistance() {
   return true;
 }
 
+function trainerAssistanceMarkup() {
+  return '<div id="trainerAssistanceModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="trainerAssistanceTitle">'
+    + '<div class="review-dialog"><h2 id="trainerAssistanceTitle" class="sr-only">Tutorials</h2>'
+    + trainerAssistancePanelHtml()
+    + '<div class="tool-actions"><button class="small-btn" onclick="closeTrainerAssistance()">Close</button></div>'
+    + '</div></div>';
+}
+
+/* Tutorials used to walk you into the whole of Settings and scroll you to a panel. It is
+   its own dialog now, the way the client side already did it, so you come back to the
+   screen you asked for help with rather than to a page about data backups. */
 function openTrainerAssistance() {
-  if (typeof openCoachDestination === "function") openCoachDestination("settings");
-  setTimeout(() => {
-    const panel = document.getElementById("trainerAssistance");
-    if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 120);
+  let modal = document.getElementById("trainerAssistanceModal");
+  if (!modal) {
+    const wrap = document.createElement("div");
+    wrap.innerHTML = trainerAssistanceMarkup();
+    document.body.appendChild(wrap.firstChild);
+  } else {
+    // Rebuilt each time: which tours can run depends on where you are standing.
+    modal.outerHTML = trainerAssistanceMarkup();
+  }
+  modal = document.getElementById("trainerAssistanceModal");
+  if (!modal) return false;
+  modal.onclick = (event) => { if (event.target === modal) closeTrainerAssistance(); };
+  if (typeof bindWalkthroughCards === "function") bindWalkthroughCards(modal);
+  modal.querySelectorAll("[data-wt-start]").forEach((button) => {
+    button.onclick = () => { closeTrainerAssistance(); startWalkthrough(button.dataset.wtStart); };
+  });
+  modal.classList.add("open");
+  modal.setAttribute("aria-hidden", "false");
+  return true;
+}
+
+function closeTrainerAssistance() {
+  const modal = document.getElementById("trainerAssistanceModal");
+  if (modal) { modal.classList.remove("open"); modal.setAttribute("aria-hidden", "true"); }
+  return true;
 }
 
 if (typeof window !== "undefined") {

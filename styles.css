@@ -2278,3 +2278,4 @@ body.cloud-first-password .cloud-auth-help{display:none}
   .phone-only-help.show{display:inline-flex!important;align-items:center;justify-content:center;min-width:38px;padding:0 10px}
   .topbar-status{padding-right:8px;margin-right:0}
 }
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
