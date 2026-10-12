@@ -141,7 +141,24 @@ const AUDIT_SAFETY_ACTIONS = [
   ["none", "Did nothing at the time"]
 ];
 
-let auditView = { tab:"audits", trainerKey:"", auditId:"", draft:null, emailFor:"", renameFor:"", trainerTier:"", trainerSearch:"" };
+const AUDIT_VIEW_DEFAULTS = { tab:"audits", trainerKey:"", auditId:"", draft:null, emailFor:"", renameFor:"", trainerTier:"", trainerSearch:"", newTier:"staff_standard" };
+let auditView = { ...AUDIT_VIEW_DEFAULTS };
+
+/* Moving between tabs used to build a fresh object literal in seven places, so any field
+   added later was silently dropped by all of them. Everything resets except the three
+   choices that are yours rather than the screen's. */
+function setAuditView(next) {
+  auditView = {
+    ...AUDIT_VIEW_DEFAULTS,
+    trainerTier: auditView.trainerTier,
+    trainerSearch: auditView.trainerSearch,
+    newTier: auditView.newTier,
+    ...(next || {})
+  };
+}
+
+/* The two tiers the gym already runs on. Standard covers flex; premium covers the lot. */
+const AUDIT_NEW_TIERS = [["staff_standard", "Standard"], ["staff_premium", "Premium"]];
 
 const AUDIT_TIER_FILTERS = [["", "Everyone"], ["staff_premium", "Premium"], ["staff_standard", "Standard"], ["unset", "No tier"]];
 const auditTrainerTier = (trainer) => (typeof normalizeStaffTier === "function" ? normalizeStaffTier(trainer.tier) : "") || "";
@@ -296,7 +313,7 @@ function saveTrainerAudit(audit) {
   return true;
 }
 
-function saveAuditTrainer(name, email) {
+function saveAuditTrainer(name, email, tier) {
   const cleanName = String(name || "").trim(), address = auditTrainerKey(email);
   if (!cleanName) { showToast("Give the trainer's name"); return null; }
   if (address && address.indexOf("@") < 1) { showToast("That does not look like an email address. Leave it blank and add it later if you do not have it."); return null; }
@@ -309,6 +326,8 @@ function saveAuditTrainer(name, email) {
   };
   record.name = cleanName;
   if (address) record.email = address;
+  const wantedTier = typeof normalizeStaffTier === "function" ? normalizeStaffTier(tier) : "";
+  if (wantedTier) record.tier = wantedTier;
   record.updatedAt = new Date().toISOString();
   if (!existing) rows.push(record);
   if (!writeAuditTrainers(rows)) return null;
@@ -359,7 +378,7 @@ function deleteTrainerAudit(id) {
   if (!window.confirm("Delete this audit? It goes for every device and cannot be undone.")) return;
   writeTrainerAudits(loadAuditRecords().filter((audit) => audit.id !== id));
   if (typeof window.fit4lifeCloudDeleteTrainerAudit === "function") window.fit4lifeCloudDeleteTrainerAudit(id);
-  auditView = { tab:"audits", trainerKey:auditView.trainerKey, auditId:"", draft:null };
+  setAuditView({ tab:"audits", trainerKey:auditView.trainerKey, auditId:"", draft:null });
   renderTrainerAuditsModule();
   showToast("Audit deleted");
 }
@@ -509,11 +528,11 @@ function auditTabsHtml() {
 }
 
 function openAuditTab(tab) {
-  auditView = { tab, trainerKey: tab === "trainer" ? auditView.trainerKey : "", auditId:"", draft: tab === "new" ? auditView.draft : null };
+  setAuditView({ tab, trainerKey: tab === "trainer" ? auditView.trainerKey : "", auditId:"", draft: tab === "new" ? auditView.draft : null });
   renderTrainerAuditsModule();
 }
-function openAuditTrainer(key) { auditView = { tab:"trainer", trainerKey:key, auditId:"", draft:null }; renderTrainerAuditsModule(); }
-function openAuditDetail(id) { auditView = { tab:"detail", trainerKey:auditView.trainerKey, auditId:id, draft:null }; renderTrainerAuditsModule(); }
+function openAuditTrainer(key) { setAuditView({ tab:"trainer", trainerKey:key, auditId:"", draft:null }); renderTrainerAuditsModule(); }
+function openAuditDetail(id) { setAuditView({ tab:"detail", trainerKey:auditView.trainerKey, auditId:id, draft:null }); renderTrainerAuditsModule(); }
 
 function auditScoreChip(audit) {
   const score = auditScore(audit);
@@ -612,7 +631,7 @@ async function setTrainerTier(key, tier) {
     if (typeof window.fit4lifeCloudSaveAuditTrainer === "function") window.fit4lifeCloudSaveAuditTrainer(record);
   }
   renderTrainerAuditsModule();
-  showToast(trainer.name + " is now " + (tier === "staff_premium" ? "premium" : "standard"));
+  showToast(trainer.name + (tier === "staff_premium" ? " promoted to premium" : " moved to standard"));
 }
 
 function renameAuditTrainer(key) {
@@ -647,6 +666,10 @@ function renderAuditTrainersCard() {
   const trainers = filteredAuditTrainers();
   const add = '<div class="compact-grid"><div class="compact-field"><label for="auditTrainerName">Name</label><input id="auditTrainerName" placeholder="Zach B"></div>'
     + '<div class="compact-field"><label for="auditTrainerEmail">Email (optional)</label><input id="auditTrainerEmail" type="email" placeholder="Leave blank and add it later" autocapitalize="none"></div></div>'
+    + '<div class="compact-field" style="margin-top:10px"><label>Tier</label><div class="chips">'
+    + AUDIT_NEW_TIERS.map(([value, label]) => '<button type="button" class="chip' + (auditView.newTier === value ? " on" : "") + '"'
+      + ' onclick="setNewTrainerTier(\'' + value + '\')" aria-pressed="' + (auditView.newTier === value) + '">' + escapeHtml(label) + '</button>').join('')
+    + '</div></div>'
     + '<div class="tool-actions"><button class="small-btn primary" onclick="addAuditTrainerFromForm()">Add trainer</button></div>'
     + '<p class="storage-note">A name is enough to start auditing someone. Add their email whenever you have it and the audits already filed stay with them. Everyone you invited as a trainer is on this list already.</p>';
   const tierCounts = auditTrainerRoster().reduce((acc, row) => {
@@ -679,7 +702,7 @@ function renderAuditTrainersCard() {
     const tierButton = window.fit4lifeTrainerTiersAvailable === false ? ''
       : '<button class="small-btn" onclick="setTrainerTier(\'' + escapeHtml(trainer.key) + '\',\''
         + (tierId === "staff_premium" ? "staff_standard" : "staff_premium") + '\')">'
-        + (tierId === "staff_premium" ? "Make standard" : "Make premium") + '</button>';
+        + (tierId === "staff_premium" ? "Demote to standard" : "Promote to premium") + '</button>';
     const emailForm = asking ? '<div class="compact-field" style="margin-top:8px"><label for="trainerEmail_' + escapeHtml(trainer.key) + '">Their email</label>'
       + '<input id="trainerEmail_' + escapeHtml(trainer.key) + '" type="email" autocapitalize="none" placeholder="zach@example.com"'
       + ' onkeydown="if(event.key===\'Enter\')addTrainerEmailFromForm(\'' + escapeHtml(trainer.key) + '\')"></div>'
@@ -687,7 +710,8 @@ function renderAuditTrainersCard() {
       + '<button class="small-btn" onclick="askForTrainerEmail(\'' + escapeHtml(trainer.key) + '\')">Not now</button></div>' : '';
     const bits = [];
     if (trainerHasEmail(trainer)) bits.push(trainer.email);
-    bits.push(auditTierLabel(trainer));
+    // Premium already has a badge beside the name; saying it twice is noise.
+    if (tierId !== "staff_premium") bits.push(auditTierLabel(trainer));
     bits.push(AUDIT_SOURCE_TEXT[trainer.source] || "on the list");
     bits.push(inviteStatusText(trainer, invite));
     bits.push(count + (count === 1 ? " audit" : " audits"));
@@ -759,10 +783,22 @@ async function revokeTrainerInvite(key) {
   showToast(done ? "Invite cancelled" : "That invite could not be cancelled");
 }
 
+function setNewTrainerTier(tier) {
+  auditView.newTier = tier;
+  renderTrainerAuditsModule();
+}
+
 function addAuditTrainerFromForm() {
-  const record = saveAuditTrainer(byId("auditTrainerName") ? byId("auditTrainerName").value : "", byId("auditTrainerEmail") ? byId("auditTrainerEmail").value : "");
+  const name = byId("auditTrainerName") ? byId("auditTrainerName").value : "";
+  const email = byId("auditTrainerEmail") ? byId("auditTrainerEmail").value : "";
+  const record = saveAuditTrainer(name, email, auditView.newTier);
   if (!record) return;
-  showToast(record.name + " added");
+  // A trainer who already has an account carries their tier there, not on our copy.
+  const onRoster = auditTrainerRoster().find((row) => row.key === record.key);
+  if (onRoster && onRoster.userId && typeof window.fit4lifeCloudSetTrainerTier === "function") {
+    window.fit4lifeCloudSetTrainerTier(onRoster.userId, auditView.newTier);
+  }
+  showToast(record.name + " added as " + (auditView.newTier === "staff_premium" ? "premium" : "standard"));
   renderTrainerAuditsModule();
 }
 
@@ -833,7 +869,7 @@ function renderAuditTrainerPage() {
 
 /* ---------- the audit form ---------- */
 function startAuditFor(key) {
-  auditView = { tab:"new", trainerKey:key, auditId:"", draft:{ trainerKey:key, date:auditToday(), kind:"developmental", sessionType:"one_to_one", ratings:{} } };
+  setAuditView({ tab:"new", trainerKey:key, auditId:"", draft:{ trainerKey:key, date:auditToday(), kind:"developmental", sessionType:"one_to_one", ratings:{} } });
   renderTrainerAuditsModule();
 }
 
@@ -1155,7 +1191,7 @@ function saveAuditFromForm() {
   audit.scorePct = auditScore(audit);
   audit.flagged = auditIsFlagged(audit);
   if (!saveTrainerAudit(audit)) return;
-  auditView = { tab:"detail", trainerKey:trainer.key, auditId:audit.id, draft:null };
+  setAuditView({ tab:"detail", trainerKey:trainer.key, auditId:audit.id, draft:null });
   renderTrainerAuditsModule();
   showToast("Audit saved for " + trainer.name);
 }
@@ -1277,7 +1313,7 @@ function saveCoachingNote(trainer, draft) {
   note.scorePct = null;
   note.flagged = auditIsFlagged(note);
   if (!saveTrainerAudit(note)) return;
-  auditView = { tab:"detail", trainerKey:trainer.key, auditId:note.id, draft:null };
+  setAuditView({ tab:"detail", trainerKey:trainer.key, auditId:note.id, draft:null });
   renderTrainerAuditsModule();
   showToast("Coaching note saved for " + trainer.name);
 }
