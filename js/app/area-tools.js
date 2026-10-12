@@ -4,7 +4,8 @@
    marked estimated until someone confirms it, and every correction keeps what it replaced. */
 
 const AREA_MAX_SHIFT_HOURS = 8;
-let areaToolsState = { entries: [], shifts: [], tasks: [], events: [], loadedFor: "", busy: false };
+let areaToolsState = { entries: [], shifts: [], tasks: [], events: [], files: [], loadedFor: "", busy: false };
+let areaFilesOpen = { category: "", editing: "" };
 
 const asDate = (value) => value ? new Date(value) : null;
 const dayKey = (value) => { const date = asDate(value); return date ? date.toISOString().slice(0, 10) : ""; };
@@ -24,19 +25,23 @@ const peopleName = (userId) => {
 async function loadAreaTools(areaKey, force) {
   if (!areaKey || typeof window.fit4lifeCloudListTimeEntries !== "function") return;
   if (areaToolsState.loadedFor === areaKey && !force) return;
+  // A heading you opened in the pool means nothing in the equipment centre.
+  if (areaToolsState.loadedFor !== areaKey) areaFilesOpen = { category: "", editing: "" };
   areaToolsState.loadedFor = areaKey;
   const from = dayKey(weekStart()), to = dayKey(new Date(Date.now() + 13 * 86400000));
   const wantsEvents = typeof areaHasEvents === "function" && areaHasEvents(areaKey);
-  const [entries, shifts, tasks, events] = await Promise.all([
+  const [entries, shifts, tasks, events, files] = await Promise.all([
     window.fit4lifeCloudListTimeEntries(from, to),
     window.fit4lifeCloudListShifts(areaKey, from, to),
     typeof window.fit4lifeCloudListAreaTasks === "function" ? window.fit4lifeCloudListAreaTasks(areaKey, dayKey(new Date())) : [],
-    wantsEvents && typeof window.fit4lifeCloudListAreaEvents === "function" ? window.fit4lifeCloudListAreaEvents(areaKey, from, to) : []
+    wantsEvents && typeof window.fit4lifeCloudListAreaEvents === "function" ? window.fit4lifeCloudListAreaEvents(areaKey, from, to) : [],
+    typeof window.fit4lifeCloudListAreaFiles === "function" ? window.fit4lifeCloudListAreaFiles(areaKey) : []
   ]);
   areaToolsState.entries = entries || [];
   areaToolsState.shifts = shifts || [];
   areaToolsState.tasks = tasks || [];
   areaToolsState.events = events || [];
+  areaToolsState.files = files || [];
   if (typeof window.fit4lifeCloudRegisterDevice === "function") await window.fit4lifeCloudRegisterDevice();
   if (isFit4LifeOwner() && typeof window.fit4lifeCloudListDevices === "function") await window.fit4lifeCloudListDevices();
   renderAreaHome();
@@ -351,5 +356,119 @@ async function addAreaEvent(areaKey) {
 async function removeAreaEvent(eventId) {
   if (!window.confirm("Take this off the calendar?")) return;
   await window.fit4lifeCloudDeleteAreaEvent(eventId);
+  await loadAreaTools(activeWorkArea(), true);
+}
+
+/* ---------- the files that belong to this area ----------
+   One card, collapsed to its categories, because a handbook you have to scroll past every
+   time you clock in is a handbook nobody reads. An owner writes them; everyone reads them. */
+const areaFileCategories = (areaKey) => {
+  const seen = [];
+  (areaToolsState.files || []).filter((row) => row.area_key === areaKey).forEach((row) => {
+    const name = row.category || "General";
+    if (seen.indexOf(name) < 0) seen.push(name);
+  });
+  return seen.sort((a, b) => a.localeCompare(b));
+};
+
+function areaFilesCardHtml(areaKey) {
+  const files = (areaToolsState.files || []).filter((row) => row.area_key === areaKey);
+  const owner = isFit4LifeOwner();
+  const categories = areaFileCategories(areaKey);
+  const open = areaFilesOpen.category;
+
+  if (window.fit4lifeAreaFilesAvailable === false) {
+    return '<section class="coach-module-card" style="grid-column:1/-1"><h3>Files</h3>'
+      + '<p class="storage-note">Files are not set up in this gym yet.</p></section>';
+  }
+
+  const chips = categories.length ? '<div class="chips" style="margin-bottom:12px">'
+    + categories.map((name) => {
+      const count = files.filter((row) => (row.category || "General") === name).length;
+      return '<button type="button" class="chip' + (open === name ? " on" : "") + '"'
+        + ' onclick="openAreaFileCategory(\'' + escapeHtml(name) + '\')" aria-pressed="' + (open === name) + '">'
+        + escapeHtml(name) + ' <b>' + count + '</b></button>';
+    }).join('') + '</div>' : '';
+
+  const shown = open ? files.filter((row) => (row.category || "General") === open) : [];
+  const rows = shown.length ? '<div class="advanced-list">' + shown.map((row) => {
+    const editing = areaFilesOpen.editing === row.id;
+    return '<div class="trainer-account-row"><div><b>' + escapeHtml(row.title) + '</b>'
+      + (row.body ? '<span class="area-file-body">' + escapeHtml(row.body) + '</span>' : '')
+      + (row.link_url ? '<span><a class="area-file-link" href="' + escapeHtml(row.link_url) + '" target="_blank" rel="noopener noreferrer">'
+        + escapeHtml(row.link_label || "Open the link") + ' &#8599;</a></span>' : '')
+      + '</div>'
+      + (owner ? '<div class="tool-actions">'
+        + '<button class="small-btn" onclick="editAreaFile(\'' + row.id + '\')">' + (editing ? "Close" : "Edit") + '</button>'
+        + '<button class="small-btn" onclick="removeAreaFile(\'' + row.id + '\')">Remove</button></div>' : '')
+      + '</div>' + (editing ? areaFileFormHtml(areaKey, row) : '');
+  }).join('') + '</div>'
+    : (open ? '<div class="empty-state">Nothing filed under ' + escapeHtml(open) + ' yet.</div>' : '');
+
+  const addNew = owner && areaFilesOpen.editing === "new" ? areaFileFormHtml(areaKey, null) : '';
+  const addButton = owner && areaFilesOpen.editing !== "new"
+    ? '<div class="tool-actions" style="margin-top:12px"><button class="small-btn primary" onclick="editAreaFile(\'new\')">Add a file</button></div>' : '';
+
+  const empty = !files.length
+    ? '<div class="empty-state">' + (owner
+      ? "Nothing here yet. Put the things people ask you about twice a week — the chemical log, who to ring, how to close up."
+      : "Nothing has been put here yet.") + '</div>' : '';
+
+  return '<section class="coach-module-card" style="grid-column:1/-1"><h3>Files</h3>'
+    + '<p class="storage-note">' + escapeHtml(files.length
+      ? files.length + (files.length === 1 ? " file" : " files") + " for this area" + (open ? "" : " · pick a heading to read them")
+      : "Procedures and numbers for this area only.") + '</p>'
+    + chips + rows + empty + addNew + addButton + '</section>';
+}
+
+function areaFileFormHtml(areaKey, row) {
+  const known = areaFileCategories(areaKey);
+  const current = row ? (row.category || "General") : (areaFilesOpen.category || "");
+  const id = row ? row.id : "new";
+  return '<div class="area-file-form">'
+    + '<div class="compact-grid">'
+    + '<div class="compact-field"><label for="fileTitle_' + id + '">Title</label>'
+    + '<input id="fileTitle_' + id + '" type="text" placeholder="How to backwash the filter" value="' + escapeHtml(row ? row.title : "") + '"></div>'
+    + '<div class="compact-field"><label for="fileCategory_' + id + '">Heading</label>'
+    + '<input id="fileCategory_' + id + '" type="text" list="fileCategoryList_' + id + '" placeholder="Safety" value="' + escapeHtml(current) + '">'
+    + '<datalist id="fileCategoryList_' + id + '">' + known.map((name) => '<option value="' + escapeHtml(name) + '"></option>').join('') + '</datalist></div></div>'
+    + '<div class="compact-field"><label for="fileBody_' + id + '">What it says</label>'
+    + '<textarea id="fileBody_' + id + '" rows="4" placeholder="Step by step, in the order you would do it">' + escapeHtml(row && row.body ? row.body : "") + '</textarea></div>'
+    + '<div class="compact-grid">'
+    + '<div class="compact-field"><label for="fileLink_' + id + '">Link (optional)</label>'
+    + '<input id="fileLink_' + id + '" type="url" placeholder="https://..." value="' + escapeHtml(row && row.link_url ? row.link_url : "") + '"></div>'
+    + '<div class="compact-field"><label for="fileLinkLabel_' + id + '">What the link is</label>'
+    + '<input id="fileLinkLabel_' + id + '" type="text" placeholder="The PDF on the shared drive" value="' + escapeHtml(row && row.link_label ? row.link_label : "") + '"></div></div>'
+    + '<div class="tool-actions"><button class="small-btn primary" onclick="saveAreaFile(\'' + escapeHtml(areaKey) + '\',\'' + id + '\')">Save</button>'
+    + '<button class="small-btn" onclick="editAreaFile(\'\')">Cancel</button></div></div>';
+}
+
+function openAreaFileCategory(name) {
+  areaFilesOpen.category = areaFilesOpen.category === name ? "" : name;
+  areaFilesOpen.editing = "";
+  renderAreaHome();
+}
+
+function editAreaFile(id) {
+  areaFilesOpen.editing = areaFilesOpen.editing === id ? "" : id;
+  renderAreaHome();
+}
+
+async function saveAreaFile(areaKey, id) {
+  const value = (field) => { const node = byId(field + "_" + id); return node ? String(node.value || "").trim() : ""; };
+  const title = value("fileTitle");
+  if (!title) { showToast("Give it a title"); return; }
+  const result = await window.fit4lifeCloudSaveAreaFile(areaKey, title, value("fileCategory"), value("fileBody"),
+    value("fileLink"), value("fileLinkLabel"), 0, id === "new" ? null : id);
+  if (!result || !result.ok) { showToast((result && result.error) || "That could not be saved"); return; }
+  areaFilesOpen.category = value("fileCategory") || "General";
+  areaFilesOpen.editing = "";
+  showToast(id === "new" ? "Filed under " + areaFilesOpen.category : "Saved");
+  await loadAreaTools(areaKey, true);
+}
+
+async function removeAreaFile(id) {
+  if (!window.confirm("Take this off the list?")) return;
+  await window.fit4lifeCloudDeleteAreaFile(id);
   await loadAreaTools(activeWorkArea(), true);
 }

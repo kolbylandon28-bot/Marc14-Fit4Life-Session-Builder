@@ -492,6 +492,7 @@ function renderAreaHome() {
     cards.push(areaClockCardHtml(key));
     cards.push(areaTodayCardHtml(key));
     if (typeof areaTasksCardHtml === "function") cards.push(areaTasksCardHtml(key));
+    if (typeof areaFilesCardHtml === "function") cards.push(areaFilesCardHtml(key));
     cards.push(areaScheduleCardHtml(key));
     if (areaHasEvents(key) && typeof areaEventsCardHtml === "function") cards.push(areaEventsCardHtml(key));
     if (isFit4LifeOwner()) {

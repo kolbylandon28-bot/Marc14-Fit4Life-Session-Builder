@@ -2458,6 +2458,31 @@
     return !response.error;
   };
 
+  /* ---------- the files that belong to one area ----------
+     Procedures, checklists and numbers, kept where the person standing in that room will
+     look for them. An owner writes them; everyone signed in to the gym can read them. */
+  window.fit4lifeAreaFiles = [];
+  window.fit4lifeAreaFilesAvailable = undefined;
+
+  window.fit4lifeCloudListAreaFiles = async function fit4lifeCloudListAreaFiles(area) {
+    const response = await areaRpc("list_fit4life_area_files", { area: area || null });
+    if (response.error) { window.fit4lifeAreaFilesAvailable = false; window.fit4lifeAreaFiles = []; return []; }
+    window.fit4lifeAreaFilesAvailable = true;
+    window.fit4lifeAreaFiles = response.data || [];
+    return window.fit4lifeAreaFiles;
+  };
+  window.fit4lifeCloudSaveAreaFile = async function fit4lifeCloudSaveAreaFile(area, title, category, body, link, linkLabel, sort, fileId) {
+    const response = await areaRpc("save_fit4life_area_file", {
+      area, file_title: title, file_category: category || "General", file_body: body || "",
+      file_link: link || "", file_link_label: linkLabel || "", file_sort: sort || 0, file_id: fileId || null
+    });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true, id: response.data };
+  };
+  window.fit4lifeCloudDeleteAreaFile = async function fit4lifeCloudDeleteAreaFile(fileId) {
+    const response = await areaRpc("delete_fit4life_area_file", { file_id: fileId });
+    return !response.error;
+  };
+
   /* ---------- work areas ----------
      A gym decides its own areas. Everyone signed in can read the list; only an owner writes
      it, and only an owner sets who works where. Staff see their own rows and nobody else's. */
