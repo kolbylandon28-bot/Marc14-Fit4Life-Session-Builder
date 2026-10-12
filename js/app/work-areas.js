@@ -347,7 +347,8 @@ window.show = function areasShow(view) {
 /* ---------- the front door ----------
    One question, answered once: where are you today. What shows after that is whatever
    belongs to that area, and nothing else. */
-const COACHING_DEFAULTS = ["gym", "pool"];
+// A pool runs lessons, not personal training. It gets a calendar, not client records.
+const COACHING_DEFAULTS = ["gym"];
 const EVENT_DEFAULTS = ["gym", "pool"];
 const areaHasEvents = (key) => {
   const area = (window.fit4lifeWorkAreas || []).find((row) => row.area_key === key);

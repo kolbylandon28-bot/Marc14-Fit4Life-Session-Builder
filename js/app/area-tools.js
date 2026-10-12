@@ -45,13 +45,17 @@ async function loadAreaTools(areaKey, force) {
 /* ---------- the clock ---------- */
 function areaClockCardHtml(areaKey) {
   const open = myOpenEntry(), device = (window.fit4lifeDevices || []).find((row) => row.device_id === window.fit4lifeDeviceId());
-  const approved = device && device.approved_at && !device.revoked_at;
+  // Only an owner can read the device list, so only an owner can know the answer in advance.
+  // Everyone else is let through to the server, which checks approval itself and says no.
+  const owner = isFit4LifeOwner();
+  const approved = owner ? Boolean(device && device.approved_at && !device.revoked_at) : true;
   const mine = (areaToolsState.entries || []).filter((entry) => entry.user_id === (window.fit4lifeCloudIdentity || {}).id);
   const weekHours = roundHours(mine.filter((entry) => asDate(entry.clock_in) >= weekStart()).reduce((sum, entry) => sum + hoursBetween(entry.clock_in, entry.clock_out), 0));
   const status = open
     ? '<p><b>Clocked in</b> at ' + escapeHtml(clockTime(open.clock_in)) + ' · ' + roundHours(hoursBetween(open.clock_in, null)).toFixed(2) + ' hours so far</p>'
     : '<p>Not clocked in.</p>';
-  const deviceNote = approved ? '' : '<p class="storage-note">This device is not approved for clocking in yet. An owner approves it under Devices below.</p>';
+  const deviceNote = owner && !approved
+    ? '<p class="storage-note">This device is not approved for clocking in yet. Approve it under Devices below.</p>' : '';
   const button = open
     ? '<button class="small-btn primary" onclick="clockOutHere()">Clock out</button>'
     : '<button class="small-btn primary" ' + (approved ? '' : 'disabled ') + 'onclick="clockInHere(\'' + escapeHtml(areaKey) + '\')">Clock in</button>';
@@ -65,7 +69,14 @@ async function clockInHere(areaKey) {
   areaToolsState.busy = true;
   const result = await window.fit4lifeCloudClockIn(areaKey);
   areaToolsState.busy = false;
-  if (!result || !result.ok) { showToast((result && result.error) || "Could not clock in"); return; }
+  if (!result || !result.ok) {
+    const why = (result && result.error) || "";
+    // The server's own words for an unapproved device mean nothing to a student on shift.
+    showToast(/device|approved/i.test(why)
+      ? "This phone is not approved for clocking in. Ask whoever runs the gym to approve it."
+      : why || "Could not clock in");
+    return;
+  }
   showToast("Clocked in at " + clockTime(result.clock_in));
   await loadAreaTools(areaKey, true);
 }

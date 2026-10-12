@@ -141,7 +141,7 @@ const AUDIT_SAFETY_ACTIONS = [
   ["none", "Did nothing at the time"]
 ];
 
-let auditView = { tab:"audits", trainerKey:"", auditId:"", draft:null };
+let auditView = { tab:"audits", trainerKey:"", auditId:"", draft:null, emailFor:"" };
 let auditFilters = { trainer:"", kind:"", from:"", to:"", flagged:false, follow:false, search:"" };
 
 /* ---------- records ---------- */
@@ -155,6 +155,13 @@ function writeTrainerAudits(items) { return writeLocalArray(TRAINER_AUDITS_KEY, 
 function loadAuditTrainers() { return loadLocalArray(AUDIT_TRAINERS_KEY); }
 function writeAuditTrainers(items) { return writeLocalArray(AUDIT_TRAINERS_KEY, items, 400); }
 const auditTrainerKey = (email) => String(email || "").trim().toLowerCase();
+/* A trainer exists before their email does. The key is what audits hang off, so once it is
+   issued it never changes - an email attached later is an attribute, not the identity.
+   Trainers created before this carry their email as their key, which still works. */
+const auditTrainerNewKey = (name) => "n-" + String(name || "trainer").trim().toLowerCase()
+  .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 28) + "-" + Math.random().toString(36).slice(2, 7);
+const trainerEmailOf = (trainer) => auditTrainerKey((trainer && trainer.email) || "");
+const trainerHasEmail = (trainer) => trainerEmailOf(trainer).indexOf("@") > 0;
 const auditNewId = (prefix) => prefix + "-" + Date.now() + "-" + Math.random().toString(16).slice(2);
 const auditToday = () => new Date().toISOString().slice(0, 10);
 
@@ -176,15 +183,20 @@ function auditTrainerRoster() {
   const hidden = loadHiddenAuditTrainers().map((row) => (row && row.key) || row);
   const byKey = new Map();
 
+  const keyForEmail = new Map();
   loadAuditTrainers().forEach((trainer) => {
-    if (trainer && trainer.key) byKey.set(trainer.key, { ...trainer, source: "manual" });
+    if (!trainer || !trainer.key) return;
+    byKey.set(trainer.key, { ...trainer, source: "manual" });
+    const address = trainerEmailOf(trainer);
+    if (address) keyForEmail.set(address, trainer.key);
   });
 
   accounts.forEach((row) => {
-    const key = auditTrainerKey(row.email);
-    if (!key || key.indexOf("@") < 1) return;
-    const existing = byKey.get(key) || { id: "audit-trainer-account-" + key, key, email: key, active: true };
-    byKey.set(key, { ...existing,
+    const address = auditTrainerKey(row.email);
+    if (!address || address.indexOf("@") < 1) return;
+    const key = keyForEmail.get(address) || address;
+    const existing = byKey.get(key) || { id: "audit-trainer-account-" + key, key, email: address, active: true };
+    byKey.set(key, { ...existing, email: existing.email || address,
       name: existing.name || row.display_name || row.email,
       userId: row.user_id || existing.userId || "",
       linked: true,
@@ -193,9 +205,11 @@ function auditTrainerRoster() {
   });
 
   invites.forEach((row) => {
-    const key = auditTrainerKey(row.email);
-    if (!key || key.indexOf("@") < 1 || byKey.has(key)) return;
-    byKey.set(key, { id: "audit-trainer-invite-" + key, key, email: key, active: true,
+    const address = auditTrainerKey(row.email);
+    if (!address || address.indexOf("@") < 1) return;
+    const key = keyForEmail.get(address) || address;
+    if (byKey.has(key)) return;
+    byKey.set(key, { id: "audit-trainer-invite-" + key, key, email: address, active: true,
       name: row.full_name || row.email, userId: "", linked: false, accountName: "", source: "invite" });
   });
 
@@ -274,16 +288,53 @@ function saveTrainerAudit(audit) {
 }
 
 function saveAuditTrainer(name, email) {
-  const cleanName = String(name || "").trim(), key = auditTrainerKey(email);
+  const cleanName = String(name || "").trim(), address = auditTrainerKey(email);
   if (!cleanName) { showToast("Give the trainer's name"); return null; }
-  if (!key || key.indexOf("@") < 1) { showToast("Give the trainer's email — it is how audits stay attached to the right person"); return null; }
-  const rows = loadAuditTrainers(), existing = rows.find((row) => row.key === key);
-  const record = existing || { id:auditNewId("audit-trainer"), key, createdAt:new Date().toISOString(), active:true };
-  record.name = cleanName; record.email = key; record.updatedAt = new Date().toISOString();
+  if (address && address.indexOf("@") < 1) { showToast("That does not look like an email address. Leave it blank and add it later if you do not have it."); return null; }
+  const rows = loadAuditTrainers();
+  const existing = address ? rows.find((row) => row.key === address || trainerEmailOf(row) === address) : null;
+  const record = existing || {
+    id: auditNewId("audit-trainer"),
+    key: address || auditTrainerNewKey(cleanName),
+    createdAt: new Date().toISOString(), active: true
+  };
+  record.name = cleanName;
+  if (address) record.email = address;
+  record.updatedAt = new Date().toISOString();
   if (!existing) rows.push(record);
   if (!writeAuditTrainers(rows)) return null;
   if (typeof window.fit4lifeCloudSaveAuditTrainer === "function") window.fit4lifeCloudSaveAuditTrainer(record);
   return record;
+}
+
+/* The audits already filed stay where they are, because the key does not move. */
+function setAuditTrainerEmail(key, email) {
+  const address = auditTrainerKey(email);
+  if (!address || address.indexOf("@") < 1) { showToast("That does not look like an email address"); return null; }
+  const rows = loadAuditTrainers();
+  const clash = rows.find((row) => row.key !== key && trainerEmailOf(row) === address);
+  if (clash) { showToast(clash.name + " already has that email"); return null; }
+  const record = rows.find((row) => row.key === key);
+  if (!record) { showToast("That trainer is not on the list any more"); return null; }
+  record.email = address;
+  record.updatedAt = new Date().toISOString();
+  if (!writeAuditTrainers(rows)) return null;
+  if (typeof window.fit4lifeCloudSaveAuditTrainer === "function") window.fit4lifeCloudSaveAuditTrainer(record);
+  return record;
+}
+
+function addTrainerEmailFromForm(key) {
+  const field = byId("trainerEmail_" + key);
+  const record = setAuditTrainerEmail(key, field ? field.value : "");
+  if (!record) return;
+  auditView.emailFor = "";
+  renderTrainerAuditsModule();
+  showToast(record.name + " now has an email. Invite them whenever you are ready.");
+}
+
+function askForTrainerEmail(key) {
+  auditView.emailFor = auditView.emailFor === key ? "" : key;
+  renderTrainerAuditsModule();
 }
 
 function removeAuditTrainer(key) {
@@ -371,8 +422,15 @@ function auditEmailText(audit) {
 function emailAuditToTrainer(id) {
   const audit = loadTrainerAudits().find((row) => row.id === id);
   if (!audit) return;
+  // The key stopped being an email when trainers could be added without one.
+  const trainer = auditTrainerRoster().find((row) => row.key === audit.trainerKey);
+  const address = trainerEmailOf(trainer) || auditTrainerKey(audit.trainerEmail);
+  if (!address) {
+    showToast(audit.trainerName + " has no email yet. Add one on the Trainers tab, or use Copy and send it yourself.");
+    return;
+  }
   const subject = "Your session audit — " + audit.date;
-  window.location.href = "mailto:" + encodeURIComponent(audit.trainerKey) + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(auditEmailText(audit));
+  window.location.href = "mailto:" + encodeURIComponent(address) + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(auditEmailText(audit));
 }
 
 function copyAuditText(id) {
@@ -499,15 +557,26 @@ function renderAuditCoverage() {
 function renderAuditTrainersCard() {
   const trainers = auditTrainerRoster();
   const add = '<div class="compact-grid"><div class="compact-field"><label for="auditTrainerName">Name</label><input id="auditTrainerName" placeholder="Zach B"></div>'
-    + '<div class="compact-field"><label for="auditTrainerEmail">Email</label><input id="auditTrainerEmail" type="email" placeholder="zach@example.com" autocapitalize="none"></div></div>'
+    + '<div class="compact-field"><label for="auditTrainerEmail">Email (optional)</label><input id="auditTrainerEmail" type="email" placeholder="Leave blank and add it later" autocapitalize="none"></div></div>'
     + '<div class="tool-actions"><button class="small-btn primary" onclick="addAuditTrainerFromForm()">Add trainer</button></div>'
-    + '<p class="storage-note">Everyone you invited as a trainer is already on this list. Add someone by hand only if they will never have an account. The email keeps every audit attached to the same person and is where "Send to trainer" addresses.</p>';
+    + '<p class="storage-note">A name is enough to start auditing someone. Add their email whenever you have it and the audits already filed stay with them. Everyone you invited as a trainer is on this list already.</p>';
   const rows = trainers.length ? '<div class="advanced-list" style="margin-top:12px">' + trainers.map((trainer) => {
-    const invite = trainerInviteFor(trainer.key);
+    const invite = trainerInviteFor(trainer);
     const count = auditsForTrainer(trainer.key).length;
+    const asking = auditView.emailFor === trainer.key;
+    const emailForm = asking ? '<div class="compact-field" style="margin-top:8px"><label for="trainerEmail_' + escapeHtml(trainer.key) + '">Their email</label>'
+      + '<input id="trainerEmail_' + escapeHtml(trainer.key) + '" type="email" autocapitalize="none" placeholder="zach@example.com"'
+      + ' onkeydown="if(event.key===\'Enter\')addTrainerEmailFromForm(\'' + escapeHtml(trainer.key) + '\')"></div>'
+      + '<div class="tool-actions"><button class="small-btn primary" onclick="addTrainerEmailFromForm(\'' + escapeHtml(trainer.key) + '\')">Save email</button>'
+      + '<button class="small-btn" onclick="askForTrainerEmail(\'' + escapeHtml(trainer.key) + '\')">Not now</button></div>' : '';
+    const bits = [];
+    if (trainerHasEmail(trainer)) bits.push(trainer.email);
+    bits.push(AUDIT_SOURCE_TEXT[trainer.source] || "on the list");
+    bits.push(inviteStatusText(trainer, invite));
+    bits.push(count + (count === 1 ? " audit" : " audits"));
     return '<div class="trainer-account-row"><div><b>' + escapeHtml(trainer.name) + '</b><span>'
-      + escapeHtml(trainer.email) + ' · ' + escapeHtml(AUDIT_SOURCE_TEXT[trainer.source] || "on the list")
-      + ' · ' + escapeHtml(inviteStatusText(trainer, invite)) + ' · ' + count + (count === 1 ? ' audit' : ' audits') + '</span></div>'
+      + escapeHtml(bits.join(" · ")) + '</span>'
+      + emailForm + '</div>'
       + '<div class="tool-actions">' + inviteButtonsHtml(trainer, invite)
       + '<button class="small-btn" onclick="openAuditTrainer(\'' + escapeHtml(trainer.key) + '\')">Audits</button>'
       + (trainer.source === "manual"
@@ -524,10 +593,15 @@ function renderAuditTrainersCard() {
 }
 
 /* ---------- getting them into the app ---------- */
-const trainerInviteFor = (key) => (window.fit4lifeStaffInvites || []).find((invite) => String(invite.email || "").toLowerCase() === key) || null;
+const trainerInviteFor = (trainer) => {
+  const address = typeof trainer === "string" ? auditTrainerKey(trainer) : trainerEmailOf(trainer);
+  if (!address) return null;
+  return (window.fit4lifeStaffInvites || []).find((invite) => auditTrainerKey(invite.email) === address) || null;
+};
 
 function inviteStatusText(trainer, invite) {
   if (trainer.linked) return "has an app account";
+  if (!trainerHasEmail(trainer)) return "no email yet";
   if (!invite || invite.revoked_at) return "not invited yet";
   if (invite.accepted_at) return "joined " + String(invite.accepted_at).slice(0, 10);
   return "invited " + String(invite.created_at).slice(0, 10) + ", waiting";
@@ -535,6 +609,10 @@ function inviteStatusText(trainer, invite) {
 
 function inviteButtonsHtml(trainer, invite) {
   if (trainer.linked) return "";
+  // An audit does not need an email. Sending an invite does, so that is the only thing that waits.
+  if (!trainerHasEmail(trainer)) {
+    return '<button class="small-btn primary" onclick="askForTrainerEmail(\'' + escapeHtml(trainer.key) + '\')">Add an email</button>';
+  }
   if (window.fit4lifeStaffInvitesAvailable === false) return "";
   const pending = invite && !invite.accepted_at && !invite.revoked_at;
   return '<button class="small-btn ' + (pending ? "" : "primary") + '" onclick="inviteTrainerToApp(\'' + escapeHtml(trainer.key) + '\')">' + (pending ? "Send again" : "Invite to the app") + '</button>'
@@ -546,7 +624,7 @@ async function inviteTrainerToApp(key) {
   if (!trainer) return;
   if (typeof window.fit4lifeCloudInviteStaff !== "function") { showToast("Sign in to the gym account first"); return; }
   showToast("Sending " + trainer.name + " an invite…");
-  const result = await window.fit4lifeCloudInviteStaff(trainer.key, trainer.name);
+  const result = await window.fit4lifeCloudInviteStaff(trainerEmailOf(trainer), trainer.name);
   renderTrainerAuditsModule();
   if (result && result.ok) showToast(trainer.name + " has been invited. They sign in with the link and land straight in your gym.");
   else if (result && result.invited) showToast("Added to the invite list, but the email did not go out: " + (result.error || "unknown"));
@@ -556,7 +634,8 @@ async function inviteTrainerToApp(key) {
 async function revokeTrainerInvite(key) {
   if (typeof window.fit4lifeCloudRevokeStaffInvite !== "function") return;
   if (!window.confirm("Cancel this invite? Their link stops working.")) return;
-  const done = await window.fit4lifeCloudRevokeStaffInvite(key);
+  const trainer = auditTrainerRoster().find((row) => row.key === key);
+  const done = await window.fit4lifeCloudRevokeStaffInvite(trainer ? trainerEmailOf(trainer) : key);
   renderTrainerAuditsModule();
   showToast(done ? "Invite cancelled" : "That invite could not be cancelled");
 }
@@ -836,6 +915,39 @@ function setCoachMoment(value) { if (!auditView.draft) return; auditView.draft.m
 function setCoachStuck(value) { if (!auditView.draft) return; auditView.draft.stuck = auditView.draft.stuck === value ? "" : value; captureCoachingDraft(); renderTrainerAuditsModule(); }
 function toggleCoachUnsafe() { if (!auditView.draft) return; auditView.draft.sawUnsafe = !auditView.draft.sawUnsafe; captureCoachingDraft(); renderTrainerAuditsModule(); }
 
+/* The whole module is rebuilt by innerHTML on every tap, so anything already typed has to be
+   lifted out first and put back after. Without this, tapping a score erased the evidence the
+   field above it had just asked for. */
+let auditFormValues = {};
+
+function captureAuditForm(root) {
+  if (!root || auditView.tab !== "new") { auditFormValues = {}; return; }
+  root.querySelectorAll("input[id], textarea[id], select[id]").forEach((field) => {
+    if (field.type === "checkbox" || field.type === "radio") auditFormValues[field.id] = field.checked;
+    else auditFormValues[field.id] = field.value;
+  });
+}
+
+function restoreAuditForm(root) {
+  if (!root || auditView.tab !== "new") { auditFormValues = {}; return; }
+  Object.keys(auditFormValues).forEach((id) => {
+    const field = root.querySelector("#" + CSS.escape(id));
+    if (!field) return;
+    const saved = auditFormValues[id];
+    if (field.type === "checkbox" || field.type === "radio") field.checked = Boolean(saved);
+    else if (saved !== undefined && saved !== null && !(field.tagName === "SELECT" && saved === "")) field.value = saved;
+  });
+  // The close-out only exists while something is ticked, so it is rebuilt after the ticks are back.
+  if (typeof renderSafetyCloseOut === "function" && root.querySelector("#auditSafetyCloseOut")) renderSafetyCloseOut();
+  Object.keys(auditFormValues).forEach((id) => {
+    if (id.indexOf("auditSafetyAction") !== 0) return;
+    const field = root.querySelector("#" + CSS.escape(id));
+    if (!field) return;
+    if (field.type === "checkbox") field.checked = Boolean(auditFormValues[id]);
+    else field.value = auditFormValues[id];
+  });
+}
+
 // A chip tap re-renders the card, so what is already typed is kept first.
 function captureCoachingDraft() {
   if (!auditView.draft) return;
@@ -907,6 +1019,7 @@ function saveAuditFromForm() {
   const audit = {
     id: auditNewId("trainer-audit"), createdAt: now, updatedAt: now,
     trainerKey: trainer.key, trainerName: trainer.name, trainerUserId: trainer.userId || "",
+    trainerEmail: trainerEmailOf(trainer),
     auditorUserId: identity.id, auditorName: identity.displayName,
     date: value("auditFormDate") || auditToday(), kind, sessionType: byId("auditFormSession") ? byId("auditFormSession").value : "one_to_one",
     type: "audit", clientHandle: value("auditFormClient"), ratings, safety, safetyAction,
@@ -1031,6 +1144,7 @@ function saveCoachingNote(trainer, draft) {
   const note = {
     id: auditNewId("coaching-note"), createdAt: now, updatedAt: now,
     trainerKey: trainer.key, trainerName: trainer.name, trainerUserId: trainer.userId || "",
+    trainerEmail: trainerEmailOf(trainer),
     auditorUserId: identity.id, auditorName: identity.displayName,
     date: value("auditFormDate") || auditToday(), kind: "developmental", type: "audit",
     ratings: {}, safety, safetyAction,
@@ -1114,7 +1228,9 @@ function renderTrainerAuditsModule() {
   else if (auditView.tab === "detail") body = renderAuditDetail();
   else if (auditView.tab === "trainers") body = renderAuditTrainersCard() + renderAuditCoverage();
   else body = renderAuditsList() + renderAuditCoverage();
+  captureAuditForm(out);
   out.innerHTML = auditTabsHtml() + body;
+  restoreAuditForm(out);
   if (window.fit4lifeStaffInvites === undefined && typeof window.fit4lifeCloudListStaffInvites === "function") {
     window.fit4lifeStaffInvites = [];
     window.fit4lifeCloudListStaffInvites().then((invites) => { if (invites) renderTrainerAuditsModule(); });

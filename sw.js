@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-10-05-v125-coaching-note-r1";
+const CACHE_NAME = "fit4life-shell-2026-10-12-v127-trainer-before-email-r3";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20261005-v125-coaching-note-r1";
+const ASSET_VERSION = "20261012-v127-trainer-before-email-r3";
 const SHELL = [
   "/",
   "/index.html",
