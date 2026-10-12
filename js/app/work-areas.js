@@ -607,9 +607,9 @@ function groupCoachSidebar() {
       heading.className = "coach-nav-group";
       heading.dataset.navGroup = label;
       heading.onclick = () => {
-        const only = (allowed[heading.dataset.navGroup] || []);
-        if (only.length === 1) {
-          const target = bar.querySelector('[data-coach-nav="' + only[0] + '"]');
+        const solo = heading.dataset.soloTarget || "";
+        if (solo) {
+          const target = bar.querySelector('[data-coach-nav="' + solo + '"]');
           if (target) target.click();
           return;
         }
@@ -632,6 +632,7 @@ function groupCoachSidebar() {
       anchor = button;
     });
     heading.hidden = !shown.length;
+    if (solo) heading.dataset.soloTarget = shown[0]; else delete heading.dataset.soloTarget;
     heading.classList.toggle("on", open || (solo && here === shown[0]));
     heading.classList.toggle("solo", solo);
     heading.classList.toggle("holds-here", !solo && Boolean(here) && keys.includes(here));
