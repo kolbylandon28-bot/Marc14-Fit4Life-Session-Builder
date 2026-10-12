@@ -583,10 +583,16 @@ function groupCoachSidebar() {
   // Follow the destination only when it actually changes. Doing it on every render meant a
   // tap on another group was overwritten before it could paint.
   const holding = navGroupFor(here);
+  const isSolo = (label) => (allowed[label] || []).length === 1;
   if (here !== lastNavDestination) {
     lastNavDestination = here;
-    if (holding && allowed[holding] && allowed[holding].length) openNavGroup = holding;
+    if (holding && allowed[holding] && allowed[holding].length) {
+      // Landing on a group of one closes whatever drawer was open, rather than leaving a
+      // second group looking current.
+      openNavGroup = isSolo(holding) ? "" : holding;
+    }
   }
+  if (openNavGroup && isSolo(openNavGroup)) openNavGroup = "";
   if (!openNavGroup || !(allowed[openNavGroup] || []).length) {
     openNavGroup = (COACH_NAV_GROUPS.find(([label]) => (allowed[label] || []).length) || [])[0] || "";
   }
@@ -600,27 +606,38 @@ function groupCoachSidebar() {
       heading.type = "button";
       heading.className = "coach-nav-group";
       heading.dataset.navGroup = label;
-      heading.onclick = () => { openNavGroup = openNavGroup === label ? "" : label; groupCoachSidebar(); };
+      heading.onclick = () => {
+        const only = (allowed[heading.dataset.navGroup] || []);
+        if (only.length === 1) {
+          const target = bar.querySelector('[data-coach-nav="' + only[0] + '"]');
+          if (target) target.click();
+          return;
+        }
+        openNavGroup = openNavGroup === heading.dataset.navGroup ? "" : heading.dataset.navGroup;
+        groupCoachSidebar();
+      };
       first.parentNode.insertBefore(heading, first);
     }
     const shown = allowed[label] || [];
-    const open = openNavGroup === label;
+    const solo = shown.length === 1;
+    const open = !solo && openNavGroup === label;
     // The buttons sit in the order the markup was written in, which is not the order of the
     // groups, so each one is moved to follow its own heading.
     let anchor = heading;
     keys.forEach((navKey) => {
       const button = bar.querySelector('[data-coach-nav="' + navKey + '"]');
       if (!button) return;
-      button.hidden = !open || shown.indexOf(navKey) < 0;
+      button.hidden = solo || !open || shown.indexOf(navKey) < 0;
       if (anchor.nextSibling !== button) anchor.parentNode.insertBefore(button, anchor.nextSibling);
       anchor = button;
     });
     heading.hidden = !shown.length;
-    heading.classList.toggle("on", open);
-    heading.classList.toggle("holds-here", Boolean(here) && keys.includes(here));
+    heading.classList.toggle("on", open || (solo && here === shown[0]));
+    heading.classList.toggle("solo", solo);
+    heading.classList.toggle("holds-here", !solo && Boolean(here) && keys.includes(here));
     heading.innerHTML = '<span class="nav-icon">' + (icon || "") + '</span>'
       + '<span class="nav-label">' + escapeHtml(label === "My area" && key ? workAreaName(key) : label) + '</span>'
-      + '<span class="coach-nav-count">' + shown.length + '</span>';
+      + (solo ? '' : '<span class="coach-nav-count">' + shown.length + '</span>');
   });
 }
 
@@ -629,7 +646,9 @@ window.show = function areaHomeShow(view) {
   const result = legacyShowBeforeAreaHome.apply(this, arguments);
   try {
     if (view === "home") renderHomeChoices();
-    if (view === "area") renderAreaHome();
+    // The area home does not route through openCoachDestination, so it has to say where it
+    // is or the rail keeps highlighting whatever you were on before.
+    if (view === "area") { if (typeof openCoachDestination === "function") openCoachDestination.current = "area-home"; renderAreaHome(); }
     groupCoachSidebar();
   } catch (_) { /* navigation must never be blocked by the trimmings */ }
   return result;

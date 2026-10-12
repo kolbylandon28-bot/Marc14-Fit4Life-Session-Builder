@@ -44,10 +44,15 @@ function show(view) {
     : "\u2190 Home";
 
   // Tutorials are only useful to a signed-in trainer, and never on top of a running walkthrough
-  const helpBtn = document.getElementById("trainerHelpBtn");
-  if (helpBtn) helpBtn.classList.toggle("show", Boolean(portalRole) && view !== "home"
-    && !(view === "client-consultation" && typeof clientNeedsRequiredConsultation === "function" && clientNeedsRequiredConsultation())
-    && !(typeof walkthroughActive === "function" && walkthroughActive()));
+  // Tutorials sits at the foot of the rail now. The rail is hidden on a phone, so a small
+  // one survives in the top bar at that width and nowhere else.
+  const running = typeof walkthroughActive === "function" && walkthroughActive();
+  const gated = view === "client-consultation" && typeof clientNeedsRequiredConsultation === "function" && clientNeedsRequiredConsultation();
+  const helpOk = Boolean(portalRole) && view !== "home" && !gated && !running;
+  const railHelp = document.getElementById("trainerHelpBtn");
+  if (railHelp) railHelp.hidden = running;
+  const topHelp = document.getElementById("topbarHelpBtn");
+  if (topHelp) topHelp.classList.toggle("show", helpOk);
   const clientNav = document.getElementById("clientBottomNav"), showClientNav = portalRole === "client" && CLIENT_APP_VIEWS.includes(view);
   if (clientNav) { clientNav.classList.toggle("show",showClientNav); clientNav.querySelectorAll("button").forEach((button) => button.classList.toggle("on",view === "client-" + button.dataset.clientTab)); }
   const coachNav = document.getElementById("coachSidebar"), showCoachNav = portalRole === "trainer" && COACH_SHELL_VIEWS.includes(view) && trainerIsUnlocked();

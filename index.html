@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20261012-v134-topbar-r1">
+<link rel="manifest" href="manifest.webmanifest?v=20261012-v135-solo-groups-r3">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20261012-v134-topbar-r1">
+<link rel="stylesheet" href="styles.css?v=20261012-v135-solo-groups-r3">
 </head>
 <body>
 
@@ -126,10 +126,12 @@
       <div class="brand-sub">BYU&#8209;Idaho Trainer Tools</div>
     </div>
     <div class="topbar-spacer"></div>
-    <span class="cloud-status" id="cloudStatus" data-state="syncing" role="status">Connecting…</span>
-    <button class="cloud-account-btn" id="cloudAccountBtn" type="button">Sign in</button>
-    <button class="home-btn" id="homeBtn" onclick="goHome()">&larr; Home</button>
-    <button class="help-btn" id="trainerHelpBtn" type="button" title="Walk me through something" aria-label="Tutorials" onclick="openAssistanceForRole()">Tutorials</button>
+    <div class="topbar-status"><span class="cloud-status" id="cloudStatus" data-state="syncing" role="status">Connecting…</span></div>
+    <div class="topbar-actions">
+      <button class="help-btn phone-only-help" id="topbarHelpBtn" type="button" title="Walk me through something" aria-label="Tutorials" onclick="openAssistanceForRole()">?</button>
+      <button class="cloud-account-btn" id="cloudAccountBtn" type="button">Sign in</button>
+      <button class="home-btn" id="homeBtn" onclick="goHome()">&larr; Home</button>
+    </div>
   </div>
 </div>
 
@@ -659,7 +661,10 @@
   <button data-owner-only data-coach-nav="access" onclick="openCoachDestination('access')"><span class="nav-icon">♙</span><span class="nav-label">Trainer Access</span><span class="coach-attention-badge" data-attention-badge="access"></span></button>
   <button data-coach-nav="settings" onclick="openCoachDestination('settings')"><span class="nav-icon">⚙</span><span class="nav-label">Settings</span></button>
   <button class="coach-nav-more" data-coach-more onclick="openCoachMoreSheet()"><span class="nav-icon">•••</span><span class="nav-label">More</span><span class="coach-attention-badge" data-coach-more-badge></span></button>
-  <div class="coach-side-foot"><button onclick="lockTrainerHub()">⇥ Lock workspace</button></div>
+  <div class="coach-side-foot">
+    <button id="trainerHelpBtn" type="button" title="Walk me through something" onclick="openAssistanceForRole()"><span class="nav-icon">?</span><span class="nav-label">Tutorials</span></button>
+    <button onclick="lockTrainerHub()"><span class="nav-icon">⇥</span><span class="nav-label">Lock workspace</span></button>
+  </div>
 </aside>
 
 <div id="appToast" class="toast" role="status" aria-live="polite"></div>
@@ -1306,33 +1311,33 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/engine/exercise-library.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/engine/session-engine.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/engine/session-builders.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/engine/personalization.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/engine/booking-import.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/navigation.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/program-app.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/forms.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/engine/generation.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/rendering.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/calculations-timers.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/engine/multiweek-programs.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/readiness-progress.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/client-consultation.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/trainer/trainer-hub.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/trainer/coaching-support.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/role-governance.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/action-calendar.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/workout-feedback-reports.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/booking-import-ui.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/trainer-audits.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/area-art.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/work-areas.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/area-tools.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/walkthrough.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/app/intro-video.js?v=20261012-v134-topbar-r1"></script>
-<script src="js/init.js?v=20261012-v134-topbar-r1"></script>
+<script src="cloud-sync.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/engine/exercise-library.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/engine/session-engine.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/engine/session-builders.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/engine/personalization.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/engine/booking-import.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/navigation.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/program-app.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/forms.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/engine/generation.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/rendering.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/calculations-timers.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/engine/multiweek-programs.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/readiness-progress.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/client-consultation.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/trainer/trainer-hub.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/trainer/coaching-support.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/role-governance.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/action-calendar.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/workout-feedback-reports.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/booking-import-ui.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/trainer-audits.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/area-art.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/work-areas.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/area-tools.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/walkthrough.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/app/intro-video.js?v=20261012-v135-solo-groups-r3"></script>
+<script src="js/init.js?v=20261012-v135-solo-groups-r3"></script>
 </body>
 </html>

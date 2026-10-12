@@ -2264,3 +2264,17 @@ body.cloud-first-password .cloud-auth-help{display:none}
 .coach-sidebar .coach-nav-count{font:600 9px var(--mono);letter-spacing:0;color:var(--text-faint);background:var(--slate-3);border-radius:999px;padding:2px 7px}
 .coach-sidebar button.coach-nav-group.on .coach-nav-count{color:var(--blue-bright)}
 .coach-sidebar button[data-coach-nav]{margin-left:14px}
+
+/* ---------- the top bar reads as three zones ---------- */
+.topbar-status{display:flex;align-items:center;gap:8px;padding-right:14px;margin-right:4px;border-right:1px solid var(--line)}
+.topbar-actions{display:flex;align-items:center;gap:8px}
+.topbar-inner .portal-theme-chip{order:-1}
+.coach-side-foot{display:grid;gap:2px}
+.coach-side-foot button{display:flex;align-items:center;gap:11px;padding:0 11px}
+.coach-side-foot .nav-label{flex:1}
+
+.phone-only-help{display:none!important}
+@media(max-width:560px){
+  .phone-only-help.show{display:inline-flex!important;align-items:center;justify-content:center;min-width:38px;padding:0 10px}
+  .topbar-status{padding-right:8px;margin-right:0}
+}
