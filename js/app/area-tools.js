@@ -10,7 +10,7 @@ let areaFilesOpen = { category: "", editing: "" };
 const asDate = (value) => value ? new Date(value) : null;
 const dayKey = (value) => { const date = asDate(value); return date ? date.toISOString().slice(0, 10) : ""; };
 const clockTime = (value) => { const date = asDate(value); return date ? date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""; };
-const dayLabel = (value) => { const date = asDate(value); return date ? date.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) : ""; };
+const dayLabel = (value) => { const date = asDate(/^\d{4}-\d{2}-\d{2}$/.test(String(value)) ? value + "T12:00:00" : value); return date ? date.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) : ""; };
 const hoursBetween = (from, to) => { const start = asDate(from), end = asDate(to) || new Date(); return start ? Math.max(0, (end - start) / 3600000) : 0; };
 const roundHours = (value) => Math.round(value * 100) / 100;
 const weekStart = () => { const now = new Date(); now.setHours(0, 0, 0, 0); now.setDate(now.getDate() - ((now.getDay() + 6) % 7)); return now; };
@@ -571,4 +571,119 @@ async function loadGymFiles() {
   if (typeof window.fit4lifeCloudListAreaFiles !== "function") return;
   window.fit4lifeAllAreaFiles = (await window.fit4lifeCloudListAreaFiles(null)) || [];
   renderGymFilesModule();
+}
+
+/* ---------- the rota ----------
+   Who is working, and what they are booked for, in one week. Shifts come from the schedule
+   and sessions from the coaching calendar, so a trainer sees their whole day rather than
+   half of it on each of two screens. */
+let rotaState = { weekOf: "", mine: false, area: "", shifts: [], loaded: false };
+
+const rotaMonday = (from) => {
+  const date = from ? new Date(from + "T12:00:00") : new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  return date;
+};
+
+function rotaWeekDays() {
+  const monday = rotaMonday(rotaState.weekOf);
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(monday);
+    day.setDate(monday.getDate() + index);
+    return day;
+  });
+}
+
+function rotaSessionsFor(dayKeyValue) {
+  if (typeof allCoachCalendarEvents !== "function") return [];
+  const me = (window.fit4lifeCloudIdentity || {}).id;
+  return allCoachCalendarEvents()
+    .filter((event) => event.date === dayKeyValue)
+    .filter((event) => !rotaState.mine || event.trainerId === me)
+    .sort((a, b) => String(a.startTime || "").localeCompare(String(b.startTime || "")));
+}
+
+function rotaShiftsFor(dayKeyValue) {
+  const me = (window.fit4lifeCloudIdentity || {}).id;
+  return (rotaState.shifts || [])
+    .filter((shift) => dayKey(shift.starts_at) === dayKeyValue)
+    .filter((shift) => !rotaState.area || shift.area_key === rotaState.area)
+    .filter((shift) => !rotaState.mine || shift.user_id === me)
+    .sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)));
+}
+
+function renderRotaModule() {
+  const out = byId("coachModuleContent");
+  if (!out) return;
+  const days = rotaWeekDays();
+  const monday = days[0], sunday = days[6];
+  const areas = typeof workAreas === "function" ? workAreas() : [];
+  const me = (window.fit4lifeCloudIdentity || {}).id;
+
+  const head = '<section class="coach-module-card" style="grid-column:1/-1"><h3>'
+    + escapeHtml(dayLabel(dayKey(monday)) + " – " + dayLabel(dayKey(sunday))) + '</h3>'
+    + '<div class="tool-actions">'
+    + '<button class="small-btn" onclick="shiftRotaWeek(-7)">← Last week</button>'
+    + '<button class="small-btn" onclick="shiftRotaWeek(0)">This week</button>'
+    + '<button class="small-btn" onclick="shiftRotaWeek(7)">Next week →</button>'
+    + '<button class="small-btn' + (rotaState.mine ? " primary" : "") + '" onclick="toggleRotaMine()">'
+    + (rotaState.mine ? "Showing just mine" : "Just mine") + '</button></div>'
+    + (areas.length > 1 ? '<div class="chips" style="margin-top:10px">'
+      + '<button type="button" class="chip' + (rotaState.area ? "" : " on") + '" onclick="setRotaArea(\'\')">All areas</button>'
+      + areas.map((area) => '<button type="button" class="chip' + (rotaState.area === area.area_key ? " on" : "") + '"'
+        + ' onclick="setRotaArea(\'' + escapeHtml(area.area_key) + '\')">' + escapeHtml(area.name) + '</button>').join('')
+      + '</div>' : '')
+    + '</section>';
+
+  let totalShifts = 0, totalSessions = 0;
+  const dayCards = days.map((day) => {
+    const key = dayKey(day);
+    const shifts = rotaShiftsFor(key), sessions = rotaSessionsFor(key);
+    totalShifts += shifts.length; totalSessions += sessions.length;
+    const today = key === dayKey(new Date());
+    const rows = shifts.map((shift) => {
+      const who = shift.staff_name || peopleName(shift.user_id);
+      return '<div class="trainer-account-row' + (shift.user_id === me ? ' ok' : '') + '"><div><b>' + escapeHtml(who) + '</b><span>'
+        + escapeHtml(clockTime(shift.starts_at) + "–" + clockTime(shift.ends_at)
+          + " · " + (typeof workAreaName === "function" ? workAreaName(shift.area_key) : shift.area_key)
+          + (shift.note ? " · " + shift.note : "")) + '</span></div>'
+        + '<div class="tool-actions"><span class="pill">Shift</span></div></div>';
+    }).join('')
+    + sessions.map((event) => '<div class="trainer-account-row"><div><b>' + escapeHtml(event.title || "Session") + '</b><span>'
+      + escapeHtml((event.startTime ? event.startTime + " · " : "") + (event.client || "")
+        + (event.trainerName ? " · " + event.trainerName : "")) + '</span></div>'
+      + '<div class="tool-actions"><span class="pill">Session</span></div></div>').join('');
+    return '<section class="coach-module-card' + (today ? ' live' : '') + '" style="grid-column:1/-1">'
+      + '<h3>' + escapeHtml(dayLabel(key)) + (today ? ' <span class="pill">Today</span>' : '') + '</h3>'
+      + (rows ? '<div class="advanced-list">' + rows + '</div>' : '<div class="empty-state">Nobody on, nothing booked.</div>')
+      + '</section>';
+  }).join('');
+
+  out.innerHTML = head
+    + '<section class="coach-module-card" style="grid-column:1/-1"><p class="storage-note">'
+    + totalShifts + (totalShifts === 1 ? " shift" : " shifts") + " · "
+    + totalSessions + (totalSessions === 1 ? " session" : " sessions")
+    + (rotaState.mine ? " · yours only" : "") + '</p></section>'
+    + dayCards;
+}
+
+function shiftRotaWeek(days) {
+  const base = days ? rotaMonday(rotaState.weekOf) : new Date();
+  if (days) base.setDate(base.getDate() + days);
+  rotaState.weekOf = dayKey(base);
+  loadRota(true);
+}
+
+function toggleRotaMine() { rotaState.mine = !rotaState.mine; renderRotaModule(); }
+function setRotaArea(key) { rotaState.area = rotaState.area === key ? "" : key; renderRotaModule(); }
+
+async function loadRota(force) {
+  if (rotaState.loaded && !force) { renderRotaModule(); return; }
+  const days = rotaWeekDays();
+  if (typeof window.fit4lifeCloudListShifts === "function") {
+    rotaState.shifts = (await window.fit4lifeCloudListShifts(null, dayKey(days[0]), dayKey(days[6]))) || [];
+  }
+  rotaState.loaded = true;
+  renderRotaModule();
 }

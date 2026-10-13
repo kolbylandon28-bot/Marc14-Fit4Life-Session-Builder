@@ -317,6 +317,14 @@ async function toggleStaffArea(userId, key) {
 /* ---------- registration ---------- */
 const legacyRenderCoachModuleBeforeAreas = window.renderCoachModule;
 window.renderCoachModule = function areasRenderCoachModule(destination) {
+  if (destination === "rota") {
+    const title = byId("coachModuleTitle"), eyebrow = byId("coachModuleEyebrow"), copy = byId("coachModuleCopy");
+    if (eyebrow) eyebrow.textContent = "Calendar";
+    if (title) title.textContent = "Shifts & sessions";
+    if (copy) copy.textContent = "Who is working this week, and what they are booked for.";
+    if (typeof loadRota === "function") loadRota(true);
+    return;
+  }
   if (destination === "hours" || destination === "files") {
     const title = byId("coachModuleTitle"), eyebrow = byId("coachModuleEyebrow"), copy = byId("coachModuleCopy");
     const owner = isFit4LifeOwner();
@@ -530,7 +538,8 @@ function renderAreaHome() {
    key still works; what changed is where it is found. */
 const COACH_NAV_GROUPS = [
   ["My area", ["area-home"], "\u25F1"],
-  ["Today", ["dashboard", "actions", "messages", "calendar"], "\u2302"],
+  ["Today", ["dashboard", "actions", "messages"], "\u2302"],
+  ["Calendar", ["calendar", "rota"], "\u25A6"],
   ["Clients", ["clients", "assessments", "reports"], "\u25CF"],
   ["Workouts", ["builder", "programming", "library", "tools"], "\u25A4"],
   ["Managing", ["team", "areas", "audits", "access", "approvals", "hours", "files", "settings"], "\u2699"]
@@ -538,6 +547,7 @@ const COACH_NAV_GROUPS = [
 /* Anything that needs a client is coaching, so a shift area never shows it. */
 const COACHING_NAV_KEYS = ["dashboard", "actions", "messages", "calendar", "clients", "assessments",
   "reports", "builder", "programming", "library", "tools", "team"];
+/* The rota is about who is working, so it belongs to every area, not only coaching ones. */
 const navGroupFor = (key) => (COACH_NAV_GROUPS.find(([, keys]) => keys.includes(key)) || [])[0] || "";
 let openNavGroup = "";
 let lastNavDestination = null;
