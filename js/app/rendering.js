@@ -1157,13 +1157,23 @@ function askForChoice(question, options, settings) {
     setTimeout(() => field.focus(),0);
   });
 }
-function showToast(message) {
+function showToast(message, action) {
   const toast = byId("appToast");
   if (!toast) return;
   toast.textContent = message;
+  // An optional one-tap follow-up, for things worth offering to take back. Every existing
+  // caller passes a message only and is unaffected.
+  if (action && action.label && typeof action.onClick === "function") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "toast-action";
+    button.textContent = action.label;
+    button.onclick = () => { toast.classList.remove("show"); action.onClick(); };
+    toast.appendChild(button);
+  }
   toast.classList.add("show");
   clearTimeout(showToast._id);
-  showToast._id = setTimeout(() => toast.classList.remove("show"), 2400);
+  showToast._id = setTimeout(() => toast.classList.remove("show"), action ? 6000 : 2400);
 }
 function updateNetworkStatus() { const status = byId('networkStatus'); if (status) status.classList.toggle('show',typeof navigator !== 'undefined' && navigator.onLine === false); }
 if (typeof window !== 'undefined' && window.addEventListener) { window.addEventListener('online',updateNetworkStatus); window.addEventListener('offline',updateNetworkStatus); }

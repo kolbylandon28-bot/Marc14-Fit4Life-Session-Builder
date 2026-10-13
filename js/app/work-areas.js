@@ -539,7 +539,7 @@ function renderAreaHome() {
 const COACH_NAV_GROUPS = [
   ["My area", ["area-home"], "\u25F1"],
   ["Today", ["dashboard", "actions", "messages"], "\u2302"],
-  ["Calendar", ["calendar", "rota"], "\u25A6"],
+  ["Calendar", ["calendar"], "\u25A6"],
   ["Clients", ["clients", "assessments", "reports"], "\u25CF"],
   ["Workouts", ["builder", "programming", "library", "tools"], "\u25A4"],
   ["Managing", ["team", "areas", "audits", "access", "approvals", "hours", "files", "settings"], "\u2699"]

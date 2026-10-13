@@ -8,7 +8,14 @@ const ACTION_CATEGORY_LABELS = {
   all:"All actions", safety:"Safety", messages:"Messages", workouts:"Workouts",
   schedule:"Schedule", access:"Access", approvals:"Owner approval", followup:"Follow-up"
 };
-const CALENDAR_TYPE_LABELS = { appointment:"Training session", consultation:"Consultation", workout:"Workout", followup:"Follow-up", admin:"Team task" }
+const CALENDAR_TYPE_LABELS = { appointment:"Training session", consultation:"Consultation", workout:"Workout", followup:"Follow-up", admin:"Team task",
+  shift:"Trainer shift", lesson:"Lesson", clinic:"Clinic", training:"Staff training", meeting:"Meeting", cleaning:"Cleaning", closure:"Closed", event:"Event", volunteer:"Volunteers" }
+/* Two switches rather than a long list, because the question is almost always "who is
+   working" or "who is coming in", and the rest is noise either way. */
+const CALENDAR_SHIFT_TYPES = ["shift"];
+const CALENDAR_CLIENT_TYPES = ["appointment", "consultation", "workout", "followup", "lesson", "clinic"];
+/* Meetings, cleanings, closures and staff training belong to the building rather than to
+   either switch, so they stay on screen whichever way the switches are set. */
 // Types that draw down a client's weekly session entitlement.
 const BILLABLE_CALENDAR_TYPES = ["appointment"]
 // Types a workout can hang off. A consultation is a conversation, not a session,
@@ -16,7 +23,8 @@ const BILLABLE_CALENDAR_TYPES = ["appointment"]
 const WORKOUT_BEARING_TYPES = ["appointment"];
 const CALENDAR_STATUS_LABELS = { scheduled:"Scheduled", in_progress:"In progress", completed:"Completed", cancelled:"Cancelled", missed:"Missed", rescheduled:"Rescheduled" };
 const coachActionCenterState = { category:"all", ownership:"all", query:"" };
-const coachCalendarState = { view:"week", viewChosen:false, anchor:calendarDateKey(new Date()), client:"", trainer:"", type:"", status:"", tier:"", time:"" };
+const coachCalendarState = { view:"week", viewChosen:false, anchor:calendarDateKey(new Date()), client:"", trainer:"", type:"", status:"", tier:"", time:"",
+  hideShifts:false, hideClients:false, area:"" };
 window.coachActionCenterState = coachActionCenterState;
 window.coachCalendarState = coachCalendarState;
 
@@ -77,9 +85,33 @@ function allCoachCalendarEvents() {
     return {id:"assignment:" + assignment.id,source:"assignment",sourceId:assignment.id,type:"workout",title:assignment.programDayName || assignment.session && assignment.session.data && assignment.session.data.goalLabel || "Assigned workout",profileId:profile && profile.id || assignment.profileId || "",client:profile && profile.name || assignment.client || "Client",trainerId:profile && profile.assignedTrainerId || "",trainerName:profile && profile.assignedTrainerName || "Coaching team",tier:calendarTier(profile),date:assignment.scheduledDate,startTime:assignment.scheduledTime || "",endTime:"",status:assignmentCalendarStatus(assignment),location:"",notes:"Workout status is controlled by assignment and client logging.",scheduleHandledAt:assignment.scheduleHandledAt || "",updatedAt:assignment.updatedAt || assignment.assignedAt};
   });
   const custom = loadCalendarEvents().map((event) => ({source:"calendar",tier:calendarTier(profileMap.get(event.profileId)),...event}));
+  const localTime = (value) => { const d = value ? new Date(value) : null; return d && !isNaN(d) ? String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0") : ""; };
+  const localDay = (value) => { const d = value ? new Date(value) : null; return d && !isNaN(d) ? calendarDateKey(d) : ""; };
+  const shifts = (window.fit4lifeShifts || []).map((shift) => ({
+    id:"shift:" + shift.id, source:"shift", sourceId:shift.id, type:"shift",
+    title:(shift.staff_name || (typeof peopleName === "function" ? peopleName(shift.user_id) : "Staff")),
+    client:"", profileId:"", trainerId:shift.user_id || "", trainerName:shift.staff_name || "",
+    areaKey:shift.area_key || "", date:localDay(shift.starts_at), startTime:localTime(shift.starts_at),
+    endTime:localTime(shift.ends_at), status:"scheduled", location:typeof workAreaName === "function" ? workAreaName(shift.area_key) : "",
+    notes:shift.note || "", tier:""
+  })).filter((row) => row.date);
+  const areaEvents = (window.fit4lifeAreaEvents || []).map((row) => ({
+    id:"area-event:" + row.id, source:"area-event", sourceId:row.id, type:row.kind || "event",
+    title:row.title, client:"", profileId:"", trainerId:row.lead_user_id || "", trainerName:row.lead_name || "",
+    areaKey:row.area_key || "", date:localDay(row.starts_at), startTime:localTime(row.starts_at),
+    endTime:localTime(row.ends_at), status:"scheduled", location:row.location || "", notes:row.note || "", tier:""
+  })).filter((row) => row.date);
   // The appointment is the anchor and the workout hangs off it. Without this, booking a
   // session and building its workout produced two chips for one real event, and a coach
   // had to work out which was which.
+  const volunteers = (window.fit4lifeVolunteerShifts || []).map((row, index) => ({
+    id:"volunteer:" + index, source:"volunteer-sheet", sourceId:"", type:"volunteer",
+    title:(row.names || []).join(", ") || "Volunteers", client:"", profileId:"",
+    trainerId:"", trainerName:"", areaKey:row.area_key || "gym",
+    date:localDay(row.starts_at), startTime:localTime(row.starts_at), endTime:localTime(row.ends_at),
+    status:"scheduled", location:"", notes:row.open_spots ? row.open_spots + " open" : "", tier:""
+  })).filter((row) => row.date);
+  const fromAreas = shifts.concat(areaEvents).concat(volunteers);
   const claimed = new Set();
   const anchored = custom.map((event) => {
     if (!WORKOUT_BEARING_TYPES.includes(event.type) || !event.profileId) return event;
@@ -93,7 +125,7 @@ function allCoachCalendarEvents() {
   });
   // A dated workout with no appointment still deserves a place; it just is not anchored.
   const unanchored = workouts.filter((item) => !claimed.has(item.sourceId));
-  return anchored.concat(unanchored).sort((a,b) => String(a.date).localeCompare(String(b.date)) || String(a.startTime || "99:99").localeCompare(String(b.startTime || "99:99")) || String(a.title).localeCompare(String(b.title)));
+  return anchored.concat(unanchored).concat(fromAreas).sort((a,b) => String(a.date).localeCompare(String(b.date)) || String(a.startTime || "99:99").localeCompare(String(b.startTime || "99:99")) || String(a.title).localeCompare(String(b.title)));
 }
 function calendarEventById(eventId) { return allCoachCalendarEvents().find((event) => event.id === eventId) || null; }
 function appendCalendarAudit(eventId,action,before,after,reason) {
@@ -527,10 +559,54 @@ function saveCalendarEvent() {
   closeCalendarEventEditor(); coachCalendarState.anchor = next.date; offerCancellationReschedule(next,cancelOutcome); renderCoachCalendarModule(); renderTrainerAttention(); showToast(action === "Created" ? "Calendar item created" : "Calendar change saved with history"); return true;
 }
 
+/* Who is working and who is coming in, as two switches, plus which room. */
+function volunteerSyncNoteHtml() {
+  const state = window.fit4lifeVolunteerSync;
+  if (!state || !state.last_synced_at) return "";
+  const minutes = Math.round((Date.now() - new Date(state.last_synced_at).getTime()) / 60000);
+  // Half an hour is well past the fifteen-minute sweep, so something has stopped.
+  const stale = minutes > 30;
+  if (!stale) return "";
+  return '<p class="calendar-sync-warning">Volunteer sheet last read '
+    + (minutes < 90 ? minutes + " minutes ago" : Math.round(minutes / 60) + " hours ago")
+    + '. What you see may be out of date.</p>';
+}
+
+function calendarScopeBarHtml() {
+  const areas = typeof workAreas === "function" ? workAreas() : [];
+  const chip = (on, label, onclick) => '<button type="button" class="chip' + (on ? " on" : "") + '" onclick="' + onclick + '">' + escapeHtml(label) + '</button>';
+  return '<div class="calendar-scope">'
+    + '<div class="chips">'
+    + chip(!coachCalendarState.hideShifts, "Trainer shifts", "toggleCalendarLayer('shifts')")
+    + chip(!coachCalendarState.hideClients, "Client schedule", "toggleCalendarLayer('clients')")
+    + '</div>'
+    + (areas.length > 1 ? '<div class="chips">'
+      + chip(!coachCalendarState.area, "All areas", "setCalendarArea('')")
+      + areas.map((area) => chip(coachCalendarState.area === area.area_key, area.name, "setCalendarArea('" + escapeHtml(area.area_key) + "')")).join('')
+      + '</div>' : '')
+    + '</div>';
+}
+
+function toggleCalendarLayer(which) {
+  if (which === "shifts") coachCalendarState.hideShifts = !coachCalendarState.hideShifts;
+  else coachCalendarState.hideClients = !coachCalendarState.hideClients;
+  renderCoachCalendarModule();
+}
+
+function setCalendarArea(key) {
+  coachCalendarState.areaChosen = true;
+  coachCalendarState.area = coachCalendarState.area === key ? "" : key;
+  renderCoachCalendarModule();
+}
+
 function calendarEventMatches(event) {
   const profile = calendarProfile(event.profileId);
   const hour = event.startTime ? Number(String(event.startTime).split(":")[0]) : -1;
   const timeMatches = !coachCalendarState.time || coachCalendarState.time === "all_day" && hour < 0 || coachCalendarState.time === "morning" && hour >= 0 && hour < 12 || coachCalendarState.time === "afternoon" && hour >= 12 && hour < 17 || coachCalendarState.time === "evening" && hour >= 17;
+  // Two switches on top of the existing filters: the rota, and the people coming in.
+  if (coachCalendarState.hideShifts && CALENDAR_SHIFT_TYPES.includes(event.type)) return false;
+  if (coachCalendarState.hideClients && CALENDAR_CLIENT_TYPES.includes(event.type)) return false;
+  if (coachCalendarState.area && event.areaKey && event.areaKey !== coachCalendarState.area) return false;
   return (!coachCalendarState.client || event.profileId === coachCalendarState.client)
     && (!coachCalendarState.trainer || (coachCalendarState.trainer === "__shared" ? !event.trainerId : event.trainerId === coachCalendarState.trainer))
     && (!coachCalendarState.type || event.type === coachCalendarState.type)
@@ -976,14 +1052,20 @@ function calendarRangeLabel() {
 // consultations - because the main calendar is "who is coming in", and programmed workouts
 // a client does alone would bury that.
 const CALENDAR_GRID_START_HOUR = 5;
-const CALENDAR_GRID_END_HOUR = 22;
+const CALENDAR_GRID_END_HOUR = 23;
 const CALENDAR_ATTENDED_TYPES = ["appointment","consultation"];
+/* Everything the grid draws a block for. Attended types stay their own list because the
+   weekly session count is about clients turning up, not about who was rostered. */
+const CALENDAR_PLACED_TYPES = CALENDAR_ATTENDED_TYPES.concat(["shift","lesson","clinic","training","meeting","cleaning","closure","event"]);
+/* Volunteers shade the background rather than taking a block, because they are cover
+   rather than an appointment. */
+const CALENDAR_BAND_TYPES = ["volunteer"];
 function calendarMinutes(value) {
   const match = String(value || "").match(/^(\d{1,2}):(\d{2})$/);
   return match ? Number(match[1]) * 60 + Number(match[2]) : null;
 }
 function calendarAttendedEvents(events) {
-  return (events || []).filter((event) => CALENDAR_ATTENDED_TYPES.includes(event.type) && calendarMinutes(event.startTime) != null);
+  return (events || []).filter((event) => CALENDAR_PLACED_TYPES.includes(event.type) && calendarMinutes(event.startTime) != null);
 }
 function calendarHourColumnHtml() {
   let rows = "";
@@ -993,6 +1075,38 @@ function calendarHourColumnHtml() {
   }
   return '<div class="calendar-hours">' + rows + '</div>';
 }
+/* ---------- the bands behind the blocks ----------
+   Two questions a block cannot answer: is this room staffed right now, and are the
+   volunteers in. Staffed shades itself from the shifts, because asking anyone to enter
+   their own cover twice is how it stops being true. */
+const calendarTopFor = (minutes) => ((minutes - CALENDAR_GRID_START_HOUR * 60) / 60) * 44;
+
+function calendarMergeSpans(spans) {
+  const sorted = spans.filter((span) => span && span.end > span.start).sort((a, b) => a.start - b.start);
+  const merged = [];
+  sorted.forEach((span) => {
+    const last = merged[merged.length - 1];
+    if (last && span.start <= last.end) last.end = Math.max(last.end, span.end);
+    else merged.push({ start: span.start, end: span.end });
+  });
+  return merged;
+}
+
+function calendarBandsHtml(dateKey, events) {
+  const onDay = (events || []).filter((event) => event.date === dateKey && calendarMinutes(event.startTime) != null);
+  const spanOf = (event) => ({ start: calendarMinutes(event.startTime), end: calendarMinutes(event.endTime) || calendarMinutes(event.startTime) + 60 });
+  const staffed = calendarMergeSpans(onDay.filter((event) => event.type === "shift").map(spanOf));
+  const volunteers = calendarMergeSpans(onDay.filter((event) => event.type === "volunteer").map(spanOf));
+  const band = (span, kind, label) => {
+    const top = calendarTopFor(span.start), height = ((span.end - span.start) / 60) * 44;
+    if (height <= 0) return "";
+    return '<div class="calendar-band band-' + kind + '" style="top:' + top.toFixed(1) + 'px;height:' + height.toFixed(1) + 'px"'
+      + ' aria-hidden="true"><span>' + escapeHtml(label) + '</span></div>';
+  };
+  return staffed.map((span) => band(span, "staffed", "Staffed")).join("")
+    + volunteers.map((span) => band(span, "volunteer", "Volunteers in")).join("");
+}
+
 function calendarPlacedEventHtml(event) {
   const start = calendarMinutes(event.startTime);
   const end = calendarMinutes(event.endTime);
@@ -1001,16 +1115,19 @@ function calendarPlacedEventHtml(event) {
   const minutes = end != null && end > start ? end - start : 60;
   const height = Math.max(22, (minutes / 60) * 44);
   const tier = typeof calendarTier === "function" ? calendarTier(loadProfiles().find((p) => p.id === event.profileId)) : "unset";
-  return '<button class="calendar-slot tier-' + escapeHtml(tier) + ' status-' + escapeHtml(event.status || "scheduled")
+  // The type decides the colour, and every block says what it is in words too, because a
+  // trainer who cannot tell the green from the red still has to read the schedule.
+  const typeLabel = CALENDAR_TYPE_LABELS[event.type] || "";
+  return '<button class="calendar-slot kind-' + escapeHtml(event.type || "event") + ' tier-' + escapeHtml(tier) + ' status-' + escapeHtml(event.status || "scheduled")
     + '" style="top:' + top.toFixed(1) + 'px;height:' + height.toFixed(1) + 'px" data-calendar-open="' + escapeHtml(event.id) + '"'
-    + ' title="' + escapeHtml((event.client || event.title) + " \u00b7 " + (event.startTime || "")) + '">'
-    + '<b>' + escapeHtml(event.client || event.title) + '</b>'
-    + '<small>' + escapeHtml(event.startTime || "") + (event.type === "consultation" ? " \u00b7 Consult" : "")
+    + ' title="' + escapeHtml((event.client || event.title) + " \u00b7 " + typeLabel + " \u00b7 " + (event.startTime || "")) + '">'
+    + (event.type === "closure" ? '<b class="closed-stamp">CLOSED</b>' : '<b>' + escapeHtml(event.client || event.title) + '</b>')
+    + '<small>' + escapeHtml(event.startTime || "") + (typeLabel ? " \u00b7 " + typeLabel : "")
     + (event.workout ? " \u00b7 \u25b8 " + escapeHtml(event.workout.title || "workout ready") : "") + '</small></button>';
 }
 function calendarDayColumnHtml(dateKey, events, label, options) {
   const settings = options || {};
-  const types = settings.types || CALENDAR_ATTENDED_TYPES;
+  const types = settings.types || CALENDAR_PLACED_TYPES;
   const pool = (events || []).filter((event) => event.date === dateKey && types.includes(event.type));
   // A programmed workout carries no clock time - it is "do this today", not "be here at
   // four". Timed things are placed in the grid; untimed ones sit as a chip above the day,
@@ -1023,7 +1140,8 @@ function calendarDayColumnHtml(dateKey, events, label, options) {
     + escapeHtml(event.title || "") + '">' + escapeHtml(event.title || "Workout") + '</span>').join("");
   return '<div class="calendar-daycol">' + (label ? '<div class="calendar-daycol-head">' + label + '</div>' : '')
     + (settings.allDayRow ? '<div class="calendar-allday-row">' + chips + '</div>' : '')
-    + '<div class="calendar-daycol-body" style="height:' + height + 'px">'
+    + '<div class="calendar-daycol-body" style="height:' + height + 'px" data-calendar-day="' + escapeHtml(dateKey) + '">'
+    + calendarBandsHtml(dateKey, events)
     + timed.map(calendarPlacedEventHtml).join("")
     + (pool.length ? "" : '<span class="calendar-daycol-empty">' + escapeHtml(settings.emptyLabel || "Nobody booked") + '</span>') + '</div></div>';
 }
@@ -1125,7 +1243,8 @@ function renderCoachCalendarModule() {
   const profiles = loadProfiles(), trainers = calendarTrainerOptions(), tiers = [...new Set(profiles.map(calendarTier))].filter(Boolean).sort((a,b) => calendarTierLabel(a).localeCompare(calendarTierLabel(b))), allEvents = allCoachCalendarEvents(), events = allEvents.filter(calendarEventMatches);
   const upcoming = events.filter((event) => calendarDate(event.date) >= calendarDate(calendarDateKey(new Date())) && !["cancelled","completed"].includes(event.status)).length, missed = events.filter((event) => event.status === "missed").length;
   const views = ["day","week","month","agenda"].map((view) => '<button class="calendar-view-btn ' + (coachCalendarState.view === view ? "on" : "") + '" onclick="setCoachCalendarView(\'' + view + '\')">' + view[0].toUpperCase() + view.slice(1) + '</button>').join("");
-  out.innerHTML = '<section class="coach-module-card operational-calendar"><div class="calendar-topbar"><div><span class="client-section-label">Operational calendar</span><h3>' + escapeHtml(calendarRangeLabel()) + '</h3><p>Appointments, assigned workouts, and coaching follow-ups share one schedule. Shared clients remain visible to every approved trainer.</p></div><div class="tool-actions"><button class="small-btn" onclick="setCoachCalendarAnchor(\'' + calendarDateKey(new Date()) + '\')">Today</button><button class="small-btn primary" onclick="openCalendarEventEditor()">+ Schedule</button></div></div><div class="calendar-policy-note"><b>Rescheduling policy is still a management draft.</b> V6 requires a reason and records the actor and time for every schedule change, but it does not enforce a fee or notice cutoff yet.</div><div class="calendar-stats"><div><b>' + upcoming + '</b><span>Upcoming</span></div><div><b>' + missed + '</b><span>Missed / follow-up</span></div><div><b>' + events.filter((event) => event.type === "workout").length + '</b><span>Assigned workouts</span></div><div><b>' + events.filter((event) => event.type === "appointment").length + '</b><span>Appointments</span></div></div><div class="calendar-controls"><div class="calendar-range-controls"><button onclick="moveCoachCalendar(-1)" aria-label="Previous">‹</button><button onclick="moveCoachCalendar(1)" aria-label="Next">›</button><strong>' + escapeHtml(calendarRangeLabel()) + '</strong></div><div class="calendar-view-toggle">' + views + '</div></div><div class="calendar-filters">' + calendarFilterSelect("calendarClientFilter","Clients","client",profiles.map((profile) => [profile.id,profile.name])) + calendarFilterSelect("calendarTrainerFilter","Trainers","trainer",[["__shared","Coaching team / unassigned"],...trainers.map((trainer) => [trainer.id,trainer.name])]) + calendarFilterSelect("calendarTypeFilter","Types","type",Object.entries(CALENDAR_TYPE_LABELS)) + calendarFilterSelect("calendarStatusFilter","Statuses","status",Object.entries(CALENDAR_STATUS_LABELS)) + calendarFilterSelect("calendarTierFilter","Tiers","tier",tiers.map((tier) => [tier,calendarTierLabel(tier)])) + calendarFilterSelect("calendarTimeFilter","Times","time",[["all_day","All-day items"],["morning","Morning · before noon"],["afternoon","Afternoon · noon–5 PM"],["evening","Evening · after 5 PM"]]) + '</div><div class="calendar-canvas">' + dailyPrepPanelHtml() + weeklyBalancePanelHtml(membershipWeekStartKey(coachCalendarState.anchor),allEvents) + calendarGridHtml(events) + '</div></section>';
+  out.innerHTML = '<section class="coach-module-card operational-calendar"><div class="calendar-topbar"><div><span class="client-section-label">Operational calendar</span><h3>' + escapeHtml(calendarRangeLabel()) + '</h3><p>Appointments, assigned workouts, and coaching follow-ups share one schedule. Shared clients remain visible to every approved trainer.</p></div><div class="tool-actions"><button class="small-btn" onclick="setCoachCalendarAnchor(\'' + calendarDateKey(new Date()) + '\')">Today</button><button class="small-btn primary" onclick="openCalendarEventEditor()">+ Schedule</button></div></div><div class="calendar-policy-note"><b>Rescheduling policy is still a management draft.</b> V6 requires a reason and records the actor and time for every schedule change, but it does not enforce a fee or notice cutoff yet.</div><div class="calendar-stats"><div><b>' + upcoming + '</b><span>Upcoming</span></div><div><b>' + missed + '</b><span>Missed / follow-up</span></div><div><b>' + events.filter((event) => event.type === "workout").length + '</b><span>Assigned workouts</span></div><div><b>' + events.filter((event) => event.type === "appointment").length + '</b><span>Appointments</span></div></div><div class="calendar-controls"><div class="calendar-range-controls"><button onclick="moveCoachCalendar(-1)" aria-label="Previous">‹</button><button onclick="moveCoachCalendar(1)" aria-label="Next">›</button><strong>' + escapeHtml(calendarRangeLabel()) + '</strong></div><div class="calendar-view-toggle">' + views + '</div></div><div class="calendar-filters">' + calendarFilterSelect("calendarClientFilter","Clients","client",profiles.map((profile) => [profile.id,profile.name])) + calendarFilterSelect("calendarTrainerFilter","Trainers","trainer",[["__shared","Coaching team / unassigned"],...trainers.map((trainer) => [trainer.id,trainer.name])]) + calendarFilterSelect("calendarTypeFilter","Types","type",Object.entries(CALENDAR_TYPE_LABELS)) + calendarFilterSelect("calendarStatusFilter","Statuses","status",Object.entries(CALENDAR_STATUS_LABELS)) + calendarFilterSelect("calendarTierFilter","Tiers","tier",tiers.map((tier) => [tier,calendarTierLabel(tier)])) + calendarFilterSelect("calendarTimeFilter","Times","time",[["all_day","All-day items"],["morning","Morning · before noon"],["afternoon","Afternoon · noon–5 PM"],["evening","Evening · after 5 PM"]]) + '</div>' + calendarScopeBarHtml() + volunteerSyncNoteHtml() + '<div class="calendar-canvas">' + dailyPrepPanelHtml() + weeklyBalancePanelHtml(membershipWeekStartKey(coachCalendarState.anchor),allEvents) + calendarGridHtml(events) + '</div></section>';
+  bindCalendarGrid();
   // Slots carry the event id in a data attribute rather than an inline handler.
   if (typeof bindDataHandlers === "function") bindDataHandlers(out,"[data-calendar-open]",(button) => openCalendarEventEditor(button.dataset.calendarOpen));
 }
@@ -1150,7 +1269,182 @@ const legacyRenderCoachModule = window.renderCoachModule;
 window.renderCoachModule = function v6RenderCoachModule(destination) {
   const title = byId("coachModuleTitle"), eyebrow = byId("coachModuleEyebrow"), copy = byId("coachModuleCopy");
   if (destination === "actions") { if (title) title.textContent = "Action Center"; if (eyebrow) eyebrow.textContent = "Coach workspace"; if (copy) copy.textContent = "One shared queue that opens the exact source and closes only when the work is complete."; renderActionCenterModule(); return; }
+  if (destination === "calendar" && !coachCalendarState.areaChosen) {
+    // Standing in the Pool means the Pool's calendar, until you say otherwise.
+    const here = typeof activeWorkArea === "function" ? activeWorkArea() : "";
+    if (here) coachCalendarState.area = here;
+  }
+  if (destination === "calendar" && typeof window.fit4lifeCloudListShifts === "function" && !window.fit4lifeShiftsLoadedForCalendar) {
+    // The rota is a calendar source now, so it loads with the calendar rather than only
+    // when someone walks into an area.
+    window.fit4lifeShiftsLoadedForCalendar = true;
+    Promise.all([
+      window.fit4lifeCloudListShifts(null, null, null),
+      typeof window.fit4lifeCloudListAreaEvents === "function" ? window.fit4lifeCloudListAreaEvents(null, null, null) : null,
+      typeof window.fit4lifeCloudListVolunteerShifts === "function" ? window.fit4lifeCloudListVolunteerShifts(null, null) : null
+    ]).then(() => renderCoachCalendarModule()).catch(() => { window.fit4lifeShiftsLoadedForCalendar = false; });
+  }
   if (destination === "team") { if (title) title.textContent = "Team"; if (eyebrow) eyebrow.textContent = "Coach workspace"; if (copy) copy.textContent = "Who is coaching whom, how the work is spread, and the workouts your colleagues have saved."; renderTeamModule(); return; }
   if (destination === "calendar") { if (title) title.textContent = "Calendar"; if (eyebrow) eyebrow.textContent = "Coach workspace"; if (copy) copy.textContent = "Appointments, workouts, and follow-ups with clear ownership, status, and history."; renderCoachCalendarModule(); return; }
   legacyRenderCoachModule(destination);
 };
+
+/* ---------- putting something on the grid, and moving it ----------
+   Click empty space to add at that time. Drag a block to move it, drag its lower edge to
+   change how long it is. Everything snaps to a quarter of an hour, everything checks the
+   same permission gate the server checks, and everything offers one undo. */
+const CALENDAR_SNAP_MINUTES = 15;
+const CALENDAR_PIXELS_PER_HOUR = 44;
+let calendarUndo = null;
+
+const calendarSnap = (minutes) => Math.max(CALENDAR_GRID_START_HOUR * 60,
+  Math.min((CALENDAR_GRID_END_HOUR + 1) * 60, Math.round(minutes / CALENDAR_SNAP_MINUTES) * CALENDAR_SNAP_MINUTES));
+const calendarMinutesFromTop = (px) => calendarSnap(CALENDAR_GRID_START_HOUR * 60 + (px / CALENDAR_PIXELS_PER_HOUR) * 60);
+const calendarHhMm = (minutes) => String(Math.floor(minutes / 60)).padStart(2, "0") + ":" + String(minutes % 60).padStart(2, "0");
+
+function calendarCanEdit(event) {
+  if (!event) return false;
+  if (typeof fit4lifeCan !== "function") return false;
+  if (event.type === "shift") return fit4lifeCan("shifts.edit.any", event.areaKey);
+  if (event.source === "area-event") return fit4lifeCan("shifts.create", event.areaKey);
+  return typeof trainerIsUnlocked === "function" ? trainerIsUnlocked() : false;
+}
+
+async function calendarPersistTimes(event, startMinutes, endMinutes) {
+  const day = event.date;
+  const iso = (minutes) => {
+    const date = calendarDate(day);
+    date.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+    return date.toISOString();
+  };
+  if (event.type === "shift" && typeof window.fit4lifeCloudSaveShift === "function") {
+    const result = await window.fit4lifeCloudSaveShift(event.areaKey, event.trainerId || null, event.trainerName || event.title,
+      iso(startMinutes), iso(endMinutes), event.notes || "", event.sourceId);
+    return Boolean(result && result.ok);
+  }
+  if (event.source === "area-event" && typeof window.fit4lifeCloudSaveAreaEvent === "function") {
+    const result = await window.fit4lifeCloudSaveAreaEvent(event.areaKey, event.title, event.type,
+      iso(startMinutes), iso(endMinutes), event.location || "", "", event.trainerId || "", event.trainerName || "",
+      event.notes || "", event.sourceId);
+    return Boolean(result && result.ok);
+  }
+  return false;
+}
+
+async function calendarApplyMove(eventId, startMinutes, endMinutes, silent) {
+  const event = calendarEventById(eventId);
+  if (!event || !calendarCanEdit(event)) { showToast("You cannot change that one"); return false; }
+  const was = { start: calendarMinutes(event.startTime), end: calendarMinutes(event.endTime) };
+  const ok = await calendarPersistTimes(event, startMinutes, endMinutes);
+  if (!ok) { showToast("That could not be saved"); renderCoachCalendarModule(); return false; }
+  await calendarReloadSources();
+  if (!silent) {
+    calendarUndo = { eventId, start: was.start, end: was.end };
+    showToast((event.title || "Moved") + " → " + calendarFormatTime(calendarHhMm(startMinutes)),
+      { label: "Undo", onClick: undoCalendarMove });
+  }
+  renderCoachCalendarModule();
+  return true;
+}
+
+async function undoCalendarMove() {
+  if (!calendarUndo) return;
+  const { eventId, start, end } = calendarUndo;
+  calendarUndo = null;
+  await calendarApplyMove(eventId, start, end, true);
+  showToast("Put back");
+}
+
+async function calendarReloadSources() {
+  const jobs = [];
+  if (typeof window.fit4lifeCloudListShifts === "function") jobs.push(window.fit4lifeCloudListShifts(null, null, null));
+  if (typeof window.fit4lifeCloudListAreaEvents === "function") jobs.push(window.fit4lifeCloudListAreaEvents(null, null, null));
+  try { await Promise.all(jobs); } catch (_) { /* a stale grid is better than a broken one */ }
+}
+
+/* One listener on the grid rather than one per block, so a re-render cannot leave a
+   half-attached drag behind. */
+let calendarDrag = null;
+
+function calendarPointerDown(pointerEvent) {
+  const slot = pointerEvent.target.closest(".calendar-slot");
+  const column = pointerEvent.target.closest(".calendar-daycol-body");
+  if (!column) return;
+  if (!slot) {
+    const day = column.getAttribute("data-calendar-day");
+    const top = pointerEvent.clientY - column.getBoundingClientRect().top;
+    openCalendarSlotCreator(day, calendarMinutesFromTop(top));
+    return;
+  }
+  const event = calendarEventById(slot.getAttribute("data-calendar-open"));
+  if (!event || !calendarCanEdit(event)) return;
+  const box = slot.getBoundingClientRect();
+  const resizing = pointerEvent.clientY > box.bottom - 10;
+  calendarDrag = {
+    id: event.id, slot, column, resizing,
+    grabOffset: pointerEvent.clientY - box.top,
+    start: calendarMinutes(event.startTime),
+    end: calendarMinutes(event.endTime) || calendarMinutes(event.startTime) + 60,
+    moved: false
+  };
+  slot.classList.add("dragging");
+  slot.setPointerCapture(pointerEvent.pointerId);
+  pointerEvent.preventDefault();
+}
+
+function calendarPointerMove(pointerEvent) {
+  if (!calendarDrag) return;
+  const columnTop = calendarDrag.column.getBoundingClientRect().top;
+  const length = calendarDrag.end - calendarDrag.start;
+  if (calendarDrag.resizing) {
+    const end = calendarMinutesFromTop(pointerEvent.clientY - columnTop);
+    calendarDrag.nextEnd = Math.max(calendarDrag.start + CALENDAR_SNAP_MINUTES, end);
+    calendarDrag.nextStart = calendarDrag.start;
+  } else {
+    const start = calendarMinutesFromTop(pointerEvent.clientY - columnTop - calendarDrag.grabOffset);
+    calendarDrag.nextStart = start;
+    calendarDrag.nextEnd = start + length;
+  }
+  calendarDrag.moved = true;
+  calendarDrag.slot.style.top = calendarTopFor(calendarDrag.nextStart).toFixed(1) + "px";
+  calendarDrag.slot.style.height = Math.max(22, ((calendarDrag.nextEnd - calendarDrag.nextStart) / 60) * CALENDAR_PIXELS_PER_HOUR).toFixed(1) + "px";
+}
+
+function calendarPointerUp() {
+  if (!calendarDrag) return;
+  const drag = calendarDrag;
+  calendarDrag = null;
+  drag.slot.classList.remove("dragging");
+  if (!drag.moved || (drag.nextStart === drag.start && drag.nextEnd === drag.end)) {
+    openCalendarSessionSummary(drag.id);
+    return;
+  }
+  calendarApplyMove(drag.id, drag.nextStart, drag.nextEnd);
+}
+
+function bindCalendarGrid() {
+  const canvas = document.querySelector(".calendar-canvas");
+  if (!canvas || canvas.dataset.dragBound) return;
+  canvas.dataset.dragBound = "yes";
+  canvas.addEventListener("pointerdown", calendarPointerDown);
+  canvas.addEventListener("pointermove", calendarPointerMove);
+  canvas.addEventListener("pointerup", calendarPointerUp);
+  canvas.addEventListener("pointercancel", calendarPointerUp);
+}
+
+/* Clicking empty space is the fastest way to add something, so it opens the editor with
+   the day and the time already set rather than making you type what you just pointed at. */
+function openCalendarSlotCreator(dayKeyValue, startMinutes) {
+  if (typeof fit4lifeCan === "function" && !fit4lifeCan("shifts.create", coachCalendarState.area)
+      && !(typeof trainerIsUnlocked === "function" && trainerIsUnlocked())) {
+    showToast("You cannot add to this calendar");
+    return;
+  }
+  if (typeof openCalendarEventEditor !== "function") return;
+  openCalendarEventEditor("", dayKeyValue);
+  setTimeout(() => {
+    const start = byId("calendarEventStart"), end = byId("calendarEventEnd");
+    if (start) start.value = calendarHhMm(startMinutes);
+    if (end) end.value = calendarHhMm(Math.min((CALENDAR_GRID_END_HOUR + 1) * 60, startMinutes + 60));
+  }, 30);
+}

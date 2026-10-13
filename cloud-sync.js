@@ -2483,6 +2483,21 @@
     return !response.error;
   };
 
+  /* ---------- the volunteer rota, mirrored from Hannah's sheet ----------
+     Read only. The sheet is the source of truth and the app never writes back to it. */
+  window.fit4lifeVolunteerShifts = [];
+  window.fit4lifeVolunteerSync = null;
+
+  window.fit4lifeCloudListVolunteerShifts = async function fit4lifeCloudListVolunteerShifts(fromDay, toDay) {
+    const [shifts, state] = await Promise.all([
+      areaRpc("list_fit4life_volunteer_shifts", { from_day: fromDay || null, to_day: toDay || null }),
+      areaRpc("fit4life_volunteer_sync_state", {})
+    ]);
+    window.fit4lifeVolunteerShifts = shifts.error ? [] : (shifts.data || []);
+    window.fit4lifeVolunteerSync = state.error ? null : ((state.data || [])[0] || null);
+    return window.fit4lifeVolunteerShifts;
+  };
+
   /* ---------- work areas ----------
      A gym decides its own areas. Everyone signed in can read the list; only an owner writes
      it, and only an owner sets who works where. Staff see their own rows and nobody else's. */
