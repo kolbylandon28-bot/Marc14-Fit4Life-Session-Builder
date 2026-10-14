@@ -2321,3 +2321,4 @@ body.cloud-first-password .cloud-auth-help{display:none}
 .calendar-slot::after{content:"";position:absolute;left:0;right:0;bottom:0;height:9px;cursor:ns-resize}
 .calendar-daycol-body{cursor:copy}
 .calendar-sync-warning{margin:8px 0 0;padding:9px 12px;border:1px solid var(--warn,#E2A33C);border-radius:9px;background:color-mix(in srgb,var(--warn,#E2A33C) 10%,transparent);color:var(--warn,#E2A33C);font-size:12.5px;line-height:1.5}
+.archive-reason{display:block;margin-top:5px;font-size:12.5px;line-height:1.5;color:var(--text-dim);font-style:italic}

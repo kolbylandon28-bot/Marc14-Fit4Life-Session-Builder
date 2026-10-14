@@ -325,6 +325,14 @@ window.renderCoachModule = function areasRenderCoachModule(destination) {
     if (typeof loadRota === "function") loadRota(true);
     return;
   }
+  if (destination === "archive") {
+    const title = byId("coachModuleTitle"), eyebrow = byId("coachModuleEyebrow"), copy = byId("coachModuleCopy");
+    if (eyebrow) eyebrow.textContent = "Managing";
+    if (title) title.textContent = "Removed items";
+    if (copy) copy.textContent = "Anything taken off the calendar, with the reason, and a way back.";
+    if (typeof loadCalendarArchive === "function") loadCalendarArchive();
+    return;
+  }
   if (destination === "hours" || destination === "files") {
     const title = byId("coachModuleTitle"), eyebrow = byId("coachModuleEyebrow"), copy = byId("coachModuleCopy");
     const owner = isFit4LifeOwner();
@@ -542,7 +550,7 @@ const COACH_NAV_GROUPS = [
   ["Calendar", ["calendar"], "\u25A6"],
   ["Clients", ["clients", "assessments", "reports"], "\u25CF"],
   ["Workouts", ["builder", "programming", "library", "tools"], "\u25A4"],
-  ["Managing", ["team", "areas", "audits", "access", "approvals", "hours", "files", "settings"], "\u2699"]
+  ["Managing", ["team", "areas", "audits", "access", "approvals", "hours", "files", "archive", "settings"], "\u2699"]
 ];
 /* Anything that needs a client is coaching, so a shift area never shows it. */
 const COACHING_NAV_KEYS = ["dashboard", "actions", "messages", "calendar", "clients", "assessments",

@@ -149,9 +149,22 @@ async function addShift(areaKey) {
 }
 
 async function removeShift(shiftId) {
-  if (!window.confirm("Remove this shift?")) return;
-  await window.fit4lifeCloudDeleteShift(shiftId);
+  const reason = askDeleteReason("this shift");
+  if (reason === null) return;
+  const result = await window.fit4lifeCloudDeleteShift(shiftId, reason);
+  if (!result || !result.ok) { showToast((result && result.error) || "That could not be removed"); return; }
   await loadAreaTools(activeWorkArea(), true);
+  showToast("Removed \u00b7 it is in the archive if you need it back");
+}
+
+/* Removing something needs a reason; changing its length or its wording does not. The
+   difference is whether anyone will later ask what happened to it. */
+function askDeleteReason(what) {
+  const reason = window.prompt("Why is " + what + " being removed?\n\nIt goes to the archive and can be brought back.", "");
+  if (reason === null) return null;
+  const clean = String(reason).trim();
+  if (!clean) { showToast("A reason is needed to remove it"); return null; }
+  return clean;
 }
 
 /* ---------- owner: hours and devices ---------- */
@@ -355,9 +368,12 @@ async function addAreaEvent(areaKey) {
 }
 
 async function removeAreaEvent(eventId) {
-  if (!window.confirm("Take this off the calendar?")) return;
-  await window.fit4lifeCloudDeleteAreaEvent(eventId);
+  const reason = askDeleteReason("this");
+  if (reason === null) return;
+  const result = await window.fit4lifeCloudDeleteAreaEvent(eventId, reason);
+  if (!result || !result.ok) { showToast((result && result.error) || "That could not be removed"); return; }
   await loadAreaTools(activeWorkArea(), true);
+  showToast("Removed \u00b7 it is in the archive if you need it back");
 }
 
 /* ---------- the files that belong to this area ----------
@@ -686,4 +702,56 @@ async function loadRota(force) {
   }
   rotaState.loaded = true;
   renderRotaModule();
+}
+
+/* ---------- the archive ----------
+   Removed, not gone. Every row carries who took it off, when, and the reason they gave,
+   and bringing it back asks for a reason too, so the record reads as a conversation
+   rather than as a thing that silently reappeared. */
+function renderCalendarArchiveModule() {
+  const out = byId("coachModuleContent");
+  if (!out) return;
+  const rows = window.fit4lifeCalendarArchive || [];
+  if (!rows.length) {
+    out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><h3>Nothing has been removed</h3>'
+      + '<p class="storage-note">Anything taken off the calendar lands here with the reason it was removed, and can be put back.</p></section>';
+    return;
+  }
+  const list = rows.map((row) => {
+    const when = row.starts_at ? dayLabel(dayKey(row.starts_at)) + " · " + clockTime(row.starts_at) + "–" + clockTime(row.ends_at) : "";
+    const removed = row.deleted_at ? dayLabel(dayKey(row.deleted_at)) : "";
+    return '<div class="trainer-account-row"><div><b>' + escapeHtml(row.title || "Removed item") + '</b><span>'
+      + escapeHtml((CALENDAR_ARCHIVE_KIND[row.kind] || row.kind || "")
+        + (when ? " · " + when : "")
+        + (typeof workAreaName === "function" && row.area_key ? " · " + workAreaName(row.area_key) : "")
+        + (removed ? " · removed " + removed : "")
+        + " · by " + peopleName(row.deleted_by)) + '</span>'
+      + '<span class="archive-reason">“' + escapeHtml(row.delete_reason || "no reason given") + '”</span></div>'
+      + '<div class="tool-actions"><button class="small-btn primary" onclick="restoreArchivedItem(\'' + escapeHtml(row.source) + '\',\'' + row.id + '\')">Put it back</button></div></div>';
+  }).join('');
+  out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><h3>Removed from the calendar · ' + rows.length + '</h3>'
+    + '<p class="storage-note">Nothing is deleted outright. Put anything back and it returns to the day it was on.</p>'
+    + '<div class="advanced-list">' + list + '</div></section>';
+}
+
+const CALENDAR_ARCHIVE_KIND = { shift:"Trainer shift", cleaning:"Cleaning", meeting:"Meeting", closure:"Closed",
+  lesson:"Lesson", clinic:"Clinic", training:"Staff training", volunteer:"Volunteers", event:"Event" };
+
+async function restoreArchivedItem(source, id) {
+  const reason = window.prompt("Why is this coming back?", "");
+  if (reason === null) return;
+  const clean = String(reason).trim();
+  if (!clean) { showToast("A reason is needed to put it back"); return; }
+  const restore = source === "shift" ? window.fit4lifeCloudRestoreShift : window.fit4lifeCloudRestoreAreaEvent;
+  if (typeof restore !== "function") return;
+  const result = await restore(id, clean);
+  if (!result || !result.ok) { showToast((result && result.error) || "That could not be put back"); return; }
+  await loadCalendarArchive();
+  showToast("Back on the calendar");
+}
+
+async function loadCalendarArchive() {
+  if (typeof window.fit4lifeCloudListCalendarArchive !== "function") return;
+  await window.fit4lifeCloudListCalendarArchive();
+  renderCalendarArchiveModule();
 }

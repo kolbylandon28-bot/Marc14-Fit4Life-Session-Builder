@@ -2408,9 +2408,13 @@
     const response = await areaRpc("save_fit4life_shift", { area, staff: userId || null, staff_label: label || "", starts, ends, shift_note: note || "", shift_id: shiftId || null });
     return response.error ? { ok: false, error: response.error.message } : { ok: true, id: response.data };
   };
-  window.fit4lifeCloudDeleteShift = async function fit4lifeCloudDeleteShift(shiftId) {
-    const response = await areaRpc("delete_fit4life_shift", { shift_id: shiftId });
-    return !response.error;
+  window.fit4lifeCloudDeleteShift = async function fit4lifeCloudDeleteShift(shiftId, reason) {
+    const response = await areaRpc("delete_fit4life_shift", { shift_id: shiftId, reason: reason || "" });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true };
+  };
+  window.fit4lifeCloudRestoreShift = async function fit4lifeCloudRestoreShift(shiftId, reason) {
+    const response = await areaRpc("restore_fit4life_shift", { shift_id: shiftId, reason: reason || "" });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true };
   };
 
   /* ---------- tasks and the events calendar ----------
@@ -2453,9 +2457,18 @@
     });
     return response.error ? { ok: false, error: response.error.message } : { ok: true, id: response.data };
   };
-  window.fit4lifeCloudDeleteAreaEvent = async function fit4lifeCloudDeleteAreaEvent(eventId) {
-    const response = await areaRpc("delete_fit4life_area_event", { event_id: eventId });
-    return !response.error;
+  window.fit4lifeCloudDeleteAreaEvent = async function fit4lifeCloudDeleteAreaEvent(eventId, reason) {
+    const response = await areaRpc("delete_fit4life_area_event", { event_id: eventId, reason: reason || "" });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true };
+  };
+  window.fit4lifeCloudRestoreAreaEvent = async function fit4lifeCloudRestoreAreaEvent(eventId, reason) {
+    const response = await areaRpc("restore_fit4life_area_event", { event_id: eventId, reason: reason || "" });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true };
+  };
+  window.fit4lifeCloudListCalendarArchive = async function fit4lifeCloudListCalendarArchive() {
+    const response = await areaRpc("list_fit4life_calendar_archive", {});
+    window.fit4lifeCalendarArchive = response.error ? [] : (response.data || []);
+    return window.fit4lifeCalendarArchive;
   };
 
   /* ---------- the files that belong to one area ----------
