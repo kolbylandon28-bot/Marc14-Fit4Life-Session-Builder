@@ -451,9 +451,22 @@ function buildPersonFields(target, container) {
   grid.appendChild(ageField(target));
   grid.appendChild(selectField("Session length", "minutes", TIME_OPTIONS, target, target.minutes));
   grid.appendChild(supervisionField(target));
-  grid.appendChild(muscleField(target));
   grid.appendChild(chipMulti("Injury limitations", "injuries", COMMON_LIMITATIONS, INJURY_LABELS, target, true));
-  grid.appendChild(chipMulti("Equipment available", "zones", ALL_ZONES, ZONE_LABELS, target, false));
+  // Target muscles and equipment are refinements a trainer leaves alone most sessions, and
+  // between them they are 22 of this screen's chips. Folding them away halves what you scroll
+  // past to build an ordinary workout. Injury limitations stays in plain sight above - it is
+  // a safety input, not a preference. A closed <details> keeps its fields in the DOM, so
+  // everything that reads them still reads them.
+  const refine = document.createElement("details");
+  refine.className = "builder-refine";
+  const refineHead = document.createElement("summary");
+  refineHead.textContent = "Target muscles and equipment (optional)";
+  const refineBody = document.createElement("div");
+  refineBody.className = "builder-refine-body";
+  refineBody.appendChild(muscleField(target));
+  refineBody.appendChild(chipMulti("Equipment available", "zones", ALL_ZONES, ZONE_LABELS, target, false));
+  refine.append(refineHead, refineBody);
+  grid.appendChild(refine);
   const saveProfile = profileSaveField(target); if (saveProfile) grid.appendChild(saveProfile);
   container.appendChild(grid);
 }

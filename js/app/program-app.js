@@ -141,7 +141,7 @@ function selectClientProgramDay(index) { renderClientProgram.selectedDay = Numbe
 function renderClientWorkoutPreview(profile,session,assignment) {
   const items = clientSessionExercises(session), equipment = clientSessionEquipment(session);
   const assignmentId = assignment && assignment.id || "", ready = assignment && !["completed","reviewed"].includes(assignmentStatus(assignment));
-  return '<section class="workout-preview"><article class="client-card"><div class="client-section-label">Workout preview</div><h3>' + escapeHtml((assignment && assignment.programDayName) || session.goalLabel || 'Coach-planned workout') + '</h3><div class="hero-meta"><span>' + (session.spec.minutes || 60) + ' min</span><span>' + escapeHtml(equipment.join(' · ') || 'Bodyweight') + '</span><span>' + items.length + ' exercises</span></div><p>' + escapeHtml(clientPurpose(session)) + '</p><div class="preview-list">' + items.map((item,index) => '<div class="preview-exercise"><i>' + (index + 1) + '</i><b>' + escapeHtml(item.exercise.name) + '<small style="display:block;color:var(--text-faint);margin-top:3px">' + escapeHtml(item.block.title) + '</small></b><span>' + escapeHtml((item.exercise.rx || item.block.rx).sets + ' × ' + (item.exercise.rx || item.block.rx).reps) + '</span></div>').join('') + '</div></article><aside class="client-card"><div class="client-section-label">Session options</div>' + (!assignment ? '<div class="portal-note">This program day has not been assigned by the trainer yet.</div>' : '') + '<div class="secondary-actions"><button class="small-btn primary" data-wt="client-start-workout"' + (ready ? '' : ' disabled title="Your coach has not assigned this day yet, so this button is off."') + ' onclick="startActiveWorkout(\'' + escapeHtml(profile.id) + '\',false,\'' + escapeHtml(assignmentId) + '\')">' + (assignmentStatus(assignment) === 'in_progress' ? 'Continue workout' : assignment && ["completed","reviewed"].includes(assignmentStatus(assignment)) ? 'Workout complete' : 'Start workout') + '</button><button class="small-btn" ' + (ready ? '' : 'disabled') + ' onclick="startActiveWorkout(\'' + escapeHtml(profile.id) + '\',true,\'' + escapeHtml(assignmentId) + '\')">Use shortened workout</button><button class="small-btn" onclick="showToast(\'Start the workout, then use Replace exercise beside the movement that needs different equipment\')">Change equipment</button><button class="small-btn" onclick="openClientPainReport()">Report a limitation</button></div><p style="margin-top:12px">Isolation swaps stay inside approved groups. Major compound changes require coach permission.</p></aside></section>';
+  return '<section class="workout-preview"><article class="client-card"><div class="client-section-label">Workout preview</div><h3>' + escapeHtml((assignment && assignment.programDayName) || session.goalLabel || 'Coach-planned workout') + '</h3><div class="hero-meta"><span>' + (session.spec.minutes || 60) + ' min</span><span>' + escapeHtml(equipment.join(' · ') || 'Bodyweight') + '</span><span>' + items.length + ' exercises</span></div><p>' + escapeHtml(clientPurpose(session)) + '</p><div class="preview-list">' + items.map((item,index) => '<div class="preview-exercise"><i>' + (index + 1) + '</i><b>' + escapeHtml(item.exercise.name) + '<small style="display:block;color:var(--text-faint);margin-top:3px">' + escapeHtml(item.block.title) + '</small></b><span>' + escapeHtml((item.exercise.rx || item.block.rx).sets + ' × ' + (item.exercise.rx || item.block.rx).reps) + '</span></div>').join('') + '</div></article><aside class="client-card"><div class="client-section-label">Session options</div>' + (!assignment ? '<div class="portal-note">This program day has not been assigned by the trainer yet.</div>' : '') + '<div class="secondary-actions"><button class="small-btn primary" data-wt="client-start-workout"' + (ready ? '' : ' disabled title="Your coach has not assigned this day yet, so this button is off."') + ' onclick="startActiveWorkout(\'' + escapeHtml(profile.id) + '\',false,\'' + escapeHtml(assignmentId) + '\')">' + (assignmentStatus(assignment) === 'in_progress' ? 'Continue workout' : assignment && ["completed","reviewed"].includes(assignmentStatus(assignment)) ? 'Workout complete' : 'Start workout') + '</button><button class="small-btn" ' + (ready ? '' : 'disabled') + ' onclick="startActiveWorkout(\'' + escapeHtml(profile.id) + '\',true,\'' + escapeHtml(assignmentId) + '\')">Use shortened workout</button><button class="small-btn" onclick="openClientPainReport()">Report a limitation</button></div><p style="margin-top:12px">Isolation swaps stay inside approved groups. Major compound changes require coach permission.</p></aside></section>';
 }
 function setClientProgressSection(section) { clientProgressSection = ["overview","performance","body","goals"].includes(section) ? section : "overview"; document.querySelectorAll('[data-client-progress]').forEach((button) => button.classList.toggle('on',button.dataset.clientProgress === clientProgressSection)); const profile = activeClientProfile(); if (profile) renderClientProgress(profile); }
 function renderClientProgress(profile) {
@@ -504,6 +504,10 @@ function startActiveWorkout(profileId,shortened,assignmentId) {
   const currentSession = clientAssignedSession(assignments[assignmentIndex],profile);
   const unresolvedSafety = unresolvedClientSafetyHold(profile);
   if (unresolvedSafety) { showToast("Workout paused until your trainer reviews the recent pain or discomfort report"); return null; }
+  // Assigned before the flag appeared, or assigned on an older build - gate the run too,
+  // not just the write.
+  const screeningHold = typeof clientHealthScreeningHold === "function" ? clientHealthScreeningHold(profile) : null;
+  if (screeningHold) { showToast("Workout paused: " + screeningHold); return null; }
   const safetyConflicts = sessionSafetyConflictsForProfile(currentSession,profile);
   if (safetyConflicts.length) {
     addProgressEntry({type:"safety_hold",client:profile.name,profileId:profile.id,sessionId:currentSession && currentSession.sessionId || "",label:"Workout safety recheck",value:"Trainer review required",note:safetyConflicts.join(" · "),data:{conflicts:safetyConflicts}});
@@ -1003,6 +1007,8 @@ async function assignCurrentWorkout() {
     const spec = plan.session.spec || {}, profile = loadProfiles().find((item) => item.id === spec.profileId) || loadProfiles().find((item) => clientMatches(item.name,spec.client));
     if (!profile) return;
     if (unresolvedClientSafetyHold(profile)) { blocked.push(profile.name + ": recent pain or discomfort still needs trainer review"); return; }
+    const screening = typeof clientHealthScreeningHold === "function" ? clientHealthScreeningHold(profile) : null;
+    if (screening) { blocked.push(profile.name + ": " + screening); return; }
     const conflicts = sessionSafetyConflictsForProfile(plan.session,profile);
     if (conflicts.length) { blocked.push(profile.name + ": " + conflicts.join("; ")); return; }
     const session = { type:"solo", data:JSON.parse(JSON.stringify(plan.session)), edits:JSON.parse(JSON.stringify(state.session.edits || {})) }, assignment = { id:"assignment-" + Date.now() + "-" + Math.random().toString(16).slice(2), profileId:profile.id, client:profile.name, assignedAt:new Date().toISOString(), status:"assigned", programDayName:finalName,
@@ -1067,9 +1073,13 @@ function coachMoreDestinations() {
   const sidebar = byId("coachSidebar"); if (!sidebar) return [];
   return Array.from(sidebar.querySelectorAll("button[data-coach-nav]"))
     .filter((button) => !COACH_PINNED_DESTINATIONS.includes(button.dataset.coachNav))
-    // data-owner-only is toggled elsewhere; an owner-only destination stays out of the
-    // sheet for a trainer exactly as it stays out of the sidebar.
-    .filter((button) => !button.hidden);
+    // Availability, not visibility. groupCoachSidebar sets data-nav-available from the
+    // role-and-area allow-list, which already excludes owner-only destinations for a
+    // trainer. Filtering on .hidden instead meant a collapsed group read as unavailable,
+    // so on the default screen - no group open - this sheet came back empty and a phone
+    // could reach four of twenty-one destinations. Unset counts as available, so the
+    // sheet over-lists rather than stranding anyone before the grouping has run.
+    .filter((button) => button.dataset.navAvailable !== "0");
 }
 function renderCoachMoreSheet() {
   const list = byId("coachMoreList"); if (!list) return;
@@ -1156,27 +1166,47 @@ function renderCoachModule(destination) {
     const canConfirm = owner;
     out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap"><div><h3>Trainer approval center</h3><p>Client accounts never receive trainer permissions automatically. Only a gym owner can confirm a verified trainer request, manually grant access, or deactivate staff; the owner and time are recorded.</p></div><span class="tag ' + (canConfirm ? 'tag-circuit' : '') + '">Owner controls</span></div><div class="compact-grid" style="margin-top:18px"><div class="compact-field"><label for="trainerAccountEmail">Verified trainer login email</label><input id="trainerAccountEmail" type="email" placeholder="trainer@example.com"></div><div class="compact-field"><label for="trainerAccountName">Name clients will see</label><input id="trainerAccountName" placeholder="Jordan Smith"></div></div><div class="tool-actions"><button class="small-btn primary" onclick="approveTrainerAccount()">Grant trainer access manually</button></div><div id="trainerAccountStatus" class="storage-note" style="margin-top:10px"></div><h3 style="margin-top:22px">Pending trainer requests</h3><div id="trainerRequestList" class="trainer-account-list"><div class="empty-state">Checking the approval queue…</div></div><h3 style="margin-top:22px">Approved staff</h3><div id="trainerAccountList" class="trainer-account-list"><div class="empty-state">Loading trainer accounts…</div></div><h3 style="margin-top:22px">Recent trainer-access decisions</h3><div id="trainerApprovalHistory" class="trainer-account-list"><div class="empty-state">Loading approval history…</div></div><div class="library-empty-tip"><b>Permission boundary:</b> trainers can request restricted changes but cannot approve staff. Only an owner may grant trainer access, deactivate staff, or recover permissions. Client sign-up and email verification never grant trainer access by themselves.</div></section>'; setTimeout(refreshTrainerAccessManager,0);
   } else if (destination === 'settings') {
-    const owner = window.fit4lifeCloudRole === 'owner';
-    out.innerHTML = '<section class="coach-module-card" style="grid-column:1/-1"><h3>Your trainer identity</h3><p class="storage-note" style="margin-bottom:10px">Just you. Gym-wide appearance and equipment are further down; data backup is under Data &amp; backups.</p><p>This is the name clients see on messages and feedback.</p><div class="compact-grid" style="margin-top:14px"><div class="compact-field"><label for="myTrainerDisplayName">Your name on messages</label><input id="myTrainerDisplayName" value="' + escapeHtml(currentAccountIdentity().displayName) + '" placeholder="Name clients should see"></div></div><div class="tool-actions"><button class="small-btn" onclick="saveMyTrainerDisplayName()">Save my sender name</button><button class="small-btn ' + (owner ? 'primary' : '') + '" onclick="openCoachDestination(\'access\')">Open Trainer Access</button></div><div id="trainerAccountStatus" class="storage-note" style="margin-top:10px"></div></section><section class="coach-module-card"><h3>Data & backups</h3><p>Export or restore the full local coaching record before changing devices.</p><div class="tool-actions"><button class="small-btn" onclick="exportProgress()">Export backup</button><button class="small-btn" onclick="byId(\'progressImport\').click()">Restore backup</button></div></section><section class="coach-module-card"><h3>Security</h3><p>Supabase accounts and approved organization roles control trainer and client access on every device.</p><div class="tool-actions"><button class="small-btn" onclick="lockTrainerHub()">Sign out / lock workspace</button></div></section>';
-    // The import and the invite self-test are operational tools used most weeks. They were
-    // reachable only through "Open holiday themes & appearance", which is gym setup - two
-    // clicks away and under a heading that gives no hint they are there.
-    // Tutorials is its own dialog from the rail now, so Settings is only settings.
-    if (typeof bookingImportPanelHtml === "function") {
-      out.insertAdjacentHTML('beforeend', bookingImportPanelHtml());
-      if (typeof refreshBookingArrivals === "function") refreshBookingArrivals();
-    }
-    if (owner) out.insertAdjacentHTML('beforeend', archivedClientsPanelHtml());
-    if (owner) out.insertAdjacentHTML('beforeend', trainerLinksPanelHtml());
-    if (typeof inviteEmailTestPanelHtml === "function") {
-      out.insertAdjacentHTML('beforeend', inviteEmailTestPanelHtml());
-    }
-    out.insertAdjacentHTML('beforeend', owner && typeof renderOrganizationModule === 'function'
-      ? renderOrganizationModule()
-      : '<section class="coach-module-card"><h3>Gym setup</h3><p>The active theme appears here automatically. Only an owner can publish a different holiday theme or change shared setup.</p><div class="tool-actions"><button class="small-btn" onclick="openOwnerRequestDialog(\'organization_setting\',\'\',\'\',\'Change the shared holiday theme, gym appearance, or shared setup\')">Request a change</button></div></section>');
+    renderCoachSettings(out);
   } else {
     out.innerHTML = '<section class="coach-module-card"><h3>Data & backups</h3><p>Export or restore the full local coaching record before changing devices.</p><div class="tool-actions"><button class="small-btn" onclick="exportProgress()">Export backup</button><button class="small-btn" onclick="byId(\'progressImport\').click()">Restore backup</button></div></section><section class="coach-module-card"><h3>Security</h3><p>Hosted accounts and approved Supabase roles control live trainer and client access. There is no shared trainer password.</p><div class="tool-actions"><button class="small-btn" onclick="lockTrainerHub()">Sign out / lock workspace</button></div></section>' + (typeof renderOrganizationModule === 'function' ? renderOrganizationModule() : '') + '';
   }
+}
+/* Settings stacked eight panels for an owner in one scroll - identity, backups, sign-out, a
+   booking import, archived clients, a name-mapping table, an email self-test and the gym
+   brand. Same panels, three groups, one on screen at a time. Tutorials already left for its
+   own dialog, so what is here is only settings. */
+let coachSettingsTab = "account";
+const COACH_SETTINGS_TABS = [["account","My account"],["gym","Gym details"],["imports","Imports and checks"]];
+function setCoachSettingsTab(tab) {
+  coachSettingsTab = COACH_SETTINGS_TABS.some(([key]) => key === tab) ? tab : "account";
+  const out = byId("coachModuleContent");
+  if (out) renderCoachSettings(out);
+}
+function renderCoachSettings(out) {
+  if (!out) return;
+  const owner = window.fit4lifeCloudRole === 'owner';
+  const tabs = '<section class="coach-module-card" style="grid-column:1/-1;padding:10px 12px">'
+    + '<div class="calendar-view-toggle">'
+    + COACH_SETTINGS_TABS.map(([key,label]) => '<button class="' + (coachSettingsTab === key ? 'on' : '')
+        + '" onclick="setCoachSettingsTab(\'' + key + '\')">' + escapeHtml(label) + '</button>').join('')
+    + '</div></section>';
+
+  let panels = '';
+  if (coachSettingsTab === "account") {
+    panels = '<section class="coach-module-card" style="grid-column:1/-1"><h3>Your trainer identity</h3><p class="storage-note" style="margin-bottom:10px">Just you. Gym-wide appearance and equipment are further down; data backup is under Data &amp; backups.</p><p>This is the name clients see on messages and feedback.</p><div class="compact-grid" style="margin-top:14px"><div class="compact-field"><label for="myTrainerDisplayName">Your name on messages</label><input id="myTrainerDisplayName" value="' + escapeHtml(currentAccountIdentity().displayName) + '" placeholder="Name clients should see"></div></div><div class="tool-actions"><button class="small-btn" onclick="saveMyTrainerDisplayName()">Save my sender name</button><button class="small-btn ' + (owner ? 'primary' : '') + '" onclick="openCoachDestination(\'access\')">Open Trainer Access</button></div><div id="trainerAccountStatus" class="storage-note" style="margin-top:10px"></div></section><section class="coach-module-card"><h3>Data & backups</h3><p>Export or restore the full local coaching record before changing devices.</p><div class="tool-actions"><button class="small-btn" onclick="exportProgress()">Export backup</button><button class="small-btn" onclick="byId(\'progressImport\').click()">Restore backup</button></div></section><section class="coach-module-card"><h3>Security</h3><p>Supabase accounts and approved organization roles control trainer and client access on every device.</p><div class="tool-actions"><button class="small-btn" onclick="lockTrainerHub()">Sign out / lock workspace</button></div></section>';
+  } else if (coachSettingsTab === "gym") {
+    panels = owner && typeof renderOrganizationModule === 'function'
+      ? renderOrganizationModule()
+      : '<section class="coach-module-card"><h3>Gym setup</h3><p>The active theme appears here automatically. Only an owner can publish a different holiday theme or change shared setup.</p><div class="tool-actions"><button class="small-btn" onclick="openOwnerRequestDialog(\'organization_setting\',\'\',\'\',\'Change the shared holiday theme, gym appearance, or shared setup\')">Request a change</button></div></section>';
+  } else {
+    if (typeof bookingImportPanelHtml === "function") panels += bookingImportPanelHtml();
+    if (owner) panels += archivedClientsPanelHtml();
+    if (owner) panels += trainerLinksPanelHtml();
+    if (typeof inviteEmailTestPanelHtml === "function") panels += inviteEmailTestPanelHtml();
+  }
+  out.innerHTML = tabs + panels;
+  // The arrivals list fetches, so it can only run once its panel is in the document.
+  if (coachSettingsTab === "imports" && typeof refreshBookingArrivals === "function") refreshBookingArrivals();
 }
 // Inline on* attributes are HTML-decoded before the JavaScript is parsed, so an escaped
 // quote inside one becomes a real quote and breaks out of the string. Values ride in

@@ -645,7 +645,13 @@ function groupCoachSidebar() {
     keys.forEach((navKey) => {
       const button = bar.querySelector('[data-coach-nav="' + navKey + '"]');
       if (!button) return;
-      button.hidden = solo || !open || shown.indexOf(navKey) < 0;
+      // Availability and visibility are different things. A collapsed group is a desktop
+      // display state; its destinations stay reachable. The phone's More sheet reads this
+      // attribute rather than .hidden, because reading .hidden left More empty on the
+      // default screen - four reachable destinations out of twenty-one on a phone.
+      const available = shown.indexOf(navKey) >= 0;
+      button.dataset.navAvailable = available ? "1" : "0";
+      button.hidden = solo || !open || !available;
       if (anchor.nextSibling !== button) anchor.parentNode.insertBefore(button, anchor.nextSibling);
       anchor = button;
     });

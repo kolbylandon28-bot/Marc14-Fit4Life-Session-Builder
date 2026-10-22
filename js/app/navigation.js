@@ -146,7 +146,7 @@ function openScratchWorkoutBuilder() {
   state.mode = "solo";
   openBuilder();
   setMode("solo");
-  showToast("Choose or load a client, then use Build from scratch");
+  showToast("Choose or load a client, then pick Build from scratch under the workout options");
   return true;
 }
 const STARRED_WORKOUTS_KEY = "fit4life_starred_workouts_v1";

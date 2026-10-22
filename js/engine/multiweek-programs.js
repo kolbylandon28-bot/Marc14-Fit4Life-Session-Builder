@@ -1031,6 +1031,8 @@ function assignProgramWeeks(program,weekNumbers) {
   if (!profile) return programAssignmentFailure("Choose a saved client profile before assigning this program");
   if (!program.calibration && !baselineCanTailor(profile)) return programAssignmentFailure("Program assignment blocked until the client baseline is coach-verified");
   if (unresolvedClientSafetyHold(profile)) return programAssignmentFailure("Program assignment paused until the trainer reviews this client’s recent pain or discomfort report");
+  const screening = typeof clientHealthScreeningHold === "function" ? clientHealthScreeningHold(profile) : null;
+  if (screening) return programAssignmentFailure("Program assignment blocked: " + screening);
   const selectedWeeks = program.weeks.filter((week) => weekNumbers.includes(Number(week.number)));
   if (!selectedWeeks.length) return programAssignmentFailure("No program weeks matched the assignment you selected");
   const safetyConflicts = selectedWeeks.flatMap((week) => (week.days || []).flatMap((day) => sessionSafetyConflictsForProfile(day.session,profile).map((conflict) => "Week " + week.number + " · " + day.name + ": " + conflict)));

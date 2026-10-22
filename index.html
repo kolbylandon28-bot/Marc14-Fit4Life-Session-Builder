@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20261022-v145-movement-videos-r1">
+<link rel="manifest" href="manifest.webmanifest?v=20261022-v149-settings-tabs-r1">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20261022-v145-movement-videos-r1">
+<link rel="stylesheet" href="styles.css?v=20261022-v149-settings-tabs-r1">
 </head>
 <body>
 
@@ -190,15 +190,10 @@
     <div class="section-eyebrow">Start here</div>
     <div class="tools-grid">
       <button class="tool-card primary" onclick="openNewClientProfile()"><div class="tc-icon">+</div><div class="tc-title">Create client profile</div><span class="portal-question">Who is new?</span><div class="tc-desc">Search first, then create a new profile only when there is no duplicate or near-duplicate match.</div></button>
-      <button class="tool-card live" onclick="openBuilder()"><div class="tc-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v18M18 3v18M6 8h12M6 16h12"/></svg></div><div class="tc-title">Build a workout</div><span class="portal-question">What are we training today?</span><div class="tc-desc">Choose the client, goals, focus, and time; then compare three genuinely different workout approaches.</div></button>
-      <button class="tool-card" onclick="openScratchWorkoutBuilder()"><div class="tc-icon">&#9998;</div><div class="tc-title">Build from scratch</div><span class="portal-question">Do I want full control?</span><div class="tc-desc">Load a client, then build every phase from warm-up through cool-down using the complete filtered exercise bank.</div></button>
-      <button class="tool-card live" onclick="openTools()"><div class="tc-icon">&#9201;</div><div class="tc-title">Trainer tools</div><span class="portal-question">What do I need on the floor?</span><div class="tc-desc">Fullscreen timers, plate math, warm-up ramps, 1RM estimates, and RPE coaching guides.</div></button>
-    </div>
+      <button class="tool-card" onclick="openScratchWorkoutBuilder()"><div class="tc-icon">&#9998;</div><div class="tc-title">Build for one client</div><span class="portal-question">Do I want full control?</span><div class="tc-desc">Load a client, then build every phase from warm-up through cool-down using the complete filtered exercise bank.</div></button>
+      </div>
     <div class="section-eyebrow">Manage &amp; review</div>
     <div class="tools-grid">
-      <button class="tool-card" onclick="openTrainerHub()"><span class="tc-tag">Private</span><div class="tc-icon">&#128202;</div><div class="tc-title">Clients &amp; summaries</div><div class="tc-desc">Search all clients, review workout history, injuries, strength trends, goals, and InBody analysis.</div></button>
-      <button class="tool-card" onclick="openPrograms()"><div class="tc-icon">&#128197;</div><div class="tc-title">Build a program</div><div class="tc-desc">Create progressive multi-week plans with clearly labeled workout blocks and deloads.</div></button>
-      <button class="tool-card" onclick="openReadiness()"><div class="tc-icon">&#10003;</div><div class="tc-title">Progress logging</div><div class="tc-desc">Add and review clean set or workout records across clients.</div></button>
       <button class="tool-card live" onclick="openAdvancedStudio('review')"><div class="tc-icon">&#10024;</div><div class="tc-title">Client review</div><div class="tc-desc">Read a client's check-ins, workout results and monitoring together, then decide the next move.</div></button>
     </div>
   </section>
@@ -397,7 +392,7 @@
     </div>
     <div class="workspace-grid">
       <article class="utility-card">
-        <div class="utility-head"><div><h3 class="utility-title">Estimated 1RM</h3><p class="utility-sub">Uses the Epley equation. Best with controlled sets of 2–10 reps.</p></div><span class="wave-badge">Wave 2</span></div>
+        <div class="utility-head"><div><h3 class="utility-title">Estimated 1RM</h3><p class="utility-sub">Uses the Epley equation. Best with controlled sets of 2–10 reps.</p></div></div>
         <div class="compact-grid">
           <div class="compact-field"><label for="oneRmWeight">Lifted weight</label><input id="oneRmWeight" type="number" min="1" step="0.5" value="225"></div>
           <div class="compact-field"><label for="oneRmReps">Completed reps</label><input id="oneRmReps" type="number" min="1" max="20" value="5"></div>
@@ -408,7 +403,7 @@
       </article>
 
       <article class="utility-card">
-        <div class="utility-head"><div><h3 class="utility-title">Plate Math</h3><p class="utility-sub">Build the target weight evenly on a standard bar.</p></div><span class="wave-badge">Wave 2</span></div>
+        <div class="utility-head"><div><h3 class="utility-title">Plate Math</h3><p class="utility-sub">Build the target weight evenly on a standard bar.</p></div></div>
         <div class="compact-grid">
           <div class="compact-field"><label for="plateTarget">Target total</label><input id="plateTarget" type="number" min="0" step="0.5" value="225"></div>
           <div class="compact-field"><label for="plateBar">Bar weight</label><input id="plateBar" type="number" min="0" step="0.5" value="45"></div>
@@ -419,7 +414,7 @@
       </article>
 
       <article class="utility-card">
-        <div class="utility-head"><div><h3 class="utility-title">Warm-up Ramp</h3><p class="utility-sub">Progressive sets that prepare the lift without creating fatigue.</p></div><span class="wave-badge">Wave 2</span></div>
+        <div class="utility-head"><div><h3 class="utility-title">Warm-up Ramp</h3><p class="utility-sub">Progressive sets that prepare the lift without creating fatigue.</p></div></div>
         <div class="compact-grid">
           <div class="compact-field"><label for="warmWeight">Working weight</label><input id="warmWeight" type="number" min="1" step="0.5" value="225"></div>
           <div class="compact-field"><label for="warmGoal">Session type</label><select id="warmGoal"><option value="strength">Get stronger / power</option><option value="hypertrophy">Build muscle</option><option value="general">Feel fitter</option></select></div>
@@ -430,7 +425,7 @@
       </article>
 
       <article class="utility-card timer-shell" id="restTimerCard">
-        <div class="utility-head"><div><h3 class="utility-title">Rest Timer</h3><p class="utility-sub">One-tap presets for strength, hypertrophy, and circuits.</p></div><span class="wave-badge">Wave 2</span></div>
+        <div class="utility-head"><div><h3 class="utility-title">Rest Timer</h3><p class="utility-sub">One-tap presets for strength, hypertrophy, and circuits.</p></div></div>
         <div class="timer-display" id="restTimerDisplay" role="timer" aria-live="polite">01:30</div>
         <div class="preset-row" aria-label="Rest timer presets">
           <button class="preset" onclick="setRestTimer(30)">0:30</button><button class="preset" onclick="setRestTimer(60)">1:00</button><button class="preset on" onclick="setRestTimer(90)">1:30</button><button class="preset" onclick="setRestTimer(120)">2:00</button><button class="preset" onclick="setRestTimer(180)">3:00</button><button class="preset" onclick="setRestTimer(300)">5:00</button>
@@ -439,7 +434,7 @@
       </article>
 
       <article class="utility-card timer-shell" id="intervalTimerCard">
-        <div class="utility-head"><div><h3 class="utility-title">Interval Timer</h3><p class="utility-sub">Alternating work and recovery with automatic round tracking.</p></div><span class="wave-badge">Wave 2</span></div>
+        <div class="utility-head"><div><h3 class="utility-title">Interval Timer</h3><p class="utility-sub">Alternating work and recovery with automatic round tracking.</p></div></div>
         <div class="compact-grid">
           <div class="compact-field"><label for="intervalWork">Work (sec)</label><input id="intervalWork" type="number" min="5" max="600" value="40"></div>
           <div class="compact-field"><label for="intervalRest">Rest (sec)</label><input id="intervalRest" type="number" min="0" max="600" value="20"></div>
@@ -451,7 +446,7 @@
       </article>
 
       <article class="utility-card">
-        <div class="utility-head"><div><h3 class="utility-title">RPE / RIR Guide</h3><p class="utility-sub">Use reps in reserve to coach effort without guessing exact load.</p></div><span class="wave-badge">Wave 2</span></div>
+        <div class="utility-head"><div><h3 class="utility-title">RPE / RIR Guide</h3><p class="utility-sub">Use reps in reserve to coach effort without guessing exact load.</p></div></div>
         <table class="guide-table"><thead><tr><th>RPE</th><th>RIR</th><th>What it feels like</th></tr></thead><tbody>
           <tr><td>10</td><td>0</td><td>Max effort; no additional clean rep possible.</td></tr>
           <tr><td>9</td><td>1</td><td>One clean rep left; appropriate for a hard top set.</td></tr>
@@ -481,7 +476,7 @@
   <section class="view" id="view-programs">
     <div class="builder-head"><span class="portal-question">How are we planning ahead?</span><h2>Programs</h2><p>Build a progressive multi-week plan from the same age, experience, goal, and muscle-aware session engine.</p></div>
     <div class="utility-card no-print">
-      <div class="utility-head"><div><h3 class="utility-title">Program Setup</h3><p class="utility-sub">Start new clients with a repeatable three-week rhythm, then move into longer progressive phases.</p></div><span class="wave-badge">Wave 3</span></div>
+      <div class="utility-head"><div><h3 class="utility-title">Program Setup</h3><p class="utility-sub">Start new clients with a repeatable three-week rhythm, then move into longer progressive phases.</p></div></div>
       <div id="programTemplateContext" class="constraint-summary" style="display:none"></div>
       <div id="programTemplatesHost"></div>
       <div class="program-setup-flow">
@@ -587,8 +582,9 @@
       </div>
       <div class="panel checkin-form" id="checkInForm">
         <div class="utility-head"><div><h3 class="utility-title" id="checkInClientTitle">Weekly check-in</h3><p class="utility-sub" id="checkInFormIntro">Use the last seven days. There are no perfect answers—accuracy helps the trainer.</p></div><span class="wave-badge">Client</span></div>
-        <div class="compact-grid">
-          
+        <details class="editor-section" open>
+          <summary>1 · How the week went</summary>
+          <div class="editor-section-body"><div class="compact-grid">
           <div class="compact-field weekly-checkin-field"><label for="checkInAdherence">Planned workouts completed</label><select id="checkInAdherence"><option value="100">All</option><option value="75">Most</option><option value="50">About half</option><option value="25">One or very few</option><option value="0">None</option></select></div>
           <div class="compact-field weekly-checkin-field"><label for="checkInSleep">Sleep quality</label><select id="checkInSleep"><option value="1">1 · Very poor</option><option value="2">2 · Poor</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · Excellent</option></select></div>
           <div class="compact-field weekly-checkin-field"><label for="checkInStress">Life stress</label><select id="checkInStress"><option value="1">1 · Low</option><option value="2">2 · Light</option><option value="3" selected>3 · Moderate</option><option value="4">4 · High</option><option value="5">5 · Extreme</option></select></div>
@@ -596,6 +592,11 @@
           <div class="compact-field weekly-checkin-field"><label for="checkInEnergy">Energy</label><select id="checkInEnergy"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · High</option></select></div>
           <div class="compact-field weekly-checkin-field"><label for="checkInConfidence">Training confidence</label><select id="checkInConfidence"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Steady</option><option value="4">4 · Confident</option><option value="5">5 · Very confident</option></select></div>
           <div class="compact-field weekly-checkin-field"><label for="checkInMotivation">Motivation</label><select id="checkInMotivation"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Average</option><option value="4">4 · Strong</option><option value="5">5 · Very strong</option></select></div>
+          </div></div>
+        </details>
+        <details class="editor-section">
+          <summary>2 · Pain, and how it felt</summary>
+          <div class="editor-section-body"><div class="compact-grid">
           <div class="compact-field"><label for="checkInPain" id="checkInPainLabel">Pain this week</label><select id="checkInPain" onchange="updateCheckInPainFields()"><option value="0">Green · No pain</option><option value="1">Yellow · Mild awareness; movement normal</option><option value="2">Orange · Changed technique, range, or balance</option><option value="3">Red · Severe, sharp, or worsening</option></select></div>
           <div class="compact-field review-safety" id="checkInPainAreaField" hidden><label for="checkInPainArea">Where?</label><select id="checkInPainArea"></select></div>
           <div class="compact-field review-safety" id="checkInPainMovementField" hidden><label for="checkInPainMovement">Did it change movement?</label><select id="checkInPainMovement" onchange="syncCheckInPainLevel()"><option value="no">No</option><option value="yes">Yes — technique, range, balance, or training changed</option></select></div>
@@ -605,11 +606,17 @@
             <div class="compact-field"><label for="checkInExerciseClarity">Exercise clarity</label><select id="checkInExerciseClarity"><option value="clear" selected>Clear and comfortable</option><option value="mostly_clear">Mostly clear</option><option value="need_help">I need coaching help</option></select></div>
             <div class="compact-field"><label for="checkInSessionFit">Session length fit</label><select id="checkInSessionFit"><option value="too_short">Too short</option><option value="right" selected>Fit my schedule</option><option value="too_long">Too long</option></select></div>
           </div>
+          </div></div>
+        </details>
+        <details class="editor-section">
+          <summary>3 · In your own words</summary>
+          <div class="editor-section-body"><div class="compact-grid">
           <div class="compact-field wide weekly-checkin-field"><label for="checkInWin">Biggest win</label><textarea id="checkInWin" placeholder="What went well?"></textarea></div>
           <div class="compact-field wide weekly-checkin-field"><label for="checkInChallenge">Biggest barrier or challenge</label><textarea id="checkInChallenge" placeholder="What made the plan harder to follow?"></textarea></div>
           <div class="compact-field wide weekly-checkin-field"><label for="checkInSchedule">Schedule changes next week</label><textarea id="checkInSchedule" placeholder="Travel, exams, work shifts, games, or limited gym access…"></textarea></div>
           <div class="compact-field wide weekly-checkin-field"><label for="checkInQuestion">Question for your trainer</label><textarea id="checkInQuestion" placeholder="What do you need help with?"></textarea></div>
-        </div>
+          </div></div>
+        </details>
         <div class="tool-actions"><button class="small-btn primary" id="checkInSubmitBtn" onclick="saveClientCheckIn()">Send weekly check-in</button></div>
         <div id="checkInConfirmation" class="advanced-output" style="display:none"></div>
       </div>
@@ -1039,17 +1046,29 @@
     <h2 id="profileEditorTitle">Edit client profile</h2>
     <p id="profileEditorCopy">Change the client’s basic setup here. Renaming a client also updates their saved workout history, InBody scans, and optional body goals.</p>
     <input id="profileEditId" type="hidden">
-    <div class="compact-grid">
+    <details class="editor-section" open>
+      <summary>1 · Who they are</summary>
+      <div class="editor-section-body"><div class="compact-grid">
       <div class="compact-field wide"><label for="profileEditName">Client name</label><input id="profileEditName" type="text" placeholder="Client name"></div>
       <div class="compact-field wide"><label for="profileEditUsername">Username</label><input id="profileEditUsername" type="text" autocomplete="off" placeholder="name-or-member-id"></div>
       <div class="compact-field wide"><label for="profileEditEmail">Client BYU-I login email</label><input id="profileEditEmail" type="email" autocomplete="off" placeholder="name@byui.edu"><span class="storage-note">Client profiles require the exact verified BYU-I login email. Trainer accounts may use personal or BYU-I email.</span></div>
       <div class="compact-field wide"><label for="profileEditBookingEmail">Booking email (personal)</label><input id="profileEditBookingEmail" type="email" autocomplete="off" placeholder="name@gmail.com"><span class="storage-note">The address Jason&rsquo;s booking site has for them, when it is not their BYU-I one. Both are matched on import, so whichever system sends the file reaches this same client.</span></div>
       <div class="compact-field wide"><label for="profileEditTrainer">Primary coach</label><select id="profileEditTrainer"><option value="">Shared client / no primary coach</option></select><span class="storage-note">Every approved trainer can still view and coach this client. This selection identifies who leads routine follow-up.</span><button id="profileTrainerRequestBtn" data-trainer-only class="small-btn" type="button" onclick="openOwnerRequestDialog('primary_trainer',byId('profileEditId').value,'','Reassign this client’s primary coach')">Request reassignment</button></div>
+      </div></div>
+    </details>
+    <details class="editor-section">
+      <summary>2 · Membership and goals</summary>
+      <div class="editor-section-body"><div class="compact-grid">
       <div class="compact-field"><label for="profileEditTier">Membership tier</label><select id="profileEditTier" onchange="syncProfileEditorTierDefault()"><option value="">Not set</option></select><span class="storage-note">Calibration workouts are built for Flex clients. Filled in automatically once the booking export is connected.</span></div>
       <div class="compact-field"><label for="profileEditSessionsPerWeek">Sessions per week</label><select id="profileEditSessionsPerWeek"><option value="">Not set</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
       <div class="compact-field"><label for="profileEditPrimary">Primary goal</label><select id="profileEditPrimary"></select></div>
       <div class="compact-field"><label for="profileEditSecondary">Secondary goal</label><select id="profileEditSecondary"></select></div>
       <div class="compact-field"><label for="profileEditStyle">Default training route</label><select id="profileEditStyle"><option value="auto">Best match for goal</option><option value="resistance">Resistance focused</option><option value="mixed">Weights + cardio</option><option value="cardio">Cardio focused</option><option value="performance">Speed + power</option><option value="recovery">Easy cardio + mobility</option><option value="mobility">Mobility only</option></select></div>
+      </div></div>
+    </details>
+    <details class="editor-section">
+      <summary>3 · Session setup</summary>
+      <div class="editor-section-body"><div class="compact-grid">
       <div class="compact-field"><label>Cardio equipment available · choose multiple</label><div id="profileEditCardioChips" class="multi-choice-grid" aria-label="Available cardio equipment"></div><span class="storage-note">Tap every available machine. This is a hard whole-workout filter, including warm-ups and cool-downs.</span></div>
       <div class="compact-field"><label for="profileEditExperience">Experience</label><select id="profileEditExperience"></select></div>
       <div class="compact-field"><label for="profileEditAge">Age</label><input id="profileEditAge" type="number" min="13" max="100"></div>
@@ -1057,14 +1076,25 @@
       <div class="compact-field"><label for="profileEditPhase">Training phase</label><select id="profileEditPhase"><option value="general">General preparation</option><option value="strength">Strength</option><option value="muscle">Muscle building</option><option value="conditioning">Conditioning</option><option value="performance">Sport performance</option><option value="recovery">Recovery / return</option></select></div>
       <div class="compact-field"><label for="profileEditDays">Available days each week</label><select id="profileEditDays"><option value="2">2 days</option><option value="3">3 days</option><option value="4">4 days</option><option value="5">5 days</option></select></div>
       <div class="compact-field wide"><label>Usual training days · Monday–Saturday</label><div id="profileEditTrainingDays" class="multi-choice-grid weekday-choices"></div><span class="storage-note">These days populate the trainer calendar and schedule program workouts. Choose at least one.</span></div>
+      </div></div>
+    </details>
+    <details class="editor-section">
+      <summary>4 · Sport and constraints</summary>
+      <div class="editor-section-body"><div class="compact-grid">
       <div class="compact-field"><label for="profileEditSport">Sport or activity</label><input id="profileEditSport" type="text" placeholder="Optional"></div>
       <div class="compact-field"><label for="profileEditCompetition">Competition / event date</label><input id="profileEditCompetition" type="date"></div>
       <div class="compact-field wide"><label for="profileEditSchedule">Practice, game, or work constraints</label><input id="profileEditSchedule" type="text" placeholder="Optional — e.g. league game Thursday"></div>
-    </div>
+      </div></div>
+    </details>
+    <details class="editor-section">
+      <summary>5 · Body, limitations and preferences</summary>
+      <div class="editor-section-body">
     <div class="profile-editor-section"><label>Muscle emphasis</label><div id="profileEditMuscles" class="profile-editor-choices"></div></div>
     <div class="profile-editor-section"><label>Injury limitations</label><div id="profileEditInjuries" class="profile-editor-choices"></div><p class="storage-note">Select an area first, then document what the client can currently do. A client saying “I can do it” supports a coached trial; it never clears a medical hold or a severe/red response by itself.</p><div id="profileLimitationAssessments" class="limitation-assessment-list"></div></div>
     <div class="profile-editor-section"><label>Equipment available <span style="font-weight:400;text-transform:none;letter-spacing:0">(nothing selected means full gym)</span></label><div id="profileEditZones" class="profile-editor-choices"></div></div>
     <div class="profile-editor-section"><label>Exercise preferences</label><div class="preference-editor"><div class="compact-field"><input id="profilePreferenceExercise" list="profileExerciseNames" placeholder="Exercise name"><datalist id="profileExerciseNames"></datalist></div><div class="compact-field"><select id="profilePreferenceValue"><option value="favorite">Favorite</option><option value="like">Like</option><option value="neutral">Neutral</option><option value="dislike">Dislike</option><option value="unfamiliar">Unfamiliar</option><option value="discomfort">Causes discomfort</option><option value="unavailable">Unavailable</option></select></div><button class="small-btn" type="button" onclick="setProfileExercisePreference()">Set preference</button></div><div id="profilePreferenceList" class="preference-list"></div></div>
+      </div>
+    </details>
     <div class="tool-actions"><button class="small-btn primary" id="profileEditorSaveBtn" onclick="saveProfileEditor()">Save changes</button><button class="small-btn" onclick="closeProfileEditor()">Cancel</button><button class="small-btn danger" id="profileEditorDeleteBtn" onclick="deleteProfileFromEditor()">Delete profile only</button><button class="small-btn danger" id="profileEditorDeleteAllBtn" onclick="openCompleteDeleteFromEditor()">Delete everything</button></div>
     <p class="storage-note" id="profileEditorDeleteNote">“Delete profile only” keeps completed history. “Delete everything” permanently removes every saved record for this client.</p>
   </div>
@@ -1312,33 +1342,33 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/engine/exercise-library.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/engine/session-engine.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/engine/session-builders.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/engine/personalization.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/engine/booking-import.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/navigation.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/program-app.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/forms.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/engine/generation.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/rendering.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/calculations-timers.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/engine/multiweek-programs.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/readiness-progress.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/client-consultation.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/trainer/trainer-hub.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/trainer/coaching-support.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/role-governance.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/action-calendar.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/workout-feedback-reports.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/booking-import-ui.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/trainer-audits.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/area-art.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/work-areas.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/area-tools.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/walkthrough.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/app/intro-video.js?v=20261022-v145-movement-videos-r1"></script>
-<script src="js/init.js?v=20261022-v145-movement-videos-r1"></script>
+<script src="cloud-sync.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/engine/exercise-library.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/engine/session-engine.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/engine/session-builders.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/engine/personalization.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/engine/booking-import.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/navigation.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/program-app.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/forms.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/engine/generation.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/rendering.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/calculations-timers.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/engine/multiweek-programs.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/readiness-progress.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/client-consultation.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/trainer/trainer-hub.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/trainer/coaching-support.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/role-governance.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/action-calendar.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/workout-feedback-reports.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/booking-import-ui.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/trainer-audits.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/area-art.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/work-areas.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/area-tools.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/walkthrough.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/app/intro-video.js?v=20261022-v149-settings-tabs-r1"></script>
+<script src="js/init.js?v=20261022-v149-settings-tabs-r1"></script>
 </body>
 </html>

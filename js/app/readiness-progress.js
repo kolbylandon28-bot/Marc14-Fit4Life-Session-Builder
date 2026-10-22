@@ -246,6 +246,20 @@ function intakeSafetyRequired(intake) {
   if (!intake) return false;
   return INTAKE_SAFETY_FIELDS.some((key) => intake.health && intake.health[key] === "yes") || Boolean(String(intake.currentPain || "").trim());
 }
+/* intakeCompletion has derived programmingBlocked since the intake shipped and nothing ever
+   read it, so a client who answered yes to a cardiac question could be assigned a workout
+   and could run it. One helper, used at all three write seams - single assignment, program
+   assignment and the client pressing Start - so the rule and the wording cannot drift apart.
+   It returns the reason or null; a trainer clears it by recording a decision on the intake,
+   which is what trainerReviewComplete already means. */
+function clientHealthScreeningHold(profile) {
+  if (!profile || typeof intakeCompletion !== "function") return null;
+  const gate = intakeCompletion(profile);
+  if (!gate || !gate.programmingBlocked) return null;
+  return (profile.intake && profile.intake.trainerDecision) === "hold"
+    ? "a trainer has put this client on hold"
+    : "the health screening needs a trainer's decision";
+}
 function intakeCompletion(profile,intakeValue) {
   const intake = intakeValue || profile && profile.intake || {}, health = intake.health || {}, consent = intake.consent || {}, emergency = intake.emergency || {}, identity = intake.identity || {}, schedule = intake.schedule || {};
   const goals = Array.isArray(intake.goals) && intake.goals.length ? intake.goals : profile && profile.goals || [];

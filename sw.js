@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-10-22-v145-movement-videos-r1";
+const CACHE_NAME = "fit4life-shell-2026-10-22-v149-settings-tabs-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20261022-v145-movement-videos-r1";
+const ASSET_VERSION = "20261022-v149-settings-tabs-r1";
 const SHELL = [
   "/",
   "/index.html",
@@ -15,6 +15,27 @@ const SHELL = [
   "/js/app/area-tools.js?v=" + ASSET_VERSION,
   "/js/app/walkthrough.js?v=" + ASSET_VERSION,
   "/js/app/workout-feedback-reports.js?v=" + ASSET_VERSION,
+  // Every script index.html loads, in load order. These were served network-first and
+  // cached only after a successful online fetch, so a cold start straight after a deploy
+  // had nothing at the new ?v= URL and the offline promise broke.
+  "/js/engine/exercise-library.js?v=" + ASSET_VERSION,
+  "/js/engine/session-engine.js?v=" + ASSET_VERSION,
+  "/js/engine/session-builders.js?v=" + ASSET_VERSION,
+  "/js/engine/personalization.js?v=" + ASSET_VERSION,
+  "/js/engine/booking-import.js?v=" + ASSET_VERSION,
+  "/js/app/navigation.js?v=" + ASSET_VERSION,
+  "/js/app/program-app.js?v=" + ASSET_VERSION,
+  "/js/app/forms.js?v=" + ASSET_VERSION,
+  "/js/engine/generation.js?v=" + ASSET_VERSION,
+  "/js/app/rendering.js?v=" + ASSET_VERSION,
+  "/js/app/calculations-timers.js?v=" + ASSET_VERSION,
+  "/js/engine/multiweek-programs.js?v=" + ASSET_VERSION,
+  "/js/app/readiness-progress.js?v=" + ASSET_VERSION,
+  "/js/trainer/trainer-hub.js?v=" + ASSET_VERSION,
+  "/js/trainer/coaching-support.js?v=" + ASSET_VERSION,
+  "/js/app/booking-import-ui.js?v=" + ASSET_VERSION,
+  "/js/app/intro-video.js?v=" + ASSET_VERSION,
+  "/js/init.js?v=" + ASSET_VERSION,
   "/dark-rock-background-v2.jpg",
   "/theme-assets/halloween-scene.jpg",
   "/theme-assets/thanksgiving-scene.jpg",
