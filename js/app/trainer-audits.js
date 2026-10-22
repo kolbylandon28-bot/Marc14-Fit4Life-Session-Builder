@@ -918,6 +918,11 @@ function auditScaleHelpHtml() {
     + AUDIT_SCALE.map(([value, label, detail]) => '<li><b>' + value + ' · ' + label + '</b> — ' + detail + '</li>').join('') + '</ul></details>';
 }
 
+/* Which area is expanded. Scoring re-renders the whole module, so this has to live outside
+   the markup or every tap would collapse the area you are working in. */
+let auditOpenArea = AUDIT_AREAS[0].key;
+function noteAuditAreaOpen(key, isOpen) { if (isOpen) auditOpenArea = key; }
+
 // Jump straight to the area you need; something that happens at minute three gets logged
 // at minute three instead of after a scroll.
 function auditJumpChipsHtml() {
@@ -928,7 +933,11 @@ function auditJumpChipsHtml() {
 
 function jumpToAuditArea(key) {
   const target = byId("auditArea_" + key);
-  if (target && target.scrollIntoView) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (!target) return;
+  // The chip has to open the area as well as reach it, or it scrolls to a closed heading.
+  auditOpenArea = key;
+  if ("open" in target) target.open = true;
+  if (target.scrollIntoView) target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function auditAreaFieldHtml(area) {
@@ -947,8 +956,19 @@ function auditAreaFieldHtml(area) {
     + '<select id="auditNotSeen_' + area.key + '" onchange="setAuditNotSeenReason(\'' + area.key + '\',this.value)">'
     + AUDIT_NOT_SEEN_REASONS.map(([value, label]) => '<option value="' + value + '"' + (skipped === value ? ' selected' : '') + '>' + escapeHtml(label) + '</option>').join('')
     + '</select></div>' : '';
-  return '<section class="coach-module-card" id="auditArea_' + area.key + '" style="grid-column:1/-1">'
-    + '<h3>' + escapeHtml(area.title) + (forRecord ? ' <span class="pill">' + area.weight + '%</span>' : '') + '</h3>'
+  // One area open at a time. The six cards were 6.2 screens of scroll on a phone, which is
+  // where this is filled in. The native name= makes the browser close the others; where it
+  // is unsupported they simply all stay openable, which is the old behaviour.
+  // Everything stays in the DOM while closed, so captureAuditForm still reads every
+  // evidence box - a collapsed area cannot lose what was typed in it.
+  const state = skipped ? "Didn't see it" : chosen ? "Scored " + chosen : "Not scored yet";
+  return '<details class="coach-module-card audit-area" id="auditArea_' + area.key + '" style="grid-column:1/-1"'
+    + ' name="auditArea"' + (auditOpenArea === area.key ? ' open' : '')
+    + ' ontoggle="noteAuditAreaOpen(\'' + area.key + '\',this.open)">'
+    + '<summary><span class="audit-area-name">' + escapeHtml(area.title) + '</span>'
+    + (forRecord ? ' <span class="pill">' + area.weight + '%</span>' : '')
+    + '<span class="audit-area-state' + (chosen || skipped ? ' done' : '') + '">' + escapeHtml(state) + '</span></summary>'
+    + '<div class="audit-area-body">'
     + '<p class="audit-area-phase">' + escapeHtml(area.phase) + '</p>'
     + '<p class="audit-area-why">' + escapeHtml(area.why) + '</p>'
     + (forRecord ? '<p class="storage-note">' + escapeHtml(area.source) + '</p>' : '')
@@ -956,7 +976,7 @@ function auditAreaFieldHtml(area) {
     + '<div class="compact-field" style="margin-top:10px"><label for="auditEvidence_' + area.key + '">What I saw — a count or a quote, before you score it</label>'
     + '<textarea id="auditEvidence_' + area.key + '" rows="2" placeholder="cued knee position twice on set 2 · said: drive through the floor"></textarea></div>'
     + '<div class="audit-rating-row"><span class="audit-rating-end">worst</span>' + buttons
-    + '<span class="audit-rating-end">best</span>' + notSeen + '</div>' + reason + '</section>';
+    + '<span class="audit-rating-end">best</span>' + notSeen + '</div>' + reason + '</div></details>';
 }
 
 function renderNewAuditForm() {

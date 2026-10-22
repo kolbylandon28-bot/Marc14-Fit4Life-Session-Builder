@@ -473,6 +473,15 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
 .builder-refine[open] summary::after{content:"\2013"}
 .builder-refine[open] summary{color:var(--blue-bright)}
 .builder-refine-body{display:grid;gap:12px;padding:0 13px 13px;border-top:1px solid var(--line)}
+details.audit-area{padding:0}
+details.audit-area>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:13px 15px;font:800 12px var(--display);letter-spacing:.02em}
+details.audit-area>summary::-webkit-details-marker{display:none}
+details.audit-area>summary::after{content:"+";margin-left:auto;color:var(--text-faint);font:700 14px var(--mono)}
+details.audit-area[open]>summary::after{content:"\2013"}
+details.audit-area[open]>summary{border-bottom:1px solid var(--line)}
+.audit-area-state{font:700 9px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--text-faint);border:1px solid var(--line);border-radius:999px;padding:3px 8px}
+.audit-area-state.done{color:var(--blue-bright);border-color:var(--blue)}
+.audit-area-body{padding:13px 15px 15px}
 .intake-help{font-size:10px;line-height:1.5;color:#6c727b;margin:10px 0}.intake-checks{display:grid;gap:8px;margin-top:10px}.intake-checks label{display:flex;gap:9px;align-items:flex-start;border:1px solid #e0e3e7;border-radius:7px;padding:9px;color:#444a52;font-size:10px;line-height:1.45}.intake-checks input{margin-top:2px}.intake-safety{border:1px solid #e6b764;background:#fff8e8;color:#75571f;border-radius:8px;padding:10px 12px;font-size:10px;line-height:1.45;margin-top:10px}.intake-safety.good{border-color:#7bcfae;background:#effbf6;color:#2e6e55}.intake-review-only{display:none}.intake-dialog.trainer-mode .intake-review-only{display:block}
   .intake-dialog.goal-only .intake-progress,.intake-dialog.goal-only .intake-navigation,.intake-dialog.goal-only .intake-section:not([data-intake-key="goals"]){display:none!important}.intake-dialog.goal-only .intake-section[data-intake-key="goals"]{display:block}.intake-dialog.goal-only>.tool-actions button:nth-child(2){display:none}
   .goal-contract-intake{grid-column:1/-1;border:1px solid #cfe0f5;border-radius:10px;background:linear-gradient(145deg,#f7fbff,#eef5ff);padding:13px;margin-top:4px}
