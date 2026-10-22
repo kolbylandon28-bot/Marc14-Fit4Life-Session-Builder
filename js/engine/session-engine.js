@@ -685,6 +685,24 @@ const LIMITATION_RULES = {
   lowintensity:{demands:["impact","ballistic"],maxImpact:0,blockFinishers:true},
 };
 
+/* Every limitation a movement is actually unavailable for, from BOTH gates - the avoid
+   list and the demand rules. The library page reported `avoid` alone, which is how a
+   blanket deep_knee_flexion tag hid every squat, lunge and calf raise in the building
+   from knee clients without showing up anywhere a trainer looks. */
+function exerciseBlockedLimitations(exercise) {
+  const item = exercise || {};
+  const demands = Array.isArray(item.demands) ? item.demands : [];
+  const impact = Number(item.impact || 0);
+  const out = new Set(Array.isArray(item.avoid) ? item.avoid.filter(Boolean) : []);
+  Object.keys(LIMITATION_RULES).forEach((code) => {
+    const rule = LIMITATION_RULES[code];
+    if (rule.blockAll) return;
+    if (Array.isArray(rule.demands) && rule.demands.some((key) => demands.includes(key))) out.add(code);
+    else if (rule.maxImpact != null && impact > rule.maxImpact) out.add(code);
+  });
+  return [...out];
+}
+
 /* How many working exercises fit in the time (excludes warm-up)?
    Grounded in real math: a set + its rest is ~1.5 min at short rest, ~3 min at
    long rest. 30 min minus a ~6 min warm-up leaves ~24 min of work. We keep the
@@ -743,7 +761,7 @@ const COMPOUND_PATTERNS = ["squat", "hinge", "lunge", "h_push", "v_push", "h_pul
 const ISO_NAMES = [
   // arms
   "Dumbbell curl","Cable curl","Incline dumbbell curl","Hammer curl","Preacher curl",
-  "Triceps pushdown","Overhead triceps extension","Cable overhead triceps extension","Skull crusher",
+  "Triceps pushdown","Overhead triceps extension","Skull crusher",
   // shoulders / upper back
   "Lateral raise","Cable lateral raise","Face pull","Rear delt fly","Reverse pec deck",
   "Straight-arm pulldown","Barbell shrug",
@@ -820,7 +838,12 @@ function movementFamily(ex) {
   if (/curl/.test(name) && !/leg curl|hamstring curl/.test(name)) return "biceps-isolation";
   if (ex.pattern === "h_pull" && /row/.test(name)) return "row";
   if (ex.pattern === "v_pull" || /pull-up|chin-up|pulldown/.test(name)) return "vertical-pull";
-  if (ex.pattern === "squat") return /calf|extension|sissy/.test(name) ? "knee-isolation" : "squat";
+  // Calves before the knee-isolation catch-all. They shared one capped slot with the leg
+  // extension, so a generated leg day could hold a calf raise or a leg extension, never both.
+  if (ex.pattern === "squat") {
+    if (/calf/.test(name)) return "calf-isolation";
+    return /extension|sissy/.test(name) ? "knee-isolation" : "squat";
+  }
   if (ex.pattern === "hinge") return /leg curl|hamstring curl|nordic/.test(name) ? "hamstring-isolation" : "hinge";
   if (ex.pattern === "lunge") return "lunge";
   if (["core","rotation","carry"].includes(ex.pattern)) return ex.pattern;
@@ -832,7 +855,7 @@ function movementFamilyLimit(family) {
     bench: 1, dip: 1, "push-up": 1, "chest-fly": 1, "overhead-press": 1,
     "lateral-raise": 1, "triceps-isolation": 1, "biceps-isolation": 1,
     row: 2, "vertical-pull": 1, squat: 1, hinge: 1, lunge: 1,
-    "knee-isolation": 1, "hamstring-isolation": 1,
+    "knee-isolation": 1, "hamstring-isolation": 1, "calf-isolation": 1,
   };
   return limits[family] == null ? 2 : limits[family];
 }

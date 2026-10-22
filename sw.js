@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-10-13-v144-calendar-archive-r1";
+const CACHE_NAME = "fit4life-shell-2026-10-22-v145-movement-videos-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20261013-v144-calendar-archive-r1";
+const ASSET_VERSION = "20261022-v145-movement-videos-r1";
 const SHELL = [
   "/",
   "/index.html",
