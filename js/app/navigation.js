@@ -287,6 +287,68 @@ function unstarWorkout(id) {
   const list = loadStarredWorkouts().filter((item) => item.id !== id);
   return writeStarredWorkouts(list);
 }
+
+/* Saving a workout wrote a record nothing ever displayed. trainerWorkoutLibrary and
+   starredWorkoutsForProfile were both defined and never called, so "Suggested to Sarah"
+   was true and then invisible, and a library save could only be glimpsed on the Team page,
+   six at a time, under whoever saved it. This is the screen those two functions were
+   written for. */
+function savedWorkoutCardHtml(record) {
+  const movements = (record.movements || []).slice(0,4).join(" · ");
+  const who = record.starredBy === "client" ? "Saved by the client"
+    : record.starredByName ? "Saved by " + record.starredByName : "";
+  const when = record.savedAt || record.createdAt;
+  const meta = [movements || "No movements recorded", record.minutes ? record.minutes + " min" : "", who,
+    when ? new Date(when).toLocaleDateString() : ""].filter(Boolean).join(" · ");
+  return '<article class="team-workout"><div><b>' + escapeHtml(record.title || "Workout") + '</b>'
+    + '<span>' + escapeHtml(meta) + '</span></div><div class="team-workout-actions">'
+    + '<button class="tiny-btn" onclick="useSavedWorkout(' + JSON.stringify(record.id) + ')">Use</button>'
+    + (canEditStarredWorkout(record)
+        ? '<button class="tiny-btn" onclick="removeSavedWorkout(' + JSON.stringify(record.id) + ')">Remove</button>'
+        : '<span class="team-readonly">View only</span>')
+    + '</div></article>';
+}
+
+function useSavedWorkout(id) {
+  if (typeof useTeamWorkout === "function") return useTeamWorkout(id);
+  showToast("That saved workout could not be opened");
+  return false;
+}
+
+function removeSavedWorkout(id) {
+  const record = loadStarredWorkouts().find((item) => item.id === id);
+  if (!record) return false;
+  if (!canEditStarredWorkout(record)) { showToast("Only the trainer who saved this, or an owner, can remove it"); return false; }
+  if (!window.confirm("Remove “" + (record.title || "this workout") + "”?")) return false;
+  if (!unstarWorkout(id)) return false;
+  renderSavedWorkoutsModule();
+  showToast(record.scope === "client" ? "Removed from " + (record.client || "that client") : "Removed from your library");
+  return true;
+}
+
+function renderSavedWorkoutsModule() {
+  const out = byId("coachModuleContent"); if (!out) return;
+  const me = typeof currentStaffId === "function" ? currentStaffId() : "";
+  const all = loadStarredWorkouts();
+  const mine = all.filter((item) => item.scope === "library" && (!me || item.starredByUserId === me));
+  const others = all.filter((item) => item.scope === "library" && me && item.starredByUserId !== me);
+  const suggested = all.filter((item) => item.scope === "client");
+
+  const byClient = {};
+  suggested.forEach((item) => { const key = item.client || "Unnamed client"; (byClient[key] = byClient[key] || []).push(item); });
+
+  const group = (title, note, cards) => '<section class="coach-module-card" style="grid-column:1/-1"><h3>' + escapeHtml(title) + '</h3>'
+    + (note ? '<p class="storage-note">' + escapeHtml(note) + '</p>' : '')
+    + (cards.length ? '<div class="team-library">' + cards.map(savedWorkoutCardHtml).join("") + '</div>'
+                    : '<div class="empty-state">Nothing here yet.</div>') + '</section>';
+
+  out.innerHTML = group("My library", mine.length + " saved for reuse with any client", mine)
+    + Object.keys(byClient).sort().map((client) =>
+        group("Suggested to " + client, byClient[client].length + " workout" + (byClient[client].length === 1 ? "" : "s"), byClient[client])).join("")
+    + (suggested.length ? "" : '<section class="coach-module-card" style="grid-column:1/-1"><h3>Suggested to a client</h3>'
+        + '<p class="storage-note">When you save a workout, choosing a client puts it here under their name.</p></section>')
+    + (others.length ? group("Saved by the rest of the team", others.length + " from other trainers, read-only unless you are the owner", others) : "");
+}
 const ASSIGNED_WORKOUTS_KEY = "fit4life_assigned_workouts_v1";
 const SAVED_PROGRAMS_KEY = "fit4life_saved_programs_v1";
 const CLIENT_DAILY_KEY = "fit4life_client_daily_v1";

@@ -549,12 +549,12 @@ const COACH_NAV_GROUPS = [
   ["Today", ["dashboard", "actions", "messages"], "\u2302"],
   ["Calendar", ["calendar"], "\u25A6"],
   ["Clients", ["clients", "assessments", "reports"], "\u25CF"],
-  ["Workouts", ["builder", "programming", "library", "tools"], "\u25A4"],
+  ["Workouts", ["builder", "programming", "saved", "library", "tools"], "\u25A4"],
   ["Managing", ["team", "areas", "audits", "access", "approvals", "hours", "files", "archive", "settings"], "\u2699"]
 ];
 /* Anything that needs a client is coaching, so a shift area never shows it. */
 const COACHING_NAV_KEYS = ["dashboard", "actions", "messages", "calendar", "clients", "assessments",
-  "reports", "builder", "programming", "library", "tools", "team"];
+  "reports", "builder", "programming", "saved", "library", "tools", "team"];
 /* The rota is about who is working, so it belongs to every area, not only coaching ones. */
 const navGroupFor = (key) => (COACH_NAV_GROUPS.find(([, keys]) => keys.includes(key)) || [])[0] || "";
 let openNavGroup = "";
