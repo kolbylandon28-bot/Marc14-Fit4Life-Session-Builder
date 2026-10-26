@@ -134,6 +134,18 @@ t("the handler no longer closes over the allowed map",
    made the bar unable to re-show its own five tabs - it came up holding a group heading and
    More, and nothing else. Collapsed is a class now; hidden means the role or the area does
    not grant it, which is true on every screen. */
+/* Picking an area does not route through show(), which is the only thing that regroups
+   the rail - so the picker used to save the choice, raise a toast, and leave the previous
+   area's screen on display. */
+t("picking an area regroups the rail",
+  /function setActiveWorkArea[\s\S]*?groupCoachSidebar\(\);/.test(src), true);
+t("and sends a screen the new area cannot show to the area home",
+  /else if \(key && !stillHere\) show\("area"\);/.test(src), true);
+t("while a screen both areas have is re-rendered where it stands",
+  /else if \(stillHere && typeof openCoachDestination === "function"\) openCoachDestination\(here\);/.test(src), true);
+t("availability decides that, not whether the drawer is shut",
+  /button\.dataset\.navAvailable !== "0"/.test(src), true);
+
 t("a group of one is drawn without a sub-item",
   /classList\.toggle\("nav-collapsed", available && \(solo \|\| !open\)\)/.test(src), true);
 t("a shut drawer no longer sets the hidden attribute",

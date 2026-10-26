@@ -43,7 +43,19 @@ function activeWorkArea() {
 function setActiveWorkArea(key) {
   try { localStorage.setItem(WORK_AREA_ACTIVE_KEY, key || ""); } catch (_) { /* a locked-down browser still works, it just asks again */ }
   renderWorkAreaPicker();
-  if (typeof renderWorkAreasModule === "function" && byId("coachModuleContent") && openCoachDestination.current === "areas") renderWorkAreasModule();
+  // The area decides which destinations exist and what every screen is looking at, and the
+  // picker does not route through show(), which is the only thing that regroups the rail.
+  // So picking Maintenance used to save the choice, raise a toast, and leave the Gym's
+  // screen sitting there. The rail follows the choice now, and so does the open screen.
+  groupCoachSidebar();
+  const here = typeof openCoachDestination === "function" ? (openCoachDestination.current || "") : "";
+  const button = here ? byId("coachSidebar") && byId("coachSidebar").querySelector('[data-coach-nav="' + here + '"]') : null;
+  const stillHere = Boolean(button) && button.dataset.navAvailable !== "0";
+  if (key && here === "area-home") renderAreaHome();
+  // A shift area has no clients, so Clients cannot stay on screen. Its own home is the one
+  // destination every area has, and show("area") renders it on the way through.
+  else if (key && !stillHere) show("area");
+  else if (stillHere && typeof openCoachDestination === "function") openCoachDestination(here);
   showToast(key ? "Working in " + workAreaName(key) : "Area cleared");
 }
 
