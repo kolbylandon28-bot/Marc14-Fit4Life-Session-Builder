@@ -332,6 +332,10 @@ const FIT4LIFE_CAPABILITIES = [
 const FIT4LIFE_MEMBER_CAPABILITIES = ["shifts.view.all", "shifts.view.own", "hours.view.own", "hours.clock.self"];
 const FIT4LIFE_SCHEDULE_CAPABILITIES = ["shifts.create", "shifts.edit.any", "shifts.edit.own", "schedule.publish"];
 const FIT4LIFE_HOURS_CAPABILITIES = ["hours.view.all", "hours.edit", "hours.confirm", "hours.export"];
+/* Which areas a client belongs to. Owner-only for now. When some trainers and managers
+   should be able to do it too, add a can_manage_clients column to staff_areas the way
+   can_schedule was added, and this becomes one more fit4lifeAreaGrant line below. */
+const FIT4LIFE_CLIENT_AREA_CAPABILITIES = ["clients.areas.edit"];
 
 function fit4lifeAreaGrant(areaKey, flag) {
   const rows = (window.fit4lifeStaffAreas || []).filter((row) => row.user_id === (window.fit4lifeCloudIdentity || {}).id);
@@ -344,5 +348,6 @@ function fit4lifeCan(capability, areaKey) {
   if (FIT4LIFE_MEMBER_CAPABILITIES.includes(capability)) return true;
   if (FIT4LIFE_SCHEDULE_CAPABILITIES.includes(capability)) return fit4lifeAreaGrant(areaKey, "can_schedule");
   if (FIT4LIFE_HOURS_CAPABILITIES.includes(capability)) return fit4lifeAreaGrant(areaKey, "can_edit_hours");
+  if (FIT4LIFE_CLIENT_AREA_CAPABILITIES.includes(capability)) return false;
   return false;
 }

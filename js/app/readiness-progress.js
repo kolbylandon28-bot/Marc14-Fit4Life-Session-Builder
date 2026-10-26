@@ -429,7 +429,7 @@ async function saveClientIntake() {
 }
 
 let profileEditorTarget = null;
-let profileEditorDraft = { muscles: [], injuries: [], zones: [], preferences:{}, cardioModes:["any"], trainingDays:[1,3,5] };
+let profileEditorDraft = { areas: [], muscles: [], injuries: [], zones: [], preferences:{}, cardioModes:["any"], trainingDays:[1,3,5] };
 function loadProgress() {
   try {
     const data = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "[]");
@@ -472,6 +472,21 @@ function migrateStoredMembershipTiers() {
   if (!stale.length) return 0;
   writeProfiles(profiles);
   return stale.length;
+}
+/* Which side of the building a client is on. loadProfiles stays unfiltered on purpose -
+   the duplicate check, a client finding their own record, and the sync all need the whole
+   list. The screens that show a roster use profilesInActiveArea instead.
+   A client with no areas yet is shown everywhere rather than nowhere: a record that
+   vanishes from every screen is far worse than one that appears on an extra one. */
+function profileInArea(profile, areaKey) {
+  if (!areaKey) return true;
+  const areas = (profile && Array.isArray(profile.areas)) ? profile.areas : [];
+  return !areas.length || areas.indexOf(areaKey) >= 0;
+}
+function profilesInActiveArea(list) {
+  const all = Array.isArray(list) ? list : loadProfiles();
+  const key = typeof activeWorkArea === "function" ? activeWorkArea() : "";
+  return key ? all.filter((profile) => profileInArea(profile, key)) : all;
 }
 function loadProfiles() {
   try {
@@ -583,6 +598,11 @@ function profileRecordFromTarget(target, name, username) {
     trainingPhase:target.trainingPhase || "general", availableDays:Number(target.availableDays) || 3, trainingDays:inferredTrainingDays(target,Number(target.availableDays) || 3),
     sport:String(target.sport || "").trim(), sportSchedule:String(target.sportSchedule || "").trim(), competitionDate:target.competitionDate || "",
     exercisePreferences:{ ...(target.exercisePreferences || {}) },
+    // Which sides of the building this client is on. A client created while a trainer is
+    // standing in an area joins that area; the whole record syncs as one block, so this
+    // rides along without a migration. Empty means they have not been placed yet.
+    areas: [...new Set((Array.isArray(target.areas) ? target.areas
+      : (typeof activeWorkArea === "function" && activeWorkArea() ? [activeWorkArea()] : [])).filter(Boolean))],
     usualTrainingRpe:Number(target.usualTrainingRpe) || null,coachingPriorities:[...(target.coachingPriorities || [])],coachingPreferenceNote:String(target.coachingPreferenceNote || ""),pastPhysicalActivities:String(target.pastPhysicalActivities || ""),fitnessInterests:[...(target.fitnessInterests || [])],
     exercisePrescriptions:{ ...(target.exercisePrescriptions || {}) },
     exerciseSubstitutions:{ ...(target.exerciseSubstitutions || {}) },
@@ -687,8 +707,27 @@ function renderProfileEditorChoices() {
   groups.forEach(([id,key,items,labels]) => { const container = byId(id); if (!container) return; container.innerHTML = items.map((value) => '<button type="button" class="profile-editor-choice' + (profileEditorDraft[key].includes(value) ? ' on' : '') + '" aria-pressed="' + profileEditorDraft[key].includes(value) + '" onclick="toggleProfileEditorChoice(\'' + key + '\',\'' + value + '\')">' + escapeHtml(labels[value] || value) + '</button>').join(""); });
   const cardio = byId("profileEditCardioChips"); if (cardio) cardio.innerHTML = multiChoiceButtonsHtml(cardioChoiceEntries(),profileEditorDraft.cardioModes || ["any"],"toggleProfileEditorCardio");
   const days = byId("profileEditTrainingDays"); if (days) days.innerHTML = multiChoiceButtonsHtml(TRAINING_WEEKDAYS.map(([value,label]) => [String(value),label]),(profileEditorDraft.trainingDays || []).map(String),"toggleProfileEditorTrainingDay");
+  // Which sides of the building this client is on. Owner-only to change today; a trainer
+  // sees where the client is placed but cannot move them.
+  const areaBox = byId("profileEditAreasField");
+  if (areaBox) {
+    const areas = typeof workAreas === "function" ? workAreas().filter((area) => area.is_active !== false) : [];
+    const canEdit = typeof fit4lifeCan === "function" && fit4lifeCan("clients.areas.edit");
+    areaBox.hidden = areas.length < 2;
+    const host = byId("profileEditAreas");
+    if (host && areas.length > 1) {
+      host.innerHTML = multiChoiceButtonsHtml(areas.map((area) => [area.area_key, area.name]),
+        profileEditorDraft.areas || [], "toggleProfileEditorArea");
+      host.querySelectorAll("button").forEach((button) => { button.disabled = !canEdit; });
+      const note = byId("profileEditAreasNote");
+      if (note) note.textContent = canEdit
+        ? "Tick every side this client uses. They pick which one they are on when they open the app."
+        : "Only an owner can move a client between areas.";
+    }
+  }
   renderProfileLimitationAssessments();
 }
+function toggleProfileEditorArea(value) { toggleProfileEditorChoice("areas", value); }
 function toggleProfileEditorChoice(key, value) {
   if (!profileEditorDraft[key]) return; const index = profileEditorDraft[key].indexOf(value); if (index >= 0) { profileEditorDraft[key].splice(index,1); if (key === "injuries" && profileEditorDraft.limitationAssessments) delete profileEditorDraft.limitationAssessments[value]; } else { profileEditorDraft[key].push(value); if (key === "injuries") profileEditorDraft.limitationAssessments[value] = normalizedLimitationAssessment(value === "medicalhold" ? {severity:"severe",ability:"cannot",decision:"hold"} : {}); } renderProfileEditorChoices();
 }
@@ -1022,7 +1061,7 @@ function createInvitedClient() {
 }
 function openCreateProfileEditor() {
   if (!requireTrainerMutation("create client profiles")) return null;
-  profileEditorTarget = null; profileEditorDraft = { muscles:[],injuries:[],zones:[],preferences:{},cardioModes:["any"],trainingDays:[1,3,5],limitationAssessments:{} };
+  profileEditorTarget = null; profileEditorDraft = { areas:[],muscles:[],injuries:[],zones:[],preferences:{},cardioModes:["any"],trainingDays:[1,3,5],limitationAssessments:{} };
   prepareProfileEditorMenus(); byId("profileEditId").value = ""; byId("profileEditName").value = ""; byId("profileEditUsername").value = ""; byId("profileEditEmail").value = ""; byId("profileEditBookingEmail").value = "";
   byId("profileEditPrimary").value = "general"; byId("profileEditSecondary").value = ""; byId("profileEditStyle").value = "auto";
   byId("profileEditExperience").value = "1"; byId("profileEditAge").value = "30"; byId("profileEditMinutes").value = "60"; byId("profileEditPhase").value = "general"; byId("profileEditDays").value = "3";
@@ -1033,7 +1072,7 @@ function openCreateProfileEditor() {
 function openProfileEditor(profileId, target) {
   if (!requireTrainerMutation("edit client profiles")) return null;
   const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) { showToast("Choose a saved profile to edit"); return; }
-  profileEditorTarget = target || null; profileEditorDraft = { muscles: [...(profile.muscles || [])], injuries: [...(profile.injuries || [])], zones: [...(profile.zones || [])], preferences:{ ...(profile.exercisePreferences || {}) },cardioModes:normalizeCardioPreferences(profile.cardioModes || profile.cardioMode),trainingDays:inferredTrainingDays(profile,profile.availableDays || 3),limitationAssessments:JSON.parse(JSON.stringify(profile.limitationAssessments || {})) };
+  profileEditorTarget = target || null; profileEditorDraft = { areas: [...(profile.areas || [])], muscles: [...(profile.muscles || [])], injuries: [...(profile.injuries || [])], zones: [...(profile.zones || [])], preferences:{ ...(profile.exercisePreferences || {}) },cardioModes:normalizeCardioPreferences(profile.cardioModes || profile.cardioMode),trainingDays:inferredTrainingDays(profile,profile.availableDays || 3),limitationAssessments:JSON.parse(JSON.stringify(profile.limitationAssessments || {})) };
   byId("profileEditId").value = profile.id; byId("profileEditName").value = profile.name; byId("profileEditUsername").value = profileUsername(profile); byId("profileEditEmail").value = profile.email || ""; byId("profileEditBookingEmail").value = profile.bookingEmail || "";
   prepareProfileEditorMenus();
   byId("profileEditPrimary").value = profile.goals && profile.goals[0] || "general"; byId("profileEditSecondary").value = profile.goals && profile.goals[1] || "";
@@ -1168,7 +1207,7 @@ function saveProfileEditor() {
   // larger number in force with no way to correct it.
   const tierChanged = String(previousProfile.membershipTier || "") !== String(nextTier || "");
   const updates = { membershipTier: nextTier, sessionsPerWeek: Number(byId("profileEditSessionsPerWeek").value) || 0,
-    programmedDays: tierChanged ? 0 : (Number(previousProfile.programmedDays) || 0), name: byId("profileEditName").value, username: byId("profileEditUsername").value, email:byId("profileEditEmail").value.trim().toLowerCase(), bookingEmail:byId("profileEditBookingEmail").value.trim().toLowerCase(), goals, trainingStyle:byId("profileEditStyle").value, cardioMode:cardioModes[0], cardioModes, experience: Number(byId("profileEditExperience").value), age: Number(byId("profileEditAge").value), minutes: Number(byId("profileEditMinutes").value), muscles: [...profileEditorDraft.muscles], injuries: [...profileEditorDraft.injuries], limitationAssessments:JSON.parse(JSON.stringify(profileEditorDraft.limitationAssessments || {})), zones: [...profileEditorDraft.zones], trainingPhase:byId("profileEditPhase").value, availableDays:Number(byId("profileEditDays").value), trainingDays:[...(profileEditorDraft.trainingDays || [])], sport:byId("profileEditSport").value, sportSchedule:byId("profileEditSchedule").value, competitionDate:byId("profileEditCompetition").value, exercisePreferences:{ ...profileEditorDraft.preferences }, assignedTrainerId:selectedAssignment.id, assignedTrainerName:selectedAssignment.name, assignedTrainerEmail:selectedAssignment.email };
+    programmedDays: tierChanged ? 0 : (Number(previousProfile.programmedDays) || 0), name: byId("profileEditName").value, username: byId("profileEditUsername").value, email:byId("profileEditEmail").value.trim().toLowerCase(), bookingEmail:byId("profileEditBookingEmail").value.trim().toLowerCase(), goals, trainingStyle:byId("profileEditStyle").value, cardioMode:cardioModes[0], cardioModes, experience: Number(byId("profileEditExperience").value), age: Number(byId("profileEditAge").value), minutes: Number(byId("profileEditMinutes").value), areas: [...(profileEditorDraft.areas || [])], muscles: [...profileEditorDraft.muscles], injuries: [...profileEditorDraft.injuries], limitationAssessments:JSON.parse(JSON.stringify(profileEditorDraft.limitationAssessments || {})), zones: [...profileEditorDraft.zones], trainingPhase:byId("profileEditPhase").value, availableDays:Number(byId("profileEditDays").value), trainingDays:[...(profileEditorDraft.trainingDays || [])], sport:byId("profileEditSport").value, sportSchedule:byId("profileEditSchedule").value, competitionDate:byId("profileEditCompetition").value, exercisePreferences:{ ...profileEditorDraft.preferences }, assignedTrainerId:selectedAssignment.id, assignedTrainerName:selectedAssignment.name, assignedTrainerEmail:selectedAssignment.email };
   if (updates.email && !(typeof window.fit4lifeIsByuiEmail === "function" ? window.fit4lifeIsByuiEmail(updates.email) : (window.FIT4LIFE_ALLOW_ANY_EMAIL || /@byui\.edu$/i.test(updates.email)))) { showToast("Client login email must be a BYU-I email ending in @byui.edu"); byId("profileEditEmail").focus(); return null; }
   if (window.fit4lifeCloudRole === 'trainer' && previous) {
     const protectedLimitations = (previous.injuries || []).filter((tag) => { const item = normalizedLimitationAssessment(previous.limitationAssessments && previous.limitationAssessments[tag]); return tag === 'medicalhold' || item.severity === 'severe' || item.ability === 'cannot' || item.decision === 'hold'; });

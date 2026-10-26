@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20261026-v154-area-switch-r1">
+<link rel="manifest" href="manifest.webmanifest?v=20261026-v156-client-areas-r1">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20261026-v154-area-switch-r1">
+<link rel="stylesheet" href="styles.css?v=20261026-v156-client-areas-r1">
 </head>
 <body>
 
@@ -1054,6 +1054,7 @@
       <div class="compact-field wide"><label for="profileEditEmail">Client BYU-I login email</label><input id="profileEditEmail" type="email" autocomplete="off" placeholder="name@byui.edu"><span class="storage-note">Client profiles require the exact verified BYU-I login email. Trainer accounts may use personal or BYU-I email.</span></div>
       <div class="compact-field wide"><label for="profileEditBookingEmail">Booking email (personal)</label><input id="profileEditBookingEmail" type="email" autocomplete="off" placeholder="name@gmail.com"><span class="storage-note">The address Jason&rsquo;s booking site has for them, when it is not their BYU-I one. Both are matched on import, so whichever system sends the file reaches this same client.</span></div>
       <div class="compact-field wide"><label for="profileEditTrainer">Primary coach</label><select id="profileEditTrainer"><option value="">Shared client / no primary coach</option></select><span class="storage-note">Every approved trainer can still view and coach this client. This selection identifies who leads routine follow-up.</span><button id="profileTrainerRequestBtn" data-trainer-only class="small-btn" type="button" onclick="openOwnerRequestDialog('primary_trainer',byId('profileEditId').value,'','Reassign this client’s primary coach')">Request reassignment</button></div>
+      <div class="compact-field wide" id="profileEditAreasField" hidden><label>Which sides of the building</label><div id="profileEditAreas" class="multi-choice-grid" aria-label="Areas this client uses"></div><span class="storage-note" id="profileEditAreasNote"></span></div>
       </div></div>
     </details>
     <details class="editor-section">
@@ -1342,33 +1343,33 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/engine/exercise-library.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/engine/session-engine.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/engine/session-builders.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/engine/personalization.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/engine/booking-import.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/navigation.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/program-app.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/forms.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/engine/generation.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/rendering.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/calculations-timers.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/engine/multiweek-programs.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/readiness-progress.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/client-consultation.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/trainer/trainer-hub.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/trainer/coaching-support.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/role-governance.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/action-calendar.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/workout-feedback-reports.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/booking-import-ui.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/trainer-audits.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/area-art.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/work-areas.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/area-tools.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/walkthrough.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/app/intro-video.js?v=20261026-v154-area-switch-r1"></script>
-<script src="js/init.js?v=20261026-v154-area-switch-r1"></script>
+<script src="cloud-sync.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/engine/exercise-library.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/engine/session-engine.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/engine/session-builders.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/engine/personalization.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/engine/booking-import.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/navigation.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/program-app.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/forms.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/engine/generation.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/rendering.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/calculations-timers.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/engine/multiweek-programs.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/readiness-progress.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/client-consultation.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/trainer/trainer-hub.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/trainer/coaching-support.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/role-governance.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/action-calendar.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/workout-feedback-reports.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/booking-import-ui.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/trainer-audits.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/area-art.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/work-areas.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/area-tools.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/walkthrough.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/app/intro-video.js?v=20261026-v156-client-areas-r1"></script>
+<script src="js/init.js?v=20261026-v156-client-areas-r1"></script>
 </body>
 </html>

@@ -183,14 +183,19 @@ async function renameWorkArea(key) {
   if (!area) return;
   const name = window.prompt("Rename this area", area.name);
   if (!name || !name.trim()) return;
-  await window.fit4lifeCloudSaveWorkArea(key, name.trim(), area.sort_order, area.is_active !== false);
+  // save takes (key, name, order, active, coaching, events). Passing four left the last two
+  // undefined, so a rename quietly switched the area's client tools and calendar back off.
+  await window.fit4lifeCloudSaveWorkArea(key, name.trim(), area.sort_order, area.is_active !== false,
+    area.is_coaching === true, area.has_events === true);
   renderWorkAreasModule();
 }
 
 async function toggleWorkArea(key, makeActive) {
   const area = (window.fit4lifeWorkAreas || []).find((row) => row.area_key === key);
   if (!area) return;
-  await window.fit4lifeCloudSaveWorkArea(key, area.name, area.sort_order, Boolean(makeActive));
+  // Same four-argument slip here: hiding and unhiding an area wiped both flags.
+  await window.fit4lifeCloudSaveWorkArea(key, area.name, area.sort_order, Boolean(makeActive),
+    area.is_coaching === true, area.has_events === true);
   renderWorkAreasModule();
   showToast(makeActive ? area.name + " is back" : area.name + " hidden");
 }

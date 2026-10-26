@@ -137,6 +137,16 @@ t("the handler no longer closes over the allowed map",
 /* Picking an area does not route through show(), which is the only thing that regroups
    the rail - so the picker used to save the choice, raise a toast, and leave the previous
    area's screen on display. */
+/* fit4lifeCloudSaveWorkArea takes (key, name, order, active, coaching, events). Rename and
+   hide passed four, so the last two defaulted to false and the area quietly lost its client
+   tools and its calendar - which would have undone switching the Pool on. */
+t("renaming an area keeps its coaching and calendar flags",
+  /renameWorkArea[\s\S]*?area\.is_coaching === true, area\.has_events === true\)/.test(src), true);
+t("so does hiding or unhiding one",
+  /toggleWorkArea[\s\S]*?area\.is_coaching === true, area\.has_events === true\)/.test(src), true);
+t("and no caller saves an area with only four arguments",
+  /fit4lifeCloudSaveWorkArea\(key, [^)]*is_active !== false\);/.test(src), false);
+
 t("picking an area regroups the rail",
   /function setActiveWorkArea[\s\S]*?groupCoachSidebar\(\);/.test(src), true);
 t("and sends a screen the new area cannot show to the area home",

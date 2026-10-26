@@ -100,8 +100,18 @@ function trainerClientNames() {
     const practice = typeof practiceProfileIds === "function" ? practiceProfileIds() : [PRACTICE_CLIENT_ID];
     return loadProfiles().filter((profile) => practice.includes(profile.id)).map((profile) => profile.name);
   }
-  return [...loadProfiles().map((profile) => profile.name), ...loadProgress().map((entry) => entry.client).filter(Boolean), ...loadInBodyScans().map((scan) => scan.client).filter(Boolean), ...loadBodyGoals().map((goal) => goal.client).filter(Boolean), ...loadCheckIns().map((item) => item.client).filter(Boolean), ...loadAthleteMetrics().map((item) => item.client).filter(Boolean)]
+  // The roster follows the area the trainer is standing in. Names also arrive from progress
+  // entries and InBody scans, which carry no area of their own, so anything matching a
+  // client who lives in another area is dropped however it got here.
+  // One load, compared by id. loadProfiles rebuilds its objects on every call, so holding
+  // two lists and comparing by identity marks every client as being somewhere else.
+  const everyone = loadProfiles();
+  const inArea = typeof profilesInActiveArea === "function" ? profilesInActiveArea(everyone) : everyone;
+  const here = new Set(inArea.map((profile) => profile.id));
+  const elsewhere = everyone.filter((profile) => !here.has(profile.id)).map((profile) => profile.name);
+  return [...inArea.map((profile) => profile.name), ...loadProgress().map((entry) => entry.client).filter(Boolean), ...loadInBodyScans().map((scan) => scan.client).filter(Boolean), ...loadBodyGoals().map((goal) => goal.client).filter(Boolean), ...loadCheckIns().map((item) => item.client).filter(Boolean), ...loadAthleteMetrics().map((item) => item.client).filter(Boolean)]
     .filter((name) => name && name !== "Client")
+    .filter((name) => !elsewhere.some((other) => clientMatches(other, name)))
     .filter((name, index, names) => names.findIndex((other) => clientMatches(other, name)) === index)
     .sort((a, b) => a.localeCompare(b));
 }
