@@ -651,7 +651,14 @@ function groupCoachSidebar() {
       // default screen - four reachable destinations out of twenty-one on a phone.
       const available = shown.indexOf(navKey) >= 0;
       button.dataset.navAvailable = available ? "1" : "0";
-      button.hidden = solo || !open || !available;
+      // Two different reasons to not draw something, and they must not share a mechanism.
+      // Unavailable here means the role or the area does not grant it, which is true on
+      // every screen, so the hidden attribute is right. Collapsed only means the desktop
+      // drawer is shut, so it is a class - styles.css carries [hidden]{display:none
+      // !important}, and using hidden for collapse made the phone bar unable to re-show
+      // its own five tabs. That is why the bar came up with a group heading and More.
+      button.hidden = !available;
+      button.classList.toggle("nav-collapsed", available && (solo || !open));
       if (anchor.nextSibling !== button) anchor.parentNode.insertBefore(button, anchor.nextSibling);
       anchor = button;
     });
