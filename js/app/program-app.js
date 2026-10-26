@@ -1084,7 +1084,7 @@ function coachMoreDestinations() {
 function renderCoachMoreSheet() {
   const list = byId("coachMoreList"); if (!list) return;
   const current = openCoachDestination.current || "";
-  list.innerHTML = coachMoreDestinations().map((button) => {
+  const tile = (button) => {
     const key = button.dataset.coachNav, icon = button.querySelector(".nav-icon"), label = button.querySelector(".nav-label");
     const badge = button.querySelector("[data-attention-badge]"), ownerBadge = button.querySelector("[data-owner-request-badge]");
     // The badge markers are copied so the existing attention renderers keep filling them in.
@@ -1093,7 +1093,26 @@ function renderCoachMoreSheet() {
     return '<button data-coach-more-go="' + escapeHtml(key) + '"' + (key === current ? ' class="on"' : '') + '>'
       + '<span class="nav-icon">' + escapeHtml(icon ? icon.textContent : "") + '</span>'
       + '<span class="nav-label">' + escapeHtml(label ? label.textContent : key) + '</span>' + badgeHtml + '</button>';
-  }).join("") || '<div class="empty-state">No further destinations are available for this account.</div>';
+  };
+
+  // Eighteen tiles in one flat grid is the sidebar's old problem one level down. The sheet
+  // uses the rail's own five groups, in the rail's order, so the phone and the desktop
+  // teach the same map instead of two different ones.
+  const available = coachMoreDestinations();
+  const groups = typeof COACH_NAV_GROUPS !== "undefined" ? COACH_NAV_GROUPS : [];
+  const placed = new Set();
+  let html = "";
+  groups.forEach(([label, keys, icon]) => {
+    const here = keys.map((key) => available.find((button) => button.dataset.coachNav === key)).filter(Boolean);
+    if (!here.length) return;
+    here.forEach((button) => placed.add(button.dataset.coachNav));
+    html += '<div class="coach-more-group"><span class="nav-icon">' + escapeHtml(icon || "") + '</span>'
+      + escapeHtml(label) + '</div>' + here.map(tile).join("");
+  });
+  // Anything a group does not claim still has to be reachable.
+  const loose = available.filter((button) => !placed.has(button.dataset.coachNav));
+  if (loose.length) html += '<div class="coach-more-group">Everything else</div>' + loose.map(tile).join("");
+  list.innerHTML = html || '<div class="empty-state">No further destinations are available for this account.</div>';
   bindDataHandlers(list,"[data-coach-more-go]",(button) => { closeCoachMoreSheet(); openCoachDestination(button.dataset.coachMoreGo); });
   if (typeof renderTrainerAttention === "function") renderTrainerAttention();
   if (typeof syncRoleGovernanceControls === "function") syncRoleGovernanceControls();

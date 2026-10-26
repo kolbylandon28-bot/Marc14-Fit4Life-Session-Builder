@@ -829,7 +829,7 @@ details.audit-area[open]>summary{border-bottom:1px solid var(--line)}
     border-radius:18px 18px 0 0;padding:16px 14px calc(18px + env(safe-area-inset-bottom));pointer-events:auto}
   .coach-more-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
   .coach-more-head h3{font-family:var(--display);font-style:italic;font-size:17px;text-transform:uppercase;margin:0}
-  .coach-more-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .coach-more-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.coach-more-group{grid-column:1/-1;display:flex;align-items:center;gap:7px;font:800 9px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin:10px 2px 1px;padding-top:9px;border-top:1px solid var(--line)}.coach-more-group:first-child{margin-top:0;padding-top:0;border-top:0}.coach-more-group .nav-icon{font:700 12px/1 system-ui;color:var(--blue-bright)}
   .coach-more-list button{position:relative;display:grid;grid-template-columns:20px minmax(0,1fr);align-items:center;gap:9px;
     min-height:52px;padding:0 10px;border:1px solid var(--line);border-radius:11px;background:transparent;color:var(--text);
     text-align:left;font:700 9px var(--mono);letter-spacing:.04em;cursor:pointer}
