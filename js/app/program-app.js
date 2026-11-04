@@ -1208,7 +1208,7 @@ function renderCoachSettings(out) {
   const owner = window.fit4lifeCloudRole === 'owner';
   const tabs = '<section class="coach-module-card" style="grid-column:1/-1;padding:10px 12px">'
     + '<div class="calendar-view-toggle">'
-    + COACH_SETTINGS_TABS.map(([key,label]) => '<button class="' + (coachSettingsTab === key ? 'on' : '')
+    + COACH_SETTINGS_TABS.map(([key,label]) => '<button class="segment-btn ' + (coachSettingsTab === key ? 'on' : '')
         + '" onclick="setCoachSettingsTab(\'' + key + '\')">' + escapeHtml(label) + '</button>').join('')
     + '</div></section>';
 
