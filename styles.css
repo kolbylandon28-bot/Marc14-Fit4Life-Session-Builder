@@ -231,6 +231,19 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
     font-size:var(--brand-watermark-size,clamp(150px,27vw,410px));
   }
 
+  /* A branch can supply a real logo instead of letters. The text layers go quiet and this
+     takes their place, same position, same job. */
+  .brand-watermark-img{
+    position:fixed;left:50%;top:52%;z-index:0;
+    transform:translate(-50%,-50%);
+    pointer-events:none;user-select:none;
+    width:var(--brand-watermark-image-width,min(74vw,1080px));
+    opacity:var(--brand-watermark-image-opacity,.17);
+    filter:drop-shadow(0 0 22px color-mix(in srgb,var(--brand-watermark-halo,var(--event-accent)) 45%,transparent))
+           drop-shadow(0 0 60px color-mix(in srgb,var(--event-accent) 22%,transparent));
+  }
+  @media(max-width:720px){.brand-watermark-img{width:var(--brand-watermark-image-width-sm,92vw)}}
+
   .portal-theme-scene{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;opacity:var(--theme-scene-opacity);transition:opacity .35s ease}
   .portal-theme-scene::before{content:"";position:absolute;inset:0;z-index:0;background-image:var(--theme-scene);background-repeat:no-repeat;background-position:center calc(100% + 20px);background-size:min(1450px,100vw) auto;mix-blend-mode:screen;filter:saturate(.96) contrast(1.04);-webkit-mask-image:linear-gradient(to bottom,transparent 0,transparent 24%,rgba(0,0,0,.34) 47%,#000 68%,#000 100%),linear-gradient(to right,transparent 0,#000 14%,#000 86%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,transparent 24%,rgba(0,0,0,.34) 47%,#000 68%,#000 100%),linear-gradient(to right,transparent 0,#000 14%,#000 86%,transparent 100%);-webkit-mask-composite:source-in;mask-composite:intersect}
   .portal-theme-scene::after{content:"";position:absolute;z-index:1;left:7%;right:7%;bottom:-13%;height:46%;background:radial-gradient(ellipse at bottom,color-mix(in srgb,var(--event-accent) 19%,transparent),transparent 66%);filter:blur(18px)}

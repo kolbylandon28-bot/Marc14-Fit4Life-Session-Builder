@@ -391,8 +391,27 @@ function applyBrandWatermark(brand) {
   const vw = Math.max(6, Math.min(27, (script ? 150 : 81) / chars));
   const vwSmall = Math.max(10, Math.min(45, (script ? 230 : 135) / chars));
 
+  /* A real logo beats letters when the branch has one. The text layers are silenced by
+     giving them empty content rather than display:none, so nothing else about them moves. */
+  const image = String(brand.watermarkImage || "");
+  let layer = document.getElementById("brandWatermarkImage");
+  if (image) {
+    if (!layer) {
+      layer = document.createElement("img");
+      layer.id = "brandWatermarkImage";
+      layer.className = "brand-watermark-img";
+      layer.alt = "";
+      layer.setAttribute("aria-hidden", "true");
+      if (document.body) document.body.insertBefore(layer, document.body.firstChild);
+    }
+    if (layer.getAttribute("src") !== image) layer.setAttribute("src", image);
+    if (brand.watermarkImageOpacity) set("--brand-watermark-image-opacity", String(brand.watermarkImageOpacity));
+  } else if (layer) {
+    layer.remove();
+  }
+
   set("--brand-mark", JSON.stringify(mark));
-  set("--brand-watermark", JSON.stringify(shown));
+  set("--brand-watermark", image ? '""' : JSON.stringify(shown));
   set("--brand-watermark-size", "clamp(" + Math.round(vw * 5.5) + "px," + vw.toFixed(1) + "vw," + Math.round(vw * 15) + "px)");
   set("--brand-watermark-size-sm", vwSmall.toFixed(1) + "vw");
 

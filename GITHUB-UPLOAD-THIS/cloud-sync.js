@@ -1,0 +1,3111 @@
+(function fit4LifeCloudModule() {
+  "use strict";
+
+  const CONFIG_CACHE_KEY = "fit4life_public_cloud_config_v1";
+  const PENDING_SYNC_KEY = "fit4life_cloud_pending_scopes_v1";
+  const ACCOUNT_CACHE_OWNER_KEY = "fit4life_account_cache_owner_v1";
+  /* Deliberately NOT a CLOUD_KEY. Switching branches wipes those, and the choice
+     of branch has to outlive the wipe or the switch bounces back. */
+  const ACTIVE_BRANCH_KEY = "fit4life_active_branch_v1";
+  const REMEMBER_SIGN_IN_KEY = "fit4life_remember_sign_in_v1";
+  const CLOUD_KEYS = {
+    profiles: "fit4life_profiles_v1",
+    assignments: "fit4life_assigned_workouts_v1",
+    programs: "fit4life_saved_programs_v1",
+    progress: "fit4life_progress_v1",
+    requests: "fit4life_profile_requests_v1",
+    summaryMeta: "fit4life_summary_meta_v1",
+    scans: "fit4life_inbody_v1",
+    goals: "fit4life_body_goals_v1",
+    checkins: "fit4life_checkins_v1",
+    metrics: "fit4life_athlete_metrics_v1",
+    gymBrand: "fit4life_gym_brand_v1",
+    gymEquipment: "fit4life_gym_equipment_v1",
+    teams: "fit4life_teams_v1",
+    mentalPlans: "fit4life_mental_plans_v1",
+    marketPrograms: "fit4life_market_programs_v1",
+    wearableConnections: "fit4life_wearable_connections_v1",
+    automations: "fit4life_automations_v1",
+    automationAlerts: "fit4life_automation_alerts_v1",
+    attentionState: "fit4life_attention_state_v1",
+    exerciseLibraryEdits: "fit4life_exercise_library_edits_v1",
+    ownerRequests: "fit4life_owner_requests_v1",
+    coachTaskClaims: "fit4life_coach_task_claims_v1",
+    coachNotes: "fit4life_coach_notes_v1",
+    calendarEvents: "fit4life_calendar_events_v1",
+    calendarAudit: "fit4life_calendar_audit_v1",
+    calendarNotices: "fit4life_calendar_notices_v1",
+    workoutRequests: "fit4life_workout_requests_v1",
+    clientDaily: "fit4life_client_daily_v1",
+    clientMessages: "fit4life_client_messages_v1",
+    progressReceipts: "fit4life_progress_receipts_v1",
+    progressReceiptResponses: "fit4life_progress_receipt_responses_v1",
+    activeWorkout: "fit4life_active_workout_v1",
+    activeClient: "fit4life_active_client_v1",
+    trainerAudits: "fit4life_trainer_audits_v1",
+    auditTrainers: "fit4life_audit_trainers_v1"
+  };
+
+  const ARRAY_KEYS = new Set([
+    CLOUD_KEYS.profiles, CLOUD_KEYS.assignments, CLOUD_KEYS.programs,
+    CLOUD_KEYS.progress, CLOUD_KEYS.requests, CLOUD_KEYS.scans,
+    CLOUD_KEYS.goals, CLOUD_KEYS.checkins, CLOUD_KEYS.metrics,
+    CLOUD_KEYS.teams, CLOUD_KEYS.mentalPlans, CLOUD_KEYS.marketPrograms,
+    CLOUD_KEYS.automations, CLOUD_KEYS.automationAlerts,
+    CLOUD_KEYS.clientMessages, CLOUD_KEYS.progressReceipts,
+    CLOUD_KEYS.progressReceiptResponses, CLOUD_KEYS.exerciseLibraryEdits,
+    CLOUD_KEYS.ownerRequests, CLOUD_KEYS.coachTaskClaims, CLOUD_KEYS.coachNotes,
+    CLOUD_KEYS.calendarEvents, CLOUD_KEYS.calendarAudit,
+    CLOUD_KEYS.calendarNotices, CLOUD_KEYS.workoutRequests
+  ]);
+
+  let cloudClient = null;
+  let cloudUser = null;
+  let cloudRole = "";
+  let cloudOrganizationId = "";
+  let branchChoiceNeeded = false;
+  let knownBranches = [];
+  let cloudReady = false;
+  let cloudApplying = false;
+  let cloudPushing = false;
+  let cloudPullTimer = null;
+  let cloudPushTimer = null;
+  let cloudChannel = null;
+  let cloudRegistrationChannel = null;
+  let cloudOrganizationPullTimer = null;
+  let cloudOrganizationRefreshTimer = null;
+  let organizationSettingsLoad = null;
+  let lastOrganizationSettingsLoadedAt = 0;
+  let organizationRefreshListenersBound = false;
+  let cloudRegistrationRequests = [];
+  let portalOrganizationId = "";
+  let portalOrganizationSlug = "fit-4-life";
+  let portalPublicRegistrationEnabled = true;
+  let cloudOrganizationSlug = "";
+  let authMode = "signin";
+  const pendingScopes = new Set();
+  const remoteProfilesByExternalId = new Map();
+  const archivedExternalIds = new Set();
+  const remoteSyncRecords = new Map();
+
+  window.fit4lifeCloudRole = "";
+  window.fit4lifeCloudReady = false;
+  // Anything needing a signed-in session waits on this instead of firing at page load.
+  function announceCloudReady() {
+    try { window.dispatchEvent(new CustomEvent("fit4life-cloud-ready")); } catch (_) {}
+  }
+  window.fit4lifeCloudRegistrationRequests = [];
+  window.fit4lifeCloudOrganizationId = "";
+
+  function rememberSignInEnabled() {
+    const field = document.getElementById("cloudRememberSignIn");
+    if (field) return field.checked;
+    try { return localStorage.getItem(REMEMBER_SIGN_IN_KEY) !== "false"; } catch (_) { return true; }
+  }
+
+  function saveRememberSignInChoice() {
+    const remember = rememberSignInEnabled();
+    try { localStorage.setItem(REMEMBER_SIGN_IN_KEY,remember ? "true" : "false"); } catch (_) {}
+    return remember;
+  }
+
+  const fit4lifeAuthStorage = {
+    getItem(key) {
+      const remember = rememberSignInEnabled(), preferred = remember ? localStorage : sessionStorage, fallback = remember ? sessionStorage : localStorage;
+      try {
+        const value = preferred.getItem(key);
+        if (value != null) return value;
+        return fallback.getItem(key);
+      } catch (_) { return null; }
+    },
+    setItem(key,value) {
+      const remember = rememberSignInEnabled(), preferred = remember ? localStorage : sessionStorage, fallback = remember ? sessionStorage : localStorage;
+      try { preferred.setItem(key,value); fallback.removeItem(key); } catch (_) {}
+    },
+    removeItem(key) {
+      try { localStorage.removeItem(key); sessionStorage.removeItem(key); } catch (_) {}
+    }
+  };
+  window.fit4lifeCloudOrganizationSlug = "";
+  window.fit4lifeCloudOrganizationSettingsError = "";
+  window.fit4lifeCloudIdentity = null;
+  window.fit4lifeCloudTrainers = [];
+  window.fit4lifeCloudTrainerRequests = [];
+
+  function readJson(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw == null) return fallback;
+      const parsed = JSON.parse(raw);
+      return parsed == null ? fallback : parsed;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function writeJson(key, value) {
+    try {
+      if (value == null) localStorage.removeItem(key);
+      else localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function restorePendingScopes() {
+    const stored = readJson(PENDING_SYNC_KEY, []);
+    (Array.isArray(stored) ? stored : []).forEach((scope) => {
+      if (typeof scope === "string" && scope) pendingScopes.add(scope);
+    });
+  }
+
+  function persistPendingScopes() {
+    writeJson(PENDING_SYNC_KEY, Array.from(pendingScopes));
+  }
+
+  function browserIsOffline() {
+    return typeof navigator !== "undefined" && navigator.onLine === false;
+  }
+
+  function localInteractionTestMode() {
+    if (!/^(?:localhost|127\.0\.0\.1)$/.test(String(window.location.hostname || ""))) return false;
+    try { return new URLSearchParams(window.location.search).get("interaction-test") === "1"; }
+    catch (_) { return false; }
+  }
+
+  function initializeLocalInteractionTest() {
+    const today = new Date(), missedDate = new Date(today.getFullYear(),today.getMonth(),today.getDate() - 1), dateKey = [missedDate.getFullYear(),String(missedDate.getMonth() + 1).padStart(2,"0"),String(missedDate.getDate()).padStart(2,"0")].join("-");
+    let interactionRole = "owner"; try { if (new URLSearchParams(window.location.search).get("role") === "client") interactionRole = "client"; } catch (_) {}
+    const profileId = "interaction-test-client", assignmentId = "interaction-test-assignment", savedStaffName = String(localStorage.getItem("fit4life_interaction_staff_name_v1") || "Interaction Test Owner").trim() || "Interaction Test Owner";
+    const profiles = readJson(CLOUD_KEYS.profiles, []);
+    if (!profiles.some((profile) => profile && profile.id === profileId)) {
+      profiles.push({id:profileId,name:"Interaction Test Client",username:"interaction-test",email:"interaction@byui.edu",age:30,experience:2,minutes:60,availableDays:3,goals:["general"],muscles:[],injuries:[],zones:[],assignedTrainerId:"interaction-test-owner",assignedTrainerName:"Interaction Test Owner",createdAt:new Date().toISOString()});
+      writeJson(CLOUD_KEYS.profiles,profiles);
+    }
+    if (interactionRole === "client") { const testProfile = profiles.find((profile) => profile && profile.id === profileId); if (testProfile) { testProfile.email = "interaction@byui.edu"; testProfile.consultation = {}; writeJson(CLOUD_KEYS.profiles,profiles); } }
+    const assignments = readJson(CLOUD_KEYS.assignments, []);
+    if (!assignments.some((assignment) => assignment && assignment.id === assignmentId)) {
+      assignments.push({id:assignmentId,profileId,client:"Interaction Test Client",status:"assigned",scheduledDate:dateKey,scheduledTime:"12:30",assignedAt:new Date().toISOString(),session:{type:"solo",data:{sessionId:"interaction-test-session",goalLabel:"Interaction Test Workout",spec:{client:"Interaction Test Client",profileId,goal:"general",goals:["general"],minutes:45},blocks:[{key:"strength",title:"Primary strength",rx:{sets:1,reps:"8",rest:"60 sec",tempo:"Controlled",rpe:"RPE 7"},items:[{name:"Bodyweight squat",pattern:"squat",region:"lower",zone:"bodyweight",muscles:["quads","glutes"],cue:"Keep the whole foot grounded.",rx:{sets:1,reps:"8",rest:"60 sec",tempo:"Controlled",rpe:"RPE 7"}}],groups:[]},{key:"accessory",title:"Upper-body support",rx:{sets:1,reps:"10",rest:"60 sec",tempo:"Controlled",rpe:"RPE 7"},items:[{name:"Incline push-up",pattern:"h_push",region:"upper",zone:"bodyweight",muscles:["chest","triceps"],cue:"Keep a straight line from head to heel.",rx:{sets:1,reps:"10",rest:"60 sec",tempo:"Controlled",rpe:"RPE 7"}}],groups:[]}]}}});
+      writeJson(CLOUD_KEYS.assignments,assignments);
+    }
+    try { localStorage.setItem(CLOUD_KEYS.activeClient,profileId); } catch (_) {}
+    cloudUser = interactionRole === "client" ? {id:"interaction-test-client-user",email:"interaction@byui.edu",user_metadata:{display_name:"Interaction Test Client"}} : {id:"interaction-test-owner",email:"owner@interaction.test",user_metadata:{display_name:savedStaffName}};
+    cloudRole = interactionRole; cloudReady = true;
+    window.fit4lifeCloudRole = interactionRole; window.fit4lifeCloudReady = true; announceCloudReady();
+    window.fit4lifeCloudIdentity = {id:cloudUser.id,email:cloudUser.email,role:interactionRole,displayName:interactionRole === "client" ? "Interaction Test Client" : savedStaffName};
+    window.fit4lifeCloudTrainers = [{user_id:cloudUser.id,display_name:savedStaffName,email:cloudUser.email,role:"owner",is_active:true}];
+    showAuthGate(false); cloudStatus("Local interaction test", "offline"); authMessage("", false);
+    setTimeout(() => { refreshVisibleApp(); if (typeof routeAuthenticatedWorkspace === "function") routeAuthenticatedWorkspace(); },0);
+  }
+
+  /* The cache belongs to one person IN ONE ORGANIZATION. Keying it on the user alone meant an
+     owner of two gyms kept the first gym's roster in localStorage while signed into the second -
+     the wrong gym's clients on screen, and the pending-sync queue able to push them up into the
+     new gym. Any change of either half wipes it, for every role. */
+  function isolateSensitiveCacheForUser(userId, role, organizationId) {
+    const scope = String(userId || "") + "|" + String(organizationId || "");
+    let previous = "";
+    try { previous = localStorage.getItem(ACCOUNT_CACHE_OWNER_KEY) || ""; } catch (_) {}
+    if (previous && previous !== scope) {
+      Object.values(CLOUD_KEYS).forEach((key) => {
+        if (key !== CLOUD_KEYS.gymBrand && key !== CLOUD_KEYS.gymEquipment) {
+          try { localStorage.removeItem(key); } catch (_) {}
+        }
+      });
+      pendingScopes.clear();
+      persistPendingScopes();
+    }
+    try { localStorage.setItem(ACCOUNT_CACHE_OWNER_KEY, scope); } catch (_) {}
+  }
+
+  function accountVisibleProfileRows(rows, role, userId) {
+    const list = Array.isArray(rows) ? rows : [];
+    if (role === "owner" || role === "trainer") return list;
+    if (role !== "client" || !userId) return [];
+    return list.filter((row) => row && row.auth_user_id === userId);
+  }
+
+  /* Tried once per session: a failure here must not turn every later sync into two extra
+     round trips. The additive function goes first because it is the one whose behaviour is
+     known - it links only when exactly one unclaimed profile carries the caller's own verified
+     address, on either the personal or the BYU-I field. claim_my_client_profile is the
+     fallback for a database where that function has not been installed yet. */
+  let clientProfileLinkTried = false;
+  async function linkOwnClientProfile() {
+    try {
+      const linked = await cloudClient.rpc("fit4life_link_my_client_profile", {
+        target_organization: cloudOrganizationId || null
+      });
+      if (!linked.error) return Number(linked.data || 0) > 0;
+      const claim = cloudOrganizationId
+        ? await cloudClient.rpc("claim_my_client_profile_for_org", { target_organization: cloudOrganizationId })
+        : await cloudClient.rpc("claim_my_client_profile");
+      return !claim.error;
+    } catch (_) { return false; }
+  }
+
+  function accountVisibleSyncRecords(records, profileRows, role) {
+    const list = Array.isArray(records) ? records : [];
+    if (role === "owner" || role === "trainer") return list;
+    const clientIds = new Set((profileRows || []).map((row) => row && row.id).filter(Boolean));
+    return list.filter((record) => record && record.client_id && clientIds.has(record.client_id));
+  }
+
+  restorePendingScopes();
+
+  function normalizedEmail(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  // PILOT MODE. Set to false to require @byui.edu again.
+  window.FIT4LIFE_ALLOW_ANY_EMAIL = true;
+  function clientByuiEmail(value) {
+    const email = normalizedEmail(value);
+    if (window.FIT4LIFE_ALLOW_ANY_EMAIL) return /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(email);
+    return /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@byui\.edu$/i.test(email);
+  }
+
+  function normalizedName(value) {
+    return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+  }
+
+  function accountDisplayName(user) {
+    const metadata = user && user.user_metadata || {};
+    return String(metadata.display_name || metadata.full_name || metadata.name || (user && user.email ? user.email.split("@")[0] : "FIT 4 LIFE coach")).trim();
+  }
+
+  function configuredPublicSiteUrl() {
+    const configured = document.querySelector && document.querySelector('meta[name="fit4life-site-url"]');
+    const value = configured && configured.content ? configured.content.trim().replace(/\/$/, "") : "";
+    return value || window.location.origin;
+  }
+
+  function publicSiteUrl(pathname,params) {
+    const url = new URL(pathname || "/", configuredPublicSiteUrl() + "/");
+    Object.entries(params || {}).forEach(([key,value]) => { if (value != null && value !== "") url.searchParams.set(key,String(value)); });
+    return url.toString();
+  }
+
+  function authRedirectUrl() {
+    const gym = requestedPortalSlug();
+    return publicSiteUrl("/", gym ? { gym } : {});
+  }
+
+  async function inviteDiagnostics() {
+    const checks = [];
+    const push = (label,ok,detail) => checks.push({ label, ok, detail: detail || "" });
+    push("Secure connection ready", Boolean(cloudClient), cloudClient ? "" : "Supabase client not created - check /api/supabase-config returns url and key");
+    push("Signed in as staff", ["owner","trainer"].includes(cloudRole), "Current role: " + (cloudRole || "none"));
+    const redirect = (function () { try { return authRedirectUrl(); } catch (error) { return ""; } })();
+    push("Redirect URL resolves", Boolean(redirect), redirect || "authRedirectUrl() returned nothing");
+    push("Redirect URL is not localhost", Boolean(redirect) && !/localhost|127\.0\.0\.1/.test(redirect),
+      /localhost|127\.0\.0\.1/.test(redirect || "") ? "Supabase will refuse a localhost redirect unless it is allowlisted" : redirect);
+    push("Invite function available", typeof window.fit4lifeCloudSendClientInvite === "function", "");
+    return { redirect, checks, ready: checks.every((item) => item.ok) };
+  }
+  window.fit4lifeCloudInviteDiagnostics = inviteDiagnostics;
+
+  async function sendClientInvite(email, fullName) {
+    // An email cannot be un-sent by a snapshot restore.
+    if (practiceSealed()) return { ok:false, error:"Practice mode: no invite was sent." };
+    const address = String(email || "").trim().toLowerCase();
+    if (!address) return { ok:false, error:"No email address was provided" };
+    if (!cloudClient) return { ok:false, error:"The secure connection is not ready yet. Try again in a moment." };
+    try {
+      const response = await cloudClient.auth.signInWithOtp({
+        email: address,
+        options: {
+          emailRedirectTo: authRedirectUrl(),
+          shouldCreateUser: true,
+          data: {
+            full_name: fullName || "",
+            requested_role: "client",
+            registration_source: "fit4life_trainer_invite",
+            organization_slug: portalOrganizationSlug || "fit-4-life"
+          }
+        }
+      });
+      if (response && response.error) return { ok:false, error:response.error.message || "The invite could not be sent" };
+      return { ok:true };
+    } catch (error) {
+      return { ok:false, error:(error && error.message) || "The invite could not be sent" };
+    }
+  }
+  window.fit4lifeCloudSendClientInvite = sendClientInvite;
+
+  window.fit4lifePublicSiteUrl = publicSiteUrl;
+
+  async function loadBranches(force) {
+    if (!cloudClient || !cloudUser) return [];
+    if (knownBranches.length && !force) return knownBranches;
+    const response = await cloudClient.rpc("fit4life_my_orgs");
+    if (response.error || !Array.isArray(response.data)) {
+      if (response.error) console.error("Branches could not be loaded", response.error);
+      return knownBranches;
+    }
+    knownBranches = response.data.filter((row) => row && row.is_template !== true);
+    window.fit4lifeBranches = knownBranches;
+    return knownBranches;
+  }
+
+  /* A branch change is an identity change. The cache wipe in
+     isolateSensitiveCacheForUser keys on user|organization, so reloading after
+     writing the choice is what actually clears the previous branch's data. */
+  function switchBranch(organizationId) {
+    const id = String(organizationId || "").trim();
+    if (!id || id === cloudOrganizationId) return false;
+    rememberBranchId(id);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("gym");
+      window.location.replace(url.toString());
+    } catch (_) {
+      window.location.reload();
+    }
+    return true;
+  }
+
+  window.fit4lifeLoadBranches = loadBranches;
+  window.fit4lifeSwitchBranch = switchBranch;
+  window.fit4lifeActiveBranchId = function () { return cloudOrganizationId; };
+
+  function publishCloudIdentity() {
+    window.fit4lifeCloudIdentity = cloudUser ? { id:cloudUser.id,email:cloudUser.email || "",role:cloudRole || "",displayName:accountDisplayName(cloudUser) } : null;
+  }
+
+  function clearCloudOrganizationContext() {
+    cloudOrganizationId = "";
+    cloudOrganizationSlug = "";
+    lastOrganizationSettingsLoadedAt = 0;
+    window.fit4lifeCloudOrganizationId = "";
+    window.fit4lifeCloudOrganizationSlug = portalOrganizationSlug || "";
+  }
+
+  function storedBranchId() {
+    try { return String(localStorage.getItem(ACTIVE_BRANCH_KEY) || "").trim(); } catch (_) { return ""; }
+  }
+
+  function rememberBranchId(id) {
+    try {
+      if (id) localStorage.setItem(ACTIVE_BRANCH_KEY, String(id));
+      else localStorage.removeItem(ACTIVE_BRANCH_KEY);
+    } catch (_) {}
+  }
+
+  /* One membership resolves silently - that is every client and every single-gym trainer.
+     More than one must be CHOSEN. Taking rows[0] is exactly how one customer's screens
+     opened over another customer's data, so this refuses to guess and asks instead. */
+  function pickMembership(rows) {
+    if (!Array.isArray(rows) || !rows.length) return null;
+    const stored = storedBranchId();
+    if (stored) {
+      const sticky = rows.find((row) => row.organization_id === stored);
+      if (sticky) return sticky;
+    }
+    if (portalOrganizationId) {
+      const fromLink = rows.find((row) => row.organization_id === portalOrganizationId);
+      if (fromLink) return fromLink;
+    }
+    if (rows.length === 1) return rows[0];
+    branchChoiceNeeded = true;
+    window.fit4lifeBranchChoiceNeeded = true;
+    return null;
+  }
+
+  function applyMembershipContext(membership) {
+    if (!membership || !membership.organization_id || !membership.role) return false;
+    cloudRole = membership.role;
+    cloudOrganizationId = membership.organization_id;
+    branchChoiceNeeded = false;
+    window.fit4lifeBranchChoiceNeeded = false;
+    rememberBranchId(membership.organization_id);
+    window.fit4lifeCloudRole = cloudRole;
+    window.fit4lifeCloudOrganizationId = cloudOrganizationId;
+    /* A ?gym= slug only describes the branding. If the session resolved to a different gym,
+       showing that slug puts one customer's name over another customer's data. Drop it and let
+       loadOrganizationSettings() fetch the branding that matches the org we are actually in. */
+    if (portalOrganizationId && portalOrganizationId !== membership.organization_id) {
+      portalOrganizationSlug = "";
+      portalOrganizationId = "";
+      try { localStorage.removeItem(CLOUD_KEYS.gymBrand); } catch (_) {}
+    }
+    if (portalOrganizationSlug) window.fit4lifeCloudOrganizationSlug = portalOrganizationSlug;
+    publishCloudIdentity();
+    return true;
+  }
+
+  function sameClientName(a, b) {
+    return Boolean(a && b) && normalizedName(a) === normalizedName(b);
+  }
+
+  function requestedPortalSlug() {
+    try {
+      const value = new URLSearchParams(window.location.search).get("gym");
+      return String(value || "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function portalName() {
+    const brand = readJson(CLOUD_KEYS.gymBrand, {});
+    return String(brand.name || "your gym").trim();
+  }
+
+  /* Defaults come from org_type, so no data migration is needed: BYU-Idaho is a
+     university and keeps every facility screen, Journey is an employer and never had
+     a pool. An explicit modules entry always wins over the default. */
+  const MODULE_DEFAULTS = {
+    university: { facility:true,  timeclock:true,  volunteers:true,  audits:true,  booking_import:true,  consultation:true, staff:true  },
+    gym:        { facility:true,  timeclock:true,  volunteers:false, audits:true,  booking_import:false, consultation:true, staff:true  },
+    employer:   { facility:false, timeclock:false, volunteers:false, audits:false, booking_import:false, consultation:true, staff:false },
+    individual: { facility:false, timeclock:false, volunteers:false, audits:false, booking_import:false, consultation:true, staff:false }
+  };
+
+  function moduleEnabled(name) {
+    const explicit = window.fit4lifeOrgModules && window.fit4lifeOrgModules[name];
+    if (explicit === true || explicit === false) return explicit;
+    const defaults = MODULE_DEFAULTS[window.fit4lifeOrgType] || MODULE_DEFAULTS.gym;
+    return defaults[name] !== false;
+  }
+
+  window.fit4lifeModuleEnabled = moduleEnabled;
+
+  function applyPortalContext(context) {
+    if (!context) return null;
+    if (context.org_type !== undefined) window.fit4lifeOrgType = String(context.org_type || "gym");
+    if (context.modules !== undefined) window.fit4lifeOrgModules = context.modules && typeof context.modules === "object" ? context.modules : {};
+    if (context.config !== undefined) window.fit4lifeOrgConfig = context.config && typeof context.config === "object" ? context.config : {};
+    if (context.is_template !== undefined) window.fit4lifeOrgIsTemplate = context.is_template === true;
+    portalOrganizationId = context.organization_id || portalOrganizationId;
+    portalOrganizationSlug = context.slug || portalOrganizationSlug;
+    portalPublicRegistrationEnabled = context.public_registration_enabled !== false;
+    if (context.brand_config && typeof context.brand_config === "object") writeJson(CLOUD_KEYS.gymBrand, context.brand_config);
+    if (context.equipment_config && typeof context.equipment_config === "object") writeJson(CLOUD_KEYS.gymEquipment, context.equipment_config);
+    lastOrganizationSettingsLoadedAt = Date.now();
+    try { if (typeof applyGymBrand === "function") applyGymBrand(); } catch (_) {}
+    const signupTab = document.querySelector && document.querySelector('[data-auth-mode="signup"]');
+    if (signupTab) signupTab.style.display = portalPublicRegistrationEnabled ? "" : "none";
+    return context;
+  }
+
+  async function loadPortalContext() {
+    if (!cloudClient) return null;
+    const slug = requestedPortalSlug();
+    const hostname = String(window.location.hostname || "").toLowerCase();
+    let response = await cloudClient.rpc("resolve_gym_portal", {
+      requested_slug: slug || null,
+      requested_hostname: hostname || null
+    });
+    let context = !response.error && Array.isArray(response.data) ? response.data[0] : null;
+    if (!context && !slug) {
+      response = await cloudClient.rpc("resolve_gym_portal", { requested_slug: null, requested_hostname: null });
+      context = !response.error && Array.isArray(response.data) ? response.data[0] : null;
+    }
+    if (context) return applyPortalContext(context);
+    portalOrganizationSlug = slug || "fit-4-life";
+    return null;
+  }
+
+  function itemBelongsToProfile(item, profile) {
+    if (!item || !profile) return false;
+    if (item.profileId && item.profileId === profile.id) return true;
+    if (item.client && sameClientName(item.client, profile.name)) return true;
+    if (item.setup && item.setup.client && sameClientName(item.setup.client, profile.name)) return true;
+    return false;
+  }
+
+  function mergeRecords(current, incoming) {
+    const result = [];
+    const positions = new Map();
+    [...(Array.isArray(current) ? current : []), ...(Array.isArray(incoming) ? incoming : [])].forEach((item) => {
+      if (!item) return;
+      const id = item.id || [item.profileId, item.date, item.type, item.label].filter(Boolean).join("|") || JSON.stringify(item);
+      if (!positions.has(id)) {
+        positions.set(id, result.length);
+        result.push(item);
+        return;
+      }
+      const index = positions.get(id);
+      const previous = result[index];
+      const previousTime = String(previous.updatedAt || previous.createdAt || previous.date || "");
+      const nextTime = String(item.updatedAt || item.createdAt || item.date || "");
+      if (nextTime >= previousTime) result[index] = item;
+    });
+    return result.sort((a, b) => String(b.createdAt || b.updatedAt || b.date || "").localeCompare(String(a.createdAt || a.updatedAt || a.date || "")));
+  }
+
+  function syncRecordCacheKey(clientId, recordType, recordKey) {
+    return [clientId || "organization", recordType, recordKey || "default"].join("|");
+  }
+
+  function recordTime(value) {
+    const parsed = Date.parse(value || "");
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  // Local cache, deliberately not in CLOUD_KEYS: it is rebuilt from every pull and must never
+  // be pushed back up as though the trainer's device were the author of it.
+  /* booking_email is added by RUN-THIS-IN-SUPABASE-PREAPPROVED-EMAILS.sql. Asking for a column
+     that is not there does not return null - Postgres rejects the whole query, and four of the
+     profile reads rethrow, so the entire client list fails to load and a trainer sees an empty
+     roster. Probed once at startup instead, so the app works before the SQL is run and picks
+     the column up by itself afterwards. */
+  let profilesHaveBookingEmail = true;
+  // Set only by a write that Postgres itself rejected for the column not existing. An earlier
+  // version probed at startup, before there was a session - so RLS answered instead of
+  // Postgres, the missing-column code never appeared, and the reads carried on asking for it.
+  function noteMissingBookingEmail(error) {
+    if (!error) return false;
+    const code = String(error.code || ""), message = String(error.message || "");
+    if (code !== "42703" && !/booking_email/.test(message)) return false;
+    if (profilesHaveBookingEmail) {
+      profilesHaveBookingEmail = false;
+      console.warn("FIT 4 LIFE: client_profiles.booking_email is missing - run RUN-THIS-IN-SUPABASE-PREAPPROVED-EMAILS.sql. Booking addresses will not sync until then.");
+    }
+    return true;
+  }
+
+  const LIVE_WORKOUTS_KEY = "fit4life_live_workouts_v1";
+  window.fit4lifeLiveWorkoutFor = function fit4lifeLiveWorkoutFor(profileId) {
+    if (!profileId) return null;
+    const all = readJson(LIVE_WORKOUTS_KEY, {});
+    return all && all[profileId] ? all[profileId] : null;
+  };
+  window.fit4lifeLiveWorkoutProfiles = function fit4lifeLiveWorkoutProfiles() {
+    const all = readJson(LIVE_WORKOUTS_KEY, {});
+    return Object.keys(all || {}).filter((id) => all[id] && !all[id].finishedAt);
+  };
+
+  /* exercisePreferences and injuries decide what the generator is allowed to give a
+     client, and they rode inside one blob that the pull spread wholesale over the local
+     profile. A stale remote copy therefore erased a fresh "this hurt me" or "I hate
+     burpees" silently, and five separate writers all assumed last-write-wins.
+
+     Merged per key instead, with two rules that cannot lose safety information:
+     a restriction always beats a permission, and an injury is a mark that sync never
+     subtracts. Clearing either stays an explicit trainer action. */
+  const PREFERENCE_SEVERITY = { discomfort:6, unavailable:5, dislike:4, unfamiliar:3, neutral:2, like:1, favorite:0 };
+
+  function strictestPreference(a, b) {
+    if (a == null) return b;
+    if (b == null) return a;
+    const left = PREFERENCE_SEVERITY[a], right = PREFERENCE_SEVERITY[b];
+    if (left === undefined) return b;
+    if (right === undefined) return a;
+    return right > left ? b : a;
+  }
+
+  function mergePreferences(a, b) {
+    const out = { ...(a || {}) };
+    Object.keys(b || {}).forEach((key) => { out[key] = strictestPreference(out[key], b[key]); });
+    return out;
+  }
+
+  function mergeInjuries(a, b) {
+    const seen = new Set(), out = [];
+    [].concat(Array.isArray(a) ? a : [], Array.isArray(b) ? b : []).forEach((item) => {
+      const key = String(item == null ? "" : item).trim();
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      out.push(item);
+    });
+    return out;
+  }
+
+  function mergeFeedbackProfile(local, remote) {
+    if (!remote) return local || {};
+    if (!local) return remote;
+    return {
+      ...local,
+      ...remote,
+      exercisePreferences: mergePreferences(local.exercisePreferences, remote.exercisePreferences),
+      injuries: mergeInjuries(local.injuries, remote.injuries),
+      workoutFeedbackHistory: mergeRecords(local.workoutFeedbackHistory, remote.workoutFeedbackHistory),
+      exercisePreferenceEvidence: mergeRecords(local.exercisePreferenceEvidence, remote.exercisePreferenceEvidence),
+      lastReview: newestObject(local.lastReview, remote.lastReview)
+    };
+  }
+
+  function newestObject(current, incoming) {
+    if (!current) return incoming || null;
+    if (!incoming) return current;
+    const currentTime = recordTime(current.updatedAt || current.savedAt || current.completedAt || current.createdAt);
+    const incomingTime = recordTime(incoming.updatedAt || incoming.savedAt || incoming.completedAt || incoming.createdAt);
+    return incomingTime >= currentTime ? { ...current, ...incoming } : { ...incoming, ...current };
+  }
+
+  /* One workout, two devices - the trainer filling in a set from their phone while the client
+     holds theirs. newestObject merged the whole thing as a blob, so the later push replaced the
+     earlier device's work outright: a set the trainer marked skipped, a warm-up the client
+     added, an exercise either of them skipped, simply gone. The logged SETS were always safe
+     (they are individual records in the progress log and merge by id) - this is everything
+     else the screen remembers.
+
+     Cursors take whichever device is further along. Anything that is a record of something
+     somebody did is merged key by key, so neither side loses theirs. */
+  function mergeActiveWorkout(left, right) {
+    if (!left) return right || null;
+    if (!right) return left;
+    // Two different workouts is not a merge. Keep the newer rather than blending two sessions.
+    if (left.assignmentId && right.assignmentId && left.assignmentId !== right.assignmentId) {
+      return newestObject(left, right);
+    }
+    const furthest = (a, b) => Math.max(Number(a) || 0, Number(b) || 0);
+    // extraSets, warmups and setByExercise are counts: the higher number is the one that has
+    // seen more work, whichever device did it.
+    const mergeCounts = (a, b) => {
+      const out = { ...(a || {}) };
+      Object.keys(b || {}).forEach((key) => { out[key] = furthest(out[key], b[key]); });
+      return out;
+    };
+    // skippedSets, skippedExercises and supersetMode are marks: present on either side means
+    // it happened, and a mark is never unset by the other device not knowing about it.
+    const mergeMarks = (a, b) => {
+      const out = { ...(a || {}) };
+      Object.keys(b || {}).forEach((key) => { if (b[key]) out[key] = b[key]; });
+      return out;
+    };
+    const earlier = (a, b) => {
+      if (!a) return b || null;
+      if (!b) return a;
+      return recordTime(a) <= recordTime(b) ? a : b;
+    };
+    return {
+      ...left,
+      ...right,
+      unitIndex: furthest(left.unitIndex, right.unitIndex),
+      pairIndex: furthest(left.pairIndex, right.pairIndex),
+      setByExercise: mergeCounts(left.setByExercise, right.setByExercise),
+      extraSets: mergeCounts(left.extraSets, right.extraSets),
+      warmups: mergeCounts(left.warmups, right.warmups),
+      skippedSets: mergeMarks(left.skippedSets, right.skippedSets),
+      skippedExercises: mergeMarks(left.skippedExercises, right.skippedExercises),
+      supersetMode: mergeMarks(left.supersetMode, right.supersetMode),
+      // Either device may shorten the workout, and shortening is not undone by the other
+      // device not having heard about it.
+      shortened: Boolean(left.shortened || right.shortened),
+      startedAt: earlier(left.startedAt, right.startedAt),
+      // Either side may end it. Whoever got there first owns it, so the other device can say
+      // who finished rather than silently reopening a workout that is over.
+      finishedAt: earlier(left.finishedAt, right.finishedAt),
+      finishedBy: recordTime(left.finishedAt) && (!right.finishedAt || recordTime(left.finishedAt) <= recordTime(right.finishedAt))
+        ? (left.finishedBy || "") : (right.finishedBy || left.finishedBy || ""),
+      // Purely local UI state. Carrying another device's half-typed row across would put a
+      // stray edit box on someone's screen.
+      editingSetByExercise: {},
+    };
+  }
+
+  function mergeBundlePayload(recordType, current, incoming) {
+    const left = current && typeof current === "object" ? current : {};
+    const right = incoming && typeof incoming === "object" ? incoming : {};
+    if (!Object.keys(left).length) return right;
+    if (!Object.keys(right).length) return left;
+
+    if (recordType === "client_plan") {
+      const leftAssignments = Array.isArray(left.assignments) ? left.assignments : left.assignment ? [left.assignment] : [];
+      const rightAssignments = Array.isArray(right.assignments) ? right.assignments : right.assignment ? [right.assignment] : [];
+      const merged = {
+        ...left,
+        ...right,
+        version: Math.max(Number(left.version || 0), Number(right.version || 0), 3),
+        profile: newestObject(left.profile, right.profile),
+        assignments: mergeRecords(leftAssignments, rightAssignments),
+        programs: mergeRecords(left.programs, right.programs),
+        inBodyScans: mergeRecords(left.inBodyScans, right.inBodyScans),
+        bodyGoals: mergeRecords(left.bodyGoals, right.bodyGoals),
+        athleteMetrics: mergeRecords(left.athleteMetrics, right.athleteMetrics),
+        mentalPlans: mergeRecords(left.mentalPlans, right.mentalPlans),
+        progressReceipts: mergeRecords(left.progressReceipts, right.progressReceipts),
+        clientCoachNotes: mergeRecords(left.clientCoachNotes, right.clientCoachNotes),
+        calendarEvents: mergeRecords(left.calendarEvents, right.calendarEvents),
+        summaryMeta: { ...(left.summaryMeta || {}), ...(right.summaryMeta || {}) },
+        wearableConnections: { ...(left.wearableConnections || {}), ...(right.wearableConnections || {}) },
+        savedAt: recordTime(right.savedAt) >= recordTime(left.savedAt) ? right.savedAt : left.savedAt
+      };
+      merged.assignment = merged.assignments[0] || null;
+      return merged;
+    }
+
+    if (recordType === "client_activity") {
+      const leftStates = Array.isArray(left.assignmentStates) ? left.assignmentStates : left.assignmentState ? [left.assignmentState] : [];
+      const rightStates = Array.isArray(right.assignmentStates) ? right.assignmentStates : right.assignmentState ? [right.assignmentState] : [];
+      const merged = {
+        ...left,
+        ...right,
+        version: Math.max(Number(left.version || 0), Number(right.version || 0), 3),
+        progress: mergeRecords(left.progress, right.progress),
+        checkIns: mergeRecords(left.checkIns, right.checkIns),
+        messages: mergeRecords(left.messages, right.messages),
+        progressReceiptResponses: mergeRecords(left.progressReceiptResponses, right.progressReceiptResponses),
+        workoutRequests: mergeRecords(left.workoutRequests, right.workoutRequests),
+        daily: { ...(left.daily || {}), ...(right.daily || {}) },
+        activeWorkout: mergeActiveWorkout(left.activeWorkout, right.activeWorkout),
+        assignmentStates: mergeRecords(leftStates, rightStates),
+        savedAt: recordTime(right.savedAt) >= recordTime(left.savedAt) ? right.savedAt : left.savedAt
+      };
+      merged.assignmentState = merged.assignmentStates[0] || null;
+      if (meaningfulIntake(left.clientIntake) && meaningfulIntake(right.clientIntake)) {
+        merged.clientIntake = intakeTime(right.clientIntake, right) >= intakeTime(left.clientIntake, left) ? right.clientIntake : left.clientIntake;
+      } else if (meaningfulIntake(left.clientIntake)) merged.clientIntake = left.clientIntake;
+      return merged;
+    }
+
+    if (recordType === "organization_snapshot") {
+      return {
+        ...left,
+        ...right,
+        profileRequests: mergeRecords(left.profileRequests, right.profileRequests),
+        teams: mergeRecords(left.teams, right.teams),
+        marketPrograms: mergeRecords(left.marketPrograms, right.marketPrograms),
+        automations: mergeRecords(left.automations, right.automations),
+        automationAlerts: mergeRecords(left.automationAlerts, right.automationAlerts),
+        exerciseLibraryEdits: mergeRecords(left.exerciseLibraryEdits, right.exerciseLibraryEdits),
+        ownerRequests: mergeRecords(left.ownerRequests, right.ownerRequests),
+        coachTaskClaims: mergeRecords(left.coachTaskClaims, right.coachTaskClaims),
+        coachNotes: mergeRecords(left.coachNotes, right.coachNotes),
+        calendarAudit: mergeRecords(left.calendarAudit, right.calendarAudit),
+        calendarNotices: mergeRecords(left.calendarNotices, right.calendarNotices),
+        calendarTeamEvents: mergeRecords(left.calendarTeamEvents, right.calendarTeamEvents),
+        gymBrand: { ...(left.gymBrand || {}), ...(right.gymBrand || {}) },
+        gymEquipment: { ...(left.gymEquipment || {}), ...(right.gymEquipment || {}) },
+        attentionState: { ...(left.attentionState || {}), ...(right.attentionState || {}) },
+        savedAt: recordTime(right.savedAt) >= recordTime(left.savedAt) ? right.savedAt : left.savedAt
+      };
+    }
+
+    return { ...left, ...right };
+  }
+
+  function cloudStatus(label, state) {
+    const target = document.getElementById("cloudStatus");
+    if (!target) return;
+    target.textContent = label;
+    target.dataset.state = state || "";
+    target.title = label;
+  }
+
+  function authMessage(message, isError) {
+    const target = document.getElementById("cloudAuthMessage");
+    if (!target) return;
+    target.textContent = message || "";
+    target.classList.toggle("error", Boolean(isError));
+  }
+
+  const INVITE_SOURCES = ["fit4life_staff_invite", "fit4life_trainer_invite"];
+  let claimedInviteThisSession = false;
+
+  // Only an account that was created by an invite is asked, and only until it has one.
+  function needsFirstPassword() {
+    if (!cloudUser) return false;
+    const meta = cloudUser.user_metadata || {};
+    if (meta.fit4life_password_set === true) return false;
+    return claimedInviteThisSession || INVITE_SOURCES.includes(meta.registration_source);
+  }
+
+  window.fit4lifeCloudSaveFirstPassword = async function fit4lifeCloudSaveFirstPassword() {
+    const first = document.getElementById("cloudFirstPassword");
+    const again = document.getElementById("cloudFirstPasswordConfirm");
+    const button = document.getElementById("cloudFirstPasswordSubmit");
+    const password = first ? String(first.value || "") : "";
+    if (password.length < 8) { authMessage("Use a password with at least 8 characters.", true); return false; }
+    if (!again || password !== String(again.value || "")) { authMessage("The two passwords do not match.", true); return false; }
+    if (button) { button.disabled = true; button.textContent = "Saving…"; }
+    try {
+      // The flag rides along with the password so the two can never disagree.
+      const response = await cloudClient.auth.updateUser({ password, data: { fit4life_password_set: true } });
+      if (response.error) {
+        authMessage(response.error.message || "That password could not be saved.", true);
+        return false;
+      }
+      if (response.data && response.data.user) cloudUser = response.data.user;
+      claimedInviteThisSession = false;
+      if (first) first.value = "";
+      if (again) again.value = "";
+      authMessage("", false);
+      showAuthGate(false);
+      if (typeof routeAuthenticatedWorkspace === "function") routeAuthenticatedWorkspace();
+      if (typeof showToast === "function") showToast("Password saved. Use it with your email from now on.");
+      return true;
+    } catch (error) {
+      authMessage((error && error.message) || "That password could not be saved.", true);
+      return false;
+    } finally {
+      if (button) { button.disabled = false; button.textContent = "Save password and continue"; }
+    }
+  };
+
+  function showAuthGate(show) {
+    const gate = document.getElementById("cloudAuthGate");
+    if (gate) gate.classList.toggle("open", Boolean(show));
+    document.body.classList.toggle("cloud-auth-locked", Boolean(show));
+  }
+
+  function setText(id, value) {
+    const target = document.getElementById(id);
+    if (target) target.textContent = value || "";
+  }
+
+  function showAuthMode(mode) {
+    authMode = mode || "signin";
+    const panels = {
+      signin: "cloudSignInPanel",
+      signup: "cloudSignUpPanel",
+      trainer_signup: "cloudTrainerSignUpPanel",
+      reset: "cloudResetPanel",
+      update: "cloudUpdatePasswordPanel",
+      first_password: "cloudFirstPasswordPanel",
+      pending: "cloudPendingPanel"
+    };
+    Object.keys(panels).forEach((key) => {
+      const panel = document.getElementById(panels[key]);
+      if (panel) panel.classList.toggle("open", key === authMode);
+    });
+    // The sign-in explainer is about creating an account; they already have one.
+    document.body.classList.toggle("cloud-first-password", authMode === "first_password");
+    const tabs = document.getElementById("cloudAuthTabs");
+    if (tabs) {
+      tabs.style.display = ["signin", "signup"].includes(authMode) ? "grid" : "none";
+      tabs.querySelectorAll("button[data-auth-mode]").forEach((button) => button.classList.toggle("on", button.dataset.authMode === authMode));
+    }
+    const copy = {
+      signin: ["Sign in to your workspace", "Access your workouts and progress from any device."],
+      signup: ["Create your client account", "Use your BYU-I email, verify the message, then complete the required Trainer Consultation."],
+      trainer_signup: ["Request trainer access", "Create a verified login, then wait for an approved gym trainer or owner to confirm trainer permissions."],
+      reset: ["Reset your password", "We will email you a secure link to choose a new password."],
+      update: ["Choose a new password", "Enter a new password for your training account."],
+      first_password: ["Choose your password", "You are signed in. Set a password now so you can get back in on any device."],
+      pending: ["Account status", "Your secure login is active while your client access is reviewed."]
+    }[authMode] || ["Training account", "Secure shared training system."];
+    setText("cloudAuthTitle", copy[0]);
+    setText("cloudAuthIntro", copy[1]);
+    authMessage("", false);
+  }
+
+  window.fit4lifeCloudShowAuthMode = function fit4lifeCloudShowAuthMode(mode) {
+    showAuthMode(mode);
+    showAuthGate(true);
+  };
+
+  function requestMeta(request) {
+    const meta = document.getElementById("cloudPendingMeta");
+    if (!meta) return;
+    const rows = [];
+    if (request && request.full_name) rows.push(["Name", request.full_name]);
+    if (request && request.email) rows.push(["Email", request.email]);
+    if (request && request.username) rows.push(["Username", "@" + String(request.username).replace(/^@/, "")]);
+    if (request && request.requested_role) rows.push(["Requested access", request.requested_role === "trainer" ? "Trainer" : "Client"]);
+    if (request && request.status) rows.push(["Status", request.status.charAt(0).toUpperCase() + request.status.slice(1)]);
+    meta.innerHTML = rows.map((row) => "<div><span>" + row[0] + "</span><b>" + String(row[1]).replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '\"': "&quot;" }[character])) + "</b></div>").join("");
+  }
+
+  function showPendingRequest(request, needsVerification) {
+    showAuthMode("pending");
+    requestMeta(request || readJson("fit4life_pending_signup_v1", {}));
+    const status = request && request.status ? request.status : "pending";
+    const trainerRequest = request && request.requested_role === "trainer";
+    if (status === "rejected") {
+      setText("cloudPendingIcon", "!");
+      setText("cloudPendingTitle", "Request needs attention");
+      setText("cloudPendingCopy", request.review_note || "A trainer could not approve this request. Contact " + portalName() + " for help.");
+      setText("cloudPendingCheck", "Check status again");
+    } else if (needsVerification) {
+      setText("cloudPendingIcon", "✉");
+      setText("cloudPendingTitle", "Check your email");
+      setText("cloudPendingCopy", trainerRequest
+        ? "Open the verification email sent to your address. After verification, an approved gym trainer or owner can confirm access from the Trainer Access center."
+        : "Open the verification message sent to your BYU-I email. After verification, return here and sign in to complete the required Trainer Consultation.");
+      setText("cloudPendingCheck", "I verified my email");
+    } else if (trainerRequest) {
+      setText("cloudPendingIcon", "⏳");
+      setText("cloudPendingTitle", "Trainer approval pending");
+      setText("cloudPendingCopy", "Your email is verified. An approved gym trainer or owner must confirm this request before any client records become available.");
+      setText("cloudPendingCheck", "Check trainer approval");
+    } else {
+      setText("cloudPendingIcon", "✓");
+      setText("cloudPendingTitle", "Finish client activation");
+      setText("cloudPendingCopy", "Your BYU-I email is verified. Sign in again if needed; the app will connect your protected client profile and open the required Trainer Consultation.");
+      setText("cloudPendingCheck", "Open client workspace");
+    }
+    showAuthGate(true);
+  }
+
+  function refreshVisibleApp() {
+    try {
+      if (typeof refreshProfileSelects === "function") refreshProfileSelects();
+      if (typeof renderForms === "function") renderForms();
+      if (typeof renderProgressHistory === "function") renderProgressHistory();
+      if (typeof applyGymBrand === "function") applyGymBrand();
+      if (currentView === "trainer" && typeof renderTrainerHub === "function") renderTrainerHub(selectedTrainerClient || "");
+      if (String(currentView || "").indexOf("client-") === 0 && typeof renderClientAppView === "function") renderClientAppView(currentView);
+      // Runs after cloudApplying has been cleared, so it covers the pull path the guard
+      // above deliberately skips.
+      if (typeof renderTrainerAttention === "function") renderTrainerAttention();
+    } catch (_) {}
+  }
+
+  async function loadPublicConfig() {
+    try {
+      const response = await fetch("/api/supabase-config", { cache: "no-store" });
+      const config = await response.json();
+      if (!response.ok || !config.configured || !config.url || !config.key) throw new Error(config.message || "Cloud connection is not configured.");
+      localStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify(config));
+      return config;
+    } catch (error) {
+      const cached = readJson(CONFIG_CACHE_KEY, null);
+      if (cached && cached.url && cached.key) return cached;
+      throw error;
+    }
+  }
+
+  async function getMembership() {
+    let response = await cloudClient
+      .from("memberships")
+      .select("organization_id, role, is_active")
+      .eq("user_id", cloudUser.id)
+      .eq("is_active", true)
+      .order("created_at", { ascending: true });
+
+    if (!response.error && Array.isArray(response.data)) {
+      const selected = pickMembership(response.data);
+      if (selected) return selected;
+      if (branchChoiceNeeded) return null;
+    }
+
+    // An invited trainer has no membership until they arrive. The invite carries the gym
+    // and the role; the database checks the address against the signed-in account, not the
+    // browser, so a link forwarded to someone else is worth nothing.
+    const staffClaim = await cloudClient.rpc("claim_my_fit4life_staff_invite");
+    if (!staffClaim.error && staffClaim.data === true) {
+      claimedInviteThisSession = true;
+      const afterInvite = await cloudClient
+        .from("memberships")
+        .select("organization_id, role, is_active")
+        .eq("user_id", cloudUser.id)
+        .eq("is_active", true);
+      if (!afterInvite.error && Array.isArray(afterInvite.data)) {
+        const claimed = pickMembership(afterInvite.data);
+        if (claimed) return claimed;
+        if (branchChoiceNeeded) return null;
+      }
+    }
+
+    const claim = portalOrganizationId
+      ? await cloudClient.rpc("claim_my_client_profile_for_org", { target_organization: portalOrganizationId })
+      : await cloudClient.rpc("claim_my_client_profile");
+    if (claim.error) {
+      const activation = await cloudClient.rpc("activate_my_fit4life_client_account");
+      if (activation.error) return null;
+    }
+
+    response = await cloudClient
+      .from("memberships")
+      .select("organization_id, role, is_active")
+      .eq("user_id", cloudUser.id)
+      .eq("is_active", true);
+    if (response.error || !Array.isArray(response.data)) return null;
+    return pickMembership(response.data);
+  }
+
+  async function getMyRegistrationRequest() {
+    if (!cloudClient || !cloudUser) return null;
+    const response = await cloudClient
+      .from("registration_requests")
+      .select("*")
+      .eq("user_id", cloudUser.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (response.error) {
+      if (response.error.code === "42P01") return null;
+      console.error("Registration request lookup failed", response.error);
+      return null;
+    }
+    return response.data || null;
+  }
+
+  // Self-signup has to stand on its own - an invite is a convenience, not the only way in.
+  // Nothing in the app has ever written this table; it was left entirely to a database
+  // trigger, and when that did not fire the client sat on a "pending" screen for a request
+  // that did not exist while no trainer could see them. Created here so the route works
+  // whether or not a trigger also does it. Only ever called after a lookup found nothing.
+  async function createMyRegistrationRequest() {
+    if (!cloudClient || !cloudUser) return null;
+    const meta = cloudUser.user_metadata || {};
+    const row = {
+      user_id: cloudUser.id,
+      email: normalizedEmail(cloudUser.email || ""),
+      full_name: meta.full_name || "",
+      requested_role: meta.requested_role === "trainer" ? "trainer" : "client",
+      status: "pending"
+    };
+    if (portalOrganizationId) row.organization_id = portalOrganizationId;
+    const response = await cloudClient.from("registration_requests").insert(row).select().maybeSingle();
+    if (response.error) {
+      // 42P01 missing table, 42501 RLS refusal. Both mean the database is not set up for
+      // self-signup yet; neither deserves an alarming error on a client's device.
+      if (response.error.code !== "42P01" && response.error.code !== "42501") {
+        console.error("Registration request could not be created", response.error);
+      }
+      return null;
+    }
+    return response.data || null;
+  }
+
+  async function loadTrainerRegistrationRequests() {
+    if (!cloudClient || !cloudOrganizationId || !(cloudRole === "owner" || cloudRole === "trainer")) return [];
+    const response = await cloudClient
+      .from("registration_requests")
+      .select("*")
+      .eq("organization_id", cloudOrganizationId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+    if (response.error) {
+      if (response.error.code !== "42P01") console.error("Registration queue failed", response.error);
+      cloudRegistrationRequests = [];
+    } else {
+      cloudRegistrationRequests = response.data || [];
+    }
+    window.fit4lifeCloudRegistrationRequests = cloudRegistrationRequests.slice();
+    try { if (typeof renderProfileRequests === "function") renderProfileRequests(); } catch (_) {}
+    // The request queue is the ONLY attention count not derived from local storage, so it
+    // is the only one that can go stale after a change. Nothing in this file repainted it,
+    // which left the sidebar badge frozen after approving or rejecting an account until a
+    // reload. Skipped while a pull is being applied: the attention snapshot writes to local
+    // storage, and a write in that window would not be queued for upload.
+    if (!cloudApplying) { try { if (typeof renderTrainerAttention === "function") renderTrainerAttention(); } catch (_) {} }
+    return cloudRegistrationRequests;
+  }
+  window.fit4lifeCloudRefreshRegistrationRequests = loadTrainerRegistrationRequests;
+
+  async function loadOrganizationSettings() {
+    if (!cloudClient || !cloudOrganizationId) return null;
+    if (organizationSettingsLoad) return organizationSettingsLoad;
+    organizationSettingsLoad = (async () => {
+      const response = await cloudClient
+        .from("organizations")
+        .select("id,slug,name,org_type,modules,config,is_template,brand_config,equipment_config,public_registration_enabled")
+        .eq("id", cloudOrganizationId)
+        .maybeSingle();
+      if (response.error || !response.data) {
+        if (response.error) console.error("Gym settings could not be loaded", response.error);
+        return null;
+      }
+      cloudOrganizationSlug = response.data.slug || portalOrganizationSlug;
+      window.fit4lifeCloudOrganizationId = cloudOrganizationId;
+      window.fit4lifeCloudOrganizationSlug = cloudOrganizationSlug;
+      applyPortalContext({
+        organization_id: response.data.id,
+        slug: response.data.slug,
+        name: response.data.name,
+        brand_config: response.data.brand_config,
+        equipment_config: response.data.equipment_config,
+        public_registration_enabled: response.data.public_registration_enabled,
+        org_type: response.data.org_type,
+        modules: response.data.modules,
+        config: response.data.config,
+        is_template: response.data.is_template
+      });
+      lastOrganizationSettingsLoadedAt = Date.now();
+      return response.data;
+    })();
+    try {
+      return await organizationSettingsLoad;
+    } finally {
+      organizationSettingsLoad = null;
+    }
+  }
+  window.fit4lifeCloudRefreshOrganizationSettings = loadOrganizationSettings;
+
+  function scheduleOrganizationSettingsPull(delay) {
+    if (!cloudReady || !cloudOrganizationId) return;
+    clearTimeout(cloudOrganizationPullTimer);
+    cloudOrganizationPullTimer = setTimeout(async () => {
+      const before = readJson(CLOUD_KEYS.gymBrand, {});
+      const loaded = await loadOrganizationSettings();
+      const after = readJson(CLOUD_KEYS.gymBrand, {});
+      if (loaded && JSON.stringify(before) !== JSON.stringify(after) && typeof showToast === "function") showToast("Portal theme updated for this gym");
+    }, Number.isFinite(delay) ? delay : 250);
+  }
+
+  function refreshOrganizationSettingsIfStale(force) {
+    if (typeof document !== "undefined" && document.hidden) return;
+    if (!force && Date.now() - lastOrganizationSettingsLoadedAt < 45000) return;
+    if (!cloudReady || !cloudOrganizationId) {
+      if (cloudClient) loadPortalContext();
+      return;
+    }
+    scheduleOrganizationSettingsPull(0);
+  }
+
+  function startOrganizationSettingsRefresh() {
+    clearInterval(cloudOrganizationRefreshTimer);
+    cloudOrganizationRefreshTimer = setInterval(() => refreshOrganizationSettingsIfStale(false), 60000);
+    if (!organizationRefreshListenersBound) {
+      organizationRefreshListenersBound = true;
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshOrganizationSettingsIfStale(true); });
+      window.addEventListener("focus", () => refreshOrganizationSettingsIfStale(false));
+      window.addEventListener("online", () => refreshOrganizationSettingsIfStale(true));
+    }
+  }
+
+  window.fit4lifeCloudSaveOrganizationSettings = async function fit4lifeCloudSaveOrganizationSettings(brand, equipment) {
+    window.fit4lifeCloudOrganizationSettingsError = "";
+    if (!cloudClient || !cloudOrganizationId || cloudRole !== "owner") {
+      window.fit4lifeCloudOrganizationSettingsError = "Only the gym owner can change shared branding and equipment";
+      if (typeof showToast === "function") showToast(window.fit4lifeCloudOrganizationSettingsError);
+      return false;
+    }
+    if (!brand || typeof brand !== "object" || !equipment || typeof equipment !== "object") {
+      window.fit4lifeCloudOrganizationSettingsError = "The shared gym settings were incomplete and could not be published.";
+      if (typeof showToast === "function") showToast(window.fit4lifeCloudOrganizationSettingsError);
+      return false;
+    }
+    let response = await cloudClient.rpc("update_my_organization_setup", {
+      target_organization: cloudOrganizationId,
+      new_brand_config: brand,
+      new_equipment_config: equipment
+    });
+    const rpcMissing = Boolean(response.error && (response.error.code === "PGRST202" || /could not find the function|schema cache/i.test(String(response.error.message || ""))));
+    if (rpcMissing) {
+      response = await cloudClient
+        .from("organizations")
+        .update({ brand_config:brand,equipment_config:equipment })
+        .eq("id",cloudOrganizationId)
+        .select("id,slug,name,org_type,modules,config,is_template,brand_config,equipment_config,public_registration_enabled")
+        .maybeSingle();
+    }
+    let saved = !response.error && Array.isArray(response.data) ? response.data[0] : response.data;
+    if (saved && saved.id && !saved.organization_id) saved = { ...saved,organization_id:saved.id };
+    if (response.error || !saved) {
+      window.fit4lifeCloudOrganizationSettingsError = response.error && response.error.message || "Gym settings could not be saved";
+      if (typeof showToast === "function") showToast(window.fit4lifeCloudOrganizationSettingsError);
+      return false;
+    }
+    applyPortalContext(saved);
+    lastOrganizationSettingsLoadedAt = Date.now();
+    queueCloudSync("organization");
+    window.fit4lifeCloudOrganizationSettingsError = "";
+    if (typeof showToast === "function") showToast("Gym setup saved for every device");
+    return true;
+  };
+
+  function subscribeToPendingRegistration() {
+    if (!cloudClient || !cloudUser) return;
+    if (cloudRegistrationChannel) cloudClient.removeChannel(cloudRegistrationChannel);
+    cloudRegistrationChannel = cloudClient
+      .channel("fit4life-registration-" + cloudUser.id)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "registration_requests", filter: "user_id=eq." + cloudUser.id }, async () => {
+        const sessionResponse = await cloudClient.auth.getSession();
+        if (sessionResponse.data && sessionResponse.data.session) await handleSession(sessionResponse.data.session);
+      })
+      .subscribe();
+  }
+
+  function tableProfile(profile) {
+    return {
+      organization_id: cloudOrganizationId,
+      external_id: String(profile.id),
+      full_name: String(profile.name || "Client").trim(),
+      username: String(profile.username || "").replace(/^@/, "").trim().toLowerCase(),
+      email: normalizedEmail(profile.email) || null,
+      /* Both addresses reach the server, not just the BYU-I one. A client who came from the
+         booking import with a personal address has that in bookingEmail and nothing in email,
+         so this column was null for them - and claim_my_client_profile_for_org matches on it.
+         They could never claim a profile and so could never get in at all. */
+      ...(profilesHaveBookingEmail ? { booking_email: normalizedEmail(profile.bookingEmail) || null } : {}),
+      // Never blindly "active". This line un-archived every deleted profile: the delete
+      // archives the row, then the next push from ANY device that still holds the client
+      // locally upserts it back to active, and the following pull rebuilds it locally.
+      // Whatever the server already has is preserved; only genuinely new rows start active.
+      // Absent from the map means archived - the pull only maps active rows - so defaulting
+      // to "active" here un-archived them on the next push from any device.
+      status: (remoteProfilesByExternalId.get(String(profile.id)) || {}).status
+        || (archivedExternalIds.has(String(profile.id)) ? "archived" : "active"),
+      created_by: cloudUser.id
+    };
+  }
+
+  function cachedProfileFromRow(row) {
+    return {
+      id: row.external_id || row.id,
+      name: row.full_name,
+      username: row.username,
+      email: row.email || "",
+      bookingEmail: row.booking_email || "",
+      goals: ["general"],
+      trainingStyle: "auto",
+      cardioMode: "any",
+      cardioModes: ["any"],
+      experience: 1,
+      age: 30,
+      minutes: 60,
+      muscles: [],
+      injuries: [],
+      zones: [],
+      updatedAt: row.updated_at
+    };
+  }
+
+  async function ensureRemoteProfiles(localProfiles) {
+    const profiles = (localProfiles || []).filter((profile) => profile && profile.id && profile.name);
+    if (!profiles.length) return [];
+    let rows = profiles.map(tableProfile);
+    let response = await cloudClient
+      .from("client_profiles")
+      .upsert(rows, { onConflict: "organization_id,external_id" })
+      .select("*");
+    /* This is the one place the database can tell us the column is not there yet: a write
+       naming it is rejected by Postgres itself, after RLS has already let us through. Retried
+       once without it so a push never fails for a migration that has not been run, and every
+       later push leaves it out too. */
+    if (response.error && noteMissingBookingEmail(response.error)) {
+      rows = profiles.map(tableProfile);
+      response = await cloudClient
+        .from("client_profiles")
+        .upsert(rows, { onConflict: "organization_id,external_id" })
+        .select("*");
+    }
+    if (response.error) throw response.error;
+    response.data.forEach((row) => remoteProfilesByExternalId.set(row.external_id, row));
+    return response.data;
+  }
+
+  async function hydrateRemoteProfileMap() {
+    const response = await cloudClient
+      .from("client_profiles")
+      .select("*")
+      .eq("organization_id", cloudOrganizationId);
+    if (response.error) throw response.error;
+    const visibleRows = accountVisibleProfileRows(response.data, cloudRole, cloudUser && cloudUser.id);
+    remoteProfilesByExternalId.clear();
+    visibleRows.forEach((row) => remoteProfilesByExternalId.set(String(row.external_id || row.id), row));
+    return visibleRows;
+  }
+
+  async function findSyncRecord(clientId, recordType, recordKey) {
+    let query = cloudClient
+      .from("sync_records")
+      .select("id,payload,version,updated_at")
+      .eq("organization_id", cloudOrganizationId)
+      .eq("record_type", recordType)
+      .eq("record_key", recordKey || "default");
+    query = clientId ? query.eq("client_id", clientId) : query.is("client_id", null);
+    const response = await query.limit(1).maybeSingle();
+    if (response.error) throw response.error;
+    return response.data;
+  }
+
+  async function saveSyncRecord(clientId, recordType, recordKey, payload) {
+    const cacheKey = syncRecordCacheKey(clientId, recordType, recordKey);
+    let expected = remoteSyncRecords.get(cacheKey) || null;
+    let nextPayload = payload;
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      if (!expected) expected = await findSyncRecord(clientId, recordType, recordKey);
+      const record = {
+        organization_id: cloudOrganizationId,
+        client_id: clientId || null,
+        record_type: recordType,
+        record_key: recordKey || "default",
+        payload: nextPayload,
+        deleted_at: null
+      };
+
+      if (!expected) {
+        const inserted = await cloudClient.from("sync_records").insert(record).select("id,payload,version,updated_at").maybeSingle();
+        if (!inserted.error && inserted.data) {
+          remoteSyncRecords.set(cacheKey, inserted.data);
+          return inserted.data;
+        }
+        if (!inserted.error || inserted.error.code === "23505") {
+          expected = await findSyncRecord(clientId, recordType, recordKey);
+          nextPayload = mergeBundlePayload(recordType, expected && expected.payload, nextPayload);
+          continue;
+        }
+        throw inserted.error;
+      }
+
+      const updated = await cloudClient
+        .from("sync_records")
+        .update(record)
+        .eq("id", expected.id)
+        .eq("version", expected.version)
+        .select("id,payload,version,updated_at")
+        .maybeSingle();
+      if (updated.error) throw updated.error;
+      if (updated.data) {
+        remoteSyncRecords.set(cacheKey, updated.data);
+        return updated.data;
+      }
+
+      const latest = await findSyncRecord(clientId, recordType, recordKey);
+      if (!latest) { expected = null; continue; }
+      nextPayload = mergeBundlePayload(recordType, latest.payload, nextPayload);
+      expected = latest;
+    }
+
+    throw new Error("This record changed on another device while it was saving. Its updates were preserved; retry the save.");
+  }
+
+  function profileProgress(profile) {
+    return readJson(CLOUD_KEYS.progress, []).filter((item) => itemBelongsToProfile(item, profile));
+  }
+
+  function planBundle(profile) {
+    const assignments = readJson(CLOUD_KEYS.assignments, []);
+    const profileAssignments = assignments.filter((item) => itemBelongsToProfile(item, profile));
+    const progress = profileProgress(profile);
+    const progressIds = new Set(progress.map((entry) => entry.id).filter(Boolean));
+    const summaryMeta = readJson(CLOUD_KEYS.summaryMeta, {});
+    const filteredMeta = {};
+    Object.keys(summaryMeta || {}).forEach((id) => { if (progressIds.has(id)) filteredMeta[id] = summaryMeta[id]; });
+    const wearables = readJson(CLOUD_KEYS.wearableConnections, {});
+    const wearableForProfile = wearables && wearables[profile.id] ? { [profile.id]: wearables[profile.id] } : {};
+    return {
+      version: 4,
+      profile,
+      assignments: profileAssignments,
+      assignment: profileAssignments[0] || null,
+      programs: readJson(CLOUD_KEYS.programs, []).filter((item) => itemBelongsToProfile(item, profile)),
+      inBodyScans: readJson(CLOUD_KEYS.scans, []).filter((item) => itemBelongsToProfile(item, profile)),
+      bodyGoals: readJson(CLOUD_KEYS.goals, []).filter((item) => itemBelongsToProfile(item, profile)),
+      summaryMeta: filteredMeta,
+      athleteMetrics: readJson(CLOUD_KEYS.metrics, []).filter((item) => itemBelongsToProfile(item, profile)),
+      mentalPlans: readJson(CLOUD_KEYS.mentalPlans, []).filter((item) => itemBelongsToProfile(item, profile)),
+      wearableConnections: wearableForProfile,
+      progressReceipts: readJson(CLOUD_KEYS.progressReceipts, []).filter((item) => itemBelongsToProfile(item, profile) && item.status === "published"),
+      clientCoachNotes: readJson(CLOUD_KEYS.coachNotes, []).filter((item) => itemBelongsToProfile(item, profile) && item.visibility === "client" && !item.archivedAt),
+      calendarEvents: readJson(CLOUD_KEYS.calendarEvents, []).filter((item) => itemBelongsToProfile(item, profile)),
+      savedAt: new Date().toISOString()
+    };
+  }
+
+  function activityBundle(profile) {
+    const assignments = readJson(CLOUD_KEYS.assignments, []);
+    const profileAssignments = assignments.filter((item) => itemBelongsToProfile(item, profile));
+    const daily = readJson(CLOUD_KEYS.clientDaily, {});
+    const dailyForProfile = {};
+    Object.keys(daily || {}).forEach((key) => {
+      if (key === profile.id || key.indexOf(profile.id + ":") === 0) dailyForProfile[key] = daily[key];
+    });
+    const activeWorkout = readJson(CLOUD_KEYS.activeWorkout, null);
+    const consultation = profile.consultation || {};
+    return {
+      version: 4,
+      profileId: profile.id,
+      clientIntake: profile.intake || {},
+      clientIntakeUpdatedAt: profile.intake && profile.intake.updatedAt || null,
+      clientConsultation: consultation,
+      clientConsultationUpdatedAt: consultation.updatedAt || consultation.submittedAt || null,
+      clientConsultationProfile: consultation.status === "submitted" ? {
+        sourceSubmittedAt:consultation.lastClientSubmittedAt || consultation.submittedAt || null,
+        phone:profile.phone || "",contactPhone:profile.contactPhone || "",age:profile.age,experience:profile.experience,goals:profile.goals || [],trainingStyle:profile.trainingStyle || "auto",
+        pastPhysicalActivities:profile.pastPhysicalActivities || "",fitnessInterests:profile.fitnessInterests || [],usualTrainingRpe:profile.usualTrainingRpe || null,coachingPriorities:profile.coachingPriorities || [],coachingPreferenceNote:profile.coachingPreferenceNote || "",
+        favoriteExerciseNotes:profile.favoriteExerciseNotes || "",leastFavoriteExerciseNotes:profile.leastFavoriteExerciseNotes || "",unfamiliarMovements:profile.unfamiliarMovements || "",
+        consultationDerivedInjuries:profile.consultationDerivedInjuries || [],manualInjuries:profile.manualInjuries || [],injuries:profile.injuries || [],limitationAssessments:profile.limitationAssessments || {},consultationLimitationDetails:profile.consultationLimitationDetails || "",limitationReviewRequired:Boolean(profile.limitationReviewRequired),
+        consultationDerivedPreferenceIds:profile.consultationDerivedPreferenceIds || [],exercisePreferences:profile.exercisePreferences || {},updatedAt:profile.updatedAt || consultation.updatedAt || null
+      } : {},
+      clientFeedbackProfile: {
+        lastReview:profile.lastReview || null,
+        workoutFeedbackHistory:profile.workoutFeedbackHistory || [],
+        exercisePreferenceEvidence:profile.exercisePreferenceEvidence || [],
+        exercisePreferences:profile.exercisePreferences || {},
+        injuries:profile.injuries || [],
+        updatedAt:profile.updatedAt || null
+      },
+      progress: profileProgress(profile),
+      checkIns: readJson(CLOUD_KEYS.checkins, []).filter((item) => itemBelongsToProfile(item, profile)),
+      messages: readJson(CLOUD_KEYS.clientMessages, []).filter((item) => itemBelongsToProfile(item, profile)),
+      progressReceiptResponses: readJson(CLOUD_KEYS.progressReceiptResponses, []).filter((item) => itemBelongsToProfile(item, profile)),
+      workoutRequests: readJson(CLOUD_KEYS.workoutRequests, []).filter((item) => itemBelongsToProfile(item, profile)),
+      daily: dailyForProfile,
+      activeWorkout: activeWorkout && activeWorkout.profileId === profile.id ? activeWorkout : null,
+      assignmentStates: profileAssignments.map((assignment) => ({
+        id: assignment.id,
+        profileId: profile.id,
+        status: assignment.status,
+        startedAt: assignment.startedAt || null,
+        completedAt: assignment.completedAt || null,
+        reviewedAt: assignment.reviewedAt || null,
+        clientReview: assignment.clientReview || null,
+        updatedAt: assignment.updatedAt || assignment.completedAt || assignment.startedAt || assignment.assignedAt || null
+      })),
+      assignmentState: profileAssignments[0] ? {
+        id: profileAssignments[0].id,
+        profileId: profile.id,
+        status: profileAssignments[0].status,
+        startedAt: profileAssignments[0].startedAt || null,
+        completedAt: profileAssignments[0].completedAt || null,
+        reviewedAt: profileAssignments[0].reviewedAt || null,
+        clientReview: profileAssignments[0].clientReview || null,
+        updatedAt: profileAssignments[0].updatedAt || profileAssignments[0].completedAt || profileAssignments[0].startedAt || profileAssignments[0].assignedAt || null
+      } : null,
+      savedAt: new Date().toISOString()
+    };
+  }
+
+  function organizationBundle() {
+    return {
+      version: 2,
+      profileRequests: readJson(CLOUD_KEYS.requests, []),
+      gymBrand: readJson(CLOUD_KEYS.gymBrand, {}),
+      gymEquipment: readJson(CLOUD_KEYS.gymEquipment, {}),
+      teams: readJson(CLOUD_KEYS.teams, []),
+      marketPrograms: readJson(CLOUD_KEYS.marketPrograms, []),
+      automations: readJson(CLOUD_KEYS.automations, []),
+      automationAlerts: readJson(CLOUD_KEYS.automationAlerts, []),
+      attentionState: readJson(CLOUD_KEYS.attentionState, {}),
+      exerciseLibraryEdits: readJson(CLOUD_KEYS.exerciseLibraryEdits, []),
+      ownerRequests: readJson(CLOUD_KEYS.ownerRequests, []),
+      coachTaskClaims: readJson(CLOUD_KEYS.coachTaskClaims, []),
+      coachNotes: readJson(CLOUD_KEYS.coachNotes, []),
+      calendarAudit: readJson(CLOUD_KEYS.calendarAudit, []),
+      calendarNotices: readJson(CLOUD_KEYS.calendarNotices, []),
+      calendarTeamEvents: readJson(CLOUD_KEYS.calendarEvents, []).filter((item) => !item.profileId),
+      savedAt: new Date().toISOString()
+    };
+  }
+
+  async function pushTrainerState(scopes) {
+    // Belt and braces: the seal should have stopped us reaching here at all, but nothing
+    // practice-branded may ever be upserted into client_profiles.
+    const profiles = stripPracticeProfiles(readJson(CLOUD_KEYS.profiles, []));
+    await ensureRemoteProfiles(profiles);
+
+    if (scopes.has("all") || scopes.has("organization")) {
+      await saveSyncRecord(null, "organization_snapshot", "main", organizationBundle());
+    }
+
+    for (const profile of profiles) {
+      const remote = remoteProfilesByExternalId.get(String(profile.id));
+      if (!remote) continue;
+      if (scopes.has("all") || scopes.has("plan")) await saveSyncRecord(remote.id, "client_plan", "main", planBundle(profile));
+      if (scopes.has("all") || scopes.has("activity")) await saveSyncRecord(remote.id, "client_activity", "main", activityBundle(profile));
+    }
+  }
+
+  async function pushClientState() {
+    const profiles = readJson(CLOUD_KEYS.profiles, []);
+    const profile = profiles.find((item) => item && item.id) || null;
+    // Marked permanent: no amount of retrying creates a profile. Retrying it forever is what
+    // wedged the queue and pinned the status pill red for every client not yet set up.
+    if (!profile) { const missing = new Error("Your trainer-created profile is not linked yet."); missing.permanent = true; throw missing; }
+    const remote = remoteProfilesByExternalId.get(String(profile.id));
+    if (!remote) throw new Error("Your cloud profile is not available yet.");
+    await saveSyncRecord(remote.id, "client_activity", "main", activityBundle(profile));
+  }
+
+  async function pushPending() {
+
+    // practice mode - a walkthrough or the sandbox - runs on fake clients; none of it belongs on the server
+
+    if (practiceSealed()) return false;
+    if (!cloudReady || !cloudClient || !cloudUser || cloudApplying || cloudPushing) return false;
+    if (browserIsOffline()) {
+      persistPendingScopes();
+      cloudStatus("Offline · changes waiting", "offline");
+      return false;
+    }
+    const scopes = new Set(pendingScopes.size ? pendingScopes : ["all"]);
+    pendingScopes.clear();
+    persistPendingScopes();
+    cloudPushing = true;
+    cloudStatus("Saving…", "syncing");
+    try {
+      if (cloudRole === "owner" || cloudRole === "trainer") await pushTrainerState(scopes);
+      else await pushClientState();
+      persistPendingScopes();
+      cloudStatus("Saved across devices", "synced");
+      return true;
+    } catch (error) {
+      // Re-queueing a doomed write meant a client with no linked profile failed on every
+      // attempt, persisted the same scope each time, and could never clear the error - the
+      // stuck scope kept failing first even after their profile arrived.
+      if (error && error.permanent) {
+        persistPendingScopes();
+        cloudStatus("Waiting on your trainer", "offline");
+        console.warn("FIT 4 LIFE cloud save skipped", error.message);
+        return false;
+      }
+      scopes.forEach((scope) => pendingScopes.add(scope));
+      persistPendingScopes();
+      cloudStatus("Save waiting · tap account", "error");
+      console.error("FIT 4 LIFE cloud save failed", error);
+      return false;
+    } finally {
+      cloudPushing = false;
+    }
+  }
+
+  function queueCloudSync(scope) {
+    if (cloudApplying || scope === "none") return;
+    pendingScopes.add(scope || "all");
+    persistPendingScopes();
+    clearTimeout(cloudPushTimer);
+    cloudPushTimer = setTimeout(pushPending, 650);
+  }
+
+  async function flushCloudSync(scope) {
+    if (!cloudApplying) {
+      pendingScopes.add(scope || "all");
+      persistPendingScopes();
+    }
+    clearTimeout(cloudPushTimer);
+    if (!cloudReady || !cloudClient || !cloudUser) return false;
+    if (cloudPushing) {
+      const started = Date.now();
+      while (cloudPushing && Date.now() - started < 8000) await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+    return pushPending();
+  }
+
+  window.fit4lifeCloudSaveProfileNow = function fit4lifeCloudSaveProfileNow() {
+    return flushCloudSync(cloudRole === "client" ? "activity" : "plan");
+  };
+
+  function applyOrganizationBundle(payload) {
+    if (!payload) return;
+    writeJson(CLOUD_KEYS.requests, payload.profileRequests || []);
+    writeJson(CLOUD_KEYS.gymBrand, payload.gymBrand || {});
+    writeJson(CLOUD_KEYS.gymEquipment, payload.gymEquipment || {});
+    writeJson(CLOUD_KEYS.teams, payload.teams || []);
+    writeJson(CLOUD_KEYS.marketPrograms, payload.marketPrograms || []);
+    writeJson(CLOUD_KEYS.automations, payload.automations || []);
+    writeJson(CLOUD_KEYS.automationAlerts, payload.automationAlerts || []);
+    writeJson(CLOUD_KEYS.attentionState, payload.attentionState || {});
+    writeJson(CLOUD_KEYS.exerciseLibraryEdits, payload.exerciseLibraryEdits || []);
+    writeJson(CLOUD_KEYS.ownerRequests, payload.ownerRequests || []);
+    writeJson(CLOUD_KEYS.coachTaskClaims, payload.coachTaskClaims || []);
+    writeJson(CLOUD_KEYS.coachNotes, payload.coachNotes || []);
+    writeJson(CLOUD_KEYS.calendarAudit, payload.calendarAudit || []);
+    writeJson(CLOUD_KEYS.calendarNotices, payload.calendarNotices || []);
+    writeJson(CLOUD_KEYS.calendarEvents, mergeRecords(readJson(CLOUD_KEYS.calendarEvents, []),payload.calendarTeamEvents || []));
+    if (typeof window.applyExerciseLibraryEdits === "function") window.applyExerciseLibraryEdits();
+  }
+
+  function meaningfulIntake(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    return Object.keys(value).some((key) => {
+      const item = value[key];
+      if (Array.isArray(item)) return item.length > 0;
+      if (item && typeof item === "object") return Object.keys(item).length > 0;
+      return item !== "" && item != null && item !== false;
+    });
+  }
+
+  function intakeTime(intake,bundle) {
+    const value = intake && (intake.updatedAt || intake.submittedAt) || bundle && (bundle.clientIntakeUpdatedAt || bundle.savedAt) || "";
+    const parsed = Date.parse(value); return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function newestClientIntake(plan,activity) {
+    const planIntake = plan && plan.profile && plan.profile.intake || {}, activityIntake = activity && activity.clientIntake || {};
+    const planReady = meaningfulIntake(planIntake), activityReady = meaningfulIntake(activityIntake);
+    if (planReady && !activityReady) return planIntake;
+    if (activityReady && !planReady) return activityIntake;
+    if (!planReady && !activityReady) return {};
+    return intakeTime(activityIntake,activity) >= intakeTime(planIntake,plan) ? activityIntake : planIntake;
+  }
+
+  function consultationTime(consultation,bundle) {
+    const value = consultation && (consultation.updatedAt || consultation.lastClientSubmittedAt || consultation.submittedAt) || bundle && (bundle.clientConsultationUpdatedAt || bundle.savedAt) || "";
+    const parsed = Date.parse(value); return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function newestClientConsultation(plan,activity) {
+    const planValue = plan && plan.profile && plan.profile.consultation || {}, activityValue = activity && activity.clientConsultation || {};
+    const planReady = meaningfulIntake(planValue), activityReady = meaningfulIntake(activityValue);
+    if (planReady && !activityReady) return planValue;
+    if (activityReady && !planReady) return activityValue;
+    if (!planReady && !activityReady) return {};
+    return consultationTime(activityValue,activity) >= consultationTime(planValue,plan) ? activityValue : planValue;
+  }
+
+  function clientConsultationProfilePatch(plan,activity) {
+    const patch = activity && activity.clientConsultationProfile;
+    if (!patch || !meaningfulIntake(patch)) return {};
+    const planSubmission = plan && plan.profile && plan.profile.consultation && (plan.profile.consultation.lastClientSubmittedAt || plan.profile.consultation.submittedAt) || "";
+    if (planSubmission && Date.parse(planSubmission) >= Date.parse(patch.sourceSubmittedAt || 0)) return {};
+    const { sourceSubmittedAt, ...safePatch } = patch;
+    return safePatch;
+  }
+
+  function applyBundles(profileRows, records) {
+    const byClientAndType = new Map();
+    records.forEach((record) => {
+      byClientAndType.set((record.client_id || "organization") + "|" + record.record_type, record.payload || {});
+      remoteSyncRecords.set(syncRecordCacheKey(record.client_id, record.record_type, record.record_key), record);
+    });
+    const profiles = [];
+    let assignments = [];
+    let programs = [];
+    // Starting empty meant a pull rebuilt this list from the server alone and then wrote it
+    // over the phone's copy, deleting any set logged since the last successful upload - and
+    // the next push sent the shortened list back up. Seed from local so the merge can only
+    // add. Client-scoped: a client holds only their own entries, so this cannot resurrect a
+    // record a trainer deleted, which is why progressReceipts above is seeded the other way.
+    let progress = cloudRole === "client" ? readJson(CLOUD_KEYS.progress, []) : [];
+    let scans = [];
+    let goals = [];
+    let checkins = [];
+    let metrics = [];
+    let mentalPlans = [];
+    let messages = [];
+    let progressReceipts = (cloudRole === "owner" || cloudRole === "trainer")
+      ? readJson(CLOUD_KEYS.progressReceipts, []).filter((item) => item && item.status === "draft")
+      : [];
+    let progressReceiptResponses = [];
+    let summaryMeta = {};
+    let clientDaily = {};
+    let wearableConnections = {};
+    let coachNotes = [];
+    let calendarEvents = [];
+    let workoutRequests = [];
+    let clientActiveWorkout = null;
+    /* One slot could only ever hold one client's live workout, so with two people training at
+       once - normal in a rec gym - a trainer saw whichever arrived first and had no way to
+       reach the other. Collected per client instead. Derived from the pull and never pushed:
+       it is a read-only view of what each client's own device is doing. */
+    const liveWorkoutsByProfile = {};
+
+    profileRows.forEach((row) => { if (row.status === "archived") archivedExternalIds.add(String(row.external_id)); });
+    profileRows.filter((row) => (row.status || "active") === "active").forEach((row) => {
+      archivedExternalIds.delete(String(row.external_id));
+      remoteProfilesByExternalId.set(row.external_id, row);
+      const plan = byClientAndType.get(row.id + "|client_plan") || {};
+      const activity = byClientAndType.get(row.id + "|client_activity") || {};
+      const consultation = newestClientConsultation(plan,activity);
+      const localBase = {
+        ...(plan.profile || cachedProfileFromRow(row)),
+        ...clientConsultationProfilePatch(plan,activity)
+      };
+      const profile = {
+        ...localBase,
+        ...mergeFeedbackProfile(localBase, activity.clientFeedbackProfile),
+        id: row.external_id || row.id,
+        name: row.full_name,
+        username: row.username,
+        email: row.email || (plan.profile && plan.profile.email) || "",
+        intake: newestClientIntake(plan,activity),
+        consultation
+      };
+      profiles.push(profile);
+      const planAssignments = Array.isArray(plan.assignments) ? plan.assignments : plan.assignment ? [plan.assignment] : [];
+      assignments = mergeRecords(assignments, planAssignments);
+      programs = mergeRecords(programs, plan.programs);
+      scans = mergeRecords(scans, plan.inBodyScans);
+      goals = mergeRecords(goals, plan.bodyGoals);
+      metrics = mergeRecords(metrics, plan.athleteMetrics);
+      mentalPlans = mergeRecords(mentalPlans, plan.mentalPlans);
+      progressReceipts = mergeRecords(progressReceipts, plan.progressReceipts);
+      coachNotes = mergeRecords(coachNotes, plan.clientCoachNotes);
+      calendarEvents = mergeRecords(calendarEvents, plan.calendarEvents);
+      summaryMeta = Object.assign(summaryMeta, plan.summaryMeta || {});
+      wearableConnections = Object.assign(wearableConnections, plan.wearableConnections || {});
+      progress = mergeRecords(progress, activity.progress);
+      checkins = mergeRecords(checkins, activity.checkIns);
+      messages = mergeRecords(messages, activity.messages);
+      progressReceiptResponses = mergeRecords(progressReceiptResponses, activity.progressReceiptResponses);
+      workoutRequests = mergeRecords(workoutRequests, activity.workoutRequests);
+      clientDaily = Object.assign(clientDaily, activity.daily || {});
+      if (activity.activeWorkout) {
+        liveWorkoutsByProfile[profile.id] = activity.activeWorkout;
+        if (!clientActiveWorkout || profile.auth_user_id === cloudUser.id) clientActiveWorkout = activity.activeWorkout;
+      }
+
+      const assignmentStates = Array.isArray(activity.assignmentStates) ? activity.assignmentStates : activity.assignmentState ? [activity.assignmentState] : [];
+      assignmentStates.forEach((assignmentState) => {
+        const index = assignments.findIndex((assignment) => assignment.id === assignmentState.id);
+        if (index >= 0) assignments[index] = { ...assignments[index], ...assignmentState };
+      });
+    });
+
+    // If a practice client ever reached the server - from a build before the database was
+    // sealed - every pull would hand it back and a local purge could never win. Strip them
+    // on the way in, so the fix holds no matter what is still sitting in the table.
+    /* An empty result for a client means "this account is not linked to a profile yet", not
+       "you have no profiles" - and overwriting with nothing left them with no way back in,
+       because the lookup searches this same list. If a row was visible but archived, the wipe
+       still happens, so archiving a client does take effect on their device. */
+    const clientHasNoVisibleRow = cloudRole === "client" && !profiles.length && !profileRows.length;
+    if (!clientHasNoVisibleRow) writeJson(CLOUD_KEYS.profiles, stripPracticeProfiles(profiles));
+    writeJson(CLOUD_KEYS.assignments, assignments);
+    writeJson(CLOUD_KEYS.programs, programs);
+    writeJson(CLOUD_KEYS.progress, progress);
+    writeJson(CLOUD_KEYS.scans, scans);
+    writeJson(CLOUD_KEYS.goals, goals);
+    writeJson(CLOUD_KEYS.summaryMeta, summaryMeta);
+    writeJson(CLOUD_KEYS.checkins, checkins);
+    writeJson(CLOUD_KEYS.metrics, metrics);
+    writeJson(CLOUD_KEYS.mentalPlans, mentalPlans);
+    writeJson(CLOUD_KEYS.clientMessages, messages);
+    writeJson(CLOUD_KEYS.progressReceipts, progressReceipts);
+    writeJson(CLOUD_KEYS.progressReceiptResponses, progressReceiptResponses);
+    writeJson(CLOUD_KEYS.clientDaily, clientDaily);
+    writeJson(CLOUD_KEYS.wearableConnections, wearableConnections);
+    writeJson(CLOUD_KEYS.coachNotes, coachNotes);
+    writeJson(CLOUD_KEYS.calendarEvents, calendarEvents);
+    writeJson(CLOUD_KEYS.workoutRequests, workoutRequests);
+    writeJson(LIVE_WORKOUTS_KEY, liveWorkoutsByProfile);
+    /* Only a client's own device may have its active workout replaced by the pull. Doing it on
+       a trainer's device overwrote whatever slot their own app was using with a client's
+       session, which is not theirs to hold. */
+    if (cloudRole === "client") writeJson(CLOUD_KEYS.activeWorkout, clientActiveWorkout);
+
+    if (cloudRole === "client" && profiles.length) {
+      let existingActiveId = "";
+      try { existingActiveId = localStorage.getItem(CLOUD_KEYS.activeClient) || ""; } catch (_) {}
+      const stillValid = existingActiveId && profiles.some((item) => item.id === existingActiveId);
+      if (!stillValid) localStorage.setItem(CLOUD_KEYS.activeClient, profiles[0].id);
+    }
+  }
+
+  /* ============================================================
+     PRACTICE MODE SEAL
+     pushPending() was guarded, but it is not the only way to the
+     database - there are roughly twenty direct .from(...) writes
+     and .rpc(...) calls that bypass it entirely: approving a
+     registration, setting a trainer tier, deactivating a trainer,
+     saving gym-wide settings, archiving or deleting a client.
+     A trainer exploring those screens in practice would have hit
+     the live database for real.
+
+     Rather than guard twenty call sites and hope the next one
+     remembers, the client itself goes inert. In practice mode the
+     app is simply offline as far as Supabase is concerned - which
+     is what a sandbox should mean. Reads are blocked too, so real
+     clients cannot appear on screen either.
+     ============================================================ */
+  // Surfaced straight onto the screen by several callers, so it has to read like a sentence
+  // and say what to do about it - a trainer who forgot to leave Demo Mode was watching real
+  // invites silently fail while the app talked about "the account action signUp".
+  function practiceBlockedResult(label) {
+    return { data: null, error: { message: "Nothing was sent - the app is still in Demo Mode. Leave Demo Mode and try again."
+      + (label ? " (" + label + ")" : ""), practiceBlocked: true } };
+  }
+  function practiceBlockedQuery(label) {
+    const settled = Promise.resolve(practiceBlockedResult(label));
+    const stub = {
+      then: (onDone, onFail) => settled.then(onDone, onFail),
+      catch: (onFail) => settled.catch(onFail),
+      finally: (onEnd) => settled.finally(onEnd),
+    };
+    ["select","insert","upsert","update","delete","eq","neq","gt","gte","lt","lte","like","ilike","is","in",
+     "contains","or","and","not","filter","match","order","limit","range","single","maybeSingle","csv","abortSignal",
+     "returns","throwOnError","overrideTypes"].forEach((method) => { stub[method] = () => stub; });
+    return stub;
+  }
+  /* The flag is per-tab, but localStorage is shared. A second tab open on the same device
+     saw practice data in storage, believed it was real, and pushed it to the server - which
+     is how a practice client reaches client_profiles at all. The snapshot key exists for
+     exactly the lifetime of practice and every tab can see it, so it seals all of them, and
+     also seals a device whose tab died mid-practice until boot recovery runs. */
+  function practiceSealed() {
+    if (window.FIT4LIFE_PRACTICE_ACTIVE === true) return true;
+    try { return localStorage.getItem("fit4life_walkthrough_snapshot_v1") != null; } catch (_) { return false; }
+  }
+  /* Batman, Superman and Spider-Man, by the ids the practice roster uses and by the brand
+     stamped on anything saved during practice. Kept here rather than imported so the sync
+     layer defends itself even if the walkthrough script fails to load. */
+  const PRACTICE_PROFILE_IDS = ["walkthrough-practice-client", "practice-client-2", "practice-client-3"];
+  function stripPracticeProfiles(list) {
+    if (!Array.isArray(list)) return list;
+    return list.filter((profile) => profile
+      && profile._practice !== true
+      && !PRACTICE_PROFILE_IDS.includes(profile.id));
+  }
+  function sealClientDuringPractice(client) {
+    if (!client || client.__fit4lifePracticeSealed) return client;
+    const realFrom = client.from.bind(client);
+    const realRpc = client.rpc.bind(client);
+    client.from = function (table) {
+      if (practiceSealed()) return practiceBlockedQuery("a change to " + table);
+      return realFrom(table);
+    };
+    client.rpc = function (name, params, options) {
+      if (practiceSealed()) return practiceBlockedQuery(String(name));
+      return realRpc(name, params, options);
+    };
+    // .from and .rpc were wrapped; client.auth was not. signUp, signInWithOtp,
+    // resetPasswordForEmail and updateUser all create real accounts or send real email, and
+    // neither a snapshot restore nor a purge can take an email back.
+    const auth = client.auth;
+    if (auth) {
+      ["signUp", "signInWithOtp", "resetPasswordForEmail", "updateUser"].forEach((name) => {
+        const real = auth[name] && auth[name].bind(auth);
+        if (!real) return;
+        auth[name] = function () {
+          if (practiceSealed()) return Promise.resolve(practiceBlockedResult("the account action " + name));
+          return real.apply(auth, arguments);
+        };
+      });
+      // getSession, onAuthStateChange, refreshSession, signOut and signInWithPassword stay
+      // open on purpose - blocking those wedges sign-in and breaks session recovery.
+    }
+    client.__fit4lifePracticeSealed = true;
+    return client;
+  }
+
+  async function pullCloudState(initial) {
+    // A pull during practice would paint real clients over the sandbox for the trainer to
+    // see, and the restore would then throw the pulled data away. Stay local.
+    if (practiceSealed()) return;
+    if (!cloudClient || !cloudUser || cloudPushing) return;
+    // Anything still waiting to upload would be overwritten by what comes back. Send it first,
+    // and if that fails, do not pull at all - a failed save must never become a lost set.
+    if (pendingScopes.size) {
+      const saved = await pushPending();
+      if (!saved) { cloudStatus("Save waiting \u00b7 tap account", "error"); return; }
+    }
+    cloudStatus("Syncing…", "syncing");
+    try {
+      let profileResponse = await cloudClient
+        .from("client_profiles")
+        .select("*")
+        .eq("organization_id", cloudOrganizationId)
+        .order("created_at", { ascending: true });
+      if (profileResponse.error) throw profileResponse.error;
+
+      const isTrainer = cloudRole === "owner" || cloudRole === "trainer";
+      const localProfiles = readJson(CLOUD_KEYS.profiles, []);
+      const mayImportLegacyFit4Life = cloudOrganizationSlug === "fit-4-life"
+        && localStorage.getItem("fit4life_legacy_migration_complete_v1") !== "yes";
+      if (initial && isTrainer && mayImportLegacyFit4Life && profileResponse.data.length === 0 && localProfiles.length) {
+        cloudStatus("Uploading existing records…", "syncing");
+        await pushTrainerState(new Set(["all"]));
+        localStorage.setItem("fit4life_legacy_migration_complete_v1", "yes");
+        profileResponse = await cloudClient
+          .from("client_profiles")
+          .select("*")
+          .eq("organization_id", cloudOrganizationId)
+          .order("created_at", { ascending: true });
+        if (profileResponse.error) throw profileResponse.error;
+      }
+
+      const recordResponse = await cloudClient
+        .from("sync_records")
+        .select("id,client_id,record_type,record_key,payload,version,updated_at")
+        .eq("organization_id", cloudOrganizationId)
+        .is("deleted_at", null);
+      if (recordResponse.error) throw recordResponse.error;
+
+      /* A client sees only rows stamped with their auth_user_id. That stamp is applied by
+         claim_my_client_profile, which getMembership() only reaches for an account that has
+         no membership yet - so anyone who got a membership another way was never linked, saw
+         zero profiles, and landed back on the old lookup menu with the questionnaire skipped.
+         Ask for the link here instead, where the symptom actually shows up. */
+      let visibleProfileRows = accountVisibleProfileRows(profileResponse.data, cloudRole, cloudUser.id);
+      if (cloudRole === "client" && !visibleProfileRows.length && !clientProfileLinkTried) {
+        clientProfileLinkTried = true;
+        if (await linkOwnClientProfile()) {
+          const relinked = await cloudClient
+            .from("client_profiles")
+            .select("*")
+            .eq("organization_id", cloudOrganizationId)
+            .order("created_at", { ascending: true });
+          if (!relinked.error) {
+            profileResponse = relinked;
+            visibleProfileRows = accountVisibleProfileRows(relinked.data, cloudRole, cloudUser.id);
+          }
+        }
+      }
+      const visibleRecords = accountVisibleSyncRecords(recordResponse.data, visibleProfileRows, cloudRole);
+
+      cloudApplying = true;
+      remoteProfilesByExternalId.clear();
+      applyBundles(visibleProfileRows, visibleRecords);
+      if (isTrainer) {
+        const orgRecord = visibleRecords.find((record) => record.client_id == null && record.record_type === "organization_snapshot");
+        if (orgRecord) applyOrganizationBundle(orgRecord.payload);
+        await loadTrainerRegistrationRequests();
+      }
+      await loadOrganizationSettings();
+      cloudApplying = false;
+      refreshVisibleApp();
+      cloudStatus("Saved across devices", "synced");
+    } catch (error) {
+      cloudApplying = false;
+      cloudStatus(navigator.onLine ? "Sync needs attention" : "Offline · cached data", navigator.onLine ? "error" : "offline");
+      console.error("FIT 4 LIFE cloud load failed", error);
+      if (initial) authMessage(error.message || "The cloud records could not be loaded.", true);
+    }
+  }
+
+  function scheduleCloudPull() {
+    if (!cloudReady || cloudPushing) return;
+    clearTimeout(cloudPullTimer);
+    cloudPullTimer = setTimeout(() => pullCloudState(false), 450);
+  }  window.fit4lifeCloudPullNow = function fit4lifeCloudPullNow() { scheduleCloudPull(); };
+
+
+  function subscribeToChanges() {
+    if (cloudChannel) cloudClient.removeChannel(cloudChannel);
+    cloudChannel = cloudClient
+      .channel("fit4life-live-" + cloudUser.id)
+      .on("postgres_changes", { event: "*", schema: "public", table: "sync_records" }, scheduleCloudPull)
+      .on("postgres_changes", { event: "*", schema: "public", table: "client_profiles" }, scheduleCloudPull)
+      .on("postgres_changes", { event: "*", schema: "public", table: "registration_requests" }, () => loadTrainerRegistrationRequests())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "organizations", filter:"id=eq." + cloudOrganizationId }, () => scheduleOrganizationSettingsPull(120))
+      .subscribe();
+  }
+
+  function updateAccountUi() {
+    const button = document.getElementById("cloudAccountBtn");
+    if (!button) return;
+    if (!cloudUser) {
+      button.textContent = "Sign in";
+      button.onclick = () => { showAuthMode("signin"); showAuthGate(true); };
+      return;
+    }
+    button.textContent = (cloudRole === "owner" ? "Owner" : cloudRole === "trainer" ? "Trainer" : cloudRole === "client" ? "Client" : "Pending") + " · Sign out";
+    button.onclick = window.fit4lifeCloudSignOut;
+  }
+
+  async function handleSession(session) {
+    cloudUser = session && session.user ? session.user : null;
+    if (!cloudUser) {
+      cloudReady = false;
+      window.fit4lifeCloudReady = false;
+      window.fit4lifeCloudRole = "";
+      cloudRole = "";
+      clearCloudOrganizationContext();
+      publishCloudIdentity();
+      if (cloudRegistrationChannel && cloudClient) cloudClient.removeChannel(cloudRegistrationChannel);
+      cloudRegistrationChannel = null;
+      updateAccountUi();
+      if (authMode !== "signup" && authMode !== "trainer_signup" && authMode !== "reset" && authMode !== "update") showAuthMode("signin");
+      showAuthGate(true);
+      cloudStatus("Sign in to sync", "offline");
+      return;
+    }
+
+    authMessage("Confirming your gym access…", false);
+    const membership = await getMembership();
+    if (!membership) {
+      cloudReady = false;
+      window.fit4lifeCloudReady = false;
+      window.fit4lifeCloudRole = "";
+      cloudRole = "";
+      clearCloudOrganizationContext();
+      publishCloudIdentity();
+      const request = await getMyRegistrationRequest();
+      updateAccountUi();
+      if (request) {
+        showPendingRequest(request, false);
+        cloudStatus(
+          request.status === "rejected" ? "Registration needs attention" : request.requested_role === "trainer" ? "Trainer approval pending" : "Finish client activation",
+          request.status === "rejected" ? "error" : "syncing"
+        );
+        subscribeToPendingRegistration();
+      } else {
+        // No request on file. Make one, rather than showing a pending screen for nothing.
+        const created = await createMyRegistrationRequest();
+        if (created) {
+          showPendingRequest(created, false);
+          cloudStatus("Waiting for a trainer to approve you", "syncing");
+          subscribeToPendingRegistration();
+          return;
+        }
+        showPendingRequest({ email: cloudUser.email || "", status: "pending" }, false);
+        setText("cloudPendingIcon", "!");
+        setText("cloudPendingTitle", "No client access assigned");
+        setText("cloudPendingCopy", "This login exists, but it is not connected to a client profile or registration request for " + portalName() + ". Contact that gym's trainer.");
+        cloudStatus("Access not assigned", "error");
+      }
+      return;
+    }
+
+    applyMembershipContext(membership);
+    isolateSensitiveCacheForUser(cloudUser.id, cloudRole, cloudOrganizationId);
+    await loadOrganizationSettings();
+    if (cloudRole === "client") {
+      try { await cloudClient.rpc("complete_my_fit4life_registration"); } catch (_) {}
+    }
+    if (cloudRegistrationChannel) cloudClient.removeChannel(cloudRegistrationChannel);
+    cloudRegistrationChannel = null;
+    writeJson("fit4life_pending_signup_v1", null);
+    publishCloudIdentity();
+    if (cloudRole === "owner" || cloudRole === "trainer") {
+      try { sessionStorage.setItem("fit4life_trainer_unlocked", "yes"); } catch (_) {}
+    }
+    updateAccountUi();
+    cloudReady = true;
+    window.fit4lifeCloudReady = true;
+    announceCloudReady();
+    let safeToPull = true;
+    try {
+      await hydrateRemoteProfileMap();
+      if (pendingScopes.size) safeToPull = await pushPending();
+    } catch (error) {
+      safeToPull = false;
+      cloudStatus(browserIsOffline() ? "Offline · changes waiting" : "Sync needs attention", browserIsOffline() ? "offline" : "error");
+      console.error("FIT 4 LIFE pending-save recovery failed", error);
+    }
+    if (safeToPull) await pullCloudState(true);
+    else authMessage("Your saved-on-this-device changes are still waiting to upload. They were not replaced by older cloud data.", true);
+    if ((cloudRole === "owner" || cloudRole === "trainer") && window.fit4lifeCloudListTrainers) await window.fit4lifeCloudListTrainers();
+    subscribeToChanges();
+    startOrganizationSettingsRefresh();
+    authMessage("", false);
+    if (needsFirstPassword()) {
+      showAuthMode("first_password");
+      showAuthGate(true);
+      return;
+    }
+    showAuthGate(false);
+
+    if (typeof routeAuthenticatedWorkspace === "function") routeAuthenticatedWorkspace();
+    else if (cloudRole === "client") {
+      portalRole = "client";
+      if (typeof openClientTab === "function") openClientTab("home");
+    } else if (cloudRole === "owner" || cloudRole === "trainer") {
+      portalRole = "trainer";
+      if (typeof show === "function") show("trainer-menu");
+    }
+  }
+
+  window.fit4lifeCloudSignIn = async function fit4lifeCloudSignIn() {
+    if (!cloudClient) {
+      authMessage("The cloud connection is not ready yet.", true);
+      return false;
+    }
+    const email = normalizedEmail(document.getElementById("cloudAuthEmail").value);
+    const password = document.getElementById("cloudAuthPassword").value;
+    if (!email || !password) {
+      authMessage("Enter your email and password.", true);
+      return false;
+    }
+    const button = document.getElementById("cloudAuthSubmit");
+    button.disabled = true;
+    button.textContent = "Signing in…";
+    authMessage("", false);
+    try {
+      saveRememberSignInChoice();
+      const response = await cloudClient.auth.signInWithPassword({ email, password });
+      if (response.error) {
+        authMessage(response.error.message, true);
+        return false;
+      }
+      await handleSession(response.data.session);
+      return true;
+    } catch (error) {
+      authMessage("Could not reach the sign-in service. Check your connection and try again.", true);
+      return false;
+    } finally {
+      button.disabled = false;
+      button.textContent = "Sign in securely";
+    }
+  };
+
+  window.fit4lifeCloudSignUp = async function fit4lifeCloudSignUp() {
+    const fullName = String(document.getElementById("cloudSignUpName").value || "").trim().replace(/\s+/g, " ");
+    const username = String(document.getElementById("cloudSignUpUsername").value || "").trim().toLowerCase().replace(/^@/, "");
+    const email = normalizedEmail(document.getElementById("cloudSignUpEmail").value);
+    const password = document.getElementById("cloudSignUpPassword").value;
+    const confirmation = document.getElementById("cloudSignUpConfirm").value;
+    const consent = document.getElementById("cloudSignUpConsent").checked;
+    if (fullName.length < 2) {
+      authMessage("Enter your full name.", true);
+      return false;
+    }
+    if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(username)) {
+      authMessage("Choose a username with 3–40 letters, numbers, periods, underscores, or hyphens.", true);
+      return false;
+    }
+    if (!clientByuiEmail(email)) {
+      authMessage("Client accounts require a BYU-I email ending in @byui.edu. Trainers may use a personal or BYU-I email from the separate trainer request form.", true);
+      return false;
+    }
+    /* Signing up is trainer-initiated: the address has to already be on file as a client.
+       A typo then dies here instead of becoming a convincing-looking row in the approval
+       queue that somebody waves through.
+
+       Asked through a function that answers only yes or no. A public form that could ask
+       "is this address registered?" and get anything richer back would let anyone read the
+       roster one guess at a time.
+
+       If the function is not installed the signup is allowed through rather than blocking
+       everybody - the gate is simply off until the SQL is run, and it says so in the console. */
+    const preapproved = await cloudClient.rpc("fit4life_email_is_preapproved", {
+      check_email: email,
+      target_organization: portalOrganizationId || null
+    });
+    if (preapproved.error) {
+      console.warn("FIT 4 LIFE pre-approval check unavailable - allowing signup", preapproved.error.message || preapproved.error);
+    } else if (preapproved.data === false) {
+      authMessage("Your trainer has not added this address yet. Check the spelling, or ask them to add you.", true);
+      return false;
+    }
+    if (password.length < 8) {
+      authMessage("Use a password with at least 8 characters.", true);
+      return false;
+    }
+    if (password !== confirmation) {
+      authMessage("The passwords do not match.", true);
+      return false;
+    }
+    if (!consent) {
+      authMessage("Confirm that you will verify the message sent to your BYU-I email.", true);
+      return false;
+    }
+    if (!cloudClient) {
+      authMessage("The secure account service is still connecting. Try again in a moment.", true);
+      return false;
+    }
+    if (!portalPublicRegistrationEnabled) {
+      authMessage("This gym is not accepting public client account requests. Ask a trainer for an invitation.", true);
+      return false;
+    }
+    const button = document.getElementById("cloudSignUpSubmit");
+    button.disabled = true;
+    button.textContent = "Creating account…";
+    authMessage("Creating your secure client login…", false);
+    try {
+      const response = await cloudClient.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: authRedirectUrl(),
+          data: {
+            full_name: fullName,
+            username,
+            requested_role: "client",
+            registration_source: "fit4life_web",
+            organization_slug: portalOrganizationSlug || "fit-4-life"
+          }
+        }
+      });
+      if (response.error) {
+        const message = /already|registered|exists/i.test(response.error.message || "")
+          ? "If this email already has an account, sign in or use Forgot password. Otherwise, wait a minute and try again."
+          : response.error.message;
+        authMessage(message, true);
+        return false;
+      }
+      // Supabase's anti-enumeration behaviour answers SUCCESS for an address that already has
+      // an account: no session, no email sent, no error. The tell is an empty identities array
+      // on the returned user. Without this the person is sent to check an inbox nothing
+      // arrived in, and reads it as the app being broken.
+      const created = response.data && response.data.user;
+      if (created && Array.isArray(created.identities) && created.identities.length === 0) {
+        authMessage("That email already has an account. Sign in instead, or use Forgot password if you cannot remember it.", true);
+        return false;
+      }
+      const pending = { full_name: fullName, username, email, status: "pending", created_at: new Date().toISOString() };
+      writeJson("fit4life_pending_signup_v1", pending);
+      document.getElementById("cloudSignUpPassword").value = "";
+      document.getElementById("cloudSignUpConfirm").value = "";
+      if (response.data && response.data.session) await handleSession(response.data.session);
+      else showPendingRequest(pending, true);
+      return true;
+    } catch (error) {
+      authMessage("Could not reach the account service. Check your connection and try again.", true);
+      return false;
+    } finally {
+      button.disabled = false;
+      button.textContent = "Create client account";
+    }
+  };
+
+  window.fit4lifeCloudTrainerSignUp = async function fit4lifeCloudTrainerSignUp() {
+    if (!cloudClient) {
+      authMessage("The secure account service is still connecting. Try again in a moment.", true);
+      return false;
+    }
+    const fullName = String(document.getElementById("cloudTrainerSignUpName").value || "").trim().replace(/\s+/g, " ");
+    const email = normalizedEmail(document.getElementById("cloudTrainerSignUpEmail").value);
+    const password = document.getElementById("cloudTrainerSignUpPassword").value;
+    const confirmation = document.getElementById("cloudTrainerSignUpConfirm").value;
+    const consent = document.getElementById("cloudTrainerSignUpConsent").checked;
+    if (fullName.length < 2) {
+      authMessage("Enter your full name.", true);
+      return false;
+    }
+    if (!email || !email.includes("@")) {
+      authMessage("Enter a valid personal or BYU-I email address for the trainer request.", true);
+      return false;
+    }
+    if (password.length < 8) {
+      authMessage("Use a password with at least 8 characters.", true);
+      return false;
+    }
+    if (password !== confirmation) {
+      authMessage("The passwords do not match.", true);
+      return false;
+    }
+    if (!consent) {
+      authMessage("Confirm the email-verification and staff-confirmation requirements.", true);
+      return false;
+    }
+    const button = document.getElementById("cloudTrainerSignUpSubmit");
+    button.disabled = true;
+    button.textContent = "Submitting request…";
+    authMessage("Creating a restricted trainer-access request…", false);
+    try {
+      const response = await cloudClient.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: authRedirectUrl(),
+          data: {
+            full_name: fullName,
+            requested_role: "trainer",
+            registration_source: "fit4life_trainer_request",
+            organization_slug: portalOrganizationSlug || "fit-4-life"
+          }
+        }
+      });
+      if (response.error) {
+        const message = /already|registered|exists/i.test(response.error.message || "")
+          ? "If this email already has an account, sign in or use Forgot password. An approved trainer or owner can confirm a pending request for that verified login."
+          : response.error.message;
+        authMessage(message, true);
+        return false;
+      }
+      const pending = {
+        full_name: fullName,
+        email,
+        requested_role: "trainer",
+        status: "pending",
+        created_at: new Date().toISOString()
+      };
+      writeJson("fit4life_pending_signup_v1", pending);
+      document.getElementById("cloudTrainerSignUpPassword").value = "";
+      document.getElementById("cloudTrainerSignUpConfirm").value = "";
+      if (response.data && response.data.session) await handleSession(response.data.session);
+      else showPendingRequest(pending, true);
+      return true;
+    } catch (error) {
+      authMessage("Could not reach the account service. Check your connection and try again.", true);
+      return false;
+    } finally {
+      button.disabled = false;
+      button.textContent = "Submit trainer request";
+    }
+  };
+
+  window.fit4lifeCloudRequestPasswordReset = async function fit4lifeCloudRequestPasswordReset() {
+    if (!cloudClient) {
+      authMessage("The secure account service is still connecting.", true);
+      return false;
+    }
+    const email = normalizedEmail(document.getElementById("cloudResetEmail").value || document.getElementById("cloudAuthEmail").value);
+    if (!email || !email.includes("@")) {
+      authMessage("Enter the email used for your training account.", true);
+      return false;
+    }
+    const button = document.getElementById("cloudResetSubmit");
+    button.disabled = true;
+    button.textContent = "Sending…";
+    try {
+      const response = await cloudClient.auth.resetPasswordForEmail(email, { redirectTo: authRedirectUrl() });
+      if (response.error) {
+        authMessage(response.error.message, true);
+        return false;
+      }
+      authMessage("If an account matches that email, a password-reset link is on its way.", false);
+      return true;
+    } catch (error) {
+      authMessage("Could not reach the account service. Check your connection and try again.", true);
+      return false;
+    } finally {
+      button.disabled = false;
+      button.textContent = "Send password reset";
+    }
+  };
+
+  window.fit4lifeCloudUpdatePassword = async function fit4lifeCloudUpdatePassword() {
+    if (!cloudClient) return false;
+    const password = document.getElementById("cloudNewPassword").value;
+    const confirmation = document.getElementById("cloudNewPasswordConfirm").value;
+    if (password.length < 8) {
+      authMessage("Use a password with at least 8 characters.", true);
+      return false;
+    }
+    if (password !== confirmation) {
+      authMessage("The passwords do not match.", true);
+      return false;
+    }
+    const button = document.getElementById("cloudUpdatePasswordSubmit");
+    button.disabled = true;
+    button.textContent = "Updating…";
+    try {
+      const response = await cloudClient.auth.updateUser({ password });
+      if (response.error) {
+        authMessage(response.error.message, true);
+        return false;
+      }
+      document.getElementById("cloudNewPassword").value = "";
+      document.getElementById("cloudNewPasswordConfirm").value = "";
+      showAuthMode("signin");
+      authMessage("Password updated. You can now sign in with the new password.", false);
+      return true;
+    } catch (error) {
+      authMessage("Could not reach the account service. Check your connection and try again.", true);
+      return false;
+    } finally {
+      button.disabled = false;
+      button.textContent = "Update password";
+    }
+  };
+
+  window.fit4lifeCloudCheckApproval = async function fit4lifeCloudCheckApproval() {
+    if (!cloudClient) return false;
+    const sessionResponse = await cloudClient.auth.getSession();
+    if (sessionResponse.error || !sessionResponse.data.session) {
+      const pending = readJson("fit4life_pending_signup_v1", {});
+      showAuthMode("signin");
+      if (pending.email) document.getElementById("cloudAuthEmail").value = pending.email;
+      authMessage(pending.requested_role === "trainer"
+        ? "After verifying your email, sign in to check whether an approved gym trainer or owner confirmed trainer access."
+        : "After verifying your BYU-I email, sign in to complete the required Trainer Consultation.", false);
+      return false;
+    }
+    await handleSession(sessionResponse.data.session);
+    return true;
+  };
+
+  window.fit4lifeCloudApproveRegistration = async function fit4lifeCloudApproveRegistration(requestId) {
+    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return false;
+    const response = await cloudClient.rpc("approve_fit4life_registration", { target_request: requestId });
+    if (response.error) {
+      if (typeof showToast === "function") showToast(response.error.message || "The account could not be approved");
+      return false;
+    }
+    if (typeof showToast === "function") showToast("Client account approved and connected");
+    await loadTrainerRegistrationRequests();
+    await pullCloudState(false);
+    return true;
+  };
+
+  // kind names what is actually being rejected - a trainer request said "client access"
+  // before - and skipConfirm lets a caller that has already asked avoid a second dialog.
+  window.fit4lifeCloudRejectRegistration = async function fit4lifeCloudRejectRegistration(requestId,options) {
+    const settings = options || {}, kind = settings.kind === "trainer" ? "trainer" : "client";
+    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return false;
+    if (!settings.skipConfirm && !window.confirm("Reject this " + kind + " account request? The person will keep their login but will not receive " + kind + " access.")) return false;
+    const response = await cloudClient.rpc("reject_fit4life_registration", { target_request: requestId, trainer_note: "Please contact the gym so a trainer can verify your account details." });
+    if (response.error) {
+      if (typeof showToast === "function") showToast(response.error.message || "The request could not be rejected");
+      return false;
+    }
+    if (typeof showToast === "function") showToast((kind === "trainer" ? "Trainer" : "Client") + " request rejected");
+    await loadTrainerRegistrationRequests();
+    return true;
+  };
+
+  window.fit4lifeCloudListTrainers = async function fit4lifeCloudListTrainers() {
+    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return [];
+    const response = await cloudClient.rpc("list_fit4life_trainers");
+    if (response.error) { console.error("Trainer list failed", response.error); return null; }
+    window.fit4lifeCloudTrainers = Array.isArray(response.data) ? response.data : [];
+    // Tiers come from a separate additive RPC rather than by redefining list_fit4life_trainers,
+    // whose definition does not exist in this repo and could not be reproduced faithfully.
+    // Merged as a LEFT join keyed on user_id: a trainer with no tier row keeps their place in
+    // the roster and defaults, because dropping them would remove them from the Team screen,
+    // the primary-coach picker and the calendar trainer filter at once.
+    await mergeTrainerTiers();
+    const mine = window.fit4lifeCloudTrainers.find((trainer) => trainer.user_id === cloudUser.id);
+    if (mine && window.fit4lifeCloudIdentity) window.fit4lifeCloudIdentity.displayName = mine.display_name || window.fit4lifeCloudIdentity.displayName;
+    return window.fit4lifeCloudTrainers;
+  };
+
+  // Undefined until the tier RPC has been tried; false means the Supabase migration has not
+  // been run, and every tier control hides rather than rendering broken.
+  window.fit4lifeTrainerTiersAvailable = undefined;
+  async function mergeTrainerTiers() {
+    const roster = window.fit4lifeCloudTrainers || [];
+    if (!cloudClient || !roster.length) return roster;
+    let rows = null;
+    try {
+      const response = await orgRpc("list_fit4life_trainer_tiers");
+      if (response.error) throw response.error;
+      rows = Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      // A missing function is the expected un-migrated state, not a fault worth shouting about.
+      window.fit4lifeTrainerTiersAvailable = false;
+      return roster;
+    }
+    window.fit4lifeTrainerTiersAvailable = true;
+    const byUser = new Map(rows.map((row) => [row.user_id, row.trainer_tier]));
+    window.fit4lifeCloudTrainers = roster.map((trainer) => ({
+      ...trainer, trainer_tier: byUser.get(trainer.user_id) || "staff_standard"
+    }));
+    return window.fit4lifeCloudTrainers;
+  }
+
+  /* ---------- staff invites (owner only) ----------
+     The owner names the trainer and the app sends a sign-in link. The membership is created
+     when they arrive, by the database, from the invite matching their signed-in address. */
+  window.fit4lifeStaffInvitesAvailable = undefined;
+
+  window.fit4lifeCloudListStaffInvites = async function fit4lifeCloudListStaffInvites() {
+    if (!cloudClient || cloudRole !== "owner") return null;
+    const response = await orgRpc("list_fit4life_staff_invites");
+    if (response.error) { window.fit4lifeStaffInvitesAvailable = false; return null; }
+    window.fit4lifeStaffInvitesAvailable = true;
+    window.fit4lifeStaffInvites = Array.isArray(response.data) ? response.data : [];
+    return window.fit4lifeStaffInvites;
+  };
+
+  window.fit4lifeCloudInviteStaff = async function fit4lifeCloudInviteStaff(email, fullName, role, areas) {
+    if (practiceSealed()) return { ok:false, error:"Practice mode: no invite was sent." };
+    if (!cloudClient || cloudRole !== "owner" || !cloudOrganizationId) return { ok:false, error:"Only an owner can invite a trainer" };
+    const address = String(email || "").trim().toLowerCase();
+    if (!address || address.indexOf("@") < 1) return { ok:false, error:"That is not an email address" };
+    const recorded = await cloudClient.rpc("invite_fit4life_staff", {
+      target_organization: cloudOrganizationId, invite_email: address, invite_name: fullName || "",
+      invite_role: role === "staff" ? "staff" : "trainer", invite_areas: Array.isArray(areas) ? areas : []
+    });
+    if (recorded.error) {
+      window.fit4lifeStaffInvitesAvailable = false;
+      return { ok:false, error:"The invite tables are not in Supabase yet. Run RUN-THIS-IN-SUPABASE-STAFF-INVITES.sql." };
+    }
+    // The address is on the invite list either way; the email is only how they find the door.
+    const sent = await cloudClient.auth.signInWithOtp({
+      email: address,
+      options: {
+        emailRedirectTo: authRedirectUrl(),
+        shouldCreateUser: true,
+        data: {
+          full_name: fullName || "",
+          requested_role: role === "staff" ? "staff" : "trainer",
+          registration_source: "fit4life_staff_invite",
+          organization_slug: portalOrganizationSlug || "fit-4-life"
+        }
+      }
+    });
+    await window.fit4lifeCloudListStaffInvites();
+    if (sent && sent.error) {
+      const raw = sent.error.message || "";
+      // Supabase's own sender allows only a handful an hour, which reads as a failure but is not one.
+      const throttled = /rate limit|too many|429|security purposes|only request/i.test(raw) || sent.error.status === 429;
+      return {
+        ok: false, invited: true, throttled,
+        error: throttled
+          ? "They are on the list, but the email service is at its hourly limit. Press Send again in an hour, or they can create an account with this address and the invite still applies."
+          : "Saved to the list, but the email did not go out: " + raw
+      };
+    }
+    return { ok:true, invited:true };
+  };
+
+  window.fit4lifeCloudRevokeStaffInvite = async function fit4lifeCloudRevokeStaffInvite(email) {
+    if (!cloudClient || cloudRole !== "owner" || !cloudOrganizationId) return false;
+    const response = await cloudClient.rpc("revoke_fit4life_staff_invite", { target_organization: cloudOrganizationId, invite_email: String(email || "").trim().toLowerCase() });
+    if (response.error) return false;
+    await window.fit4lifeCloudListStaffInvites();
+    return true;
+  };
+
+  /* ---------- the clock, the schedule and the devices that may punch ----------
+     Hours are wage records, so the server stamps every time and keeps what changed. */
+  const DEVICE_KEY = "fit4life_device_id_v1";
+  window.fit4lifeAreaToolsAvailable = undefined;
+
+  function deviceId() {
+    let id = "";
+    try { id = localStorage.getItem(DEVICE_KEY) || ""; } catch (_) { id = ""; }
+    if (!id) {
+      id = "dev-" + Date.now().toString(36) + "-" + Math.random().toString(16).slice(2, 10);
+      try { localStorage.setItem(DEVICE_KEY, id); } catch (_) { /* a private window simply asks again next time */ }
+    }
+    return id;
+  }
+  window.fit4lifeDeviceId = deviceId;
+
+  /* Area RPCs are all org-scoped. Sending org_id stops fit4life_active_org() from
+     having to resolve it, which it now refuses to do for a multi-branch account. */
+  function withBranch(args) {
+    const payload = { ...(args || {}) };
+    if (cloudOrganizationId && payload.org_id === undefined) payload.org_id = cloudOrganizationId;
+    return payload;
+  }
+
+  async function orgRpc(name, args) {
+    if (!cloudClient || !cloudUser) return { error: { message: "Not signed in" } };
+    return cloudClient.rpc(name, withBranch(args));
+  }
+
+  async function areaRpc(name, args) {
+    if (!cloudClient || !cloudUser) return { error: { message: "Not signed in" } };
+    const response = await cloudClient.rpc(name, withBranch(args));
+    if (response.error && /could not find the function|schema cache/i.test(String(response.error.message || ""))) {
+      window.fit4lifeAreaToolsAvailable = false;
+    } else if (!response.error) {
+      window.fit4lifeAreaToolsAvailable = true;
+    }
+    return response;
+  }
+
+  window.fit4lifeCloudRegisterDevice = async function fit4lifeCloudRegisterDevice(name) {
+    return areaRpc("register_fit4life_device", { device: deviceId(), device_name: name || (navigator.platform || "device") });
+  };
+  window.fit4lifeCloudListDevices = async function fit4lifeCloudListDevices() {
+    const response = await areaRpc("list_fit4life_devices");
+    window.fit4lifeDevices = response.error ? [] : (response.data || []);
+    return window.fit4lifeDevices;
+  };
+  window.fit4lifeCloudSetDevice = async function fit4lifeCloudSetDevice(device, name, area, approved) {
+    const response = await areaRpc("set_fit4life_device", { device, device_name: name || "", area: area || "", approved: approved === true });
+    return !response.error;
+  };
+  window.fit4lifeCloudClockIn = async function fit4lifeCloudClockIn(area) {
+    const response = await areaRpc("fit4life_clock_in", { area, device: deviceId() });
+    return response.error ? { ok: false, error: response.error.message } : response.data;
+  };
+  window.fit4lifeCloudClockOut = async function fit4lifeCloudClockOut(note) {
+    const response = await areaRpc("fit4life_clock_out", { device: deviceId(), entry_note: note || "" });
+    return response.error ? { ok: false, error: response.error.message } : response.data;
+  };
+  window.fit4lifeCloudListTimeEntries = async function fit4lifeCloudListTimeEntries(fromDay, toDay) {
+    const response = await areaRpc("list_fit4life_time_entries", { from_day: fromDay || null, to_day: toDay || null });
+    window.fit4lifeTimeEntries = response.error ? [] : (response.data || []);
+    return window.fit4lifeTimeEntries;
+  };
+  window.fit4lifeCloudConfirmTimeEntry = async function fit4lifeCloudConfirmTimeEntry(entry, newIn, newOut) {
+    const response = await areaRpc("confirm_fit4life_time_entry", { entry, new_in: newIn || null, new_out: newOut || null });
+    return !response.error;
+  };
+  window.fit4lifeCloudCloseOpenEntries = async function fit4lifeCloudCloseOpenEntries(maxHours) {
+    const response = await areaRpc("close_fit4life_open_entries", { max_hours: Number(maxHours) || 8 });
+    return response.error ? 0 : response.data;
+  };
+  window.fit4lifeCloudListShifts = async function fit4lifeCloudListShifts(area, fromDay, toDay) {
+    const response = await areaRpc("list_fit4life_shifts", { area: area || null, from_day: fromDay || null, to_day: toDay || null });
+    window.fit4lifeShifts = response.error ? [] : (response.data || []);
+    return window.fit4lifeShifts;
+  };
+  window.fit4lifeCloudSaveShift = async function fit4lifeCloudSaveShift(area, userId, label, starts, ends, note, shiftId) {
+    const response = await areaRpc("save_fit4life_shift", { area, staff: userId || null, staff_label: label || "", starts, ends, shift_note: note || "", shift_id: shiftId || null });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true, id: response.data };
+  };
+  window.fit4lifeCloudDeleteShift = async function fit4lifeCloudDeleteShift(shiftId, reason) {
+    const response = await areaRpc("delete_fit4life_shift", { shift_id: shiftId, reason: reason || "" });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true };
+  };
+  window.fit4lifeCloudRestoreShift = async function fit4lifeCloudRestoreShift(shiftId, reason) {
+    const response = await areaRpc("restore_fit4life_shift", { shift_id: shiftId, reason: reason || "" });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true };
+  };
+
+  /* ---------- tasks and the events calendar ----------
+     An owner writes both. Anyone who works in the area ticks a task off, and a repeating task
+     is ticked per day, so yesterday's tick does not hide today's job. */
+  window.fit4lifeAreaTasks = [];
+  window.fit4lifeAreaEvents = [];
+
+  window.fit4lifeCloudListAreaTasks = async function fit4lifeCloudListAreaTasks(area, onDay) {
+    const response = await areaRpc("list_fit4life_area_tasks", { area: area || null, on_day: onDay || null });
+    window.fit4lifeAreaTasks = response.error ? [] : (response.data || []);
+    return window.fit4lifeAreaTasks;
+  };
+  window.fit4lifeCloudSaveAreaTask = async function fit4lifeCloudSaveAreaTask(area, title, detail, repeats, due, assigned, assignedName, sort, taskId) {
+    const response = await areaRpc("save_fit4life_area_task", {
+      area, task_title: title, task_detail: detail || "", task_repeats: repeats || "once", task_due: due || null,
+      task_assigned: assigned || null, task_assigned_name: assignedName || "", task_sort: sort || 0, task_id: taskId || null
+    });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true, id: response.data };
+  };
+  window.fit4lifeCloudDeleteAreaTask = async function fit4lifeCloudDeleteAreaTask(taskId) {
+    const response = await areaRpc("delete_fit4life_area_task", { task_id: taskId });
+    return !response.error;
+  };
+  window.fit4lifeCloudCompleteAreaTask = async function fit4lifeCloudCompleteAreaTask(taskId, onDay, done, note) {
+    const response = await areaRpc("complete_fit4life_area_task", { task: taskId, on_day: onDay || null, done: done !== false, done_note: note || "" });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true };
+  };
+
+  window.fit4lifeCloudListAreaEvents = async function fit4lifeCloudListAreaEvents(area, fromDay, toDay) {
+    const response = await areaRpc("list_fit4life_area_events", { area: area || null, from_day: fromDay || null, to_day: toDay || null });
+    window.fit4lifeAreaEvents = response.error ? [] : (response.data || []);
+    return window.fit4lifeAreaEvents;
+  };
+  window.fit4lifeCloudSaveAreaEvent = async function fit4lifeCloudSaveAreaEvent(area, title, kind, starts, ends, location, capacity, lead, leadName, note, eventId) {
+    const response = await areaRpc("save_fit4life_area_event", {
+      area, event_title: title, event_kind: kind || "event", starts, ends, event_location: location || "",
+      event_capacity: Number.isFinite(Number(capacity)) && Number(capacity) > 0 ? Number(capacity) : null,
+      event_lead: lead || null, event_lead_name: leadName || "", event_note: note || "", event_id: eventId || null
+    });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true, id: response.data };
+  };
+  window.fit4lifeCloudDeleteAreaEvent = async function fit4lifeCloudDeleteAreaEvent(eventId, reason) {
+    const response = await areaRpc("delete_fit4life_area_event", { event_id: eventId, reason: reason || "" });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true };
+  };
+  window.fit4lifeCloudRestoreAreaEvent = async function fit4lifeCloudRestoreAreaEvent(eventId, reason) {
+    const response = await areaRpc("restore_fit4life_area_event", { event_id: eventId, reason: reason || "" });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true };
+  };
+  window.fit4lifeCloudListCalendarArchive = async function fit4lifeCloudListCalendarArchive() {
+    const response = await areaRpc("list_fit4life_calendar_archive", {});
+    window.fit4lifeCalendarArchive = response.error ? [] : (response.data || []);
+    return window.fit4lifeCalendarArchive;
+  };
+
+  /* ---------- the files that belong to one area ----------
+     Procedures, checklists and numbers, kept where the person standing in that room will
+     look for them. An owner writes them; everyone signed in to the gym can read them. */
+  window.fit4lifeAreaFiles = [];
+  window.fit4lifeAreaFilesAvailable = undefined;
+
+  window.fit4lifeCloudListAreaFiles = async function fit4lifeCloudListAreaFiles(area) {
+    const response = await areaRpc("list_fit4life_area_files", { area: area || null });
+    if (response.error) { window.fit4lifeAreaFilesAvailable = false; window.fit4lifeAreaFiles = []; return []; }
+    window.fit4lifeAreaFilesAvailable = true;
+    window.fit4lifeAreaFiles = response.data || [];
+    return window.fit4lifeAreaFiles;
+  };
+  window.fit4lifeCloudSaveAreaFile = async function fit4lifeCloudSaveAreaFile(area, title, category, body, link, linkLabel, sort, fileId) {
+    const response = await areaRpc("save_fit4life_area_file", {
+      area, file_title: title, file_category: category || "General", file_body: body || "",
+      file_link: link || "", file_link_label: linkLabel || "", file_sort: sort || 0, file_id: fileId || null
+    });
+    return response.error ? { ok: false, error: response.error.message } : { ok: true, id: response.data };
+  };
+  window.fit4lifeCloudDeleteAreaFile = async function fit4lifeCloudDeleteAreaFile(fileId) {
+    const response = await areaRpc("delete_fit4life_area_file", { file_id: fileId });
+    return !response.error;
+  };
+
+  /* ---------- the volunteer rota, mirrored from Hannah's sheet ----------
+     Read only. The sheet is the source of truth and the app never writes back to it. */
+  window.fit4lifeVolunteerShifts = [];
+  window.fit4lifeVolunteerSync = null;
+
+  window.fit4lifeCloudListVolunteerShifts = async function fit4lifeCloudListVolunteerShifts(fromDay, toDay) {
+    const [shifts, state] = await Promise.all([
+      areaRpc("list_fit4life_volunteer_shifts", { from_day: fromDay || null, to_day: toDay || null }),
+      areaRpc("fit4life_volunteer_sync_state", {})
+    ]);
+    window.fit4lifeVolunteerShifts = shifts.error ? [] : (shifts.data || []);
+    window.fit4lifeVolunteerSync = state.error ? null : ((state.data || [])[0] || null);
+    return window.fit4lifeVolunteerShifts;
+  };
+
+  /* ---------- work areas ----------
+     A gym decides its own areas. Everyone signed in can read the list; only an owner writes
+     it, and only an owner sets who works where. Staff see their own rows and nobody else's. */
+  window.fit4lifeWorkAreasAvailable = undefined;
+  window.fit4lifeWorkAreas = [];
+  window.fit4lifeStaffAreas = [];
+  window.fit4lifeMyAreas = [];
+
+  window.fit4lifeCloudListWorkAreas = async function fit4lifeCloudListWorkAreas() {
+    if (!cloudClient || !cloudUser) return null;
+    const [areas, staff] = await Promise.all([
+      orgRpc("list_fit4life_work_areas"),
+      orgRpc("list_fit4life_staff_areas")
+    ]);
+    if (areas.error) { window.fit4lifeWorkAreasAvailable = false; return null; }
+    window.fit4lifeWorkAreasAvailable = true;
+    window.fit4lifeWorkAreas = Array.isArray(areas.data) ? areas.data : [];
+    window.fit4lifeStaffAreas = !staff.error && Array.isArray(staff.data) ? staff.data : [];
+    window.fit4lifeMyAreas = window.fit4lifeStaffAreas.filter((row) => row.user_id === cloudUser.id).map((row) => row.area_key);
+    return window.fit4lifeWorkAreas;
+  };
+
+  window.fit4lifeCloudSaveWorkArea = async function fit4lifeCloudSaveWorkArea(areaKey, name, sortOrder, active, coaching, events) {
+    if (!cloudClient || cloudRole !== "owner" || !cloudOrganizationId) return false;
+    const base = {
+      target_organization: cloudOrganizationId, area: areaKey || "", area_name: name || "",
+      position_in_list: Number(sortOrder) || 0, active: active !== false, coaching: coaching === true
+    };
+    let response = await cloudClient.rpc("save_fit4life_work_area", Object.assign({ events: events === true }, base));
+    // The calendar flag arrived in a later migration; a gym that has not run it yet still saves.
+    if (response.error && /events|function|schema/i.test(response.error.message || "")) {
+      response = await cloudClient.rpc("save_fit4life_work_area", base);
+    }
+    if (response.error) { window.fit4lifeWorkAreasAvailable = false; return false; }
+    await window.fit4lifeCloudListWorkAreas();
+    return true;
+  };
+
+  window.fit4lifeCloudSetStaffAreas = async function fit4lifeCloudSetStaffAreas(userId, areaKeys) {
+    if (!cloudClient || cloudRole !== "owner" || !cloudOrganizationId) return false;
+    const response = await cloudClient.rpc("set_fit4life_staff_areas", {
+      target_organization: cloudOrganizationId, target_user: userId, areas: Array.isArray(areaKeys) ? areaKeys : []
+    });
+    if (response.error) return false;
+    await window.fit4lifeCloudListWorkAreas();
+    return true;
+  };
+
+  /* ---------- trainer audits (owner only) ----------
+     Their own table with owner-only policies, because the shared organization snapshot is
+     readable by every trainer device. Undefined until the RPC has been tried; false means the
+     SQL has not been run and the app says so rather than pretending the audits are shared. */
+  window.fit4lifeTrainerAuditsAvailable = undefined;
+
+  function mergeAuditRows(localKey, rows) {
+    const local = (function () { try { const data = JSON.parse(localStorage.getItem(localKey) || "[]"); return Array.isArray(data) ? data : []; } catch (_) { return []; } })();
+    const byId = new Map();
+    local.concat(rows).forEach((row) => {
+      if (!row || !row.id) return;
+      const held = byId.get(row.id);
+      if (!held || String(row.updatedAt || "") > String(held.updatedAt || "")) byId.set(row.id, row);
+    });
+    const merged = [...byId.values()].sort((a, b) => String(b.date || b.updatedAt || "").localeCompare(String(a.date || a.updatedAt || "")));
+    try { localStorage.setItem(localKey, JSON.stringify(merged)); } catch (_) { /* a full disk must not lose the cloud copy */ }
+    return merged;
+  }
+
+  window.fit4lifeCloudListTrainerAudits = async function fit4lifeCloudListTrainerAudits() {
+    if (!cloudClient || cloudRole !== "owner") return null;
+    let audits, trainers;
+    try {
+      [audits, trainers] = await Promise.all([
+        orgRpc("list_fit4life_trainer_audits"),
+        orgRpc("list_fit4life_audit_trainers")
+      ]);
+      if (audits.error) throw audits.error;
+      if (trainers.error) throw trainers.error;
+    } catch (error) {
+      window.fit4lifeTrainerAuditsAvailable = false;
+      return null;
+    }
+    window.fit4lifeTrainerAuditsAvailable = true;
+    mergeAuditRows(CLOUD_KEYS.trainerAudits, (audits.data || []).map((row) => row.payload || row));
+    mergeAuditRows(CLOUD_KEYS.auditTrainers, (trainers.data || []).map((row) => row.payload || row));
+    if (typeof window.renderTrainerAuditsModule === "function" && typeof openCoachDestination === "function" && openCoachDestination.current === "audits") window.renderTrainerAuditsModule();
+    return true;
+  };
+
+  async function saveAuditRow(rpcName, payload) {
+    if (!cloudClient || cloudRole !== "owner") return false;
+    if (window.fit4lifeTrainerAuditsAvailable === false) return false;
+    const response = await cloudClient.rpc(rpcName, { target_organization: cloudOrganizationId, payload });
+    if (response.error) {
+      window.fit4lifeTrainerAuditsAvailable = false;
+      if (typeof showToast === "function") showToast("Saved on this device. The audit tables are not in Supabase yet.");
+      return false;
+    }
+    return true;
+  }
+
+  window.fit4lifeCloudSaveTrainerAudit = function fit4lifeCloudSaveTrainerAudit(audit) { return saveAuditRow("save_fit4life_trainer_audit", audit); };
+  window.fit4lifeCloudSaveAuditTrainer = function fit4lifeCloudSaveAuditTrainer(trainer) { return saveAuditRow("save_fit4life_audit_trainer", trainer); };
+
+  async function deleteAuditRow(rpcName, id) {
+    if (!cloudClient || cloudRole !== "owner" || window.fit4lifeTrainerAuditsAvailable === false) return false;
+    const response = await cloudClient.rpc(rpcName, { target_organization: cloudOrganizationId, target_id: id });
+    return !response.error;
+  }
+  window.fit4lifeCloudDeleteTrainerAudit = function fit4lifeCloudDeleteTrainerAudit(id) { return deleteAuditRow("delete_fit4life_trainer_audit", id); };
+  window.fit4lifeCloudDeleteAuditTrainer = function fit4lifeCloudDeleteAuditTrainer(key) { return deleteAuditRow("delete_fit4life_audit_trainer", key); };
+
+  window.fit4lifeCloudSetTrainerTier = async function fit4lifeCloudSetTrainerTier(userId, tier) {
+    if (!cloudClient || cloudRole !== "owner") { if (typeof showToast === "function") showToast("Only an owner can change a trainer's tier"); return false; }
+    if (!userId || !["staff_standard","staff_premium"].includes(tier)) return false;
+    const response = await cloudClient.rpc("set_fit4life_trainer_tier", { target_user:userId, target_tier:tier });
+    if (response.error) {
+      if (typeof showToast === "function") showToast(response.error.message || "The trainer tier could not be saved");
+      return false;
+    }
+    const roster = window.fit4lifeCloudTrainers || [];
+    window.fit4lifeCloudTrainers = roster.map((trainer) => trainer.user_id === userId ? { ...trainer, trainer_tier:tier } : trainer);
+    return true;
+  };
+
+  window.fit4lifeCloudPendingBookingImports = async function fit4lifeCloudPendingBookingImports() {
+    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return [];
+    const response = await cloudClient
+      .from("booking_imports")
+      .select("id,fingerprint,filename,subject,sender,csv_body,received_at")
+      .eq("status","pending")
+      .order("received_at",{ ascending:false })
+      .limit(10);
+    if (response.error) { console.warn("Pending booking imports unavailable",response.error.message); return null; }
+    return Array.isArray(response.data) ? response.data : [];
+  };
+
+  window.fit4lifeCloudMarkBookingImport = async function fit4lifeCloudMarkBookingImport(id,status) {
+    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return false;
+    if (!["applied","ignored"].includes(status)) return false;
+    const response = await cloudClient
+      .from("booking_imports")
+      .update({ status, applied_at:new Date().toISOString(), applied_by:cloudUser && cloudUser.id || null })
+      .eq("id",id);
+    if (response.error) { console.error("Could not mark the import",response.error); return false; }
+    return true;
+  };
+
+  window.fit4lifeCloudListTrainerRequests = async function fit4lifeCloudListTrainerRequests() {
+    if (!cloudClient || !cloudOrganizationId || cloudRole !== "owner") return [];
+    const response = await cloudClient
+      .from("registration_requests")
+      .select("id,user_id,email,full_name,requested_role,status,created_at,reviewed_by,reviewed_at,review_note")
+      .eq("organization_id", cloudOrganizationId)
+      .eq("requested_role", "trainer")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (response.error) { console.error("Trainer request history failed", response.error); return null; }
+    window.fit4lifeCloudTrainerRequests = Array.isArray(response.data) ? response.data : [];
+    return window.fit4lifeCloudTrainerRequests;
+  };
+
+  window.fit4lifeCloudApproveTrainer = async function fit4lifeCloudApproveTrainer(email, displayName) {
+    if (!cloudClient || cloudRole !== "owner") return { ok:false,message:"Only an active owner can approve trainer access." };
+    const response = await cloudClient.rpc("approve_fit4life_trainer_account", { target_email:normalizedEmail(email),target_display_name:String(displayName || "").trim() });
+    if (response.error) return { ok:false,message:response.error.message || "Trainer approval failed." };
+    await window.fit4lifeCloudListTrainers();
+    return { ok:true,data:response.data };
+  };
+
+  window.fit4lifeCloudUpdateMyTrainerName = async function fit4lifeCloudUpdateMyTrainerName(displayName) {
+    if (localInteractionTestMode() && (cloudRole === "owner" || cloudRole === "trainer")) {
+      const name = String(displayName || "").trim(); if (name.length < 2) return {ok:false,message:"Enter the name clients should see."};
+      try { localStorage.setItem("fit4life_interaction_staff_name_v1",name); } catch (_) { return {ok:false,message:"This browser could not save the sender name."}; }
+      cloudUser.user_metadata = {...(cloudUser.user_metadata || {}),display_name:name};
+      window.fit4lifeCloudIdentity = {...(window.fit4lifeCloudIdentity || {}),displayName:name};
+      window.fit4lifeCloudTrainers = (window.fit4lifeCloudTrainers || []).map((trainer) => trainer.user_id === cloudUser.id ? {...trainer,display_name:name} : trainer);
+      return {ok:true};
+    }
+    if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return { ok:false,message:"Trainer access is required." };
+    const response = await cloudClient.rpc("update_my_fit4life_staff_name", { target_display_name:String(displayName || "").trim() });
+    if (response.error) return { ok:false,message:response.error.message || "The display name could not be saved." };
+    await window.fit4lifeCloudListTrainers();
+    return { ok:true };
+  };
+
+  window.fit4lifeCloudDeactivateTrainer = async function fit4lifeCloudDeactivateTrainer(userId) {
+    if (!cloudClient || cloudRole !== "owner") return { ok:false,message:"Only the owner can deactivate trainer accounts." };
+    const response = await cloudClient.rpc("deactivate_fit4life_trainer_account", { target_user:userId });
+    if (response.error) return { ok:false,message:response.error.message || "Trainer deactivation failed." };
+    await window.fit4lifeCloudListTrainers();
+    return { ok:true };
+  };
+
+  /* Changing your own password from inside the app, rather than from the sign-in gate. The
+     existing updater reads two inputs that live in the auth panel, which a signed-in person
+     cannot reach without being shown a screen that looks like being logged out.
+
+     Only the account holder can do this. There is deliberately no way for a trainer to set or
+     read a client's password: Supabase stores a one-way hash, so there is nothing to read, and
+     keeping a readable copy so staff could look one up would put every client's password one
+     database leak away from the public - including the ones they reuse elsewhere. */
+  window.fit4lifeCloudSetOwnPassword = async function fit4lifeCloudSetOwnPassword(password) {
+    if (!cloudClient || !cloudUser) return { ok:false, error:"You are not signed in." };
+    const value = String(password || "");
+    if (value.length < 8) return { ok:false, error:"Use a password with at least 8 characters." };
+    try {
+      const response = await cloudClient.auth.updateUser({ password: value });
+      if (response.error) return { ok:false, error:response.error.message || "The password could not be changed." };
+      return { ok:true };
+    } catch (error) {
+      return { ok:false, error:(error && error.message) || "The password could not be changed." };
+    }
+  };
+
+  window.fit4lifeCloudSignOut = async function fit4lifeCloudSignOut() {
+    // Attempt the save before asking anyone to choose between signing out and losing work.
+    // The warning existed but nothing ever tried the push first, so a trainer whose last save
+    // simply had not fired yet was offered a discard when a one-second flush would have done.
+    if (pendingScopes.size) { try { await pushPending(); } catch (_) {} }
+    if (pendingScopes.size && typeof window.confirm === "function" && !window.confirm("Some changes on this device could not be saved to the shared database. Sign out anyway and discard them?")) return;
+    pendingScopes.clear();
+    persistPendingScopes();
+    if (cloudClient) await cloudClient.auth.signOut();
+    if (cloudRegistrationChannel && cloudClient) cloudClient.removeChannel(cloudRegistrationChannel);
+    cloudRegistrationChannel = null;
+    if (cloudChannel && cloudClient) cloudClient.removeChannel(cloudChannel);
+    cloudChannel = null;
+    try { sessionStorage.removeItem("fit4life_trainer_unlocked"); } catch (_) {}
+    cloudReady = false;
+    cloudUser = null;
+    cloudRole = "";
+    clearCloudOrganizationContext();
+    window.fit4lifeCloudReady = false;
+    window.fit4lifeCloudRole = "";
+    window.fit4lifeCloudIdentity = null;
+    window.fit4lifeCloudTrainers = [];
+    updateAccountUi();
+    showAuthMode("signin");
+    showAuthGate(true);
+    cloudStatus("Signed out", "offline");
+  };
+
+  window.fit4lifeCloudEnsureOrganizationConnection = async function fit4lifeCloudEnsureOrganizationConnection() {
+    if (!cloudClient || !cloudUser) return false;
+    if (cloudOrganizationId && cloudRole) {
+      window.fit4lifeCloudOrganizationId = cloudOrganizationId;
+      window.fit4lifeCloudRole = cloudRole;
+      return true;
+    }
+    const membership = await getMembership();
+    if (!applyMembershipContext(membership)) return false;
+    await loadOrganizationSettings();
+    return Boolean(cloudOrganizationId && cloudRole);
+  };
+
+  window.fit4lifeCloudRetry = function fit4lifeCloudRetry() {
+    authMessage("Retrying the secure connection…", false);
+    initializeCloud();
+  };
+
+  function scopeForLocalKey(key) {
+    if ([CLOUD_KEYS.progress, CLOUD_KEYS.checkins, CLOUD_KEYS.clientMessages, CLOUD_KEYS.progressReceiptResponses, CLOUD_KEYS.clientDaily, CLOUD_KEYS.activeWorkout, CLOUD_KEYS.workoutRequests].includes(key)) return "activity";
+    if ([CLOUD_KEYS.profiles, CLOUD_KEYS.assignments, CLOUD_KEYS.programs, CLOUD_KEYS.summaryMeta, CLOUD_KEYS.scans, CLOUD_KEYS.goals, CLOUD_KEYS.metrics, CLOUD_KEYS.mentalPlans, CLOUD_KEYS.wearableConnections, CLOUD_KEYS.progressReceipts, CLOUD_KEYS.calendarEvents].includes(key)) return cloudRole === "client" ? "activity" : "plan";
+    if ([CLOUD_KEYS.requests, CLOUD_KEYS.gymBrand, CLOUD_KEYS.gymEquipment, CLOUD_KEYS.teams, CLOUD_KEYS.marketPrograms, CLOUD_KEYS.automations, CLOUD_KEYS.automationAlerts, CLOUD_KEYS.attentionState, CLOUD_KEYS.exerciseLibraryEdits, CLOUD_KEYS.ownerRequests, CLOUD_KEYS.coachTaskClaims, CLOUD_KEYS.calendarAudit, CLOUD_KEYS.calendarNotices].includes(key)) return "organization";
+    if (key === CLOUD_KEYS.coachNotes) return "all";
+    // Audits have their own owner-only table and push themselves; they must never ride the
+    // organization snapshot, which every trainer device can read and write back.
+    if ([CLOUD_KEYS.trainerAudits, CLOUD_KEYS.auditTrainers].includes(key)) return "none";
+    return "all";
+  }
+
+  function wrapWriter(name, fixedScope, keyPosition) {
+    const original = window[name];
+    if (typeof original !== "function" || original.__cloudWrapped) return;
+    const wrapped = function cloudAwareWriter() {
+      const result = original.apply(this, arguments);
+      if (result !== false) {
+        const key = keyPosition == null ? "" : arguments[keyPosition];
+        const requestedScope = typeof fixedScope === "function" ? fixedScope() : fixedScope;
+        queueCloudSync(requestedScope || scopeForLocalKey(key));
+      }
+      return result;
+    };
+    wrapped.__cloudWrapped = true;
+    window[name] = wrapped;
+  }
+
+  function installWriterHooks() {
+    wrapWriter("writeProfiles", () => cloudRole === "client" ? "activity" : "plan");
+    wrapWriter("writeAssignedWorkouts", "plan");
+    wrapWriter("writeSavedPrograms", "plan");
+    wrapWriter("writeProgress", "activity");
+    wrapWriter("writeProfileRequests", "organization");
+    wrapWriter("writeSummaryMeta", "plan");
+    wrapWriter("writeInBodyScans", "plan");
+    wrapWriter("writeBodyGoals", "plan");
+    wrapWriter("writeLocalArray", null, 0);
+    wrapWriter("writeLocalObject", null, 0);
+    wrapWriter("saveActiveWorkoutState", "activity");
+  }
+
+  // Archived profiles are filtered out of the normal pull, so nothing in the app can see
+  // them. This is the only way back.
+  window.fit4lifeCloudListArchivedProfiles = async function fit4lifeCloudListArchivedProfiles() {
+    if (!cloudClient || !cloudOrganizationId || cloudRole !== "owner") return [];
+    const response = await cloudClient
+      .from("client_profiles")
+      .select("*")
+      .eq("organization_id", cloudOrganizationId)
+      .eq("status", "archived")
+      .order("updated_at", { ascending:false })
+      .limit(200);
+    if (response.error) { console.error("Archived clients unavailable", response.error); return null; }
+    return Array.isArray(response.data) ? response.data : [];
+  };
+
+  window.fit4lifeCloudRestoreProfile = async function fit4lifeCloudRestoreProfile(externalId) {
+    if (!cloudClient || cloudRole !== "owner") return false;
+    const response = await cloudClient
+      .from("client_profiles")
+      .update({ status:"active" })
+      .eq("organization_id", cloudOrganizationId)
+      .eq("external_id", String(externalId))
+      .select("id,external_id,status");
+    if (response.error || !(response.data && response.data.length)) {
+      console.error("Restore failed", response.error || "the database refused the change");
+      return false;
+    }
+    const row = response.data[0];
+    remoteProfilesByExternalId.set(String(row.external_id), row);
+    return true;
+  };
+
+  window.fit4lifeCloudDeleteProfile = async function fit4lifeCloudDeleteProfile(externalId, permanent) {
+    if (!cloudClient || cloudRole !== "owner") return false;
+    const remote = remoteProfilesByExternalId.get(String(externalId));
+    if (!remote) return false;
+    // .select("id") matters: a row-level-security refusal comes back as error:null with an
+    // empty result, which the old error-only check read as success.
+    const response = permanent
+      ? await cloudClient.from("client_profiles").delete().eq("id", remote.id).select("id")
+      : await cloudClient.from("client_profiles").update({ status: "archived" }).eq("id", remote.id).select("id");
+    if (response.error || !(response.data && response.data.length)) {
+      console.error("Cloud profile deletion failed", response.error || "the database refused the change");
+      return false;
+    }
+    remoteProfilesByExternalId.delete(String(externalId));
+    return true;
+  };
+
+  async function initializeCloud() {
+    if (localInteractionTestMode()) { initializeLocalInteractionTest(); return; }
+    const rememberField = document.getElementById("cloudRememberSignIn");
+    if (rememberField) {
+      try { rememberField.checked = localStorage.getItem(REMEMBER_SIGN_IN_KEY) !== "false"; } catch (_) { rememberField.checked = true; }
+    }
+    showAuthGate(true);
+    cloudStatus("Connecting…", "syncing");
+    authMessage("Connecting to your gym's secure records…", false);
+    try {
+      const config = await loadPublicConfig();
+      if (!window.supabase || typeof window.supabase.createClient !== "function") throw new Error("The secure sign-in library did not load. Check the internet connection and retry.");
+      cloudClient = sealClientDuringPractice(window.supabase.createClient(config.url, config.key, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage:fit4lifeAuthStorage }
+      }));
+      await loadPortalContext();
+      startOrganizationSettingsRefresh();
+      installWriterHooks();
+      const sessionResponse = await cloudClient.auth.getSession();
+      if (sessionResponse.error) throw sessionResponse.error;
+      const recoveryRedirect = /(?:[?#&])type=recovery(?:&|$)/.test(window.location.href);
+      if (recoveryRedirect && sessionResponse.data.session) {
+        cloudUser = sessionResponse.data.session.user;
+        updateAccountUi();
+        showAuthMode("update");
+        showAuthGate(true);
+        cloudStatus("Choose a new password", "syncing");
+      } else {
+        await handleSession(sessionResponse.data.session);
+      }
+      cloudClient.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_OUT") handleSession(null);
+        else if (event === "PASSWORD_RECOVERY") {
+          cloudUser = session && session.user ? session.user : cloudUser;
+          updateAccountUi();
+          showAuthMode("update");
+          showAuthGate(true);
+          cloudStatus("Choose a new password", "syncing");
+        }
+        else if (event === "SIGNED_IN" && session && (!cloudUser || cloudUser.id !== session.user.id)) handleSession(session);
+      });
+    } catch (error) {
+      cloudStatus("Cloud setup needed", "error");
+      authMessage(error.message || "The cloud connection could not start.", true);
+      showAuthGate(true);
+    }
+  }
+
+  window.addEventListener("online", () => {
+    cloudStatus("Reconnecting…", "syncing");
+    if (cloudReady) {
+      pendingScopes.add("all");
+      persistPendingScopes();
+      pushPending().then((saved) => { if (saved) pullCloudState(false); });
+    } else initializeCloud();
+  });
+  window.addEventListener("offline", () => cloudStatus("Offline · changes cached", "offline"));
+
+  if (window.__FIT4LIFE_TEST__) {
+    window.fit4lifeCloudTestHooks = {
+      CLOUD_KEYS,
+      mergeRecords,
+      mergeBundlePayload,
+      planBundle,
+      activityBundle,
+      applyBundles,
+      syncRecordCacheKey
+    };
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initializeCloud, { once: true });
+  else initializeCloud();
+})();

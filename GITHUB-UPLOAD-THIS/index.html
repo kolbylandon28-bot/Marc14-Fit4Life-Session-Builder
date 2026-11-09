@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0C0C0F">
+<meta name="fit4life-site-url" content="https://marc14-fit4-life-session-builder.vercel.app">
+<script>
+/* Send Vercel-generated deployment links from this release forward to the
+   permanent production address before the application or service worker loads. */
+(function redirectGeneratedVercelUrlToProduction() {
+  var canonical = "https://marc14-fit4-life-session-builder.vercel.app";
+  var currentHost = String(window.location.hostname || "").toLowerCase();
+  var canonicalHost = "marc14-fit4-life-session-builder.vercel.app";
+  var isGeneratedVercelHost = currentHost.endsWith(".vercel.app") && currentHost !== canonicalHost;
+  window.fit4lifeCanonicalSiteUrl = canonical;
+  if (!isGeneratedVercelHost) return;
+
+  var destination = new URL("/", canonical);
+  destination.search = window.location.search;
+  destination.hash = window.location.hash;
+  window.location.replace(destination.href);
+})();
+</script>
+<link rel="canonical" href="https://marc14-fit4-life-session-builder.vercel.app/">
+<meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest?v=20261109-v164-journey-logo-r1">
+<link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="fit4life-icon.svg">
+<title>FIT4LIFE — Session Builder</title>
+<link rel="stylesheet" href="styles.css?v=20261109-v164-journey-logo-r1">
+<style>
+.branch-switcher{position:relative;flex:0 0 auto}
+.branch-switcher-btn{display:inline-flex;align-items:center;gap:7px;max-width:210px;border:1px solid var(--line);background:var(--slate-2);color:var(--text-dim);border-radius:7px;padding:8px 10px;font:700 11px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:border-color .16s ease,color .16s ease}
+.branch-switcher-btn:hover,.branch-switcher-btn[aria-expanded="true"]{border-color:color-mix(in srgb,var(--blue) 55%,var(--line));color:var(--text)}
+.branch-switcher-btn .bs-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.branch-switcher-btn .bs-caret{flex:0 0 auto;font-size:8px;opacity:.6;transition:transform .16s ease}
+.branch-switcher-btn[aria-expanded="true"] .bs-caret{transform:rotate(180deg)}
+.bs-dot{flex:0 0 auto;width:7px;height:7px;border-radius:999px;background:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 22%,transparent),0 0 9px color-mix(in srgb,var(--blue) 60%,transparent)}
+.branch-switcher-menu{position:absolute;right:0;top:calc(100% + 7px);min-width:252px;max-width:min(320px,calc(100vw - 28px));background:rgba(14,15,19,.97);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:11px;padding:5px;z-index:70;box-shadow:0 18px 44px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.04)}
+.branch-switcher-menu .bs-head{display:block;padding:7px 10px 6px;font:600 8.5px var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--text-faint)}
+.branch-option{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:transparent;color:var(--text-dim);border:0;border-radius:8px;padding:9px 10px;font:inherit;cursor:pointer}
+.branch-option:hover{background:rgba(255,255,255,.055);color:var(--text)}
+.branch-option.on{background:color-mix(in srgb,var(--blue) 15%,transparent);color:var(--text)}
+.branch-option-text{min-width:0;flex:1 1 auto}
+.branch-option-name{display:block;font:700 12px var(--display);letter-spacing:.04em;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.branch-option-meta{display:block;font:600 8.5px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint);margin-top:3px}
+.branch-option.on .branch-option-meta{color:color-mix(in srgb,var(--blue-bright) 72%,var(--text-faint))}
+.branch-option .bs-check{flex:0 0 auto;font-size:11px;color:var(--blue-bright);opacity:0}
+.branch-option.on .bs-check{opacity:1}
+@media(max-width:720px){.branch-switcher-btn{max-width:118px;padding:7px 8px;font-size:10px;gap:5px}.branch-switcher-menu{min-width:214px}}
+</style>
+</head>
+<body>
+
+<div class="cloud-auth-gate open" id="cloudAuthGate" role="dialog" aria-modal="true" aria-labelledby="cloudAuthTitle">
+  <div class="cloud-auth-card">
+    <div class="cloud-auth-brand">FIT 4 LIFE</div>
+    <div class="cloud-auth-kicker">Secure shared training system</div>
+    <h1 id="cloudAuthTitle">Sign in to your workspace</h1>
+    <p id="cloudAuthIntro">Access your workouts and progress from any device.</p>
+    <div class="cloud-auth-tabs" id="cloudAuthTabs">
+      <button type="button" class="on" data-auth-mode="signin" onclick="fit4lifeCloudShowAuthMode('signin')">Sign in</button>
+      <button type="button" data-auth-mode="signup" onclick="fit4lifeCloudShowAuthMode('signup')">Create account</button>
+    </div>
+    <div class="cloud-auth-panel open" id="cloudSignInPanel">
+      <div class="cloud-auth-fields">
+        <label>Email address<input id="cloudAuthEmail" type="email" autocomplete="username" inputmode="email" placeholder="you@example.com"></label>
+        <label>Password<input id="cloudAuthPassword" type="password" autocomplete="current-password" placeholder="Your account password" onkeydown="if(event.key==='Enter')fit4lifeCloudSignIn()"></label>
+        <label class="cloud-auth-checkbox cloud-remember-choice"><input id="cloudRememberSignIn" type="checkbox" checked><span><b>Stay signed in on this device</b><small>Keep me signed in after I close the browser. Turn this off on a shared computer.</small></span></label>
+      </div>
+      <button class="cloud-auth-submit" id="cloudAuthSubmit" onclick="fit4lifeCloudSignIn()">Sign in securely</button>
+      <div class="cloud-auth-actions"><button class="cloud-auth-link" type="button" onclick="fit4lifeCloudShowAuthMode('reset')">Forgot password?</button><button class="cloud-auth-link" type="button" onclick="fit4lifeCloudShowAuthMode('signup')">Create a client account</button><button class="cloud-auth-link" type="button" onclick="fit4lifeCloudShowAuthMode('trainer_signup')">Request trainer access</button></div>
+    </div>
+    <div class="cloud-auth-panel" id="cloudSignUpPanel">
+      <div class="cloud-auth-fields">
+        <div class="cloud-auth-row">
+          <label>Full name<input id="cloudSignUpName" type="text" autocomplete="name" placeholder="Jordan Smith" maxlength="80"></label>
+          <label>Username<input id="cloudSignUpUsername" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="jordan-smith" maxlength="40"></label>
+        </div>
+        <label>Email address<input id="cloudSignUpEmail" type="email" autocomplete="email" inputmode="email" placeholder="the address your trainer has on file"></label>
+        <div class="cloud-auth-row">
+          <label>Password<input id="cloudSignUpPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>
+          <label>Confirm password<input id="cloudSignUpConfirm" type="password" autocomplete="new-password" placeholder="Repeat password" onkeydown="if(event.key==='Enter')fit4lifeCloudSignUp()"></label>
+        </div>
+        <label class="cloud-auth-checkbox"><input id="cloudSignUpConsent" type="checkbox"><span>I understand that this creates a client account at <b data-brand-name>FIT4LIFE</b>, and that my trainer can see the workouts and check-ins I record in it.</span></label>
+      </div>
+      <button class="cloud-auth-submit" id="cloudSignUpSubmit" onclick="fit4lifeCloudSignUp()">Create client account</button>
+      <div class="cloud-auth-note">Use the address your trainer already has on file for you \u2014 an account can only be created for an address they have added. If it is refused, check the spelling or ask them to add it. You go straight in afterwards and complete a short consultation. Trainer access is requested separately and approved by gym staff.</div>
+    </div>
+    <div class="cloud-auth-panel" id="cloudTrainerSignUpPanel">
+      <div class="cloud-auth-fields">
+        <label>Full name<input id="cloudTrainerSignUpName" type="text" autocomplete="name" placeholder="Jordan Smith" maxlength="80"></label>
+        <label>Trainer email address (personal or BYU-I)<input id="cloudTrainerSignUpEmail" type="email" autocomplete="email" inputmode="email" placeholder="trainer@example.com"></label>
+        <div class="cloud-auth-row">
+          <label>Password<input id="cloudTrainerSignUpPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>
+          <label>Confirm password<input id="cloudTrainerSignUpConfirm" type="password" autocomplete="new-password" placeholder="Repeat password" onkeydown="if(event.key==='Enter')fit4lifeCloudTrainerSignUp()"></label>
+        </div>
+        <label class="cloud-auth-checkbox"><input id="cloudTrainerSignUpConsent" type="checkbox"><span>I understand that I must verify my own email and that an approved gym staff member must separately confirm trainer permissions.</span></label>
+      </div>
+      <button class="cloud-auth-submit" id="cloudTrainerSignUpSubmit" onclick="fit4lifeCloudTrainerSignUp()">Submit trainer request</button>
+      <div class="cloud-auth-actions"><button class="cloud-auth-link" type="button" onclick="fit4lifeCloudShowAuthMode('signin')">Back to sign in</button></div>
+      <div class="cloud-auth-note">This creates a login request only. It does not expose client records. A gym owner reviews the verified request inside Coach → Trainer Access.</div>
+    </div>
+    <div class="cloud-auth-panel" id="cloudResetPanel">
+      <div class="cloud-auth-fields"><label>Email address<input id="cloudResetEmail" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')fit4lifeCloudRequestPasswordReset()"></label></div>
+      <button class="cloud-auth-submit" id="cloudResetSubmit" onclick="fit4lifeCloudRequestPasswordReset()">Send password reset</button>
+      <div class="cloud-auth-actions"><button class="cloud-auth-link" type="button" onclick="fit4lifeCloudShowAuthMode('signin')">Back to sign in</button></div>
+    </div>
+    <div class="cloud-auth-panel" id="cloudUpdatePasswordPanel">
+      <div class="cloud-auth-fields">
+        <label>New password<input id="cloudNewPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>
+        <label>Confirm new password<input id="cloudNewPasswordConfirm" type="password" autocomplete="new-password" placeholder="Repeat password" onkeydown="if(event.key==='Enter')fit4lifeCloudUpdatePassword()"></label>
+      </div>
+      <button class="cloud-auth-submit" id="cloudUpdatePasswordSubmit" onclick="fit4lifeCloudUpdatePassword()">Update password</button>
+    </div>
+    <div class="cloud-auth-panel" id="cloudFirstPasswordPanel">
+      <div class="cloud-auth-fields">
+        <label>Choose a password<input id="cloudFirstPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>
+        <label>Type it again<input id="cloudFirstPasswordConfirm" type="password" autocomplete="new-password" placeholder="Repeat password" onkeydown="if(event.key==='Enter')fit4lifeCloudSaveFirstPassword()"></label>
+      </div>
+      <button class="cloud-auth-submit" id="cloudFirstPasswordSubmit" onclick="fit4lifeCloudSaveFirstPassword()">Save password and continue</button>
+      <p class="cloud-auth-fineprint" id="cloudFirstPasswordNote">Your link got you in this once. A password is how you get back in on any device.</p>
+    </div>
+    <div class="cloud-auth-panel" id="cloudPendingPanel">
+      <div class="cloud-auth-pending">
+        <div class="cloud-auth-pending-icon" id="cloudPendingIcon">✓</div>
+        <h2 id="cloudPendingTitle">Request received</h2>
+        <p id="cloudPendingCopy">Verify your email, then a trainer can approve your client profile.</p>
+        <div class="cloud-auth-request-meta" id="cloudPendingMeta"></div>
+        <button class="cloud-auth-submit" id="cloudPendingCheck" onclick="fit4lifeCloudCheckApproval()">Check approval</button>
+        <div class="cloud-auth-actions"><button class="cloud-auth-link" type="button" onclick="fit4lifeCloudSignOut()">Sign out</button></div>
+      </div>
+    </div>
+    <div class="cloud-auth-message" id="cloudAuthMessage" role="status" aria-live="polite">Connecting to your gym’s secure records…</div>
+    <p class="cloud-auth-help">Your trainer adds you first, then you create your account here with a password of your own. An approved trainer or owner must confirm a pending trainer request; only the owner can manually grant or remove staff access. <button class="cloud-auth-retry" onclick="fit4lifeCloudRetry()">Retry connection</button></p>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="mark" role="img" aria-label="Portal" data-brand-label></div>
+    <div class="brand-txt">
+      <div class="brand-name"><span class="grad-text">FIT4LIFE</span></div>
+      <div class="brand-sub">BYU&#8209;Idaho Trainer Tools</div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="branch-switcher" id="branchSwitcher" style="display:none">
+      <button class="branch-switcher-btn" id="branchSwitcherBtn" type="button" aria-haspopup="true" aria-expanded="false" onclick="toggleBranchSwitcher()">Branch &#9662;</button>
+      <div class="branch-switcher-menu" id="branchSwitcherMenu" role="menu" style="display:none"></div>
+    </div>
+    <div class="topbar-status"><span class="cloud-status" id="cloudStatus" data-state="syncing" role="status">Connecting…</span></div>
+    <div class="topbar-actions">
+      <button class="help-btn phone-only-help" id="topbarHelpBtn" type="button" title="Walk me through something" aria-label="Tutorials" onclick="openAssistanceForRole()">?</button>
+      <button class="cloud-account-btn" id="cloudAccountBtn" type="button">Sign in</button>
+      <button class="home-btn" id="homeBtn" onclick="goHome()">&larr; Home</button>
+    </div>
+  </div>
+</div>
+
+<div class="network-status" id="networkStatus" role="status">You are offline. This device can keep recording local workout progress; cross-device updates will wait for a connected cloud account.</div>
+
+<div class="portal-theme-scene" id="portalThemeScene" aria-hidden="true">
+  <div class="portal-theme-particles"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+</div>
+
+<main>
+  <!-- LEVEL 1: ROLE GATE -->
+  <section class="view active" id="view-home">
+    <div class="role-hero hero">
+      <div class="granite-logo-lockup" aria-label="Portal" data-brand-label><div class="granite-logo-main" data-brand-name>FIT 4 LIFE</div><div class="granite-logo-sub">Professional Training System</div></div>
+      <div class="role-hero-copy" id="roleHeroCopy">
+        <h1>How are you using<br><span class="grad-text"><span data-brand-name>FIT4LIFE</span> today?</span></h1>
+        <p>Owners can open the coaching workspace or verify the client experience. Trainer accounts open the coaching workspace directly, and clients open only their own record.</p>
+      </div>
+    </div>
+    <div class="role-choice-grid" id="roleChoiceGrid">
+      <button class="tool-card role-card primary" onclick="selectPortalRole('trainer')">
+        <span class="tc-tag">Approved account</span>
+        <div class="tc-icon" aria-hidden="true">&#128274;</div>
+        <div class="tc-title">Trainer side</div>
+        <div class="tc-desc">Manage clients, build and assign workouts, review results, and decide what comes next.</div>
+        <span class="role-action">Open trainer workspace →</span>
+      </button>
+      <button class="tool-card role-card" onclick="selectPortalRole('client')">
+        <span class="tc-tag">Owner preview</span>
+        <div class="tc-icon" aria-hidden="true">&#128100;</div>
+        <div class="tc-title">Open client side</div>
+        <div class="tc-desc">Owners can preview any saved client and switch clients while verifying the live client experience. Trainer accounts cannot enter this side.</div>
+        <span class="role-action">Open client workspace →</span>
+      </button>
+    </div>
+    <div class="portal-note" style="max-width:780px;margin-left:auto;margin-right:auto">Client names are never shown as a public directory. Clients search by name or username; only an unlocked trainer can create, edit, or delete profiles.</div>
+  </section>
+
+  <!-- LEVEL 2: AREA HOME -->
+  <section class="view" id="view-area">
+    <div class="portal-menu-head">
+      <div>
+      <h1 id="areaHomeTitle">Your area</h1><p id="areaHomeCopy"></p></div>
+      <button class="small-btn" onclick="leaveWorkArea()">Switch area</button>
+    </div>
+    <div class="coach-module-grid" id="areaHomeContent"></div>
+  </section>
+
+  <!-- LEVEL 2: TRAINER MENU -->
+  <section class="view" id="view-trainer-menu">
+    <div class="portal-menu-head">
+      <div><h1>Trainer <span class="grad-text">workspace</span></h1><p>Start with the job you need to do. Client records stay behind your named, owner-approved trainer account.</p></div>
+      <button class="small-btn" onclick="lockTrainerHub()">Lock trainer access</button>
+    </div>
+    <div class="trainer-attention-panel" id="trainerAttentionPanel" aria-live="polite"></div>
+    <div class="section-eyebrow">Start here</div>
+    <div class="tools-grid">
+      <button class="tool-card primary" onclick="openNewClientProfile()"><div class="tc-icon">+</div><div class="tc-title">Create client profile</div><span class="portal-question">Who is new?</span><div class="tc-desc">Search first, then create a new profile only when there is no duplicate or near-duplicate match.</div></button>
+      <button class="tool-card" onclick="openScratchWorkoutBuilder()"><div class="tc-icon">&#9998;</div><div class="tc-title">Build for one client</div><span class="portal-question">Do I want full control?</span><div class="tc-desc">Load a client, then build every phase from warm-up through cool-down using the complete filtered exercise bank.</div></button>
+      </div>
+    <div class="section-eyebrow">Manage &amp; review</div>
+    <div class="tools-grid">
+      <button class="tool-card live" onclick="openAdvancedStudio('review')"><div class="tc-icon">&#10024;</div><div class="tc-title">Client review</div><div class="tc-desc">Read a client's check-ins, workout results and monitoring together, then decide the next move.</div></button>
+    </div>
+  </section>
+
+  <!-- LEVEL 2: CLIENT MENU -->
+  <section class="view" id="view-client-menu">
+    <div class="portal-menu-head">
+      <div><h1>Client <span class="grad-text">workspace</span></h1><p>Find your own workout and the tools you need without opening the trainer’s client directory.</p></div>
+      <button class="small-btn" onclick="switchPortalRole()">Switch role</button>
+    </div>
+    <div class="tools-grid">
+      <button class="tool-card primary" onclick="openClientWorkout()"><div class="tc-icon">&#9654;</div><div class="tc-title">Find my workout</div><span class="portal-question">What am I doing today?</span><div class="tc-desc">Search your name or username, load your saved goals and limitations, then open today’s workout options.</div></button>
+      <button class="tool-card live" onclick="openTools()"><div class="tc-icon">&#9201;</div><div class="tc-title">Workout tools</div><span class="portal-question">What helps me train?</span><div class="tc-desc">Use fullscreen rest and interval timers, plate math, warm-up sets, and the RPE guide.</div></button>
+      <button class="tool-card" onclick="openClientCheckIn()"><div class="tc-icon">&#128221;</div><div class="tc-title">Weekly check-in</div><span class="portal-question">How is training going?</span><div class="tc-desc">Share adherence, recovery, confidence, motivation, pain, wins, barriers, and schedule changes with your trainer.</div></button>
+    </div>
+    <div class="portal-note">Can’t find your profile? Submit one request from the lookup. A trainer must approve it, and duplicate-name checks prevent extra profiles from piling up.</div>
+  </section>
+
+  <aside class="trainer-client-preview-bar" id="trainerClientPreviewBar" aria-label="Owner client preview controls">
+    <div class="trainer-client-preview-copy"><span>Owner client preview</span><b>Viewing the live client experience</b><small>Use the selector to double-check another client. Actions in this view affect the selected client’s record.</small></div>
+    <label for="trainerClientPreviewSelect">Viewing client<select id="trainerClientPreviewSelect" onchange="switchTrainerClientPreview(this.value)"></select></label>
+    <button class="small-btn" type="button" onclick="exitTrainerClientPreview()">Return to owner workspace</button>
+  </aside>
+
+  <!-- REQUIRED IN-APP CLIENT CONSULTATION -->
+  <section class="view consultation-view" id="view-client-consultation">
+    <div class="consultation-shell">
+      <header class="consultation-head">
+        <div><span class="portal-question">Required client setup</span><h1>Trainer <span class="grad-text">Consultation</span></h1><p>Tell the coaching team what you want from training. Your answers update your coaching profile and help the workout generator make a safer, more useful starting plan.</p></div>
+        <button class="small-btn" type="button" onclick="saveClientConsultationAndSignOut()">Save later &amp; sign out</button>
+      </header>
+      <div class="consultation-progress" aria-label="Questionnaire progress"><div id="consultationProgressFill"></div></div>
+      <nav class="consultation-steps" id="consultationStepNav" aria-label="Consultation steps"></nav>
+      <div class="consultation-alert" id="consultationAlert" role="status" aria-live="polite"></div>
+      <form id="clientConsultationForm" onsubmit="event.preventDefault();submitClientConsultation()" novalidate>
+        <section class="consultation-panel" data-consultation-step="1">
+          <div class="consultation-panel-title"><span>1 of 5</span><h2>About you</h2><p>We use this information to connect the answers to the correct protected client profile.</p></div>
+          <div class="consultation-grid">
+            <div class="compact-field wide"><label for="consultationName">Full name</label><input id="consultationName" type="text" readonly><span class="storage-note">Connected to your verified client profile.</span></div>
+            <div class="compact-field wide"><label for="consultationEmail">Verified BYU-I email</label><input id="consultationEmail" type="email" readonly><span class="storage-note">Client accounts must use a BYU-I email. Trainers may use a personal or BYU-I email.</span></div>
+            <div class="compact-field"><label for="consultationPhone">Phone number</label><input id="consultationPhone" type="tel" autocomplete="tel" placeholder="(208) 555-0123"></div>
+            <div class="compact-field"><label for="consultationAge">Age</label><input id="consultationAge" type="number" min="13" max="100" inputmode="numeric" placeholder="Age in years"></div>
+            <fieldset class="consultation-fieldset wide"><legend>How would you describe your current fitness level?</legend><div class="consultation-option-grid three" id="consultationFitnessLevel"></div></fieldset>
+          </div>
+        </section>
+
+        <section class="consultation-panel" data-consultation-step="2">
+          <div class="consultation-panel-title"><span>2 of 5</span><h2>Your activity background</h2><p>Past experience and familiar activities help the generator choose an appropriate level and training route.</p></div>
+          <div class="consultation-grid">
+            <div class="compact-field wide"><label for="consultationPastActivities">What types of physical activity have you done in the past?</label><textarea id="consultationPastActivities" placeholder="Examples: sports, running, lifting, classes, swimming, or none yet"></textarea></div>
+            <fieldset class="consultation-fieldset wide"><legend>At what intensity do you normally exercise?</legend><div class="consultation-rpe-row"><input id="consultationRpe" type="range" min="1" max="10" step="1" value="5" oninput="renderConsultationRpe(this.value)"><output id="consultationRpeOutput" for="consultationRpe">5 · Moderate</output></div><p class="consultation-help">1 is very easy. 10 is an all-out effort you could not maintain.</p></fieldset>
+            <fieldset class="consultation-fieldset wide"><legend>What types of exercise interest you?</legend><div class="consultation-option-grid four" id="consultationInterests"></div></fieldset>
+          </div>
+        </section>
+
+        <section class="consultation-panel" data-consultation-step="3">
+          <div class="consultation-panel-title"><span>3 of 5</span><h2>Goals &amp; exercise preferences</h2><p>Your primary goal drives the session structure. Exercise preferences help the generator use familiar, motivating movements and avoid poor-fit choices.</p></div>
+          <div class="consultation-grid">
+            <div class="compact-field wide"><label for="consultationPrimaryGoal">What is your main fitness goal?</label><select id="consultationPrimaryGoal"><option value="">Choose one main goal…</option></select></div>
+            <fieldset class="consultation-fieldset wide"><legend>Any secondary goals? <small>Choose up to two</small></legend><div class="consultation-option-grid two" id="consultationSecondaryGoals"></div></fieldset>
+            <div class="compact-field wide"><label for="consultationFavorites">Favorite exercises we should include</label><textarea id="consultationFavorites" placeholder="Separate exercises with commas or new lines"></textarea></div>
+            <div class="compact-field wide"><label for="consultationDislikes">Least favorite exercises</label><textarea id="consultationDislikes" placeholder="Separate exercises with commas or new lines"></textarea></div>
+            <div class="compact-field wide"><label for="consultationUnfamiliar">Exercises or gym activities you do not know how to do yet</label><textarea id="consultationUnfamiliar" placeholder="This helps your trainer plan instruction and simpler starting options"></textarea></div>
+          </div>
+        </section>
+
+        <section class="consultation-panel" data-consultation-step="4">
+          <div class="consultation-panel-title"><span>4 of 5</span><h2>Limitations &amp; coaching support</h2><p>Client-reported limitations immediately create conservative exercise filters and a trainer-review task. This is not medical screening or diagnosis.</p></div>
+          <div class="consultation-grid">
+            <fieldset class="consultation-fieldset wide"><legend>Do you have any physical limitations or adaptations we should know about?</legend><div class="consultation-option-grid two" id="consultationHasLimitations"></div></fieldset>
+            <fieldset class="consultation-fieldset wide consultation-limitations-detail"><legend>Where does the limitation affect you?</legend><div class="consultation-option-grid four" id="consultationLimitationAreas"></div></fieldset>
+            <div class="compact-field wide consultation-limitations-detail"><label for="consultationLimitationDetails">Describe the limitation, adaptation, or movements that bother you</label><textarea id="consultationLimitationDetails" placeholder="Example: My right ankle is sprained; running and jumping are uncomfortable"></textarea></div>
+            <fieldset class="consultation-fieldset wide"><legend>What would you most like from your trainer?</legend><div class="consultation-option-grid two" id="consultationSupport"></div></fieldset>
+            <div class="compact-field wide"><label for="consultationSupportOther">Anything else you want your trainer to know?</label><textarea id="consultationSupportOther" placeholder="Optional coaching preference or concern"></textarea></div>
+          </div>
+        </section>
+
+        <section class="consultation-panel" data-consultation-step="5">
+          <div class="consultation-panel-title"><span>5 of 5</span><h2>Review &amp; submit</h2><p>Review the summary below. You can update this consultation later from More → Account &amp; profile.</p></div>
+          <div id="consultationReview" class="consultation-review"></div>
+          <div class="consultation-consents">
+            <label><input id="consultationTruth" type="checkbox"> My answers are accurate to the best of my knowledge.</label>
+            <label><input id="consultationPrivacy" type="checkbox"> I understand these answers are shared with approved <b data-brand-name>Fit4Life</b> trainers for coaching.</label>
+            <label><input id="consultationNotMedical" type="checkbox"> I understand this questionnaire and the workout generator do not provide medical diagnosis or clearance.</label>
+          </div>
+        </section>
+        <div class="consultation-actions"><button class="small-btn" id="consultationBackBtn" type="button" onclick="changeConsultationStep(-1)">Back</button><button class="small-btn" type="button" onclick="saveClientConsultationDraft()">Save draft</button><button class="small-btn primary" id="consultationNextBtn" type="button" onclick="changeConsultationStep(1)">Continue</button><button class="small-btn primary" id="consultationSubmitBtn" type="submit">Submit consultation</button></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- PROGRAM-LED CLIENT APP -->
+  <section class="view client-app-view" id="view-client-home">
+    <div class="client-app-head"><div><div class="client-section-label">Home</div><h1 id="clientHomeGreeting">Ready when you are</h1><p id="clientHomeSubhead">Your next coaching action is shown first.</p></div><div class="client-avatar" id="clientHomeAvatar">FL</div></div>
+    <div id="clientHomeContent"></div>
+  </section>
+
+  <section class="view client-app-view" id="view-client-program">
+    <div class="client-app-head"><div><div class="client-section-label">Workout</div><h1>Your program</h1><p>See the week, preview the session, then train without extra navigation.</p></div><div class="client-avatar client-avatar-shared">FL</div></div>
+    <div id="clientProgramContent"></div>
+  </section>
+
+  <section class="view client-app-view" id="view-client-progress">
+    <div class="client-app-head"><div><div class="client-section-label">Progress</div><h1>Your progress</h1><p>A simple summary first. Open the detail only when you need it.</p></div><div class="client-avatar client-avatar-shared">FL</div></div>
+    <nav class="segmented-tabs" aria-label="Progress sections">
+      <button class="on" data-client-progress="overview" onclick="setClientProgressSection('overview')">Overview</button><button data-client-progress="performance" onclick="setClientProgressSection('performance')">Performance</button><button data-client-progress="body" onclick="setClientProgressSection('body')">Body</button><button data-client-progress="goals" onclick="setClientProgressSection('goals')">Goals</button>
+    </nav>
+    <div id="clientProgressContent"></div>
+  </section>
+
+  <section class="view client-app-view" id="view-client-coach">
+    <div class="client-app-head"><div><div class="client-section-label">Coach</div><h1>Your coach</h1><p>Messages, check-ins, feedback, updates, and reports stay organized by purpose.</p></div><div class="client-avatar client-avatar-shared">FL</div></div>
+    <div id="clientCoachContent"></div>
+  </section>
+
+  <section class="view client-app-view" id="view-client-more">
+    <div class="client-app-head"><div><div class="client-section-label">More</div><h1>More tools</h1><p>Utilities and education stay one level deeper so today’s plan remains focused.</p></div><div class="client-avatar client-avatar-shared">FL</div></div>
+    <div id="clientMoreContent"></div>
+  </section>
+
+  <section class="view" id="view-active-workout">
+    <div class="active-workout-top"><div class="active-progress-row"><div><b id="activeWorkoutLabel">Active workout</b><span id="activeWorkoutStep">Exercise 1</span></div><button class="small-btn" onclick="leaveActiveWorkout()">Close</button></div><div class="active-progress-track"><div class="active-progress-fill" id="activeWorkoutProgress" style="width:0"></div></div></div>
+    <div id="activeWorkoutContent"></div>
+  </section>
+
+  <section class="view" id="view-coach-module">
+    <div class="builder-head"><span class="portal-question" id="coachModuleEyebrow">Coach workspace</span><h2 id="coachModuleTitle">Coach module</h2><p id="coachModuleCopy"></p></div>
+    <div class="coach-module-grid" id="coachModuleContent"></div>
+  </section>
+
+  <!-- LEVEL 3: CLIENT WORKOUT ACCESS -->
+  <section class="view" id="view-client-workout">
+    <div class="builder-head"><span class="portal-question">What am I doing today?</span><h2>My Workout</h2><p>Search your name or username. The directory stays hidden, and only the latest workout assigned to your profile on this device is opened.</p></div>
+    <div class="panel">
+      <div class="compact-field profile-lookup"><label for="clientWorkoutLookup">Name or username</label><input id="clientWorkoutLookup" type="search" autocomplete="off" placeholder="Start typing your name or username" oninput="renderClientWorkoutLookup()"><div id="clientWorkoutLookupResults" class="profile-results"></div></div>
+      <p class="profile-guidance">No public client list is shown. If there is no matching profile, send one request and wait for a trainer to approve it.</p>
+    </div>
+    <div id="clientAssignedWorkout" class="client-session-readonly"><div class="empty-state">Find your profile to open the workout your trainer assigned.</div></div>
+  </section>
+
+  <!-- PRIVATE TRAINER HUB -->
+  <section class="view" id="view-trainer">
+    <div class="trainer-head">
+      <div><span class="portal-question">Who am I coaching?</span><h2>Trainer Hub</h2><p>Private client directory, coach insights, workout history, and goal-aware analysis.</p></div>
+      <div><span class="private-badge">&#128274; Trainer session</span><button class="small-btn" style="margin-left:8px" onclick="lockTrainerHub()">Lock</button></div>
+    </div>
+    <div class="trainer-kpis" id="trainerKpis"></div>
+    <div class="coach-insights" id="coachInsights"></div>
+    <div class="trainer-layout">
+      <aside class="client-directory">
+        <div class="directory-head">
+          <div class="result-label">Client directory</div>
+          <button class="small-btn primary" style="width:100%" onclick="openNewClientProfile()">+ New client profile</button>
+          <input id="trainerClientSearch" type="text" placeholder="Search clients…" oninput="renderTrainerDirectory()" aria-label="Search all clients">
+          <select id="trainerClientScope" onchange="renderTrainerDirectory()" aria-label="Filter clients by primary coach"><option value="all">All clients</option><option value="mine">My primary clients</option><option value="shared">Shared clients</option></select>
+        </div>
+        <div id="profileRequestQueue"></div>
+        <div class="client-list" id="trainerClientList"></div>
+      </aside>
+      <div class="trainer-report" id="trainerReport"><div class="empty-state">Choose a client to open their analysis.</div></div>
+    </div>
+  </section>
+
+  <!-- BUILDER -->
+  <section class="view" id="view-builder">
+    <div class="builder-head">
+      <span class="portal-question" id="builderQuestion">What is today's workout?</span><h2 id="builderTitle">New Session</h2>
+      <p id="builderCopy">Fill in the client’s details, compare three generated workout directions, then choose and customize the best fit.</p>
+    </div>
+
+    <div class="panel">
+      <div class="mode-toggle" id="modeToggle">
+        <button class="on" data-mode="solo" onclick="setMode('solo')">Solo</button>
+        <button data-mode="group" onclick="setMode('group')">Group of 2</button>
+      </div>
+      <div id="soloFields"></div>
+      <div id="groupFields" style="display:none"></div>
+
+      <div class="build-actions">
+        <button class="btn btn-primary" id="buildBtn" onclick="generate()">Generate 3 workout options</button>
+        <button class="btn btn-ghost" id="scratchBuildBtn" onclick="startWorkoutFromScratch()">Build from scratch</button>
+        <button class="btn btn-ghost" id="reshuffleBtn" onclick="reshuffle()" style="display:none">&#8635; Reshuffle</button>
+        <span class="hint-inline" id="buildHint"></span>
+      </div>
+    </div>
+
+    <div id="output"></div>
+    <p class="disclaimer" id="disclaimer" style="display:none">These sessions are evidence-informed starting points generated from your inputs. You are the coach — confirm every prescription fits your client, adjust load and range to the individual, and stop anything that provokes pain.</p>
+  </section>
+
+  <!-- WAVE 2: TRAINER TOOLS -->
+  <section class="view" id="view-tools">
+    <div class="builder-head">
+      <span class="portal-question" id="toolsQuestion">What do I need on the gym floor?</span><h2 id="toolsTitle">Training Tools</h2>
+      <p id="toolsCopy">Fast floor-side math, warm-up planning, and timers that work without an account.</p>
+    </div>
+    <div class="workspace-grid">
+      <article class="utility-card">
+        <div class="utility-head"><div><h3 class="utility-title">Estimated 1RM</h3><p class="utility-sub">Uses the Epley equation. Best with controlled sets of 2–10 reps.</p></div></div>
+        <div class="compact-grid">
+          <div class="compact-field"><label for="oneRmWeight">Lifted weight</label><input id="oneRmWeight" type="number" min="1" step="0.5" value="225"></div>
+          <div class="compact-field"><label for="oneRmReps">Completed reps</label><input id="oneRmReps" type="number" min="1" max="20" value="5"></div>
+          <div class="compact-field"><label for="oneRmUnit">Unit</label><select id="oneRmUnit"><option value="lb">lb</option><option value="kg">kg</option></select></div>
+        </div>
+        <div class="tool-actions"><button class="small-btn primary" onclick="calculateOneRm()">Calculate</button></div>
+        <div class="result-box" id="oneRmResult" aria-live="polite"></div>
+      </article>
+
+      <article class="utility-card">
+        <div class="utility-head"><div><h3 class="utility-title">Plate Math</h3><p class="utility-sub">Build the target weight evenly on a standard bar.</p></div></div>
+        <div class="compact-grid">
+          <div class="compact-field"><label for="plateTarget">Target total</label><input id="plateTarget" type="number" min="0" step="0.5" value="225"></div>
+          <div class="compact-field"><label for="plateBar">Bar weight</label><input id="plateBar" type="number" min="0" step="0.5" value="45"></div>
+          <div class="compact-field"><label for="plateUnit">Unit</label><select id="plateUnit" onchange="syncPlateUnit()"><option value="lb">lb</option><option value="kg">kg</option></select></div>
+        </div>
+        <div class="tool-actions"><button class="small-btn primary" onclick="calculatePlates()">Load bar</button></div>
+        <div class="result-box" id="plateResult" aria-live="polite"></div>
+      </article>
+
+      <article class="utility-card">
+        <div class="utility-head"><div><h3 class="utility-title">Warm-up Ramp</h3><p class="utility-sub">Progressive sets that prepare the lift without creating fatigue.</p></div></div>
+        <div class="compact-grid">
+          <div class="compact-field"><label for="warmWeight">Working weight</label><input id="warmWeight" type="number" min="1" step="0.5" value="225"></div>
+          <div class="compact-field"><label for="warmGoal">Session type</label><select id="warmGoal"><option value="strength">Get stronger / power</option><option value="hypertrophy">Build muscle</option><option value="general">Feel fitter</option></select></div>
+          <div class="compact-field"><label for="warmUnit">Unit</label><select id="warmUnit"><option value="lb">lb</option><option value="kg">kg</option></select></div>
+        </div>
+        <div class="tool-actions"><button class="small-btn primary" onclick="buildWarmupRamp()">Build ramp</button></div>
+        <div class="result-box" id="warmResult" aria-live="polite"></div>
+      </article>
+
+      <article class="utility-card timer-shell" id="restTimerCard">
+        <div class="utility-head"><div><h3 class="utility-title">Rest Timer</h3><p class="utility-sub">One-tap presets for strength, hypertrophy, and circuits.</p></div></div>
+        <div class="timer-display" id="restTimerDisplay" role="timer" aria-live="polite">01:30</div>
+        <div class="preset-row" aria-label="Rest timer presets">
+          <button class="preset" onclick="setRestTimer(30)">0:30</button><button class="preset" onclick="setRestTimer(60)">1:00</button><button class="preset on" onclick="setRestTimer(90)">1:30</button><button class="preset" onclick="setRestTimer(120)">2:00</button><button class="preset" onclick="setRestTimer(180)">3:00</button><button class="preset" onclick="setRestTimer(300)">5:00</button>
+        </div>
+        <div class="tool-actions"><button class="small-btn primary" id="restStartBtn" onclick="toggleRestTimer()">Start</button><button class="small-btn" onclick="resetRestTimer()">Reset</button><button class="small-btn" id="restFullscreenBtn" onclick="toggleTimerFullscreen('restTimerCard')">Fullscreen</button></div>
+      </article>
+
+      <article class="utility-card timer-shell" id="intervalTimerCard">
+        <div class="utility-head"><div><h3 class="utility-title">Interval Timer</h3><p class="utility-sub">Alternating work and recovery with automatic round tracking.</p></div></div>
+        <div class="compact-grid">
+          <div class="compact-field"><label for="intervalWork">Work (sec)</label><input id="intervalWork" type="number" min="5" max="600" value="40"></div>
+          <div class="compact-field"><label for="intervalRest">Rest (sec)</label><input id="intervalRest" type="number" min="0" max="600" value="20"></div>
+          <div class="compact-field"><label for="intervalRounds">Rounds</label><input id="intervalRounds" type="number" min="1" max="50" value="8"></div>
+        </div>
+        <div class="timer-display" id="intervalDisplay" role="timer" aria-live="polite">00:40</div>
+        <div class="result-label" id="intervalStatus">Ready · 8 rounds</div>
+        <div class="tool-actions"><button class="small-btn primary" id="intervalStartBtn" onclick="toggleIntervalTimer()">Start</button><button class="small-btn" onclick="resetIntervalTimer()">Reset</button><button class="small-btn" id="intervalFullscreenBtn" onclick="toggleTimerFullscreen('intervalTimerCard')">Fullscreen</button></div>
+      </article>
+
+      <article class="utility-card">
+        <div class="utility-head"><div><h3 class="utility-title">RPE / RIR Guide</h3><p class="utility-sub">Use reps in reserve to coach effort without guessing exact load.</p></div></div>
+        <table class="guide-table"><thead><tr><th>RPE</th><th>RIR</th><th>What it feels like</th></tr></thead><tbody>
+          <tr><td>10</td><td>0</td><td>Max effort; no additional clean rep possible.</td></tr>
+          <tr><td>9</td><td>1</td><td>One clean rep left; appropriate for a hard top set.</td></tr>
+          <tr><td>8</td><td>2</td><td>Challenging and repeatable; primary working-set target.</td></tr>
+          <tr><td>7</td><td>3</td><td>Solid work with clear speed; technique and volume work.</td></tr>
+          <tr><td>6</td><td>4+</td><td>Warm-up or recovery effort; fast, comfortable reps.</td></tr>
+        </tbody></table>
+        <p class="storage-note">Stop a set if technique changes, pain appears, or the client cannot maintain the intended tempo.</p>
+      </article>
+      <article class="utility-card wide">
+        <div class="utility-head"><div><h3 class="utility-title">Beginner Glossary</h3><p class="utility-sub">Plain-language definitions for the terms used throughout the workouts.</p></div><span class="wave-badge">Quick guide</span></div>
+        <div class="glossary-grid">
+          <div class="glossary-item"><b>Working set</b><p>A set that counts toward the workout after the lighter warm-up sets are finished.</p></div>
+          <div class="glossary-item"><b>RPE</b><p>Effort from 1–10. RPE 8 means you could perform about two more clean reps.</p></div>
+          <div class="glossary-item"><b>RIR</b><p>“Reps in reserve”—the number of good repetitions you believe you had left.</p></div>
+          <div class="glossary-item"><b>Tempo</b><p>How quickly each part of a repetition is performed, especially the lowering phase.</p></div>
+          <div class="glossary-item"><b>Superset</b><p>Two exercises performed back-to-back before taking a full rest.</p></div>
+          <div class="glossary-item"><b>Drop set</b><p>Perform a hard set, reduce the weight, and immediately continue with more reps.</p></div>
+          <div class="glossary-item"><b>Finisher</b><p>A short final exercise intended to challenge the trained muscles or conditioning.</p></div>
+          <div class="glossary-item"><b>Deload</b><p>An easier training week that reduces fatigue while keeping the movement routine.</p></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- WAVE 3: PROGRAMS -->
+  <section class="view" id="view-programs">
+    <div class="builder-head"><span class="portal-question">How are we planning ahead?</span><h2>Programs</h2><p>Build a progressive multi-week plan from the same age, experience, goal, and muscle-aware session engine.</p></div>
+    <div class="utility-card no-print">
+      <div class="utility-head"><div><h3 class="utility-title">Program Setup</h3><p class="utility-sub">Start new clients with a repeatable three-week rhythm, then move into longer progressive phases.</p></div></div>
+      <div id="programTemplateContext" class="constraint-summary" style="display:none"></div>
+      <div id="programTemplatesHost"></div>
+      <div class="program-setup-flow">
+        <section class="program-setup-section">
+          <div class="program-setup-section-head"><span class="program-setup-step">1</span><div><h4>Select the client</h4><p>Load the saved profile first so goals, limitations, equipment, and prior program details follow the client.</p></div></div>
+          <div class="program-setup-grid program-profile-grid">
+            <div class="compact-field profile-lookup"><label for="programProfileLookup">Find client profile</label><input id="programProfileLookup" type="search" autocomplete="off" placeholder="Type name or username" oninput="renderProgramProfileLookup()"><input id="programProfile" type="hidden"><div id="programProfileLookupResults" class="profile-results"></div></div>
+            <div class="compact-field"><label for="programClient">Client name</label><input id="programClient" type="text" placeholder="Optional"></div>
+          </div>
+          <div class="profile-actions" id="programProfileActions" style="margin-top:10px"><button class="small-btn primary" type="button" onclick="updateSelectedProgramProfileFromSetup()">Update client profile</button><button class="small-btn" type="button" onclick="editSelectedProgramProfile()">Edit full profile</button><button class="small-btn danger" type="button" onclick="deleteSelectedProgramProfile()">Delete profile only</button><button class="small-btn danger" type="button" onclick="deleteAllSelectedProgramClient()">Delete all client data</button></div>
+          <div id="programBaselineGate" class="baseline-gate" data-status="missing"><div class="baseline-gate-copy"><span>Personalization baseline</span><h4>Select a client to check baseline readiness</h4><p>Tailored programming unlocks after the client completes a short calibration inside their first useful workout and a trainer verifies the evidence.</p></div></div>
+        </section>
+
+        <section class="program-setup-section">
+          <div class="program-setup-section-head"><span class="program-setup-step">2</span><div><h4>Choose the coaching direction</h4><p>Set the outcome first, then choose the training route that best fits how this client wants to train.</p></div></div>
+          <div class="program-setup-grid program-goal-grid">
+            <div class="compact-field"><label for="programGoal">Primary goal</label><select id="programGoal"><option value="strength">Get stronger</option><option value="hypertrophy">Build muscle</option><option value="fatloss">Lose body fat</option><option value="general">Feel fitter</option><option value="athletic">Move faster / power</option><option value="conditioning">Improve stamina</option><option value="recovery">Move better / recover</option></select></div>
+            <div class="compact-field"><label for="programSecondaryGoal">Secondary goal</label><select id="programSecondaryGoal"><option value="">No secondary goal</option><option value="strength">Get stronger</option><option value="hypertrophy">Build muscle</option><option value="fatloss">Lose body fat</option><option value="general">Feel fitter</option><option value="athletic">Move faster / power</option><option value="conditioning">Improve stamina</option><option value="recovery">Move better / recover</option></select></div>
+            <div class="compact-field"><label for="programStyle">Training route</label><select id="programStyle"><option value="auto">Best match for goal</option><option value="resistance">Resistance focused</option><option value="mixed">Weights + cardio</option><option value="cardio">Cardio focused</option><option value="performance">Speed + power</option><option value="recovery">Easy cardio + mobility</option><option value="mobility">Mobility only</option></select></div>
+            <div class="compact-field"><label for="programExp">Experience</label><select id="programExp"><option value="1">New</option><option value="2" selected>Intermediate</option><option value="3">Advanced</option></select></div>
+            <div class="compact-field"><label for="programAge">Age</label><input id="programAge" type="number" min="18" max="90" value="30"></div>
+          </div>
+        </section>
+
+        <section class="program-setup-section">
+          <div class="program-setup-section-head"><span class="program-setup-step">3</span><div><h4>Choose available cardio options</h4><p>Select every option the client can use. These choices apply to warm-ups, conditioning, and cool-downs—not only the main workout.</p></div></div>
+          <div id="programCardioChips" class="multi-choice-grid program-cardio-grid" aria-label="Cardio preferences"></div>
+          <div class="program-cardio-help"><span><b>Multiple selections are allowed.</b> Selected options are highlighted in blue.</span><span>“Any available” clears the specific choices.</span></div>
+        </section>
+
+        <section class="program-setup-section">
+          <div class="program-setup-section-head"><span class="program-setup-step">4</span><div><h4>Set the schedule</h4><p>Choose the repeatable weekly rhythm, total phase length, and expected time for each visit. <b>Which days of the week</b> they train lives on the client&rsquo;s profile, not on this draft &mdash; <button class="mini-btn" type="button" onclick="editSelectedProgramProfile()">set their training days</button></p></div></div>
+          <div class="program-setup-grid program-schedule-grid">
+            <div class="compact-field"><label for="programMode">Program type</label><select id="programMode" onchange="syncProgramMode()"><option value="starter" selected>3-week starter rhythm</option><option value="progressive">Ongoing progressive program</option></select></div>
+            <div class="compact-field"><label for="programDays">Days per week</label><select id="programDays"><option value="1">1 day</option><option value="2" selected>2 days</option><option value="3">3 days</option><option value="4">4 days</option><option value="5">5 days</option></select><span class="storage-note" id="programTierNote"></span></div>
+            <div class="compact-field"><label for="programWeeks">Program length</label><select id="programWeeks" disabled><option value="3" selected>3 weeks</option><option value="4">4 weeks</option><option value="6">6 weeks</option><option value="8">8 weeks</option><option value="12">12 weeks</option></select></div>
+            <div class="compact-field"><label for="programMinutes">Session length</label><select id="programMinutes"><option value="" selected>Use their tier (60 min)</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option><option value="90">90 min</option></select></div>
+            <div class="compact-field"><label for="programFocus">Extra muscle emphasis</label><select id="programFocus"><option value="">No extra emphasis</option><option value="chest">Chest</option><option value="back">Back</option><option value="shoulders">Shoulders</option><option value="quads">Quads</option><option value="hamstrings">Hamstrings</option><option value="glutes">Glutes</option><option value="arms">Arms</option><option value="calves">Calves</option><option value="core">Core</option></select></div>
+            <div class="program-mode-note" id="programModeNote"><b>Starter rhythm · recommended for new clients</b>Two recognizable workouts repeat for three weeks. Week 1 learns the plan, Week 2 repeats it with a small progression, and Week 3 builds confidence without swapping the exercise menu. A client review follows Week 1.</div>
+          </div>
+        </section>
+
+        <details class="program-setup-section program-safety-section">
+          <summary><span class="program-safety-copy"><span class="program-setup-step">5</span><span><b>Review safety and equipment</b><span>Open only when limitations or a reduced equipment list need to be adjusted.</span></span></span></summary>
+          <div class="program-safety-body">
+            <div class="compact-field"><label>Injury and life-stage limitations</label><div class="filter-chips" id="programInjuryChips">
+              <button type="button" class="chip none-chip on" onclick="clearProgramLimitations()">No limitations</button>
+              <button type="button" class="chip" onclick="toggleProgramFilter('injuries','knee',this)">Knee</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','shoulder',this)">Shoulder</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','lowback',this)">Lower back</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','wrist',this)">Wrist</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','hip',this)">Hip</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','elbow',this)">Elbow</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','ankle',this)">Ankle</button>
+              <button type="button" class="chip" onclick="toggleProgramFilter('injuries','pregnancy',this)">Pregnancy / postpartum</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','nohinge',this)">Avoid hip hinging</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','nooverhead',this)">Avoid overhead work</button>
+            </div></div>
+            <div class="compact-field"><label>Equipment available (leave blank for full gym)</label><div class="filter-chips" id="programZoneChips">
+              <button type="button" class="chip" onclick="toggleProgramFilter('zones','cardio',this)">Cardio</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','platform',this)">Platforms</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','rack',this)">Racks</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','crossfit',this)">Functional</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','dumbbell',this)">Dumbbells</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','machine',this)">Machines</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','cable',this)">Cables</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','bodyweight',this)">Bodyweight</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','band',this)">Bands</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','kettlebell',this)">Kettlebell</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','household',this)">Household</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','outdoor',this)">Outdoors</button>
+            </div></div>
+            <p class="storage-note" style="grid-column:1/-1">The exercise bank is automatically limited by the shared equipment setup for this gym. Client-level equipment choices can narrow it further for the entire session.</p>
+          </div>
+        </details>
+      </div>
+      <div class="tool-actions program-build-actions"><button class="small-btn primary" id="programBuildBtn" onclick="generateProgram()">Build tailored program draft</button><button class="small-btn" id="programCalibrationBtn" onclick="generateCalibrationProgram()">Build first-workout calibration</button><button class="small-btn" id="programApproveBtn" onclick="approveCurrentProgram()" disabled>Coach approve program</button><button class="small-btn" id="programPrintBtn" onclick="printProgram()" disabled>Print take-home cards</button><button class="small-btn primary" id="programSaveBtn" onclick="saveAndAssignCurrentProgram('all')" disabled>Save &amp; assign full program</button><button class="small-btn" id="programSaveOnlyBtn" onclick="saveCurrentProgram()" disabled>Save without assigning</button></div>
+    </div>
+    <div id="programOutput" class="empty-state">Choose the client details and build a program.</div>
+  </section>
+
+  <!-- WAVE 4: READINESS + PROGRESS -->
+  <section class="view" id="view-readiness">
+    <div class="builder-head"><span class="portal-question">Am I improving?</span><h2>Progress</h2><p>Connect strength, measurements, consistency, PRs, and InBody history.</p></div>
+    <div class="workspace-grid">
+      <article class="utility-card wide" id="progressLockedCard" style="display:none">
+        <div class="utility-head"><div><h3 class="utility-title">Client Records Are Private</h3><p class="utility-sub">The all-client history and analysis now live inside the protected Trainer Hub.</p></div><span class="wave-badge">&#128274; Trainers</span></div>
+        <button class="small-btn primary" onclick="openTrainerHub()">Unlock Trainer Hub</button>
+      </article>
+
+      <article class="utility-card wide" id="progressMemoryCard" style="display:none">
+        <div class="utility-head"><div><h3 class="utility-title">Progress Memory</h3><p class="utility-sub">Log a working set or session note. Entries save locally first, then sync to the signed-in account when connected.</p></div><span class="wave-badge">Cloud + offline</span></div>
+        <div class="compact-grid">
+          <div class="compact-field"><label for="logClient">Client</label><input id="logClient" type="text" placeholder="Client"></div>
+          <div class="compact-field"><label for="logExercise">Exercise / session</label><input id="logExercise" type="text" placeholder="Back squat"></div>
+          <div class="compact-field"><label for="logLoad">Load</label><input id="logLoad" type="number" min="0" step="0.5" placeholder="225"></div>
+          <div class="compact-field"><label for="logReps">Reps</label><input id="logReps" type="number" min="0" max="999" placeholder="5"></div>
+          <div class="compact-field"><label for="logUnit">Unit</label><select id="logUnit"><option value="lb">lb</option><option value="kg">kg</option><option value="bodyweight">bodyweight</option><option value="session">session</option></select></div>
+          <div class="compact-field"><label for="logRpe">RPE</label><select id="logRpe"><option value="">Not recorded</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select></div>
+          <div class="compact-field wide"><label for="logNotes">Notes</label><input id="logNotes" type="text" placeholder="Technique, pain-free range, next-session target…"></div>
+        </div>
+        <div class="tool-actions"><button class="small-btn primary" onclick="saveManualProgress()">Save entry</button><button class="small-btn" onclick="exportProgress()">Export backup</button><button class="small-btn" onclick="byId('progressImport').click()">Restore backup</button><button class="small-btn danger" onclick="clearProgress()">Clear history</button><input id="progressImport" type="file" accept="application/json,.json" onchange="importProgressFile(this)" style="display:none"></div>
+        <p class="storage-note" id="storageStatus">Signed-in records sync across devices. Offline changes stay queued on this device until the connection returns.</p>
+        <div class="filter-bar">
+          <div class="compact-field"><label for="historyClientFilter">Select client</label><select id="historyClientFilter" onchange="selectProgressHistoryClient()"><option value="">Choose a client…</option></select></div>
+          <div class="compact-field"><label for="historyTypeFilter">Entry type</label><select id="historyTypeFilter" onchange="renderProgressHistory()" disabled><option value="">All entries</option><option value="workout">Workout reviews</option><option value="set">Logged sets</option><option value="readiness">Readiness</option><option value="program">Programs</option></select></div>
+          <div class="compact-field"><label>Workout summary</label><button class="small-btn" id="historySummaryBtn" onclick="renderClientSummary()" disabled>Build client summary</button></div>
+        </div>
+        <div id="clientSummary"></div>
+        <div id="progressHistory" class="history-list"></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- CLIENT WEEKLY CHECK-IN -->
+  <section class="view" id="view-checkin">
+    <div class="builder-head"><span class="portal-question" id="checkInPageQuestion">How is training going?</span><h2 id="checkInPageTitle">Weekly Check-in</h2><p id="checkInPageCopy">Share the information your trainer needs to adjust the plan. Your answers stay connected only to the profile you look up on this device.</p></div>
+    <div class="checkin-panel">
+      <div class="panel checkin-identity">
+        <div class="compact-field profile-lookup"><label for="checkInLookup">Name or username</label><input id="checkInLookup" type="search" autocomplete="off" placeholder="Find your profile" oninput="renderCheckInLookup()"><input id="checkInProfileId" type="hidden"><div id="checkInLookupResults" class="profile-results"></div></div>
+        <p class="profile-guidance">No client directory is displayed. Select your own matching profile before submitting.</p>
+      </div>
+      <div class="panel checkin-form" id="checkInForm">
+        <div class="utility-head"><div><h3 class="utility-title" id="checkInClientTitle">Weekly check-in</h3><p class="utility-sub" id="checkInFormIntro">Use the last seven days. There are no perfect answers—accuracy helps the trainer.</p></div><span class="wave-badge">Client</span></div>
+        <details class="editor-section" open>
+          <summary>1 · How the week went</summary>
+          <div class="editor-section-body"><div class="compact-grid">
+          <div class="compact-field weekly-checkin-field"><label for="checkInAdherence">Planned workouts completed</label><select id="checkInAdherence"><option value="100">All</option><option value="75">Most</option><option value="50">About half</option><option value="25">One or very few</option><option value="0">None</option></select></div>
+          <div class="compact-field weekly-checkin-field"><label for="checkInSleep">Sleep quality</label><select id="checkInSleep"><option value="1">1 · Very poor</option><option value="2">2 · Poor</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · Excellent</option></select></div>
+          <div class="compact-field weekly-checkin-field"><label for="checkInStress">Life stress</label><select id="checkInStress"><option value="1">1 · Low</option><option value="2">2 · Light</option><option value="3" selected>3 · Moderate</option><option value="4">4 · High</option><option value="5">5 · Extreme</option></select></div>
+          <div class="compact-field weekly-checkin-field"><label for="checkInSoreness">Soreness</label><select id="checkInSoreness"><option value="1">1 · None</option><option value="2">2 · Mild</option><option value="3" selected>3 · Moderate</option><option value="4">4 · High</option><option value="5">5 · Severe</option></select></div>
+          <div class="compact-field weekly-checkin-field"><label for="checkInEnergy">Energy</label><select id="checkInEnergy"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Average</option><option value="4">4 · Good</option><option value="5">5 · High</option></select></div>
+          <div class="compact-field weekly-checkin-field"><label for="checkInConfidence">Training confidence</label><select id="checkInConfidence"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Steady</option><option value="4">4 · Confident</option><option value="5">5 · Very confident</option></select></div>
+          <div class="compact-field weekly-checkin-field"><label for="checkInMotivation">Motivation</label><select id="checkInMotivation"><option value="1">1 · Very low</option><option value="2">2 · Low</option><option value="3" selected>3 · Average</option><option value="4">4 · Strong</option><option value="5">5 · Very strong</option></select></div>
+          </div></div>
+        </details>
+        <details class="editor-section">
+          <summary>2 · Pain, and how it felt</summary>
+          <div class="editor-section-body"><div class="compact-grid">
+          <div class="compact-field"><label for="checkInPain" id="checkInPainLabel">Pain this week</label><select id="checkInPain" onchange="updateCheckInPainFields()"><option value="0">Green · No pain</option><option value="1">Yellow · Mild awareness; movement normal</option><option value="2">Orange · Changed technique, range, or balance</option><option value="3">Red · Severe, sharp, or worsening</option></select></div>
+          <div class="compact-field review-safety" id="checkInPainAreaField" hidden><label for="checkInPainArea">Where?</label><select id="checkInPainArea"></select></div>
+          <div class="compact-field review-safety" id="checkInPainMovementField" hidden><label for="checkInPainMovement">Did it change movement?</label><select id="checkInPainMovement" onchange="syncCheckInPainLevel()"><option value="no">No</option><option value="yes">Yes — technique, range, balance, or training changed</option></select></div>
+          <div class="starter-review-fields compact-grid weekly-checkin-field" id="checkInStarterFields">
+            <p>This first-week review checks whether the starter plan is understandable, appropriately difficult, and realistic for your schedule before Week 2 repeats it.</p>
+            <div class="compact-field"><label for="checkInWorkoutFit">Workout difficulty fit</label><select id="checkInWorkoutFit"><option value="too_easy">Too easy</option><option value="right" selected>About right</option><option value="too_hard">Too hard</option></select></div>
+            <div class="compact-field"><label for="checkInExerciseClarity">Exercise clarity</label><select id="checkInExerciseClarity"><option value="clear" selected>Clear and comfortable</option><option value="mostly_clear">Mostly clear</option><option value="need_help">I need coaching help</option></select></div>
+            <div class="compact-field"><label for="checkInSessionFit">Session length fit</label><select id="checkInSessionFit"><option value="too_short">Too short</option><option value="right" selected>Fit my schedule</option><option value="too_long">Too long</option></select></div>
+          </div>
+          </div></div>
+        </details>
+        <details class="editor-section">
+          <summary>3 · In your own words</summary>
+          <div class="editor-section-body"><div class="compact-grid">
+          <div class="compact-field wide weekly-checkin-field"><label for="checkInWin">Biggest win</label><textarea id="checkInWin" placeholder="What went well?"></textarea></div>
+          <div class="compact-field wide weekly-checkin-field"><label for="checkInChallenge">Biggest barrier or challenge</label><textarea id="checkInChallenge" placeholder="What made the plan harder to follow?"></textarea></div>
+          <div class="compact-field wide weekly-checkin-field"><label for="checkInSchedule">Schedule changes next week</label><textarea id="checkInSchedule" placeholder="Travel, exams, work shifts, games, or limited gym access…"></textarea></div>
+          <div class="compact-field wide weekly-checkin-field"><label for="checkInQuestion">Question for your trainer</label><textarea id="checkInQuestion" placeholder="What do you need help with?"></textarea></div>
+          </div></div>
+        </details>
+        <div class="tool-actions"><button class="small-btn primary" id="checkInSubmitBtn" onclick="saveClientCheckIn()">Send weekly check-in</button></div>
+        <div id="checkInConfirmation" class="advanced-output" style="display:none"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRAINER CONNECTED COACHING SUPPORT -->
+  <section class="view" id="view-advanced">
+    <div class="builder-head"><span class="portal-question">What does this client need next?</span><h2>Client review</h2><p>Check-ins, workout results and monitoring for one client, read together so the next decision has something behind it.</p></div>
+    <div class="advanced-shell">
+      <nav class="advanced-nav" id="advancedNav" aria-label="Advanced coaching modules"></nav>
+      <div class="advanced-main">
+        <div class="advanced-card advanced-client-bar" id="advancedClientBar">
+          <div class="compact-field"><label for="advancedClient">Client context</label><select id="advancedClient" onchange="selectAdvancedClient(this.value)"></select></div>
+          <button class="small-btn" onclick="renderAdvancedStudio()">Refresh analysis</button>
+        </div>
+        <div id="advancedContent"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="client-bottom-nav" id="clientBottomNav" aria-label="Client navigation">
+  <button data-client-tab="home" onclick="openClientTab('home')"><span class="nav-icon">⌂</span>Home</button>
+  <button data-client-tab="program" onclick="openClientTab('program')"><span class="nav-icon">▶</span>Workout</button>
+  <button data-client-tab="progress" onclick="openClientTab('progress')"><span class="nav-icon">↗</span>Progress</button>
+  <button data-client-tab="coach" onclick="openClientTab('coach')"><span class="nav-icon">●</span>Coach</button>
+  <button data-client-tab="more" onclick="openClientTab('more')"><span class="nav-icon">•••</span>More</button>
+</nav>
+
+<aside class="coach-sidebar" id="coachSidebar" aria-label="Coach navigation">
+  <h2>Coach workspace</h2>
+  <button data-coach-nav="dashboard" onclick="openCoachDestination('dashboard')"><span class="nav-icon">⌂</span><span class="nav-label">Dashboard</span></button>
+  <button data-coach-nav="actions" onclick="openCoachDestination('actions')"><span class="nav-icon">⚑</span><span class="nav-label">Actions</span><span class="coach-attention-badge" data-attention-badge="actions"></span></button>
+  <button data-coach-nav="clients" onclick="openCoachDestination('clients')"><span class="nav-icon">●</span><span class="nav-label">Clients</span><span class="coach-attention-badge" data-attention-badge="client_requests"></span></button>
+  <button data-coach-nav="builder" onclick="openCoachDestination('builder')"><span class="nav-icon">&#9636;</span><span class="nav-label">Build a workout</span></button>
+  <button data-coach-nav="tools" onclick="openCoachDestination('tools')"><span class="nav-icon">&#9201;</span><span class="nav-label">Trainer tools</span></button>
+  <button data-coach-nav="programming" onclick="openCoachDestination('programming')"><span class="nav-icon">▤</span><span class="nav-label">Programming</span></button>
+  <button data-coach-nav="calendar" onclick="openCoachDestination('calendar')"><span class="nav-icon">□</span><span class="nav-label">Calendar</span><span class="coach-attention-badge" data-attention-badge="schedule"></span></button>
+  <button data-coach-nav="messages" onclick="openCoachDestination('messages')"><span class="nav-icon">✉</span><span class="nav-label">Messages</span><span class="coach-attention-badge" data-attention-badge="messages"></span></button>
+  <button data-coach-nav="library" onclick="openCoachDestination('library')"><span class="nav-icon">≡</span><span class="nav-label">Exercise library</span></button><button data-coach-nav="saved" onclick="openCoachDestination('saved')"><span class="nav-icon">☆</span><span class="nav-label">Saved workouts</span></button>
+  <button data-coach-nav="assessments" onclick="openCoachDestination('assessments')"><span class="nav-icon">✓</span><span class="nav-label">Progress &amp; readiness</span></button><button data-coach-nav="team" onclick="openCoachDestination('team')"><span class="nav-icon">⌸</span><span class="nav-label">Team</span></button>
+  <button data-coach-nav="reports" onclick="openCoachDestination('reports')"><span class="nav-icon">↗</span><span class="nav-label">Reports</span></button>
+  <button data-coach-nav="approvals" onclick="openCoachDestination('approvals')"><span class="nav-icon">⎘</span><span class="nav-label">Approvals &amp; requests</span><span class="coach-attention-badge" data-owner-request-badge></span></button>
+  <button data-owner-only data-coach-nav="areas" onclick="openCoachDestination('areas')"><span class="nav-icon">◱</span><span class="nav-label">Areas &amp; people</span></button>
+  <button data-owner-only data-coach-nav="audits" onclick="openCoachDestination('audits')"><span class="nav-icon">✓</span><span class="nav-label">Trainer audits</span></button>
+  <button data-owner-only data-coach-nav="hours" onclick="openCoachDestination('hours')"><span class="nav-icon">&#9201;</span><span class="nav-label">Hours &amp; export</span></button>
+  <button data-owner-only data-coach-nav="archive" onclick="openCoachDestination('archive')"><span class="nav-icon">&#9100;</span><span class="nav-label">Removed items</span></button>
+  <button data-owner-only data-coach-nav="files" onclick="openCoachDestination('files')"><span class="nav-icon">&#9707;</span><span class="nav-label">All files</span></button>
+  <button data-owner-only data-coach-nav="access" onclick="openCoachDestination('access')"><span class="nav-icon">♙</span><span class="nav-label">Trainer access</span><span class="coach-attention-badge" data-attention-badge="access"></span></button>
+  <button data-coach-nav="settings" onclick="openCoachDestination('settings')"><span class="nav-icon">⚙</span><span class="nav-label">Settings</span></button>
+  <button class="coach-nav-more" data-coach-more onclick="openCoachMoreSheet()"><span class="nav-icon">•••</span><span class="nav-label">More</span><span class="coach-attention-badge" data-coach-more-badge></span></button>
+  <div class="coach-side-foot">
+    <button id="trainerHelpBtn" type="button" title="Walk me through something" onclick="openAssistanceForRole()"><span class="nav-icon">?</span><span class="nav-label">Tutorials</span></button>
+    <button onclick="lockTrainerHub()"><span class="nav-icon">⇥</span><span class="nav-label">Lock workspace</span></button>
+  </div>
+</aside>
+
+<div id="appToast" class="toast" role="status" aria-live="polite"></div>
+
+<div id="coachMoreSheet" class="modal-backdrop coach-more-backdrop" role="dialog" aria-modal="true" aria-labelledby="coachMoreTitle" onclick="if(event.target===this)closeCoachMoreSheet()">
+  <div class="coach-more-sheet">
+    <div class="coach-more-head"><h3 id="coachMoreTitle">All coach destinations</h3><button class="small-btn" onclick="closeCoachMoreSheet()">Close</button></div>
+    <div class="coach-more-list" id="coachMoreList"></div>
+  </div>
+</div>
+
+<div id="archivedClientsModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="archivedClientsTitle" onclick="if(event.target===this)closeArchivedClients()">
+  <div class="list-dialog">
+    <div class="list-dialog-head"><h3 id="archivedClientsTitle">Archived clients</h3><button class="small-btn" onclick="closeArchivedClients()">Close</button></div>
+    <div id="archivedClientList" class="archived-client-list">Checking…</div>
+  </div>
+</div>
+
+<div id="trainerLinksModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="trainerLinksTitle" onclick="if(event.target===this)closeTrainerLinks()">
+  <div class="list-dialog">
+    <div class="list-dialog-head"><h3 id="trainerLinksTitle">Trainer name links</h3><button class="small-btn" onclick="closeTrainerLinks()">Close</button></div>
+    <p class="storage-note">Pick the account each name from Jason&rsquo;s report belongs to. Saved once and reused on every future import.</p>
+    <div id="trainerLinksList" class="trainer-link-list">Loading…</div>
+  </div>
+</div>
+
+<div id="exerciseSwapModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="exerciseSwapTitle">
+  <div class="review-dialog swap-dialog">
+    <h2 id="exerciseSwapTitle">Replace movement</h2>
+    <p id="exerciseSwapCopy">Choose an exact replacement or shuffle this movement.</p>
+    <div class="swap-toolbar" aria-label="Replacement choices">
+      <button class="small-btn on" id="swapRecommendedBtn" onclick="setSwapMode('recommended')">Recommended</button>
+      <button class="small-btn" id="swapSimilarBtn" onclick="setSwapMode('similar')">Similar</button>
+      <button class="small-btn" id="swapBankBtn" onclick="setSwapMode('bank')">Workout bank</button>
+      <button class="small-btn primary" id="swapShuffleBtn" onclick="shuffleExerciseFromModal()">&#8635; Shuffle this movement</button>
+    </div>
+    <input class="swap-search" id="exerciseSwapSearch" type="text" placeholder="Search by exercise name…" aria-label="Search replacement exercises" oninput="renderSwapOptions()">
+    <div class="scratch-filter-menus" id="scratchFilterMenus" aria-label="Sort exercises by body part and movement type">
+      <div class="scratch-filter-group">
+        <span class="scratch-filter-label">Body part</span>
+        <div class="scratch-filter-chips" id="scratchRegionMenu"></div>
+      </div>
+      <div class="scratch-filter-group">
+        <span class="scratch-filter-label">Movement type</span>
+        <div class="scratch-filter-chips" id="scratchPatternMenu"></div>
+      </div>
+    </div>
+    <div class="swap-bank-filters" id="swapBankFilters">
+      <div class="compact-field"><label for="swapPatternFilter">Movement</label><select id="swapPatternFilter" onchange="renderSwapOptions()"><option value="">All patterns</option></select></div>
+      <div class="compact-field"><label for="swapRegionFilter">Body part</label><select id="swapRegionFilter" onchange="renderSwapOptions()"><option value="">All body areas</option></select></div>
+      <div class="compact-field"><label for="swapZoneFilter">Equipment</label><select id="swapZoneFilter" onchange="renderSwapOptions()"><option value="">All equipment</option></select></div>
+      <div class="compact-field"><label for="swapSafetyFilter">Current filters</label><select id="swapSafetyFilter" onchange="renderSwapOptions()"><option value="safe">Only filter-matching</option><option value="all">Show overrides with warnings</option></select></div>
+    </div>
+    <p class="swap-tab-note" id="swapTabNote">Recommended choices match this phase, the client, the available equipment, and every reported limitation.</p>
+    <div class="swap-result-summary" id="swapResultSummary" aria-live="polite"></div>
+    <div class="compact-grid" id="clientSwapFields" style="margin-top:10px">
+      <div class="compact-field"><label for="exerciseSwapReason">Why change it?</label><select id="exerciseSwapReason"><option value="preference">Preference</option><option value="equipment">Equipment unavailable</option><option value="unfamiliar">Not confident yet</option><option value="discomfort">Discomfort or pain</option></select></div>
+      <div class="compact-field"><label for="exerciseSwapScope">Apply this preference</label><select id="exerciseSwapScope"><option value="today">Today only</option><option value="future">Future workouts too</option></select></div>
+    </div>
+    <div class="compact-grid" id="programSwapFields" style="margin-top:10px;display:none">
+      <div class="compact-field wide"><label for="programSwapScope">Apply replacement to</label><select id="programSwapScope"><option value="single">This workout only</option><option value="remaining">Unfinished repeats from this week forward</option><option value="all">Every matching workout in this program</option><option value="future">Future generated workouts too</option></select><span class="storage-note">Completed workout history never changes. Published workouts that have not started synchronize after the coach reapproves this draft.</span></div>
+      <div class="compact-field wide"><label for="programSwapReason">Coach reason</label><textarea id="programSwapReason" placeholder="Why this change is appropriate for this client"></textarea></div>
+      <div class="compact-field"><label for="programSwapCalibration">If this is calibration evidence</label><select id="programSwapCalibration"><option value="transfer">Transfer the calibration responsibility when the replacement tests the same pattern</option><option value="reassign">Keep this replacement, then reassign calibration to another movement</option><option value="remove">Remove this calibration measure with a documented reason</option></select></div>
+      <div class="compact-field"><label for="programSwapOverride">Safety override</label><select id="programSwapOverride"><option value="none">Do not override client filters</option><option value="modified">Coach-approved modified trial</option><option value="allow">Coach-approved normal trial</option></select></div>
+    </div>
+    <div id="exerciseSwapOptions" class="swap-list"></div>
+    <p class="swap-help">The workout bank can place any exercise in any phase. Filter-matching choices are shown first; deliberate equipment, experience, phase, age, or limitation overrides stay clearly labeled and require confirmation.</p>
+    <div class="tool-actions"><button class="small-btn" onclick="closeExerciseSwap()">Cancel</button></div>
+  </div>
+</div>
+
+<div id="programDayReworkModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="programDayReworkTitle">
+  <div class="review-dialog program-rework-dialog">
+    <h2 id="programDayReworkTitle">Regenerate this workout</h2>
+    <p id="programDayReworkCopy">Keep the parts that work, remove an unwanted body area from every phase, and replace that work with a better focus.</p>
+    <div class="program-rework-grid">
+      <section class="program-rework-group"><span>Keep from this workout</span><div class="program-rework-chips" id="programReworkKeep"></div></section>
+      <section class="program-rework-group exclude"><span>Remove from every phase</span><div class="program-rework-chips" id="programReworkExclude"></div></section>
+      <section class="program-rework-group"><span>Replace it with</span><div class="program-rework-chips" id="programReworkAdd"></div></section>
+    </div>
+    <div class="compact-grid" style="margin-top:12px">
+      <div class="compact-field"><label for="programReworkScope">Apply the new structure to</label><select id="programReworkScope"><option value="single">This workout only</option><option value="remaining">This program day from this week forward</option><option value="all">This program day in every week</option></select></div>
+      <div class="compact-field"><label for="programReworkPrimary">Primary lift</label><select id="programReworkPrimary"><option value="keep">Keep it when it does not conflict</option><option value="new">Generate a new primary lift</option></select></div>
+    </div>
+    <div class="program-rework-note" id="programReworkSummary">Choose at least one area to remove or add. The full workout—including warm-up, main work, conditioning, and cool-down—will be rechecked against the client’s equipment and limitations.</div>
+    <div class="tool-actions"><button class="small-btn primary" type="button" onclick="applyProgramDayRework()">Regenerate selected workout</button><button class="small-btn" type="button" onclick="closeProgramDayRework()">Cancel</button></div>
+  </div>
+</div>
+
+<div id="exerciseEditorModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="exerciseEditorTitle">
+  <div class="review-dialog exercise-editor-dialog">
+    <h2 id="exerciseEditorTitle">Add exercise</h2>
+    <p>These categories are not just labels. They determine when the generator, warm-up builder, exercise search, and substitution system may use this movement.</p>
+    <input id="exerciseBankId" type="hidden">
+    <div class="exercise-editor-grid">
+      <div class="compact-field wide"><label for="exerciseBankName">Exercise name</label><input id="exerciseBankName" type="text" autocomplete="off" placeholder="Use one clear, unique name"></div>
+      <div class="compact-field wide"><label for="exerciseBankAliases">Search aliases</label><input id="exerciseBankAliases" type="text" autocomplete="off" placeholder="RFESS, rear-foot-elevated split squat"></div>
+      <div class="compact-field"><label for="exerciseBankRole">Programming role</label><select id="exerciseBankRole"><option value="standard">Working exercise</option><option value="primary">Primary-lift candidate</option><option value="warmup">Warm-up / mobility</option><option value="finisher">Finisher</option></select></div>
+      <div class="compact-field"><label for="exerciseBankPattern">Movement pattern</label><select id="exerciseBankPattern"></select></div>
+      <div class="compact-field"><label for="exerciseBankRegion">Body area</label><select id="exerciseBankRegion"></select></div>
+      <div class="compact-field"><label for="exerciseBankZone">Equipment</label><select id="exerciseBankZone"></select></div>
+      <div class="compact-field"><label for="exerciseBankExperience">Minimum experience</label><select id="exerciseBankExperience"><option value="1">New / beginner</option><option value="2">Intermediate</option><option value="3">Advanced</option></select></div>
+      <div class="compact-field"><label for="exerciseBankImpact">Impact / joint demand</label><select id="exerciseBankImpact"><option value="0">0 · Low</option><option value="1">1 · Moderate-low</option><option value="2">2 · Moderate-high</option><option value="3">3 · High</option></select></div>
+      <div class="compact-field"><label for="exerciseBankCardio">Cardio machine</label><select id="exerciseBankCardio"><option value="">Not a cardio machine</option></select></div>
+      <div class="compact-field"><label for="exerciseBankFinisherType">Finisher type</label><select id="exerciseBankFinisherType"><option value="pump">Muscle pump</option><option value="metcon">Metabolic</option><option value="core">Core</option></select></div>
+      <div class="compact-field"><label for="exerciseBankMuscles">Muscles trained</label><select id="exerciseBankMuscles" multiple></select></div>
+      <div class="compact-field"><label for="exerciseBankAvoid">Block for reported limitations</label><select id="exerciseBankAvoid" multiple></select><span class="storage-note">Exercise-specific exclusions are enforced in every workout phase.</span></div>
+      <div class="compact-field wide"><label for="exerciseBankDemands">Movement and position demands</label><select id="exerciseBankDemands" multiple></select><span class="storage-note">These power the universal limitation filter. Inferred suggestions are preselected; review and correct them.</span></div>
+      <div class="compact-field"><label for="exerciseBankPreps">Warm-up prepares</label><select id="exerciseBankPreps" multiple><option value="general">General temperature</option><option value="upper">Upper body</option><option value="lower">Lower body</option><option value="push">Push</option><option value="pull">Pull</option></select></div>
+      <div class="compact-field full"><label for="exerciseBankCue">Coaching cue</label><textarea id="exerciseBankCue" placeholder="One short, useful cue that will be shown in the workout"></textarea></div>
+      <div class="compact-field full"><label for="exerciseBankInstructions">Step-by-step setup and execution</label><textarea id="exerciseBankInstructions" placeholder="Setup, starting position, movement, breathing, and safe stopping point"></textarea></div>
+      <div class="compact-field wide"><label for="exerciseBankVideo">Demonstration video URL</label><input id="exerciseBankVideo" type="url" inputmode="url" placeholder="https://…"></div>
+      <div class="compact-field"><label for="exerciseBankRegression">Regression / easier option</label><input id="exerciseBankRegression" list="profileExerciseNames" placeholder="Optional"></div>
+      <div class="compact-field"><label for="exerciseBankProgression">Progression / harder option</label><input id="exerciseBankProgression" list="profileExerciseNames" placeholder="Optional"></div>
+      <div class="exercise-editor-checks full"><label><input id="exerciseBankUnilateral" type="checkbox"> Unilateral / added balance demand</label><label><input id="exerciseBankSafetyReviewed" type="checkbox"> I reviewed the movement demands and limitation exclusions</label></div>
+    </div>
+    <div class="constraint-summary"><b>Generator + safety check:</b> every movement needs programming categories plus trainer-reviewed movement demands. Those demands and exclusions are applied to warm-ups, lifting, conditioning, finishers, cool-downs, swaps, and active workouts.</div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="saveExerciseBankEntry()">Save to exercise bank</button><button class="small-btn" onclick="closeExerciseEditor()">Cancel</button><button class="small-btn danger" id="exerciseBankDeleteBtn" onclick="deleteExerciseBankEntryFromEditor()">Delete exercise</button></div>
+  </div>
+</div>
+
+<div id="prescriptionEditorModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="prescriptionEditorTitle">
+  <div class="review-dialog prescription-dialog">
+    <h2 id="prescriptionEditorTitle">Edit exercise prescription</h2>
+    <p>These numbers become the client’s assignment and active-workout targets. For one-sided movements, write “each side.”</p>
+    <div class="prescription-grid">
+      <div class="compact-field"><label for="prescriptionSets">Working sets</label><input id="prescriptionSets" type="number" min="1" max="12" inputmode="numeric"></div>
+      <div class="compact-field"><label for="prescriptionReps">Reps or duration</label><input id="prescriptionReps" placeholder="8 each side, 10–12, or 30 sec"></div>
+      <div class="compact-field"><label for="prescriptionTempo">Tempo / time per rep</label><input id="prescriptionTempo" placeholder="3-1-1 or controlled"></div>
+      <div class="compact-field"><label for="prescriptionRest">Rest after set</label><input id="prescriptionRest" placeholder="60–90 sec"></div>
+      <div class="compact-field wide"><label for="prescriptionEffort">Target effort</label><input id="prescriptionEffort" placeholder="RPE 8 / 2 reps in reserve"></div>
+      <div class="compact-field wide"><label for="prescriptionLoad">Target load or load rule</label><input id="prescriptionLoad" placeholder="95 lb, use last successful load, or form-first"></div>
+      <div class="compact-field wide"><label for="prescriptionCue">Coach cue / setup note</label><textarea id="prescriptionCue" placeholder="One clear instruction the client sees during the workout"></textarea></div>
+      <div class="compact-field wide" id="prescriptionScopeField"><label for="prescriptionScope">Apply this edit to</label><select id="prescriptionScope"><option value="single">This workout only</option><option value="remaining">Unfinished repeats from this week forward</option><option value="all">Every matching workout in this program</option><option value="future">Future generated workouts too</option></select></div>
+      <div class="compact-field wide" id="prescriptionCalibrationField"><label for="prescriptionCalibration">Calibration responsibility</label><select id="prescriptionCalibration"><option value="keep">Keep this as calibration evidence</option><option value="remove">Remove the calibration measure with a documented reason</option></select></div>
+      <div class="compact-field wide"><label for="prescriptionReason">Reason for change</label><textarea id="prescriptionReason" placeholder="Required for calibration changes or filter overrides"></textarea></div>
+    </div>
+    <div class="portal-note">Timed cardio and mobility can use a duration in the reps field. Tempo is optional when it does not add useful coaching direction.</div>
+    <div id="programPrescriptionStructureActions" class="tool-actions" hidden><button class="small-btn" type="button" onclick="applyProgramExerciseStructureAction('up')">Move up</button><button class="small-btn" type="button" onclick="applyProgramExerciseStructureAction('down')">Move down</button><button class="small-btn danger" type="button" onclick="applyProgramExerciseStructureAction('remove')">Remove exercise</button></div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="savePrescriptionEditor()">Save prescription</button><button class="small-btn" id="prescriptionReplaceBtn" onclick="replaceFromPrescriptionEditor()">Replace exercise</button><button class="small-btn" onclick="closePrescriptionEditor()">Cancel</button></div>
+  </div>
+</div>
+
+<div id="programStructureEditorModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="programStructureEditorTitle">
+  <div class="review-dialog prescription-dialog">
+    <h2 id="programStructureEditorTitle">Edit workout structure</h2>
+    <p id="programStructureEditorCopy">Edit the visible workout without silently rewriting completed history.</p>
+    <div class="prescription-grid">
+      <div class="compact-field wide"><label for="programStructureTitle">Title</label><input id="programStructureTitle" type="text"></div>
+      <div class="compact-field wide"><label for="programStructurePurpose">Purpose / client explanation</label><textarea id="programStructurePurpose"></textarea></div>
+      <div class="compact-field wide"><label for="programStructureScope">Apply this edit to</label><select id="programStructureScope"><option value="single">This workout only</option><option value="remaining">Unfinished repeats from this week forward</option><option value="all">Every matching workout in this program</option><option value="future">Future generated workouts too</option></select></div>
+      <div class="compact-field wide"><label for="programStructureReason">Coach reason</label><textarea id="programStructureReason" placeholder="Why this structure is right for the client"></textarea></div>
+    </div>
+    <div id="programPhaseStructureActions" class="tool-actions" hidden><button class="small-btn" type="button" onclick="applyProgramPhaseStructureAction('up')">Move phase up</button><button class="small-btn" type="button" onclick="applyProgramPhaseStructureAction('down')">Move phase down</button><button class="small-btn danger" type="button" onclick="applyProgramPhaseStructureAction('remove')">Remove phase</button></div>
+    <div class="tool-actions"><button class="small-btn primary" type="button" onclick="saveProgramStructureEditor()">Save structure</button><button class="small-btn" type="button" onclick="closeProgramStructureEditor()">Cancel</button></div>
+  </div>
+</div>
+
+<div id="profileImpactModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="profileImpactTitle">
+  <div class="review-dialog program-rework-dialog">
+    <h2 id="profileImpactTitle">Profile changed — review programming impact</h2>
+    <p>Profile answers are saved now. Choose whether unfinished programming should also be updated; completed and reviewed history is always preserved.</p>
+    <div id="profileImpactSummary" class="program-rework-note"></div>
+    <div id="profileImpactItems" class="data-list"></div>
+    <div class="tool-actions"><button class="small-btn primary" type="button" onclick="applyProfileImpactUpdates()">Update selected unfinished work</button><button class="small-btn" type="button" onclick="closeProfileImpactModal()">Keep existing workouts unchanged</button></div>
+  </div>
+</div>
+
+<div id="supersetEditorModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="supersetEditorTitle">
+  <div class="review-dialog superset-dialog">
+    <h2 id="supersetEditorTitle">Create a superset</h2>
+    <p>Pair two movements as A1 and A2. If A2 is currently in another section, it will move into this section so the client sees and performs the pair together.</p>
+    <div class="superset-pair-grid">
+      <div class="compact-field"><label for="supersetFirst">A1 · first movement</label><select id="supersetFirst" onchange="paintSupersetEditorWarning()"></select></div>
+      <div class="compact-field"><label for="supersetSecond">A2 · paired movement</label><select id="supersetSecond" onchange="paintSupersetEditorWarning()"></select></div>
+    </div>
+    <div id="supersetProgramFields" class="prescription-grid" hidden>
+      <div class="compact-field wide"><label for="supersetProgramScope">Apply this pairing to</label><select id="supersetProgramScope"><option value="single">This workout only</option><option value="remaining">Unfinished repeats from this week forward</option><option value="all">Every matching workout in this program</option><option value="future">Future generated workouts too</option></select></div>
+      <div class="compact-field wide"><label for="supersetProgramReason">Coach reason</label><textarea id="supersetProgramReason" placeholder="Why this pairing or structure change fits the client"></textarea></div>
+    </div>
+    <div id="supersetEditorWarning" class="superset-warning">Choose two different movements. The client can alternate them before taking the prescribed rest.</div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="saveSupersetEditor()">Create A1 + A2</button><button class="small-btn danger" id="supersetProgramClearBtn" onclick="clearProgramSupersetsFromEditor()" hidden>Clear pairing in selected scope</button><button class="small-btn" onclick="closeSupersetEditor()">Cancel</button></div>
+  </div>
+</div>
+
+<div id="marketTemplatePreviewModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="marketTemplatePreviewTitle">
+  <div class="review-dialog market-template-dialog">
+    <h2 id="marketTemplatePreviewTitle">Program preview</h2>
+    <p>Review the weekly structure first, then choose a client and load the template into the full program builder for individual adjustments.</p>
+    <input id="marketTemplateId" type="hidden">
+    <div class="market-preview-hero">
+      <div><h3 id="marketTemplateName">Program template</h3><p id="marketTemplateDescription"></p></div>
+      <div id="marketTemplateMeta" class="market-preview-meta"></div>
+    </div>
+    <div class="market-preview-layout">
+      <section>
+        <div class="compact-field"><label>Weekly session structure</label></div>
+        <div id="marketTemplateSessions" class="market-preview-sessions"></div>
+        <div id="marketTemplateProgression" class="market-progression-note"></div>
+      </section>
+      <section class="market-client-setup">
+        <h4>Customize for a client</h4>
+        <p>The client’s profile will still control injuries, equipment, cardio access, age, and experience.</p>
+        <div class="compact-field"><label for="marketTemplateClient">Select client</label><select id="marketTemplateClient"><option value="">Choose a client…</option></select></div>
+        <div class="compact-grid" style="margin-top:10px">
+          <div class="compact-field"><label for="marketTemplateWeeks">Weeks</label><select id="marketTemplateWeeks"><option value="3">3 weeks</option><option value="4">4 weeks</option><option value="6">6 weeks</option><option value="8">8 weeks</option><option value="12">12 weeks</option></select></div>
+          <div class="compact-field"><label for="marketTemplateDays">Days per week</label><select id="marketTemplateDays"><option value="2">2 days</option><option value="3">3 days</option><option value="4">4 days</option><option value="5">5 days</option></select></div>
+          <div class="compact-field wide"><label for="marketTemplateMinutes">Session length</label><select id="marketTemplateMinutes"><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option><option value="90">90 min</option></select></div>
+        </div>
+      </section>
+    </div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="loadMarketTemplateForClient()">Customize in program builder</button><button class="small-btn" onclick="installActiveMarketTemplate()">Save template</button><button class="small-btn" onclick="closeProgramTemplatePreview()">Close</button></div>
+  </div>
+</div>
+
+<div id="summaryEntryModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="summaryEntryTitle">
+  <div class="review-dialog summary-meta-dialog">
+    <h2 id="summaryEntryTitle">Organize record</h2>
+    <p>Correct its category, attach a private trainer note, or keep it out of strength calculations.</p>
+    <input id="summaryEntryId" type="hidden">
+    <div class="compact-grid">
+      <div class="compact-field"><label for="summaryEntryCategory">Training category</label><select id="summaryEntryCategory"><option value="">Automatic</option><option value="upper">Upper body</option><option value="lower">Lower body</option><option value="core">Core</option><option value="conditioning">Conditioning</option></select></div>
+      <div class="compact-field"><label for="summaryEntryTrainer">Trainer</label><input id="summaryEntryTrainer" type="text" placeholder="Trainer name"></div>
+      <div class="compact-field wide"><label for="summaryEntryNote">Private trainer note</label><textarea id="summaryEntryNote" placeholder="Why this result matters, technique context, or what to repeat next time…"></textarea></div>
+    </div>
+    <div class="summary-checks"><label><input id="summaryEntryPinned" type="checkbox"> Pin as important</label><label><input id="summaryEntryExcluded" type="checkbox"> Exclude from strength calculations</label></div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="saveSummaryEntryMeta()">Save record</button><button class="small-btn" onclick="closeSummaryEntryEditor()">Cancel</button></div>
+  </div>
+</div>
+
+<div id="clientIntakeModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="clientIntakeTitle" aria-hidden="true" hidden>
+  <div class="review-dialog intake-dialog" id="clientIntakeDialog">
+    <h2 id="clientIntakeTitle">Client onboarding</h2>
+    <p id="clientIntakeCopy">Complete the coaching information in short sections. You can save and return without finishing everything at once.</p>
+    <input id="clientIntakeProfileId" type="hidden">
+    <div class="intake-progress"><div><b id="clientIntakePercent">0%</b><span id="clientIntakeStatus">Not started</span></div><div><span id="clientIntakeProgressCopy">0 of 9 onboarding sections ready</span><div class="intake-track"><i id="clientIntakeProgressBar" style="width:0"></i></div></div></div>
+
+    <div class="intake-navigation"><button class="small-btn" type="button" onclick="goToNextIncompleteIntakeSection()">Go to next unfinished section</button><span id="clientIntakeNextCopy">Complete the client sections, then a trainer records the baseline decision.</span></div>
+
+    <details class="intake-section" data-intake-key="identity" open>
+      <summary>1 · Identity and contact</summary>
+      <div class="intake-section-body"><p class="intake-help">Confirm how the client should be identified and contacted. Changing this intake does not change the account login until a trainer reviews it.</p><div class="compact-grid">
+        <div class="compact-field"><label for="intakePreferredName">Preferred name</label><input id="intakePreferredName" autocomplete="name"></div>
+        <div class="compact-field"><label for="intakeEmail">Contact email</label><input id="intakeEmail" type="email" autocomplete="email"></div>
+        <div class="compact-field wide"><label for="intakePhone">Phone</label><input id="intakePhone" type="tel" inputmode="tel" autocomplete="tel"></div>
+      </div></div>
+    </details>
+
+    <details class="intake-section" data-intake-key="goals">
+      <summary>2 · Goal contract and what success means</summary>
+      <div class="intake-section-body"><p class="intake-help">The training category helps program the workouts. The goal contract records what the client actually wants, why it matters, how progress will be measured, and what success means in their own words.</p><div class="compact-grid">
+        <div class="compact-field"><label for="intakePrimaryGoal">Primary goal</label><select id="intakePrimaryGoal"><option value="">Choose…</option><option value="strength">Get stronger</option><option value="hypertrophy">Build muscle</option><option value="fatloss">Lose body fat</option><option value="general">Feel fitter</option><option value="performance">Move faster &amp; build power</option><option value="conditioning">Improve stamina</option><option value="recovery">Move better &amp; recover</option></select></div>
+        <div class="compact-field"><label for="intakeSecondaryGoal">Secondary goal</label><select id="intakeSecondaryGoal"><option value="">No secondary goal</option><option value="strength">Get stronger</option><option value="hypertrophy">Build muscle</option><option value="fatloss">Lose body fat</option><option value="general">Feel fitter</option><option value="performance">Move faster &amp; build power</option><option value="conditioning">Improve stamina</option><option value="recovery">Move better &amp; recover</option></select></div>
+        <div class="compact-field wide"><label for="intakeStatedGoal">In your own words, what do you want to accomplish?</label><textarea id="intakeStatedGoal" placeholder="Example: I want enough strength and stamina to hike with my family without needing to stop"></textarea></div>
+        <div class="compact-field wide"><label for="intakeWhy">Why does this matter deeply to you?</label><textarea id="intakeWhy" placeholder="The personal reason worth remembering on difficult days"></textarea></div>
+        <div class="goal-contract-intake">
+          <h4>Make the goal measurable</h4>
+          <p>Choose one main measure. This keeps the app honest: progress comes from real workout, attendance, or body-composition records when they exist—not a mystery score.</p>
+          <div class="goal-contract-measure">
+            <div class="wide"><label for="intakeGoalMetricType">How will progress be measured?</label><select id="intakeGoalMetricType" onchange="updateGoalContractFields()"><option value="">Choose one measure…</option><option value="sessions_week">Completed workouts each week</option><option value="exercise_load">Weight used on an exercise</option><option value="exercise_reps">Reps or seconds on an exercise</option><option value="body_weight">Body weight</option><option value="body_fat">Body-fat percentage</option><option value="cardio">Cardio time or distance</option><option value="custom">Another measurable target</option></select></div>
+            <div class="wide" id="intakeGoalExerciseField"><label for="intakeGoalExercise">Exercise or cardio activity</label><input id="intakeGoalExercise" list="profileExerciseNames" placeholder="Back squat, plank, treadmill…"></div>
+            <div class="full"><label for="intakeGoalMetricLabel">What exactly are we measuring?</label><input id="intakeGoalMetricLabel" placeholder="Example: completed workouts per week"></div>
+            <div><label for="intakeGoalBaseline">Starting point</label><input id="intakeGoalBaseline" type="number" step="any" inputmode="decimal" placeholder="0"></div>
+            <div id="intakeGoalCurrentField"><label for="intakeGoalCurrent">Current value</label><input id="intakeGoalCurrent" type="number" step="any" inputmode="decimal" placeholder="Update as you go"></div>
+            <div><label for="intakeGoalTarget">Target value</label><input id="intakeGoalTarget" type="number" step="any" inputmode="decimal" placeholder="3"></div>
+            <div><label for="intakeGoalUnit">Unit</label><input id="intakeGoalUnit" placeholder="workouts, lb, reps, min…"></div>
+            <div class="wide"><label for="intakeGoalTargetDate">Target date</label><input id="intakeGoalTargetDate" type="date"></div>
+            <div class="goal-contract-milestone-fields">
+              <div><label for="intakeGoalMilestone1">Milestone 1</label><input id="intakeGoalMilestone1" placeholder="First meaningful checkpoint"></div>
+              <div><label for="intakeGoalMilestone2">Milestone 2</label><input id="intakeGoalMilestone2" placeholder="Middle checkpoint"></div>
+              <div><label for="intakeGoalMilestone3">Milestone 3</label><input id="intakeGoalMilestone3" placeholder="Near-goal checkpoint"></div>
+            </div>
+          </div>
+        </div>
+        <div class="compact-field wide"><label for="intakeSuccess">How will you know this effort has been successful?</label><textarea id="intakeSuccess" placeholder="Describe the real-life result—not just a number. Example: I can keep up with my family and feel confident continuing on my own."></textarea></div>
+      </div></div>
+    </details>
+
+    <details class="intake-section" data-intake-key="schedule">
+      <summary>3 · Schedule, locations, and barriers</summary>
+      <div class="intake-section-body"><p class="intake-help">Usual training days and session length remain in the main client profile. Record the real-world factors most likely to affect consistency here.</p><div class="compact-grid">
+        <div class="compact-field"><label for="intakeDaysPerWeek">Realistic training days per week</label><select id="intakeDaysPerWeek"><option value="">Choose…</option><option value="1">1 day</option><option value="2">2 days</option><option value="3">3 days</option><option value="4">4 days</option><option value="5">5 days</option><option value="6">6 days</option></select></div>
+        <div class="compact-field"><label for="intakeSessionMinutes">Typical session length</label><select id="intakeSessionMinutes"><option value="">Choose…</option><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option><option value="90">90 minutes</option></select></div>
+        <div class="compact-field"><label for="intakeLocation">Usual training location</label><select id="intakeLocation"><option value="">Choose…</option><option value="gym">Gym</option><option value="home">Home</option><option value="mixed">Gym + home</option><option value="travel">Frequently traveling</option></select></div>
+        <div class="compact-field"><label for="intakeOccupation">Occupation / daily physical demand</label><input id="intakeOccupation" placeholder="Desk job, construction, student…"></div>
+        <div class="compact-field wide"><label>Days that usually work</label><div class="intake-checks"><label><input id="intakeDay1" type="checkbox"> Monday</label><label><input id="intakeDay2" type="checkbox"> Tuesday</label><label><input id="intakeDay3" type="checkbox"> Wednesday</label><label><input id="intakeDay4" type="checkbox"> Thursday</label><label><input id="intakeDay5" type="checkbox"> Friday</label><label><input id="intakeDay6" type="checkbox"> Saturday</label></div></div>
+        <div class="compact-field wide"><label for="intakeBarriers">Likely schedule or consistency barriers</label><textarea id="intakeBarriers" placeholder="Childcare, rotating shifts, classes, travel, transportation…"></textarea></div>
+      </div></div>
+    </details>
+
+    <details class="intake-section" data-intake-key="equipment">
+      <summary>4 · Equipment access</summary>
+      <div class="intake-section-body"><p class="intake-help">Select everything the client can reliably use. The trainer can narrow this further in the approved profile, and the filters apply to warm-ups, main work, conditioning, and cool-downs.</p><div class="intake-checks">
+        <label><input id="intakeEquipBodyweight" type="checkbox"> Bodyweight / open floor</label>
+        <label><input id="intakeEquipDumbbell" type="checkbox"> Dumbbells</label>
+        <label><input id="intakeEquipKettlebell" type="checkbox"> Kettlebells</label>
+        <label><input id="intakeEquipBand" type="checkbox"> Resistance bands</label>
+        <label><input id="intakeEquipRack" type="checkbox"> Rack / barbells</label>
+        <label><input id="intakeEquipMachine" type="checkbox"> Strength machines</label>
+        <label><input id="intakeEquipCable" type="checkbox"> Cable stations</label>
+        <label><input id="intakeEquipCardio" type="checkbox"> Cardio machines</label>
+        <label><input id="intakeEquipPlatform" type="checkbox"> Platforms / Olympic lifting</label>
+        <label><input id="intakeEquipCrossfit" type="checkbox"> Functional / CrossFit equipment</label>
+        <label><input id="intakeEquipHousehold" type="checkbox"> Household / improvised (backpack, jugs, stairs)</label>
+        <label><input id="intakeEquipOutdoor" type="checkbox"> Outdoors (walking routes, hills, bike)</label>
+      </div><div class="compact-field wide" style="margin-top:10px"><label for="intakeEquipmentNotes">Unavailable, home-only, or special equipment notes</label><textarea id="intakeEquipmentNotes" placeholder="Example: treadmill and bands at home; no cable stack or stair climber"></textarea></div></div>
+    </details>
+
+    <details class="intake-section" data-intake-key="health">
+      <summary>5 · Health readiness and current limitations</summary>
+      <div class="intake-section-body"><p class="intake-help">These questions support trainer review; they do not diagnose or clear anyone for exercise. A “yes,” current concerning symptom, clinician restriction, pregnancy/postpartum status, or unresolved pain must be reviewed before difficult training.</p><div class="compact-grid">
+        <div class="compact-field"><label for="intakeHeart">Heart condition or blood-pressure concern?</label><select id="intakeHeart"><option value="">Not answered</option><option value="no">No</option><option value="yes">Yes</option></select></div>
+        <div class="compact-field"><label for="intakeChest">Chest pain during activity or at rest?</label><select id="intakeChest"><option value="">Not answered</option><option value="no">No</option><option value="yes">Yes</option></select></div>
+        <div class="compact-field"><label for="intakeDizzy">Dizziness, fainting, or loss of balance?</label><select id="intakeDizzy"><option value="">Not answered</option><option value="no">No</option><option value="yes">Yes</option></select></div>
+        <div class="compact-field"><label for="intakeBoneJoint">Bone, joint, or soft-tissue problem affected by exercise?</label><select id="intakeBoneJoint"><option value="">Not answered</option><option value="no">No</option><option value="yes">Yes</option></select></div>
+        <div class="compact-field"><label for="intakeMedication">Medication or condition relevant to exercise?</label><select id="intakeMedication"><option value="">Not answered</option><option value="no">No</option><option value="yes">Yes</option></select></div>
+        <div class="compact-field"><label for="intakeOtherMedical">Any other reason to seek medical guidance first?</label><select id="intakeOtherMedical"><option value="">Not answered</option><option value="no">No</option><option value="yes">Yes</option></select></div>
+        <div class="compact-field wide"><label for="intakeCurrentPain">Current pain, recent surgery, pregnancy/postpartum context, or clinician restriction</label><textarea id="intakeCurrentPain" placeholder="Include the area, aggravating motion, date, clearance status, and instructions already received"></textarea></div>
+        <div class="compact-field wide"><label for="intakeMedicalNotes">Optional details for the trainer</label><textarea id="intakeMedicalNotes" placeholder="Keep only exercise-relevant information"></textarea></div>
+      </div><div id="clientIntakeSafetyMessage" class="intake-safety good">No safety-review trigger has been entered.</div></div>
+    </details>
+
+    <details class="intake-section" data-intake-key="lifestyle">
+      <summary>6 · Lifestyle and recovery baseline</summary>
+      <div class="intake-section-body"><div class="compact-grid">
+        <div class="compact-field"><label for="intakeSleep">Typical sleep per night</label><select id="intakeSleep"><option value="">Choose…</option><option value="under5">Under 5 hours</option><option value="5-6">5–6 hours</option><option value="6-7">6–7 hours</option><option value="7-8">7–8 hours</option><option value="8plus">8+ hours</option></select></div>
+        <div class="compact-field"><label for="intakeStress">Typical stress</label><select id="intakeStress"><option value="">Choose…</option><option value="1">1 · Low</option><option value="2">2</option><option value="3">3 · Moderate</option><option value="4">4</option><option value="5">5 · Very high</option></select></div>
+        <div class="compact-field"><label for="intakeActivity">Current weekly activity</label><select id="intakeActivity"><option value="">Choose…</option><option value="none">Little or none</option><option value="1-2">1–2 active days</option><option value="3-4">3–4 active days</option><option value="5plus">5+ active days</option></select></div>
+        <div class="compact-field"><label for="intakeNutritionSupport">Nutrition support wanted?</label><select id="intakeNutritionSupport"><option value="">Not discussed</option><option value="no">No</option><option value="simple">Simple habits only</option><option value="referral">Qualified referral needed</option></select></div>
+      </div></div>
+    </details>
+
+    <details class="intake-section" data-intake-key="experience">
+      <summary>7 · Exercise experience and confidence</summary>
+      <div class="intake-section-body"><div class="compact-grid">
+        <div class="compact-field"><label for="intakeConfidence">Confidence training independently</label><select id="intakeConfidence"><option value="">Choose…</option><option value="1">1 · Very unsure</option><option value="2">2</option><option value="3">3 · Somewhat confident</option><option value="4">4</option><option value="5">5 · Very confident</option></select></div>
+        <div class="compact-field"><label for="intakeCoachingStyle">Preferred coaching style</label><select id="intakeCoachingStyle"><option value="">Choose…</option><option value="detailed">Detailed explanation</option><option value="simple">One simple cue at a time</option><option value="encouraging">High encouragement</option><option value="direct">Direct and concise</option><option value="mixed">A mix</option></select></div>
+        <div class="compact-field wide"><label for="intakeUnfamiliar">Movements, machines, or gym areas that feel unfamiliar</label><textarea id="intakeUnfamiliar" placeholder="The exercise-preference bank can hold specific likes, dislikes, discomfort, and unavailable equipment"></textarea></div>
+      </div></div>
+    </details>
+
+    <details class="intake-section" data-intake-key="emergency">
+      <summary>8 · Emergency contact</summary>
+      <div class="intake-section-body"><div class="compact-grid">
+        <div class="compact-field"><label for="intakeEmergencyName">Emergency contact name</label><input id="intakeEmergencyName"></div>
+        <div class="compact-field"><label for="intakeEmergencyRelation">Relationship</label><input id="intakeEmergencyRelation"></div>
+        <div class="compact-field wide"><label for="intakeEmergencyPhone">Phone</label><input id="intakeEmergencyPhone" type="tel" inputmode="tel"></div>
+      </div></div>
+    </details>
+
+    <details class="intake-section" data-intake-key="consent">
+      <summary>9 · Consent and acknowledgements</summary>
+      <div class="intake-section-body"><div class="intake-checks">
+        <label><input id="intakeTruth" type="checkbox"> I confirm that the information entered is accurate to the best of my knowledge and I will report material changes.</label>
+        <label><input id="intakePrivacy" type="checkbox"> I understand that training, progress, readiness, and body-composition information is stored in the gym’s coaching system and shared only with authorized staff.</label>
+        <label><input id="intakeNotMedical" type="checkbox"> I understand that this system provides fitness coaching, not medical diagnosis or emergency care, and that I should seek qualified care for concerning symptoms.</label>
+      </div></div>
+    </details>
+
+    <details class="intake-section intake-review-only" data-intake-key="trainer">
+      <summary>10 · Trainer review and baseline decision</summary>
+      <div class="intake-section-body"><p class="intake-help">A trainer documents the decision without erasing what the client submitted.</p><div class="compact-grid">
+        <div class="compact-field"><label for="intakeTrainerDecision">Programming readiness</label><select id="intakeTrainerDecision"><option value="">Review not completed</option><option value="ready">Ready to program</option><option value="modified">Ready with documented modifications</option><option value="hold">Hold programming / refer for guidance</option></select></div>
+        <div class="compact-field wide"><label for="intakeTrainerNote">Private trainer review note</label><textarea id="intakeTrainerNote" placeholder="Decision, modification, referral, baseline priorities, and follow-up date"></textarea></div>
+      </div><div class="intake-checks"><label><input id="intakeTrainerReviewed" type="checkbox"> I reviewed the submitted safety information and documented the next coaching action.</label></div></div>
+    </details>
+
+    <div class="tool-actions"><button class="small-btn primary" id="clientIntakeSaveBtn" onclick="saveClientIntake()">Save onboarding</button><button class="small-btn" onclick="saveClientIntake()">Save progress &amp; close</button><button class="small-btn" onclick="closeClientIntake()">Cancel unsaved changes</button></div>
+    <p class="storage-note">Saving attaches these answers to the client profile and synchronizes them across signed-in devices. Goals, schedule, equipment, and reviewed limitations filter future workouts. Client-submitted information cannot grant trainer access, complete the trainer safety review, or publish a workout.</p>
+  </div>
+</div>
+
+<div id="profileEditorModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="profileEditorTitle">
+  <div class="review-dialog">
+    <h2 id="profileEditorTitle">Edit client profile</h2>
+    <p id="profileEditorCopy">Change the client’s basic setup here. Renaming a client also updates their saved workout history, InBody scans, and optional body goals.</p>
+    <input id="profileEditId" type="hidden">
+    <details class="editor-section" open>
+      <summary>1 · Who they are</summary>
+      <div class="editor-section-body"><div class="compact-grid">
+      <div class="compact-field wide"><label for="profileEditName">Client name</label><input id="profileEditName" type="text" placeholder="Client name"></div>
+      <div class="compact-field wide"><label for="profileEditUsername">Username</label><input id="profileEditUsername" type="text" autocomplete="off" placeholder="name-or-member-id"></div>
+      <div class="compact-field wide"><label for="profileEditEmail">Client BYU-I login email</label><input id="profileEditEmail" type="email" autocomplete="off" placeholder="name@byui.edu"><span class="storage-note">Client profiles require the exact verified BYU-I login email. Trainer accounts may use personal or BYU-I email.</span></div>
+      <div class="compact-field wide"><label for="profileEditBookingEmail">Booking email (personal)</label><input id="profileEditBookingEmail" type="email" autocomplete="off" placeholder="name@gmail.com"><span class="storage-note">The address Jason&rsquo;s booking site has for them, when it is not their BYU-I one. Both are matched on import, so whichever system sends the file reaches this same client.</span></div>
+      <div class="compact-field wide"><label for="profileEditTrainer">Primary coach</label><select id="profileEditTrainer"><option value="">Shared client / no primary coach</option></select><span class="storage-note">Every approved trainer can still view and coach this client. This selection identifies who leads routine follow-up.</span><button id="profileTrainerRequestBtn" data-trainer-only class="small-btn" type="button" onclick="openOwnerRequestDialog('primary_trainer',byId('profileEditId').value,'','Reassign this client’s primary coach')">Request reassignment</button></div>
+      <div class="compact-field wide" id="profileEditAreasField" hidden><label>Which sides of the building</label><div id="profileEditAreas" class="multi-choice-grid" aria-label="Areas this client uses"></div><span class="storage-note" id="profileEditAreasNote"></span></div>
+      </div></div>
+    </details>
+    <details class="editor-section">
+      <summary>2 · Membership and goals</summary>
+      <div class="editor-section-body"><div class="compact-grid">
+      <div class="compact-field"><label for="profileEditTier">Membership tier</label><select id="profileEditTier" onchange="syncProfileEditorTierDefault()"><option value="">Not set</option></select><span class="storage-note">Calibration workouts are built for Flex clients. Filled in automatically once the booking export is connected.</span></div>
+      <div class="compact-field"><label for="profileEditSessionsPerWeek">Sessions per week</label><select id="profileEditSessionsPerWeek"><option value="">Not set</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+      <div class="compact-field"><label for="profileEditPrimary">Primary goal</label><select id="profileEditPrimary"></select></div>
+      <div class="compact-field"><label for="profileEditSecondary">Secondary goal</label><select id="profileEditSecondary"></select></div>
+      <div class="compact-field"><label for="profileEditStyle">Default training route</label><select id="profileEditStyle"><option value="auto">Best match for goal</option><option value="resistance">Resistance focused</option><option value="mixed">Weights + cardio</option><option value="cardio">Cardio focused</option><option value="performance">Speed + power</option><option value="recovery">Easy cardio + mobility</option><option value="mobility">Mobility only</option></select></div>
+      </div></div>
+    </details>
+    <details class="editor-section">
+      <summary>3 · Session setup</summary>
+      <div class="editor-section-body"><div class="compact-grid">
+      <div class="compact-field"><label>Cardio equipment available · choose multiple</label><div id="profileEditCardioChips" class="multi-choice-grid" aria-label="Available cardio equipment"></div><span class="storage-note">Tap every available machine. This is a hard whole-workout filter, including warm-ups and cool-downs.</span></div>
+      <div class="compact-field"><label for="profileEditExperience">Experience</label><select id="profileEditExperience"></select></div>
+      <div class="compact-field"><label for="profileEditAge">Age</label><input id="profileEditAge" type="number" min="13" max="100"></div>
+      <div class="compact-field"><label for="profileEditMinutes">Usual session length</label><select id="profileEditMinutes"></select></div>
+      <div class="compact-field"><label for="profileEditPhase">Training phase</label><select id="profileEditPhase"><option value="general">General preparation</option><option value="strength">Strength</option><option value="muscle">Muscle building</option><option value="conditioning">Conditioning</option><option value="performance">Sport performance</option><option value="recovery">Recovery / return</option></select></div>
+      <div class="compact-field"><label for="profileEditDays">Available days each week</label><select id="profileEditDays"><option value="2">2 days</option><option value="3">3 days</option><option value="4">4 days</option><option value="5">5 days</option></select></div>
+      <div class="compact-field wide"><label>Usual training days · Monday–Saturday</label><div id="profileEditTrainingDays" class="multi-choice-grid weekday-choices"></div><span class="storage-note">These days populate the trainer calendar and schedule program workouts. Choose at least one.</span></div>
+      </div></div>
+    </details>
+    <details class="editor-section">
+      <summary>4 · Sport and constraints</summary>
+      <div class="editor-section-body"><div class="compact-grid">
+      <div class="compact-field"><label for="profileEditSport">Sport or activity</label><input id="profileEditSport" type="text" placeholder="Optional"></div>
+      <div class="compact-field"><label for="profileEditCompetition">Competition / event date</label><input id="profileEditCompetition" type="date"></div>
+      <div class="compact-field wide"><label for="profileEditSchedule">Practice, game, or work constraints</label><input id="profileEditSchedule" type="text" placeholder="Optional — e.g. league game Thursday"></div>
+      </div></div>
+    </details>
+    <details class="editor-section">
+      <summary>5 · Body, limitations and preferences</summary>
+      <div class="editor-section-body">
+    <div class="profile-editor-section"><label>Muscle emphasis</label><div id="profileEditMuscles" class="profile-editor-choices"></div></div>
+    <div class="profile-editor-section"><label>Injury limitations</label><div id="profileEditInjuries" class="profile-editor-choices"></div><p class="storage-note">Select an area first, then document what the client can currently do. A client saying “I can do it” supports a coached trial; it never clears a medical hold or a severe/red response by itself.</p><div id="profileLimitationAssessments" class="limitation-assessment-list"></div></div>
+    <div class="profile-editor-section"><label>Equipment available <span style="font-weight:400;text-transform:none;letter-spacing:0">(nothing selected means full gym)</span></label><div id="profileEditZones" class="profile-editor-choices"></div></div>
+    <div class="profile-editor-section"><label>Exercise preferences</label><div class="preference-editor"><div class="compact-field"><input id="profilePreferenceExercise" list="profileExerciseNames" placeholder="Exercise name"><datalist id="profileExerciseNames"></datalist></div><div class="compact-field"><select id="profilePreferenceValue"><option value="favorite">Favorite</option><option value="like">Like</option><option value="neutral">Neutral</option><option value="dislike">Dislike</option><option value="unfamiliar">Unfamiliar</option><option value="discomfort">Causes discomfort</option><option value="unavailable">Unavailable</option></select></div><button class="small-btn" type="button" onclick="setProfileExercisePreference()">Set preference</button></div><div id="profilePreferenceList" class="preference-list"></div></div>
+      </div>
+    </details>
+    <div class="tool-actions"><button class="small-btn primary" id="profileEditorSaveBtn" onclick="saveProfileEditor()">Save changes</button><button class="small-btn" onclick="closeProfileEditor()">Cancel</button><button class="small-btn danger" id="profileEditorDeleteBtn" onclick="deleteProfileFromEditor()">Delete profile only</button><button class="small-btn danger" id="profileEditorDeleteAllBtn" onclick="openCompleteDeleteFromEditor()">Delete everything</button></div>
+    <p class="storage-note" id="profileEditorDeleteNote">“Delete profile only” keeps completed history. “Delete everything” permanently removes every saved record for this client.</p>
+  </div>
+</div>
+
+<div id="trainerConsultationModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="trainerConsultationTitle">
+  <div class="review-dialog consultation-review-dialog">
+    <div class="modal-head"><div><span class="portal-question">Client consultation</span><h2 id="trainerConsultationTitle">Review client answers</h2></div><button class="icon-close" type="button" aria-label="Close consultation review" onclick="closeTrainerConsultationReview()">×</button></div>
+    <div id="trainerConsultationContent"></div>
+    <div class="tool-actions"><button class="small-btn primary" id="trainerConsultationReviewBtn" type="button" onclick="markTrainerConsultationReviewed()">Mark reviewed</button><button class="small-btn" type="button" onclick="openTrainerConsultationLimitations()">Review profile limitations</button><button class="small-btn" type="button" onclick="closeTrainerConsultationReview()">Close</button></div>
+  </div>
+</div>
+
+<div id="completeDeleteModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="completeDeleteTitle">
+  <div class="review-dialog access-dialog">
+    <div class="access-mark" aria-hidden="true">&#9888;</div>
+    <h2 id="completeDeleteTitle">Permanently delete client</h2>
+    <p id="completeDeleteSummary">This permanently deletes the profile and all connected client records from this device.</p>
+    <div class="goal-warning">This cannot be undone unless you previously exported a backup. Workout history, reviews, logged sets, trainer notes, InBody values and attachments, and body-composition goals will all be removed.</div>
+    <div class="compact-field" style="margin-top:14px"><label for="completeDeleteConfirm">Type the client’s full name to confirm</label><input id="completeDeleteConfirm" type="text" autocomplete="off" oninput="updateCompleteDeleteState()"></div>
+    <input id="completeDeleteClient" type="hidden">
+    <div class="tool-actions"><button id="completeDeleteButton" class="small-btn danger" disabled onclick="confirmCompleteClientDelete()">Permanently delete all client data</button><button class="small-btn" onclick="closeCompleteDeleteModal()">Cancel</button></div>
+  </div>
+</div>
+
+<div id="inBodyModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="inBodyTitle">
+  <div class="review-dialog">
+    <h2 id="inBodyTitle">Add InBody scan</h2>
+    <p>Import CSV/JSON results when available, or enter the key values from a PDF or image result sheet.</p>
+    <div class="compact-field" style="margin-bottom:12px"><label for="inBodyFile">Result file</label><input id="inBodyFile" type="file" accept=".csv,.json,.pdf,.png,.jpg,.jpeg,application/pdf,image/*" onchange="handleInBodyFile(this)"><span class="storage-note" id="inBodyFileStatus">PDF and image files are stored on this device; enter their result values below.</span></div>
+    <details class="inbody-entry-section" open><summary>Client &amp; test information</summary><div class="compact-grid">
+      <div class="compact-field"><label for="inBodyClientId">InBody ID</label><input id="inBodyClientId" type="text"></div>
+      <div class="compact-field"><label for="inBodyHeight">Height</label><input id="inBodyHeight" type="text" placeholder="6 ft 03.0 in"></div>
+      <div class="compact-field"><label for="inBodyAge">Age at scan</label><input id="inBodyAge" type="number" min="0" max="120"></div>
+      <div class="compact-field"><label for="inBodySex">Sex on result sheet</label><select id="inBodySex"><option value="">Not entered</option><option value="Female">Female</option><option value="Male">Male</option><option value="Other">Other / not listed</option></select></div>
+      <div class="compact-field"><label for="inBodyTime">Test time</label><input id="inBodyTime" type="time"></div>
+    </div></details>
+    <details class="inbody-entry-section" open><summary>Core body-composition results</summary>
+    <div class="compact-grid">
+      <div class="compact-field"><label for="inBodyDate">Scan date</label><input id="inBodyDate" type="date"></div>
+      <div class="compact-field"><label for="inBodyUnit">Weight unit</label><select id="inBodyUnit"><option value="lb">lb</option><option value="kg">kg</option></select></div>
+      <div class="compact-field"><label for="inBodyWeight">Weight</label><input id="inBodyWeight" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodySmm">Skeletal muscle mass</label><input id="inBodySmm" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyFatMass">Body fat mass</label><input id="inBodyFatMass" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyPbf">Percent body fat</label><input id="inBodyPbf" type="number" min="0" max="100" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyVisceral">Visceral fat level</label><input id="inBodyVisceral" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyEcw">ECW/TBW ratio</label><input id="inBodyEcw" type="number" min="0" max="1" step="0.001"></div>
+      <div class="compact-field"><label for="inBodyScore">InBody score</label><input id="inBodyScore" type="number" min="0" step="1"></div>
+      <div class="compact-field"><label for="inBodyBmi">BMI</label><input id="inBodyBmi" type="number" min="0" step="0.1"></div>
+    </div></details>
+    <details class="inbody-entry-section"><summary>Body water &amp; lean tissue</summary><div class="compact-grid">
+      <div class="compact-field"><label for="inBodyIcw">Intracellular water</label><input id="inBodyIcw" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyExtracellularWater">Extracellular water</label><input id="inBodyExtracellularWater" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyTotalBodyWater">Total body water</label><input id="inBodyTotalBodyWater" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyDryLeanMass">Dry lean mass</label><input id="inBodyDryLeanMass" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyLeanBodyMass">Lean body mass</label><input id="inBodyLeanBodyMass" type="number" min="0" step="0.1"></div>
+    </div></details>
+    <details class="inbody-entry-section" open><summary>Segmental soft lean mass</summary><div class="compact-grid">
+      <div class="compact-field"><label for="inBodyRightArmMass">Right arm mass</label><input id="inBodyRightArmMass" type="number" min="0" step="0.01"></div><div class="compact-field"><label for="inBodyRightArm">Right arm %</label><input id="inBodyRightArm" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyLeftArmMass">Left arm mass</label><input id="inBodyLeftArmMass" type="number" min="0" step="0.01"></div><div class="compact-field"><label for="inBodyLeftArm">Left arm %</label><input id="inBodyLeftArm" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyTrunkMass">Trunk mass</label><input id="inBodyTrunkMass" type="number" min="0" step="0.01"></div><div class="compact-field"><label for="inBodyTrunk">Trunk %</label><input id="inBodyTrunk" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyRightLegMass">Right leg mass</label><input id="inBodyRightLegMass" type="number" min="0" step="0.01"></div><div class="compact-field"><label for="inBodyRightLeg">Right leg %</label><input id="inBodyRightLeg" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyLeftLegMass">Left leg mass</label><input id="inBodyLeftLegMass" type="number" min="0" step="0.01"></div><div class="compact-field"><label for="inBodyLeftLeg">Left leg %</label><input id="inBodyLeftLeg" type="number" min="0" step="0.1"></div>
+    </div></details>
+    <details class="inbody-entry-section"><summary>Segmental fat analysis</summary><div class="compact-grid">
+      <div class="compact-field"><label for="inBodyFatRightArmMass">Right arm fat mass</label><input id="inBodyFatRightArmMass" type="number" min="0" step="0.01"></div><div class="compact-field"><label for="inBodyFatRightArmPercent">Right arm fat %</label><input id="inBodyFatRightArmPercent" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyFatLeftArmMass">Left arm fat mass</label><input id="inBodyFatLeftArmMass" type="number" min="0" step="0.01"></div><div class="compact-field"><label for="inBodyFatLeftArmPercent">Left arm fat %</label><input id="inBodyFatLeftArmPercent" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyFatTrunkMass">Trunk fat mass</label><input id="inBodyFatTrunkMass" type="number" min="0" step="0.01"></div><div class="compact-field"><label for="inBodyFatTrunkPercent">Trunk fat %</label><input id="inBodyFatTrunkPercent" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyFatRightLegMass">Right leg fat mass</label><input id="inBodyFatRightLegMass" type="number" min="0" step="0.01"></div><div class="compact-field"><label for="inBodyFatRightLegPercent">Right leg fat %</label><input id="inBodyFatRightLegPercent" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyFatLeftLegMass">Left leg fat mass</label><input id="inBodyFatLeftLegMass" type="number" min="0" step="0.01"></div><div class="compact-field"><label for="inBodyFatLeftLegPercent">Left leg fat %</label><input id="inBodyFatLeftLegPercent" type="number" min="0" step="0.1"></div>
+    </div></details>
+    <details class="inbody-entry-section"><summary>Control &amp; research parameters</summary><div class="compact-grid">
+      <div class="compact-field"><label for="inBodyFatControl">Body fat mass control</label><input id="inBodyFatControl" type="number" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyLeanControl">Lean body mass control</label><input id="inBodyLeanControl" type="number" step="0.1"></div>
+      <div class="compact-field"><label for="inBodyBmr">Basal metabolic rate (kcal)</label><input id="inBodyBmr" type="number" min="0" step="1"></div>
+      <div class="compact-field"><label for="inBodyArmCircumference">Arm circumference</label><input id="inBodyArmCircumference" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="inBodySmi">SMI (kg/m²)</label><input id="inBodySmi" type="number" min="0" step="0.1"></div>
+    </div></details>
+    <details class="inbody-entry-section"><summary>Impedance (advanced)</summary><div class="analysis-table-wrap"><table class="analysis-table"><thead><tr><th>Frequency</th><th>Right arm</th><th>Left arm</th><th>Trunk</th><th>Right leg</th><th>Left leg</th></tr></thead><tbody>
+      <tr><td>5 kHz</td><td><input id="inBodyZ5Ra" type="number" step="0.1"></td><td><input id="inBodyZ5La" type="number" step="0.1"></td><td><input id="inBodyZ5Tr" type="number" step="0.1"></td><td><input id="inBodyZ5Rl" type="number" step="0.1"></td><td><input id="inBodyZ5Ll" type="number" step="0.1"></td></tr>
+      <tr><td>50 kHz</td><td><input id="inBodyZ50Ra" type="number" step="0.1"></td><td><input id="inBodyZ50La" type="number" step="0.1"></td><td><input id="inBodyZ50Tr" type="number" step="0.1"></td><td><input id="inBodyZ50Rl" type="number" step="0.1"></td><td><input id="inBodyZ50Ll" type="number" step="0.1"></td></tr>
+      <tr><td>500 kHz</td><td><input id="inBodyZ500Ra" type="number" step="0.1"></td><td><input id="inBodyZ500La" type="number" step="0.1"></td><td><input id="inBodyZ500Tr" type="number" step="0.1"></td><td><input id="inBodyZ500Rl" type="number" step="0.1"></td><td><input id="inBodyZ500Ll" type="number" step="0.1"></td></tr>
+    </tbody></table></div></details>
+    <div class="compact-field wide" style="margin-top:14px"><label for="inBodyNotes">Trainer notes</label><textarea id="inBodyNotes" placeholder="Testing conditions, hydration context, client discussion, or next check-in…"></textarea></div>
+    <div class="result-label" style="margin:16px 0 8px">Scan comparability</div>
+    <div class="summary-checks scan-quality"><label><input id="inBodySameTime" type="checkbox"> Similar time of day</label><label><input id="inBodyHydration" type="checkbox"> Usual hydration</label><label><input id="inBodyRestroom" type="checkbox"> Restroom beforehand</label><label><input id="inBodyNoExercise" type="checkbox"> No recent exercise</label></div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="saveInBodyScan()">Save scan</button><button class="small-btn" onclick="closeInBodyModal()">Cancel</button></div>
+    <p class="storage-note">Use repeated scans under similar testing conditions when interpreting change. <span data-brand-name>FIT4LIFE</span> uses these values as coaching context, not as a medical diagnosis.</p>
+  </div>
+</div>
+
+<div id="bodyGoalModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="bodyGoalTitle">
+  <div class="review-dialog">
+    <h2 id="bodyGoalTitle">Optional body-composition goals</h2>
+    <p>Set these only when the client wants body weight or body-fat goals included in coaching reviews. Trainers can change or turn them off at any time.</p>
+    <div class="summary-checks" style="margin-bottom:14px"><label><input id="bodyGoalEnabled" type="checkbox"> Use body-composition goals for this client</label></div>
+    <div class="compact-grid">
+      <div class="compact-field"><label for="bodyGoalType">Goal direction</label><select id="bodyGoalType"><option value="fatloss">Reduce body fat</option><option value="musclegain">Build muscle</option><option value="recomp">Recomposition</option><option value="maintain">Maintain</option></select></div>
+      <div class="compact-field"><label for="bodyGoalUnit">Weight unit</label><select id="bodyGoalUnit"><option value="lb">lb</option><option value="kg">kg</option></select></div>
+      <div class="compact-field"><label for="bodyGoalTargetWeight">Goal body weight <span style="font-weight:400">(optional)</span></label><input id="bodyGoalTargetWeight" type="number" min="0" step="0.1"></div>
+      <div class="compact-field"><label for="bodyGoalTargetPbf">Goal body fat % <span style="font-weight:400">(optional)</span></label><input id="bodyGoalTargetPbf" type="number" min="0" max="100" step="0.1"></div>
+      <div class="compact-field"><label for="bodyGoalTargetDate">Target review date <span style="font-weight:400">(optional)</span></label><input id="bodyGoalTargetDate" type="date"></div>
+      <div class="compact-field"><label for="bodyGoalMuscle">Muscle intention</label><select id="bodyGoalMuscle"><option value="preserve">Preserve muscle</option><option value="gain">Build muscle</option><option value="none">No separate muscle target</option></select></div>
+      <div class="compact-field wide"><label for="bodyGoalBaseline">Starting scan</label><select id="bodyGoalBaseline"></select><span class="storage-note">This anchors the baseline → current → goal comparison.</span></div>
+      <div class="compact-field wide"><label for="bodyGoalWhy">Client’s reason / coaching context <span style="font-weight:400">(optional)</span></label><textarea id="bodyGoalWhy" placeholder="What would reaching this goal help the client do or feel?"></textarea></div>
+    </div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="saveBodyCompositionGoal()">Save goals</button><button class="small-btn" onclick="closeBodyGoalModal()">Cancel</button></div>
+    <p class="storage-note">The progress map summarizes measured scan values and workout history. It does not predict appearance or diagnose health.</p>
+  </div>
+</div>
+
+<div id="clientPainModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="clientPainTitle">
+  <div class="review-dialog">
+    <h2 id="clientPainTitle">Report Pain or Discomfort</h2>
+    <p>Choose what the symptom did to your movement. This report alerts your trainer and stays attached to the workout.</p>
+    <div class="pain-level-guide" aria-label="Pain response guide">
+      <div class="pain-level-card" style="--pain-color:#55c98a"><b>Green</b><span>No pain. Continue as planned.</span></div>
+      <div class="pain-level-card" style="--pain-color:#e4c85b"><b>Yellow</b><span>Mild awareness; movement stays normal. Modify if needed and monitor.</span></div>
+      <div class="pain-level-card" style="--pain-color:#ed9448"><b>Orange</b><span>Technique, range, or balance changes. Stop that exercise and substitute.</span></div>
+      <div class="pain-level-card" style="--pain-color:#e86666"><b>Red</b><span>Severe, sharp, worsening, or concerning. End the workout and seek appropriate help.</span></div>
+    </div>
+    <div class="review-grid">
+      <div class="compact-field"><label for="clientPainLevel">Response level</label><select id="clientPainLevel" onchange="updateClientPainAction()"><option value="" selected>Choose how it feels</option><option value="yellow">Yellow · Mild awareness; movement normal</option><option value="orange">Orange · Changed technique, range, or balance</option><option value="red">Red · Severe, sharp, or worsening</option></select></div>
+      <div class="compact-field"><label for="clientPainArea">Where?</label><select id="clientPainArea"></select></div>
+      <div class="compact-field"><label for="clientPainMovementChanged">Did it change movement?</label><select id="clientPainMovementChanged" onchange="syncClientPainLevel()"><option value="no">No</option><option value="yes">Yes — technique, range, or balance changed</option></select></div>
+      <div class="compact-field"><label for="clientPainScore">0–10 rating <span style="font-weight:400">(optional)</span></label><input id="clientPainScore" type="number" min="0" max="10" step="1" placeholder="Optional"></div>
+      <div class="compact-field full"><label for="clientPainExercise">Movement or exercise involved</label><input id="clientPainExercise" placeholder="Example: front squat, treadmill walking, overhead reach"></div>
+      <div class="compact-field full"><label for="clientPainDetails">Short note <span style="font-weight:400">(optional for yellow)</span></label><textarea id="clientPainDetails" placeholder="Where did you feel it, what changed, and did you stop?"></textarea></div>
+      <div class="pain-action-note full" id="clientPainAction"></div>
+    </div>
+    <div class="tool-actions"><button class="small-btn primary" data-wt="pain-submit" onclick="saveClientPainReport()">Send to my trainer</button><button class="small-btn" data-wt="pain-cancel" onclick="closeClientPainReport()">Cancel</button></div>
+    <p class="storage-note">This tool does not diagnose an injury. For emergency or serious symptoms, follow local emergency procedures.</p>
+  </div>
+</div>
+
+<div id="reviewModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+  <div class="review-dialog">
+    <h2 id="reviewTitle">Finish &amp; Review</h2>
+    <p>A short review is enough. Your answers guide the next workout; extra notes are optional.</p>
+    <section class="review-section">
+      <div class="review-section-head"><div><h3>60-second check</h3><p>Difficulty, pain, and questions are the only answers needed right now.</p></div></div>
+      <div class="review-grid">
+        <div class="compact-field full"><label for="reviewClient">Client / workout</label><select id="reviewClient"></select></div>
+        <div class="compact-field"><label for="reviewDifficulty">Overall difficulty</label><select id="reviewDifficulty"><option value="4">4 · Easy</option><option value="5">5 · Comfortable</option><option value="6">6 · Moderate</option><option value="7" selected>7 · Challenging</option><option value="8">8 · Hard</option><option value="9">9 · Very hard</option><option value="10">10 · Maximum</option></select></div>
+        <div class="compact-field"><label for="reviewPain">Pain or injury?</label><select id="reviewPain" onchange="updateReviewPainFields()"><option value="none">Green · No pain</option><option value="mild">Yellow · Mild awareness; movement normal</option><option value="changed">Orange · Changed technique, range, or balance</option><option value="stopped">Red · Severe, sharp, or worsening</option></select></div>
+        <div class="compact-field review-safety" id="reviewInjuryAreaField" hidden><label for="reviewInjuryArea">Body area</label><select id="reviewInjuryArea"></select></div>
+        <div class="compact-field review-safety" id="reviewMovementChangedField" hidden><label for="reviewMovementChanged">Did it change movement?</label><select id="reviewMovementChanged" onchange="syncReviewPainLevel()"><option value="no">No</option><option value="yes">Yes — technique, range, or balance changed</option></select></div>
+        <div class="compact-field review-safety" id="reviewPainScoreField" hidden><label for="reviewPainScore">0–10 rating <span style="font-weight:400">(optional)</span></label><input id="reviewPainScore" type="number" min="0" max="10" step="1" placeholder="Optional"></div>
+        <div class="compact-field full review-safety" id="reviewPainExerciseField" hidden><label for="reviewPainExercise">Movement or exercise involved</label><input id="reviewPainExercise" placeholder="Example: squat, rower, overhead press"></div>
+        <div class="compact-field full review-safety" id="reviewInjuryDetailsField" hidden><label for="reviewInjuryDetails">What happened?</label><textarea id="reviewInjuryDetails" placeholder="Which movement caused it, where was it felt, and did it change technique or range?"></textarea></div>
+        <div class="pain-action-note full review-safety" id="reviewPainActionField" hidden></div>
+        <div class="compact-field full"><label for="reviewQuestions">Question for your coach <span style="font-weight:400">(optional)</span></label><textarea id="reviewQuestions" placeholder="Anything you want explained or changed before the next workout?"></textarea></div>
+      </div>
+    </section>
+    <details class="review-more">
+      <summary>Add completion, effort, and exercise details (optional)</summary>
+      <div class="review-grid">
+        <div class="compact-field"><label for="reviewCompletion">Workout completed</label><select id="reviewCompletion"><option value="all">Everything</option><option value="most">Most of it</option><option value="some">About half</option><option value="stopped">Stopped early</option></select></div>
+        <div class="compact-field"><label for="reviewEnergy">Energy afterward</label><select id="reviewEnergy"><option value="1">1 · Exhausted</option><option value="2">2 · Very tired</option><option value="3" selected>3 · Okay</option><option value="4">4 · Good</option><option value="5">5 · Energized</option></select></div>
+        <div class="compact-field"><label for="reviewTimeFit">Fit the planned time?</label><select id="reviewTimeFit"><option value="yes">Yes</option><option value="short">Finished early</option><option value="long">Ran over time</option><option value="unfinished">Could not finish in time</option></select></div>
+        <div class="compact-field"><label for="reviewRir">Reps left on hardest set</label><select id="reviewRir"><option value="0">0 · None</option><option value="1">1 rep</option><option value="2" selected>2 reps</option><option value="3">3 reps</option><option value="4">4+ reps</option></select></div>
+        <div class="compact-field"><label for="reviewForm">Form quality</label><select id="reviewForm"><option value="strong">Strong and consistent</option><option value="mixed">Mixed / some breakdown</option><option value="poor">Poor / needed help</option></select></div>
+        <div class="compact-field"><label for="reviewRange">Pain-free range of motion</label><select id="reviewRange"><option value="full">Full planned range</option><option value="limited">Had to shorten range</option><option value="stopped">Could not continue safely</option></select></div>
+        <div class="compact-field full"><label for="reviewNotes">Workout notes</label><textarea id="reviewNotes" placeholder="What went well or should change next time?"></textarea></div>
+        <div class="compact-field movement-feedback-field">
+          <label>Exercises you liked</label>
+          <details class="movement-feedback-picker" id="reviewLikedPicker"><summary>Choose from this workout</summary><div class="movement-feedback-menu"><input type="search" placeholder="Search movements…" aria-label="Search movements you liked" oninput="filterReviewMovementPicker('liked',this.value)"><div id="reviewLikedOptions" class="movement-feedback-options"></div><button type="button" class="movement-picker-done" onclick="this.closest('details').open=false">Done</button></div></details>
+          <input id="reviewLiked" type="hidden">
+        </div>
+        <div class="compact-field movement-feedback-field">
+          <label>Exercises you disliked or did not understand</label>
+          <details class="movement-feedback-picker" id="reviewDislikedPicker"><summary>Choose from this workout</summary><div class="movement-feedback-menu"><input type="search" placeholder="Search movements…" aria-label="Search movements you disliked" oninput="filterReviewMovementPicker('disliked',this.value)"><div id="reviewDislikedOptions" class="movement-feedback-options"></div><button type="button" class="movement-picker-done" onclick="this.closest('details').open=false">Done</button></div></details>
+          <input id="reviewDisliked" type="hidden">
+        </div>
+      </div>
+    </details>
+    <div class="tool-actions"><button class="small-btn primary" id="reviewSaveAnalysisBtn" onclick="saveWorkoutReview(true)">Save &amp; view client analysis</button><button class="small-btn" id="reviewSaveOnlyBtn" onclick="saveWorkoutReview(false)">Save only</button><button class="small-btn" onclick="closeWorkoutReview()">Cancel</button></div>
+  </div>
+</div>
+
+<div id="coachAdjustmentModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="coachAdjustmentTitle">
+  <div class="review-dialog">
+    <h2 id="coachAdjustmentTitle">Review &amp; Adjust</h2>
+    <p>Close the coaching loop: review what the client completed, choose the next-session direction, and leave one clear coaching note.</p>
+    <input id="coachAdjustmentProfileId" type="hidden">
+    <div id="coachAdjustmentSummary" class="priority-card"></div>
+    <section id="coachAdjustmentClientFeedback" class="coach-review-feedback" aria-live="polite"></section>
+    <div class="compact-grid" style="margin-top:14px">
+      <div class="compact-field wide"><label for="coachAdjustmentAction">Next workout decision</label><select id="coachAdjustmentAction"><option value="repeat">Repeat the successful plan</option><option value="progress">Progress one variable</option><option value="reduce">Reduce load or volume</option><option value="pain_swap">Replace the painful pattern</option></select></div>
+      <div class="compact-field wide"><label for="coachAdjustmentNote">Trainer note for the client</label><textarea id="coachAdjustmentNote" placeholder="What should the client repeat, change, or pay attention to next time?"></textarea></div>
+    </div>
+    <details class="formal-review-box" id="formalReviewBox"><summary id="formalReviewSummary">Four-week formal review</summary><div class="compact-grid" style="margin-top:12px"><div class="compact-field"><label><input id="coachFormalReviewComplete" type="checkbox"> Complete formal block review now</label></div><div class="compact-field"><label for="coachFormalDecision">Block decision</label><select id="coachFormalDecision"><option value="continue">Continue the phase</option><option value="deload">Extend / add deload</option><option value="change">Change emphasis</option><option value="rebuild">Rebuild the program</option></select></div><div class="compact-field wide"><label for="coachFormalNote">Formal review note</label><textarea id="coachFormalNote" placeholder="Adherence, performance, pain, readiness, technique, preferences, and the next four-week decision…"></textarea></div></div></details>
+    <div class="tool-actions"><button class="small-btn primary" onclick="saveCoachAdjustment(true)">Save &amp; build next workout</button><button class="small-btn" onclick="saveCoachAdjustment(false)">Save decision</button><button class="small-btn" onclick="closeCoachAdjustment()">Cancel</button></div>
+    <p class="storage-note">This choice is coach-approved. It becomes visible in the next workout builder and can adjust the generated session’s volume and safety emphasis.</p>
+  </div>
+</div>
+
+<div id="progressReceiptModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="progressReceiptTitle">
+  <div class="review-dialog receipt-editor-dialog">
+    <div class="receipt-head"><div><div class="client-section-label" id="progressReceiptCadence">Weekly progress receipt</div><h2 id="progressReceiptTitle">Review progress receipt</h2><p>Confirm the evidence, simplify the message, and publish only what this client can act on.</p></div><span class="receipt-status" id="progressReceiptStatus">Draft</span></div>
+    <input id="progressReceiptId" type="hidden">
+    <input id="progressReceiptProfileId" type="hidden">
+    <input id="progressReceiptType" type="hidden">
+    <div id="progressReceiptDueNote" class="receipt-due-note"></div>
+    <div id="progressReceiptEvidence" class="receipt-editor-evidence"></div>
+    <div class="receipt-editor-grid">
+      <div class="compact-field wide"><label for="progressReceiptImproved">What improved <span style="font-weight:400">(one clear point per line)</span></label><textarea id="progressReceiptImproved" placeholder="Completed three planned sessions with no pain reported.&#10;Back squat estimated strength improved 4% across comparable sessions."></textarea></div>
+      <div class="compact-field"><label for="progressReceiptNeedsWork">What needs work <span style="font-weight:400">(maximum two priorities)</span></label><textarea id="progressReceiptNeedsWork" placeholder="Keep the main lifts consistent long enough to build a reliable baseline."></textarea></div>
+      <div class="compact-field"><label for="progressReceiptNext">What changes next <span style="font-weight:400">(specific actions)</span></label><textarea id="progressReceiptNext" placeholder="Repeat the main lifts and add one rep only when all sets stay controlled."></textarea></div>
+      <div class="compact-field wide"><label for="progressReceiptCoachMessage">Coach message <span style="font-weight:400">(lead with honest recognition)</span></label><textarea id="progressReceiptCoachMessage" placeholder="You are building consistency. The next block keeps the lifts familiar and progresses only one variable at a time."></textarea></div>
+    </div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="saveProgressReceipt(true)">Publish to client</button><button class="small-btn" onclick="saveProgressReceipt(false)">Save draft</button><button class="small-btn danger" onclick="deleteProgressReceiptDraft()">Delete draft</button><button class="small-btn" onclick="closeProgressReceiptEditor()">Cancel</button></div>
+    <p class="storage-note">Publishing sends this receipt to the client Home and Progress pages. Drafts remain trainer-only. A formal receipt also closes the current four-week receipt request.</p>
+  </div>
+</div>
+
+<div id="baselineReviewModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="baselineReviewTitle">
+  <div class="review-dialog">
+    <div class="receipt-head"><div><div class="client-section-label">Coach verification</div><h2 id="baselineReviewTitle">Review personalization baseline</h2><p>Confirm that the calibration results are usable. No max testing is required: the app uses pain-free submaximal work, effort, confidence, and familiar equipment.</p></div><span class="receipt-status" id="baselineReviewStatus">Needs evidence</span></div>
+    <input id="baselineReviewProfileId" type="hidden">
+    <div id="baselineReviewSummary" class="baseline-review-grid"></div>
+    <div class="compact-grid">
+      <div class="compact-field wide"><label for="baselineReviewNote">Trainer interpretation</label><textarea id="baselineReviewNote" placeholder="Technique quality, movement tolerance, useful starting loads or paces, and anything the generator should preserve…"></textarea></div>
+      <label class="client-action-row wide"><span><b>I reviewed the evidence</b><span>I checked pain response, confidence, effort, exercise fit, and whether these results are appropriate for programming.</span></span><input id="baselineReviewConfirmed" class="habit-check" type="checkbox"></label>
+    </div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="establishClientBaseline()">Establish baseline &amp; unlock tailoring</button><button class="small-btn" onclick="requestBaselineRetest()">Keep calibration open</button><button class="small-btn" onclick="closeBaselineReview()">Cancel</button></div>
+    <p class="storage-note">This is a coaching baseline, not a medical diagnosis or a one-repetition maximum. Future programs still apply the full safety, equipment, readiness, and coach-approval rules.</p>
+  </div>
+</div>
+
+<div id="attentionDismissModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="attentionDismissTitle" aria-describedby="attentionDismissCopy">
+  <div class="review-dialog attention-dismiss-dialog">
+    <div class="client-section-label">Shared action center</div>
+    <h2 id="attentionDismissTitle">Dismiss this reminder?</h2>
+    <p id="attentionDismissCopy">This hides only the notification for the coaching team. It does not delete the source record or mark the work complete.</p>
+    <input id="attentionDismissItemId" type="hidden">
+    <div id="attentionDismissItemSummary" class="priority-card"></div>
+    <div class="compact-grid" style="margin-top:14px">
+      <div class="compact-field wide"><label for="attentionDismissReason">Reason</label><select id="attentionDismissReason"><option value="">Choose a reason…</option><option value="Duplicate reminder">Duplicate reminder</option><option value="Handled outside this notification">Handled outside this notification</option><option value="Not actionable right now">Not actionable right now</option><option value="No longer relevant">No longer relevant</option><option value="Other">Other</option></select></div>
+      <div class="compact-field wide"><label for="attentionDismissNote">Audit note <span style="font-weight:400">(required for Other)</span></label><textarea id="attentionDismissNote" placeholder="Add a short explanation for the coaching team."></textarea></div>
+    </div>
+    <div class="tool-actions"><button class="small-btn primary" onclick="confirmDismissCoachAttention()">Dismiss for team</button><button class="small-btn" onclick="closeAttentionDismissModal()">Cancel</button></div>
+    <p class="storage-note">The actor, time, and reason are saved in the shared audit state. A genuinely new event or revised client submission can appear again.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
+<script src="cloud-sync.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/engine/exercise-library.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/engine/session-engine.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/engine/session-builders.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/engine/personalization.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/engine/booking-import.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/navigation.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/program-app.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/forms.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/engine/generation.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/rendering.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/calculations-timers.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/engine/multiweek-programs.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/readiness-progress.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/client-consultation.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/trainer/trainer-hub.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/trainer/coaching-support.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/role-governance.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/action-calendar.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/workout-feedback-reports.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/booking-import-ui.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/trainer-audits.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/area-art.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/branch-switcher.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/work-areas.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/area-tools.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/walkthrough.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/app/intro-video.js?v=20261109-v164-journey-logo-r1"></script>
+<script src="js/init.js?v=20261109-v164-journey-logo-r1"></script>
+</body>
+</html>
