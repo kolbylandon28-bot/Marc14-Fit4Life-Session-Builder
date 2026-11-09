@@ -121,6 +121,10 @@ let workAreasRequested = false, standardAreasSeeded = false;
 function loadWorkAreasOnce(force) {
   if (typeof window.fit4lifeCloudListWorkAreas !== "function") return;
   if (!window.fit4lifeCloudReady) return;
+  /* seedStandardAreasIfEmpty() below is what wrote Maintenance, I-Center, Equipment
+     Center, Pool and Gym into Journey Financial Services' own database. A branch
+     without the facility module must neither fetch areas nor be given any. */
+  if (facilityModuleOff()) { window.fit4lifeWorkAreasAvailable = false; return; }
   if (workAreasRequested && !force) return;
   workAreasRequested = true;
   window.fit4lifeCloudListWorkAreas()
@@ -466,9 +470,39 @@ function areaGroupHtml(label, keys) {
 /* Rebuilt on every visit home, because who you are and where you can work both change.
    The areas are the whole question now; the coaching workspace and the client view are
    places you reach from an area, not a fork in the road before it. */
+/* The facility layer - areas, clocks, shifts, tasks, files - is BYU-Idaho's building,
+   not every customer's. An employer branch has no pool to schedule. Off means these
+   surfaces never render and never fetch; unknown means on, so nothing regresses. */
+function facilityModuleOn() {
+  return typeof window.fit4lifeModuleEnabled !== "function" || window.fit4lifeModuleEnabled("facility");
+}
+
+function facilityModuleOff() { return !facilityModuleOn(); }
+
+/* Where an employer or individual branch lands instead of "where are you working today?" */
+function renderCoachingOnlyHome() {
+  const grid = byId("roleChoiceGrid"), heading = byId("roleHeroCopy"), path = byId("roleLevelPath");
+  if (!grid) return;
+  if (path) path.innerHTML = "";
+  if (heading) heading.innerHTML = '<h1>Who are you<br><span class="grad-text">training today?</span></h1><p>Your clients, their programs and their reports.</p>';
+  const coach = canEditClientRecords();
+  grid.className = "role-choice-grid";
+  grid.innerHTML = (coach ? '<button class="tool-card role-card primary" onclick="openCoachDestination(\'dashboard\')">'
+      + '<div class="tc-title">Coaching workspace</div><div class="tc-desc">Clients, programs, reports and messages.</div>'
+      + '<span class="role-action">Open \u2192</span></button>'
+      + '<button class="tool-card role-card" onclick="openBuilder()">'
+      + '<div class="tc-title">Build a workout</div><div class="tc-desc">Generate or write one for a client.</div>'
+      + '<span class="role-action">Open \u2192</span></button>' : '')
+    + (isFit4LifeOwner() ? '<button class="tool-card role-card" onclick="selectPortalRole(\'client\')">'
+      + '<div class="tc-title">See the client view</div><div class="tc-desc">Exactly what your clients see.</div>'
+      + '<span class="role-action">Open \u2192</span></button>' : '');
+  renderHomeSideDoors(isFit4LifeOwner());
+}
+
 function renderHomeChoices() {
   const grid = byId("roleChoiceGrid");
   if (!grid) return;
+  if (facilityModuleOff()) { renderCoachingOnlyHome(); return; }
   if (window.fit4lifeWorkAreasAvailable === false) return;
   // Still fetching: say so rather than flashing the first-run card at someone whose areas exist.
   if (window.fit4lifeWorkAreasAvailable === undefined) {
@@ -516,12 +550,13 @@ function renderHomeSideDoors(owner) {
   doors.innerHTML = '<span>Owner:</span>'
     + '<button class="small-btn" onclick="openCoachDestination(\'dashboard\')">Coaching workspace</button>'
     + '<button class="small-btn" onclick="selectPortalRole(\'client\')">See the client view</button>'
-    + '<button class="small-btn" onclick="openCoachDestination(\'areas\')">Areas &amp; people</button>';
+    + (facilityModuleOn() ? '<button class="small-btn" onclick="openCoachDestination(\'areas\')">Areas &amp; people</button>' : '');
 }
 
 function renderAreaHome() {
   const out = byId("areaHomeContent"), key = activeWorkArea();
   if (!out) return;
+  if (facilityModuleOff()) { show("home"); renderHomeChoices(); return; }
   if (!key) { show("home"); renderHomeChoices(); return; }
   const title = byId("areaHomeTitle"), copy = byId("areaHomeCopy"), levelOne = byId("areaLevelOne");
   if (title) title.textContent = workAreaName(key);
@@ -533,7 +568,7 @@ function renderAreaHome() {
     cards.push('<section class="coach-module-card"><h3>Coaching</h3><p>Clients, programming and the floor.</p>'
       + '<div class="tool-actions"><button class="small-btn primary" onclick="openCoachDestination(\'dashboard\')">Coaching workspace</button>'
       + '<button class="small-btn" onclick="openBuilder()">Build a workout</button>'
-      + (isFit4LifeOwner() ? '<button class="small-btn" onclick="openCoachDestination(\'audits\')">Trainer audits</button>' : '') + '</div></section>');
+      + (isFit4LifeOwner() && (typeof window.fit4lifeModuleEnabled !== "function" || window.fit4lifeModuleEnabled("audits")) ? '<button class="small-btn" onclick="openCoachDestination(\'audits\')">Trainer audits</button>' : '') + '</div></section>');
   }
   if (window.fit4lifeAreaToolsAvailable === false) {
     cards.push('<section class="coach-module-card" style="grid-column:1/-1"><h3>Clock and schedule not set up</h3>'

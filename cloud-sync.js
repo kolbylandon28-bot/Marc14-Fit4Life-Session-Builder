@@ -4,6 +4,9 @@
   const CONFIG_CACHE_KEY = "fit4life_public_cloud_config_v1";
   const PENDING_SYNC_KEY = "fit4life_cloud_pending_scopes_v1";
   const ACCOUNT_CACHE_OWNER_KEY = "fit4life_account_cache_owner_v1";
+  /* Deliberately NOT a CLOUD_KEY. Switching branches wipes those, and the choice
+     of branch has to outlive the wipe or the switch bounces back. */
+  const ACTIVE_BRANCH_KEY = "fit4life_active_branch_v1";
   const REMEMBER_SIGN_IN_KEY = "fit4life_remember_sign_in_v1";
   const CLOUD_KEYS = {
     profiles: "fit4life_profiles_v1",
@@ -60,6 +63,8 @@
   let cloudUser = null;
   let cloudRole = "";
   let cloudOrganizationId = "";
+  let branchChoiceNeeded = false;
+  let knownBranches = [];
   let cloudReady = false;
   let cloudApplying = false;
   let cloudPushing = false;
@@ -194,10 +199,15 @@
     setTimeout(() => { refreshVisibleApp(); if (typeof routeAuthenticatedWorkspace === "function") routeAuthenticatedWorkspace(); },0);
   }
 
-  function isolateSensitiveCacheForUser(userId, role) {
+  /* The cache belongs to one person IN ONE ORGANIZATION. Keying it on the user alone meant an
+     owner of two gyms kept the first gym's roster in localStorage while signed into the second -
+     the wrong gym's clients on screen, and the pending-sync queue able to push them up into the
+     new gym. Any change of either half wipes it, for every role. */
+  function isolateSensitiveCacheForUser(userId, role, organizationId) {
+    const scope = String(userId || "") + "|" + String(organizationId || "");
     let previous = "";
     try { previous = localStorage.getItem(ACCOUNT_CACHE_OWNER_KEY) || ""; } catch (_) {}
-    if (role === "client" && previous !== userId) {
+    if (previous && previous !== scope) {
       Object.values(CLOUD_KEYS).forEach((key) => {
         if (key !== CLOUD_KEYS.gymBrand && key !== CLOUD_KEYS.gymEquipment) {
           try { localStorage.removeItem(key); } catch (_) {}
@@ -206,7 +216,7 @@
       pendingScopes.clear();
       persistPendingScopes();
     }
-    try { localStorage.setItem(ACCOUNT_CACHE_OWNER_KEY, userId || ""); } catch (_) {}
+    try { localStorage.setItem(ACCOUNT_CACHE_OWNER_KEY, scope); } catch (_) {}
   }
 
   function accountVisibleProfileRows(rows, role, userId) {
@@ -326,6 +336,40 @@
 
   window.fit4lifePublicSiteUrl = publicSiteUrl;
 
+  async function loadBranches(force) {
+    if (!cloudClient || !cloudUser) return [];
+    if (knownBranches.length && !force) return knownBranches;
+    const response = await cloudClient.rpc("fit4life_my_orgs");
+    if (response.error || !Array.isArray(response.data)) {
+      if (response.error) console.error("Branches could not be loaded", response.error);
+      return knownBranches;
+    }
+    knownBranches = response.data.filter((row) => row && row.is_template !== true);
+    window.fit4lifeBranches = knownBranches;
+    return knownBranches;
+  }
+
+  /* A branch change is an identity change. The cache wipe in
+     isolateSensitiveCacheForUser keys on user|organization, so reloading after
+     writing the choice is what actually clears the previous branch's data. */
+  function switchBranch(organizationId) {
+    const id = String(organizationId || "").trim();
+    if (!id || id === cloudOrganizationId) return false;
+    rememberBranchId(id);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("gym");
+      window.location.replace(url.toString());
+    } catch (_) {
+      window.location.reload();
+    }
+    return true;
+  }
+
+  window.fit4lifeLoadBranches = loadBranches;
+  window.fit4lifeSwitchBranch = switchBranch;
+  window.fit4lifeActiveBranchId = function () { return cloudOrganizationId; };
+
   function publishCloudIdentity() {
     window.fit4lifeCloudIdentity = cloudUser ? { id:cloudUser.id,email:cloudUser.email || "",role:cloudRole || "",displayName:accountDisplayName(cloudUser) } : null;
   }
@@ -338,12 +382,54 @@
     window.fit4lifeCloudOrganizationSlug = portalOrganizationSlug || "";
   }
 
+  function storedBranchId() {
+    try { return String(localStorage.getItem(ACTIVE_BRANCH_KEY) || "").trim(); } catch (_) { return ""; }
+  }
+
+  function rememberBranchId(id) {
+    try {
+      if (id) localStorage.setItem(ACTIVE_BRANCH_KEY, String(id));
+      else localStorage.removeItem(ACTIVE_BRANCH_KEY);
+    } catch (_) {}
+  }
+
+  /* One membership resolves silently - that is every client and every single-gym trainer.
+     More than one must be CHOSEN. Taking rows[0] is exactly how one customer's screens
+     opened over another customer's data, so this refuses to guess and asks instead. */
+  function pickMembership(rows) {
+    if (!Array.isArray(rows) || !rows.length) return null;
+    const stored = storedBranchId();
+    if (stored) {
+      const sticky = rows.find((row) => row.organization_id === stored);
+      if (sticky) return sticky;
+    }
+    if (portalOrganizationId) {
+      const fromLink = rows.find((row) => row.organization_id === portalOrganizationId);
+      if (fromLink) return fromLink;
+    }
+    if (rows.length === 1) return rows[0];
+    branchChoiceNeeded = true;
+    window.fit4lifeBranchChoiceNeeded = true;
+    return null;
+  }
+
   function applyMembershipContext(membership) {
     if (!membership || !membership.organization_id || !membership.role) return false;
     cloudRole = membership.role;
     cloudOrganizationId = membership.organization_id;
+    branchChoiceNeeded = false;
+    window.fit4lifeBranchChoiceNeeded = false;
+    rememberBranchId(membership.organization_id);
     window.fit4lifeCloudRole = cloudRole;
     window.fit4lifeCloudOrganizationId = cloudOrganizationId;
+    /* A ?gym= slug only describes the branding. If the session resolved to a different gym,
+       showing that slug puts one customer's name over another customer's data. Drop it and let
+       loadOrganizationSettings() fetch the branding that matches the org we are actually in. */
+    if (portalOrganizationId && portalOrganizationId !== membership.organization_id) {
+      portalOrganizationSlug = "";
+      portalOrganizationId = "";
+      try { localStorage.removeItem(CLOUD_KEYS.gymBrand); } catch (_) {}
+    }
     if (portalOrganizationSlug) window.fit4lifeCloudOrganizationSlug = portalOrganizationSlug;
     publishCloudIdentity();
     return true;
@@ -367,8 +453,31 @@
     return String(brand.name || "your gym").trim();
   }
 
+  /* Defaults come from org_type, so no data migration is needed: BYU-Idaho is a
+     university and keeps every facility screen, Journey is an employer and never had
+     a pool. An explicit modules entry always wins over the default. */
+  const MODULE_DEFAULTS = {
+    university: { facility:true,  timeclock:true,  volunteers:true,  audits:true,  booking_import:true,  consultation:true },
+    gym:        { facility:true,  timeclock:true,  volunteers:false, audits:true,  booking_import:false, consultation:true },
+    employer:   { facility:false, timeclock:false, volunteers:false, audits:false, booking_import:false, consultation:true },
+    individual: { facility:false, timeclock:false, volunteers:false, audits:false, booking_import:false, consultation:true }
+  };
+
+  function moduleEnabled(name) {
+    const explicit = window.fit4lifeOrgModules && window.fit4lifeOrgModules[name];
+    if (explicit === true || explicit === false) return explicit;
+    const defaults = MODULE_DEFAULTS[window.fit4lifeOrgType] || MODULE_DEFAULTS.gym;
+    return defaults[name] !== false;
+  }
+
+  window.fit4lifeModuleEnabled = moduleEnabled;
+
   function applyPortalContext(context) {
     if (!context) return null;
+    if (context.org_type !== undefined) window.fit4lifeOrgType = String(context.org_type || "gym");
+    if (context.modules !== undefined) window.fit4lifeOrgModules = context.modules && typeof context.modules === "object" ? context.modules : {};
+    if (context.config !== undefined) window.fit4lifeOrgConfig = context.config && typeof context.config === "object" ? context.config : {};
+    if (context.is_template !== undefined) window.fit4lifeOrgIsTemplate = context.is_template === true;
     portalOrganizationId = context.organization_id || portalOrganizationId;
     portalOrganizationSlug = context.slug || portalOrganizationSlug;
     portalPublicRegistrationEnabled = context.public_registration_enabled !== false;
@@ -468,6 +577,56 @@
     const all = readJson(LIVE_WORKOUTS_KEY, {});
     return Object.keys(all || {}).filter((id) => all[id] && !all[id].finishedAt);
   };
+
+  /* exercisePreferences and injuries decide what the generator is allowed to give a
+     client, and they rode inside one blob that the pull spread wholesale over the local
+     profile. A stale remote copy therefore erased a fresh "this hurt me" or "I hate
+     burpees" silently, and five separate writers all assumed last-write-wins.
+
+     Merged per key instead, with two rules that cannot lose safety information:
+     a restriction always beats a permission, and an injury is a mark that sync never
+     subtracts. Clearing either stays an explicit trainer action. */
+  const PREFERENCE_SEVERITY = { discomfort:6, unavailable:5, dislike:4, unfamiliar:3, neutral:2, like:1, favorite:0 };
+
+  function strictestPreference(a, b) {
+    if (a == null) return b;
+    if (b == null) return a;
+    const left = PREFERENCE_SEVERITY[a], right = PREFERENCE_SEVERITY[b];
+    if (left === undefined) return b;
+    if (right === undefined) return a;
+    return right > left ? b : a;
+  }
+
+  function mergePreferences(a, b) {
+    const out = { ...(a || {}) };
+    Object.keys(b || {}).forEach((key) => { out[key] = strictestPreference(out[key], b[key]); });
+    return out;
+  }
+
+  function mergeInjuries(a, b) {
+    const seen = new Set(), out = [];
+    [].concat(Array.isArray(a) ? a : [], Array.isArray(b) ? b : []).forEach((item) => {
+      const key = String(item == null ? "" : item).trim();
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      out.push(item);
+    });
+    return out;
+  }
+
+  function mergeFeedbackProfile(local, remote) {
+    if (!remote) return local || {};
+    if (!local) return remote;
+    return {
+      ...local,
+      ...remote,
+      exercisePreferences: mergePreferences(local.exercisePreferences, remote.exercisePreferences),
+      injuries: mergeInjuries(local.injuries, remote.injuries),
+      workoutFeedbackHistory: mergeRecords(local.workoutFeedbackHistory, remote.workoutFeedbackHistory),
+      exercisePreferenceEvidence: mergeRecords(local.exercisePreferenceEvidence, remote.exercisePreferenceEvidence),
+      lastReview: newestObject(local.lastReview, remote.lastReview)
+    };
+  }
 
   function newestObject(current, incoming) {
     if (!current) return incoming || null;
@@ -810,10 +969,9 @@
       .order("created_at", { ascending: true });
 
     if (!response.error && Array.isArray(response.data)) {
-      const selected = portalOrganizationId
-        ? response.data.find((membership) => membership.organization_id === portalOrganizationId)
-        : response.data[0];
+      const selected = pickMembership(response.data);
       if (selected) return selected;
+      if (branchChoiceNeeded) return null;
     }
 
     // An invited trainer has no membership until they arrive. The invite carries the gym
@@ -828,10 +986,9 @@
         .eq("user_id", cloudUser.id)
         .eq("is_active", true);
       if (!afterInvite.error && Array.isArray(afterInvite.data)) {
-        const claimed = portalOrganizationId
-          ? afterInvite.data.find((membership) => membership.organization_id === portalOrganizationId)
-          : afterInvite.data[0];
+        const claimed = pickMembership(afterInvite.data);
         if (claimed) return claimed;
+        if (branchChoiceNeeded) return null;
       }
     }
 
@@ -849,9 +1006,7 @@
       .eq("user_id", cloudUser.id)
       .eq("is_active", true);
     if (response.error || !Array.isArray(response.data)) return null;
-    return portalOrganizationId
-      ? response.data.find((membership) => membership.organization_id === portalOrganizationId) || null
-      : response.data[0] || null;
+    return pickMembership(response.data);
   }
 
   async function getMyRegistrationRequest() {
@@ -931,7 +1086,7 @@
     organizationSettingsLoad = (async () => {
       const response = await cloudClient
         .from("organizations")
-        .select("id,slug,name,brand_config,equipment_config,public_registration_enabled")
+        .select("id,slug,name,org_type,modules,config,is_template,brand_config,equipment_config,public_registration_enabled")
         .eq("id", cloudOrganizationId)
         .maybeSingle();
       if (response.error || !response.data) {
@@ -947,7 +1102,11 @@
         name: response.data.name,
         brand_config: response.data.brand_config,
         equipment_config: response.data.equipment_config,
-        public_registration_enabled: response.data.public_registration_enabled
+        public_registration_enabled: response.data.public_registration_enabled,
+        org_type: response.data.org_type,
+        modules: response.data.modules,
+        config: response.data.config,
+        is_template: response.data.is_template
       });
       lastOrganizationSettingsLoadedAt = Date.now();
       return response.data;
@@ -1015,7 +1174,7 @@
         .from("organizations")
         .update({ brand_config:brand,equipment_config:equipment })
         .eq("id",cloudOrganizationId)
-        .select("id,slug,name,brand_config,equipment_config,public_registration_enabled")
+        .select("id,slug,name,org_type,modules,config,is_template,brand_config,equipment_config,public_registration_enabled")
         .maybeSingle();
     }
     let saved = !response.error && Array.isArray(response.data) ? response.data[0] : response.data;
@@ -1519,10 +1678,13 @@
       const plan = byClientAndType.get(row.id + "|client_plan") || {};
       const activity = byClientAndType.get(row.id + "|client_activity") || {};
       const consultation = newestClientConsultation(plan,activity);
-      const profile = {
+      const localBase = {
         ...(plan.profile || cachedProfileFromRow(row)),
-        ...clientConsultationProfilePatch(plan,activity),
-        ...(activity.clientFeedbackProfile || {}),
+        ...clientConsultationProfilePatch(plan,activity)
+      };
+      const profile = {
+        ...localBase,
+        ...mergeFeedbackProfile(localBase, activity.clientFeedbackProfile),
         id: row.external_id || row.id,
         name: row.full_name,
         username: row.username,
@@ -1857,7 +2019,7 @@
     }
 
     applyMembershipContext(membership);
-    isolateSensitiveCacheForUser(cloudUser.id, cloudRole);
+    isolateSensitiveCacheForUser(cloudUser.id, cloudRole, cloudOrganizationId);
     await loadOrganizationSettings();
     if (cloudRole === "client") {
       try { await cloudClient.rpc("complete_my_fit4life_registration"); } catch (_) {}
@@ -2259,7 +2421,7 @@
     if (!cloudClient || !roster.length) return roster;
     let rows = null;
     try {
-      const response = await cloudClient.rpc("list_fit4life_trainer_tiers");
+      const response = await orgRpc("list_fit4life_trainer_tiers");
       if (response.error) throw response.error;
       rows = Array.isArray(response.data) ? response.data : [];
     } catch (error) {
@@ -2282,7 +2444,7 @@
 
   window.fit4lifeCloudListStaffInvites = async function fit4lifeCloudListStaffInvites() {
     if (!cloudClient || cloudRole !== "owner") return null;
-    const response = await cloudClient.rpc("list_fit4life_staff_invites");
+    const response = await orgRpc("list_fit4life_staff_invites");
     if (response.error) { window.fit4lifeStaffInvitesAvailable = false; return null; }
     window.fit4lifeStaffInvitesAvailable = true;
     window.fit4lifeStaffInvites = Array.isArray(response.data) ? response.data : [];
@@ -2355,9 +2517,22 @@
   }
   window.fit4lifeDeviceId = deviceId;
 
+  /* Area RPCs are all org-scoped. Sending org_id stops fit4life_active_org() from
+     having to resolve it, which it now refuses to do for a multi-branch account. */
+  function withBranch(args) {
+    const payload = { ...(args || {}) };
+    if (cloudOrganizationId && payload.org_id === undefined) payload.org_id = cloudOrganizationId;
+    return payload;
+  }
+
+  async function orgRpc(name, args) {
+    if (!cloudClient || !cloudUser) return { error: { message: "Not signed in" } };
+    return cloudClient.rpc(name, withBranch(args));
+  }
+
   async function areaRpc(name, args) {
     if (!cloudClient || !cloudUser) return { error: { message: "Not signed in" } };
-    const response = await cloudClient.rpc(name, args || {});
+    const response = await cloudClient.rpc(name, withBranch(args));
     if (response.error && /could not find the function|schema cache/i.test(String(response.error.message || ""))) {
       window.fit4lifeAreaToolsAvailable = false;
     } else if (!response.error) {
@@ -2522,8 +2697,8 @@
   window.fit4lifeCloudListWorkAreas = async function fit4lifeCloudListWorkAreas() {
     if (!cloudClient || !cloudUser) return null;
     const [areas, staff] = await Promise.all([
-      cloudClient.rpc("list_fit4life_work_areas"),
-      cloudClient.rpc("list_fit4life_staff_areas")
+      orgRpc("list_fit4life_work_areas"),
+      orgRpc("list_fit4life_staff_areas")
     ]);
     if (areas.error) { window.fit4lifeWorkAreasAvailable = false; return null; }
     window.fit4lifeWorkAreasAvailable = true;
@@ -2583,8 +2758,8 @@
     let audits, trainers;
     try {
       [audits, trainers] = await Promise.all([
-        cloudClient.rpc("list_fit4life_trainer_audits"),
-        cloudClient.rpc("list_fit4life_audit_trainers")
+        orgRpc("list_fit4life_trainer_audits"),
+        orgRpc("list_fit4life_audit_trainers")
       ]);
       if (audits.error) throw audits.error;
       if (trainers.error) throw trainers.error;
