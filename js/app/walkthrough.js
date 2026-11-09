@@ -40,7 +40,7 @@ function practiceClientProfile() {
     // instead of 41, so the amber cautions and blocks in the picker are genuine. Chosen
     // because it leaves the lower-body main lift alone, which the rest of the demo uses.
     injuries: ["shoulder"],
-    zones: ["cardio","platform","rack","crossfit","dumbbell","machine","cable","bodyweight"],
+    zones: ["cardio","platform","rack","crossfit","dumbbell","machine","cable","bodyweight","band","kettlebell","household","outdoor"],
     membershipTier: "standard",
     sessionsPerWeek: 2,
     programmedDays: 3,

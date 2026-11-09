@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-10-26-v158-settings-tabs-r1";
+const CACHE_NAME = "fit4life-shell-2026-11-07-v159-movement-library-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20261026-v158-settings-tabs-r1";
+const ASSET_VERSION = "20261107-v159-movement-library-r1";
 const SHELL = [
   "/",
   "/index.html",

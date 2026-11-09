@@ -144,7 +144,7 @@ function requestBaselineRetest() {
 }
 const EXP_OPTIONS = [[1, "New — learning technique"], [2, "Intermediate — trains consistently"], [3, "Advanced — highly experienced"]];
 const TIME_OPTIONS = [[30, "30 min"], [45, "45 min"], [60, "60 min"], [90, "90 min"]];
-const ALL_ZONES = ["cardio", "platform", "rack", "crossfit", "dumbbell", "machine", "cable", "bodyweight"];
+const ALL_ZONES = ["cardio", "platform", "rack", "crossfit", "dumbbell", "machine", "cable", "bodyweight", "band", "kettlebell", "household", "outdoor"];
 const ALL_INJURIES = [...BODY_AREA_LIMITATIONS,...LIFE_STAGE_LIMITATIONS,...MOVEMENT_RESTRICTIONS];
 const MUSCLE_LIST = ["chest", "back", "shoulders", "quads", "hamstrings", "glutes", "arms", "calves", "core"];
 const QUICK_REGIONS = [["push", "Push"], ["pull", "Pull"], ["legs", "Legs"], ["core", "Core"], ["full", "Full body"]];

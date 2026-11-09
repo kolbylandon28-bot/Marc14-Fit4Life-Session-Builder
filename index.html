@@ -26,11 +26,11 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20261026-v158-settings-tabs-r1">
+<link rel="manifest" href="manifest.webmanifest?v=20261107-v159-movement-library-r1">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20261026-v158-settings-tabs-r1">
+<link rel="stylesheet" href="styles.css?v=20261107-v159-movement-library-r1">
 </head>
 <body>
 
@@ -528,7 +528,7 @@
               <button type="button" class="chip" onclick="toggleProgramFilter('injuries','pregnancy',this)">Pregnancy / postpartum</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','nohinge',this)">Avoid hip hinging</button><button type="button" class="chip" onclick="toggleProgramFilter('injuries','nooverhead',this)">Avoid overhead work</button>
             </div></div>
             <div class="compact-field"><label>Equipment available (leave blank for full gym)</label><div class="filter-chips" id="programZoneChips">
-              <button type="button" class="chip" onclick="toggleProgramFilter('zones','cardio',this)">Cardio</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','platform',this)">Platforms</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','rack',this)">Racks</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','crossfit',this)">Functional</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','dumbbell',this)">Dumbbells</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','machine',this)">Machines</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','cable',this)">Cables</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','bodyweight',this)">Bodyweight</button>
+              <button type="button" class="chip" onclick="toggleProgramFilter('zones','cardio',this)">Cardio</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','platform',this)">Platforms</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','rack',this)">Racks</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','crossfit',this)">Functional</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','dumbbell',this)">Dumbbells</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','machine',this)">Machines</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','cable',this)">Cables</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','bodyweight',this)">Bodyweight</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','band',this)">Bands</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','kettlebell',this)">Kettlebell</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','household',this)">Household</button><button type="button" class="chip" onclick="toggleProgramFilter('zones','outdoor',this)">Outdoors</button>
             </div></div>
             <p class="storage-note" style="grid-column:1/-1">The exercise bank is automatically limited by the shared equipment setup for this gym. Client-level equipment choices can narrow it further for the entire session.</p>
           </div>
@@ -967,13 +967,17 @@
       <summary>4 · Equipment access</summary>
       <div class="intake-section-body"><p class="intake-help">Select everything the client can reliably use. The trainer can narrow this further in the approved profile, and the filters apply to warm-ups, main work, conditioning, and cool-downs.</p><div class="intake-checks">
         <label><input id="intakeEquipBodyweight" type="checkbox"> Bodyweight / open floor</label>
-        <label><input id="intakeEquipDumbbell" type="checkbox"> Dumbbells / kettlebells</label>
+        <label><input id="intakeEquipDumbbell" type="checkbox"> Dumbbells</label>
+        <label><input id="intakeEquipKettlebell" type="checkbox"> Kettlebells</label>
+        <label><input id="intakeEquipBand" type="checkbox"> Resistance bands</label>
         <label><input id="intakeEquipRack" type="checkbox"> Rack / barbells</label>
         <label><input id="intakeEquipMachine" type="checkbox"> Strength machines</label>
         <label><input id="intakeEquipCable" type="checkbox"> Cable stations</label>
         <label><input id="intakeEquipCardio" type="checkbox"> Cardio machines</label>
         <label><input id="intakeEquipPlatform" type="checkbox"> Platforms / Olympic lifting</label>
         <label><input id="intakeEquipCrossfit" type="checkbox"> Functional / CrossFit equipment</label>
+        <label><input id="intakeEquipHousehold" type="checkbox"> Household / improvised (backpack, jugs, stairs)</label>
+        <label><input id="intakeEquipOutdoor" type="checkbox"> Outdoors (walking routes, hills, bike)</label>
       </div><div class="compact-field wide" style="margin-top:10px"><label for="intakeEquipmentNotes">Unavailable, home-only, or special equipment notes</label><textarea id="intakeEquipmentNotes" placeholder="Example: treadmill and bands at home; no cable stack or stair climber"></textarea></div></div>
     </details>
 
@@ -1343,33 +1347,33 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/engine/exercise-library.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/engine/session-engine.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/engine/session-builders.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/engine/personalization.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/engine/booking-import.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/navigation.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/program-app.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/forms.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/engine/generation.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/rendering.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/calculations-timers.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/engine/multiweek-programs.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/readiness-progress.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/client-consultation.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/trainer/trainer-hub.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/trainer/coaching-support.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/role-governance.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/action-calendar.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/workout-feedback-reports.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/booking-import-ui.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/trainer-audits.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/area-art.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/work-areas.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/area-tools.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/walkthrough.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/app/intro-video.js?v=20261026-v158-settings-tabs-r1"></script>
-<script src="js/init.js?v=20261026-v158-settings-tabs-r1"></script>
+<script src="cloud-sync.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/engine/exercise-library.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/engine/session-engine.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/engine/session-builders.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/engine/personalization.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/engine/booking-import.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/navigation.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/program-app.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/forms.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/engine/generation.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/rendering.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/calculations-timers.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/engine/multiweek-programs.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/readiness-progress.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/client-consultation.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/trainer/trainer-hub.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/trainer/coaching-support.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/role-governance.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/action-calendar.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/workout-feedback-reports.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/booking-import-ui.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/trainer-audits.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/area-art.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/work-areas.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/area-tools.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/walkthrough.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/app/intro-video.js?v=20261107-v159-movement-library-r1"></script>
+<script src="js/init.js?v=20261107-v159-movement-library-r1"></script>
 </body>
 </html>

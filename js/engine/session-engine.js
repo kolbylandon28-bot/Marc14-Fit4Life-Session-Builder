@@ -513,6 +513,7 @@ function warmupExercise(exercise,stage) {
 const ZONE_LABELS = {
   cardio: "Cardio", platform: "Platform", rack: "Rack", crossfit: "CrossFit",
   dumbbell: "Free weights", machine: "Machine", cable: "Cable", bodyweight: "Bodyweight",
+  band: "Resistance bands", kettlebell: "Kettlebell", household: "Household / improvised", outdoor: "Outdoors",
 };
 
 /* ============================================================
@@ -526,9 +527,9 @@ const ZONE_LABELS = {
    Machines and cardio equipment are each their own station and are NEVER
    superset together \u2014 that ties up gear other members are waiting on.
    ============================================================ */
-const SUPERSET_ZONES = ["dumbbell", "cable", "rack", "bodyweight"];
+const SUPERSET_ZONES = ["dumbbell", "cable", "rack", "bodyweight", "band", "kettlebell", "household"];
 /* Zones that hog dedicated equipment and must stay as straight sets. */
-const NO_SUPERSET_ZONES = ["machine", "cardio", "platform", "crossfit"];
+const NO_SUPERSET_ZONES = ["machine", "cardio", "platform", "crossfit", "outdoor"];
 
 function canSuperset(ex) { return SUPERSET_ZONES.includes(ex.zone); }
 
@@ -578,6 +579,9 @@ function stationLabel(a, b) {
   return z === "dumbbell" ? "one dumbbell station"
     : z === "cable" ? "one cable station"
     : z === "rack" ? "one rack / barbell"
+    : z === "band" ? "one band set"
+    : z === "kettlebell" ? "one kettlebell"
+    : z === "household" ? "one loaded bag at home"
     : "no equipment needed";
 }
 
@@ -1186,6 +1190,9 @@ function movementDifficultyRank(exercise) {
   else if (zone === "cable") rank -= 4;
   else if (zone === "crossfit" && /trx/.test(name)) rank -= 5;  // assistable by foot position
   else if (zone === "bodyweight") rank -= 2;
+  else if (zone === "band") rank -= 3;                     // tension scales smoothly, easiest to regress
+  else if (zone === "household") rank -= 1;
+  else if (zone === "kettlebell") rank += 1;               // offset load, less forgiving than a dumbbell
   else if (zone === "platform" || zone === "rack") rank += 4;   // barbell off a rack
   if (exercise.unilateral) rank += 2;                      // balance demand
   if (Number(exercise.impact) >= 2) rank += 2;
