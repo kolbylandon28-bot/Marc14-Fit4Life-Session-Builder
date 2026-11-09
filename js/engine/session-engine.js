@@ -722,21 +722,51 @@ const TIME_PROFILE = {
   90: { setDelta: 1,  restScale: 1.0, note: "Long session \u2014 extra set and extra accessory volume." },
 };
 
+/* A rest can mix units: "90 sec\u20132 min". Reading the bare numbers gives 90 and 2, averages
+   them to 46, sees "min" and calls it 46 minutes. Convert to seconds first. */
+function restHasMixedUnits(base) { return /sec/.test(base) && /min/.test(base); }
+
+/* "90 sec\u20132 min" -> [90, 120]. A bare number takes the unit written after it. */
+function mixedRestSeconds(base) {
+  const parts = [], pattern = /(\d+)\s*(sec|min)?/g;
+  let match;
+  while ((match = pattern.exec(base))) parts.push([Number(match[1]), match[2] || ""]);
+  for (let i = parts.length - 2; i >= 0; i--) if (!parts[i][1]) parts[i][1] = parts[i + 1][1];
+  return parts.map(([value, unit]) => unit === "min" ? value * 60 : value);
+}
+
+function formatRestSeconds(values) {
+  const lo = values[0], hi = values.length > 1 ? Math.max(values[1], lo + 10) : lo;
+  if (hi < 180) return values.length > 1 ? lo + "\u2013" + hi + " sec" : lo + " sec";
+  const minutes = (seconds) => String(Math.round(seconds / 30) / 2);
+  return values.length > 1 ? minutes(lo) + "\u2013" + minutes(hi) + " min" : minutes(lo) + " min";
+}
+
 /* Turn a rest string into an approximate number of MINUTES (midpoint). */
 function restToMinutes(rest) {
   if (/as needed|as prescribed|minimal/.test(rest)) return 0.5;
   const base = rest.replace(/\s*\(.*\)$/, "");
+  if (restHasMixedUnits(base)) {
+    const seconds = mixedRestSeconds(base);
+    if (!seconds.length) return 1;
+    return (seconds.length > 1 ? (seconds[0] + seconds[1]) / 2 : seconds[0]) / 60;
+  }
   const nums = (base.match(/\d+/g) || []).map(Number);
   if (!nums.length) return 1;
   const mid = nums.length > 1 ? (nums[0] + nums[1]) / 2 : nums[0];
   return /min/.test(base) ? mid : mid / 60;
 }
 
-/* Scale a human-readable rest string ("60\u201390 sec", "3\u20135 min") by a factor. */
-function scaleRest(rest, factor) {
+/* Scale the NUMBERS in a rest string. Words are restored by scaleRest() below. */
+function scaleRestNumbers(rest, factor) {
   if (factor === 1 || /as needed|as prescribed|minimal/.test(rest)) return rest;
   // strip any previously appended parenthetical
   const base = rest.replace(/\s*\(.*\)$/, "");
+  if (restHasMixedUnits(base)) {
+    const seconds = mixedRestSeconds(base);
+    if (!seconds.length) return rest;
+    return formatRestSeconds(seconds.map((value) => Math.max(15, Math.round((value * factor) / 5) * 5)));
+  }
   const isMin = /min/.test(base);
   const nums = base.match(/\d+/g);
   if (!nums) return rest;
@@ -757,6 +787,19 @@ function scaleRest(rest, factor) {
     return scaled[0] + "\u2013" + scaled[1] + unit;
   }
   return scaled[0] + unit;
+}
+
+/* Keep the words around the numbers: "full, 60\u201390 sec", "20\u201330 sec between stations",
+   and the age extension "(+15\u201330s)" that scaling used to delete from short sessions. */
+function scaleRest(rest, factor) {
+  const scaled = scaleRestNumbers(rest, factor);
+  if (scaled === rest) return rest;
+  const paren = (rest.match(/\s*\(.*\)$/) || [""])[0], base = rest.slice(0, rest.length - paren.length);
+  const prefix = (base.match(/^[^\d]*/) || [""])[0];
+  let words = "", match;
+  const unit = /\b(?:sec|min)\b/g;
+  while ((match = unit.exec(base))) words = base.slice(match.index + match[0].length);
+  return prefix + scaled + words + paren;
 }
 
 /* patterns that count as compound multi-joint lifts (for main-lift selection) */
@@ -1347,10 +1390,13 @@ function unresolvedClientSafetyHold(profile) {
 
 /* ---- Eligibility: filter the library for this person ---- */
 function eligible(spec, age) {
-  const bases = LIBRARY.filter((ex) => {
-    return !exerciseConstraintIssues(ex,spec,age).some((issue) => issue.hard);
-  });
-  return expandWithModifiers(bases).map((ex) => ({ ...ex, _preference:exercisePreferenceFor(spec,ex) }));
+  /* The second filter is load-bearing. expandWithModifiers() invents variants - burnouts,
+     drop sets, circuits, intervals - and a variant can violate a limitation its base movement
+     does not. Filtering only the bases let "Glute bridge to failure" reach a pelvic-floor
+     client. Check the expanded list too. */
+  const safe = (ex) => !exerciseConstraintIssues(ex,spec,age).some((issue) => issue.hard);
+  return expandWithModifiers(LIBRARY.filter(safe)).filter(safe)
+    .map((ex) => ({ ...ex, _preference:exercisePreferenceFor(spec,ex) }));
 }
 
 /* Dedicated finishers must ONLY appear in the finisher block, never as a main
