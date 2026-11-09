@@ -292,6 +292,7 @@ function renderWorkloadModule() {
 const PORTAL_THEME_PRESETS = {
   neon:{ label:"Neon blue",badge:"",description:"The original electric-blue look.",a:"#5AA6F0",b:"#3E6BE0" },
   gold:{ label:"Black & gold",badge:"",description:"Gold on black with graphite greys.",a:"#E8B33A",b:"#8C9199" },
+  mono:{ label:"Black & white",badge:"",description:"Plain white on black, no colour at all.",a:"#FFFFFF",b:"#9AA0A6" },
   evergreen:{ label:"Evergreen",badge:"",description:"Deep green with a soft mint edge.",a:"#4FC08D",b:"#2E7D5B" },
   newyear:{ label:"New Year",badge:"NEW YEAR",description:"Midnight clock, fireworks and metallic confetti.",a:"#7CCBFF",b:"#D9B865" },
   halloween:{ label:"Halloween",badge:"HALLOWEEN",description:"Pumpkin, cauldron and magical embers.",a:"#FF8A3D",b:"#8B5CF6" },
@@ -362,6 +363,11 @@ function brandInitials(name) {
 
 /* Static markup said FIT4LIFE in eight places, so every branch wore the vendor's name.
    Tagged nodes are rewritten whenever the brand is applied. */
+function brandMarkNow() {
+  const brand = currentGymBrand();
+  return String(brand.mark || brandInitials(brand.name) || "F4L").toUpperCase();
+}
+
 function applyBrandText(brand) {
   if (!document.querySelectorAll) return;
   const name = String(brand.name || "Training Portal");
@@ -398,6 +404,12 @@ function applyBrandWatermark(brand) {
   set("--brand-watermark-halo", brand.watermarkHalo || "");
   set("--brand-watermark-edge", brand.watermarkEdge || brand.watermarkHalo || "");
   set("--brand-watermark-ink", brand.watermarkInk || "");
+  /* The 3-4px outline is sized for the heavy display face. A script's hairlines are thinner
+     than that, so a thick stroke swallows them and the letter reads as solid outline with no
+     black left inside. Thin stroke for script, and the fill layer carries no edge of its own
+     so the only white is the outline. */
+  set("--brand-watermark-halo-width", script ? "clamp(1.2px,.1vw,2px)" : "");
+  set("--brand-watermark-edge-width", script ? "0" : "");
   // A flat halo wants a flat glow in the same colour, not the accent's.
   const halo = brand.watermarkHalo || "";
   set("--brand-watermark-shadow", halo
@@ -410,7 +422,13 @@ function applyGymBrand() {
   const theme = portalThemePreset(brand.theme);
   applyBrandWatermark(brand);
   applyBrandText(brand);
-  document.documentElement.style.setProperty("--blue",brand.primary || "#3E6BE0"); document.documentElement.style.setProperty("--blue-bright",brand.accent || "#5AA6F0");
+  const primary = brand.primary || "#3E6BE0", bright = brand.accent || "#5AA6F0";
+  document.documentElement.style.setProperty("--blue",primary);
+  document.documentElement.style.setProperty("--blue-bright",bright);
+  /* --grad ends on --blue-deep, which nothing ever set from the brand - so a gold or green
+     branch still faded into Fit4Life blue. Derived from the branch's own colour instead. */
+  document.documentElement.style.setProperty("--blue-deep","color-mix(in srgb," + primary + " 62%, #05070c)");
+  document.documentElement.style.setProperty("--blue-glow","color-mix(in srgb," + bright + " 18%, transparent)");
   document.documentElement.style.setProperty("--event-accent",theme.a); document.documentElement.style.setProperty("--event-accent-2",theme.b); document.documentElement.dataset.portalTheme = normalizedPortalTheme(brand.theme);
   const name = document.querySelector && (document.querySelector(".brand-name .grad-text") || document.querySelector(".brand-name")), sub = document.querySelector && document.querySelector(".brand-sub"), auth = document.querySelector && document.querySelector(".cloud-auth-brand"), lockup = document.querySelector && document.querySelector(".granite-logo-main"), lockupWrap = document.querySelector && document.querySelector(".granite-logo-lockup");
   if (name) name.textContent = brand.name || "Training Portal"; if (sub) sub.textContent = brand.sub || "Trainer Tools"; if (auth) auth.textContent = brand.name || "Training Portal"; if (lockup) lockup.textContent = brand.name || "Training Portal"; if (lockupWrap) lockupWrap.setAttribute("aria-label",brand.name || "Training Portal");
@@ -426,7 +444,7 @@ function applyGymBrand() {
 function renderPortalThemePicker() {
   const current = currentGymBrand().theme, currentPreset = portalThemePreset(current), owner = typeof isFit4LifeOwner === "function" && isFit4LifeOwner();
   if (!owner) return '<div class="portal-theme-section"><div class="portal-theme-heading"><div><h4>Published portal theme</h4><p>The owner publishes one shared theme for every trainer and client device. Trainers can request a different theme, but cannot preview or publish one themselves.</p></div><span class="tag">Owner only</span></div><div class="advanced-list-item"><b>' + escapeHtml(currentPreset.label) + '</b><span>' + escapeHtml(currentPreset.description) + '</span></div><div class="tool-actions"><button type="button" class="small-btn" onclick="openOwnerRequestDialog(\'organization_setting\',\'\',\'\',\'Change the shared portal theme from ' + escapeHtml(currentPreset.label) + '\')">Request a theme change</button></div></div>';
-  const options = Object.entries(PORTAL_THEME_PRESETS).map(([key,theme]) => '<button type="button" class="portal-theme-option ' + (key === current ? 'on' : '') + '" data-theme="' + key + '" aria-pressed="' + (key === current ? 'true' : 'false') + '" onclick="setPortalTheme(\'' + key + '\')" style="--preset-a:' + theme.a + ';--preset-b:' + theme.b + '"><span class="portal-theme-swatch" aria-hidden="true"><i data-brand-mark>F4L</i></span><span><b>' + escapeHtml(theme.label) + '</b><small>' + escapeHtml(theme.description) + '</small></span></button>').join("");
+  const options = Object.entries(PORTAL_THEME_PRESETS).map(([key,theme]) => '<button type="button" class="portal-theme-option ' + (key === current ? 'on' : '') + '" data-theme="' + key + '" aria-pressed="' + (key === current ? 'true' : 'false') + '" onclick="setPortalTheme(\'' + key + '\')" style="--preset-a:' + theme.a + ';--preset-b:' + theme.b + '"><span class="portal-theme-swatch" aria-hidden="true"><i data-brand-mark>' + escapeHtml(brandMarkNow()) + '</i></span><span><b>' + escapeHtml(theme.label) + '</b><small>' + escapeHtml(theme.description) + '</small></span></button>').join("");
   return '<div class="portal-theme-section"><div class="portal-theme-heading"><div><h4>Holiday themes</h4><p>One owner click publishes a holiday scene, matching accent colour, and ambient details to every trainer and client device. The portal layout, controls, and gym brand settings stay intact.</p></div><span class="tag">Owner only</span></div><div class="portal-theme-grid">' + options + '</div><p class="storage-note">Themes stay selected until an owner changes them. They never turn on automatically, so the portal will not surprise clients after a holiday.</p></div>';
 }
 function renderBrandModule() {

@@ -82,5 +82,18 @@ const visible = (mods) => MANAGING.filter((k) => !NAV_MODULE[k] || mods[NAV_MODU
 t("Journey keeps only approvals and settings", visible(employer), ["approvals", "settings"]);
 t("BYU-Idaho keeps all nine", visible(university).length, 9);
 
+/* V164: nothing in the chrome may stay Fit4Life blue when the branch is gold or white. */
+t("no hardcoded F4L blue is left in the stylesheet",
+  /rgba\(90,166,240|rgba\(74,111,227|rgba\(62,107,224|rgba\(59,103,216/.test(css), false);
+t("the gradient's deep stop is derived from the branch", /--blue-deep","color-mix\(in srgb," \+ primary/.test(cs), true);
+t("the glow colour is derived too", /--blue-glow","color-mix\(in srgb," \+ bright/.test(cs), true);
+t("the outline width is a variable", /--brand-watermark-halo-width,clamp\(3px/.test(css), true);
+t("the fill edge width is a variable", /--brand-watermark-edge-width,1px/.test(css), true);
+t("a script face gets a thin outline", /halo-width", script \? "clamp\(1\.2px/.test(cs), true);
+t("a script face drops the fill edge so only the outline is white", /edge-width", script \? "0"/.test(cs), true);
+t("there is a plain black and white theme", /mono:\{ label:"Black & white"/.test(cs), true);
+t("the theme swatch renders the live mark", /escapeHtml\(brandMarkNow\(\)\)/.test(cs), true);
+t("a script wordmark keeps its lower case", /script \? word : word\.toUpperCase\(\)/.test(cs), true);
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);
