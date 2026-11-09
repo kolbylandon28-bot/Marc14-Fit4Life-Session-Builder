@@ -26,21 +26,31 @@
 <meta property="og:url" content="https://marc14-fit4-life-session-builder.vercel.app/">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest?v=20261109-v162-branches-r1">
+<link rel="manifest" href="manifest.webmanifest?v=20261109-v163-branch-identity-r1">
 <link rel="icon" href="fit4life-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="fit4life-icon.svg">
 <title>FIT4LIFE — Session Builder</title>
-<link rel="stylesheet" href="styles.css?v=20261109-v162-branches-r1">
+<link rel="stylesheet" href="styles.css?v=20261109-v163-branch-identity-r1">
 <style>
-.branch-switcher{position:relative;margin-right:10px}
-.branch-switcher-btn{background:var(--card,#141a24);color:inherit;border:1px solid rgba(255,255,255,.16);border-radius:8px;padding:7px 11px;font:inherit;font-size:13px;cursor:pointer;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.branch-switcher-btn:hover{border-color:var(--blue,#3E6BE0)}
-.branch-switcher-menu{position:absolute;right:0;top:calc(100% + 6px);min-width:250px;background:var(--card,#141a24);border:1px solid rgba(255,255,255,.16);border-radius:10px;padding:6px;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.45)}
-.branch-option{display:block;width:100%;text-align:left;background:transparent;color:inherit;border:0;border-radius:7px;padding:9px 10px;font:inherit;cursor:pointer}
-.branch-option:hover{background:rgba(255,255,255,.07)}
-.branch-option.on{background:rgba(62,107,224,.18)}
-.branch-option-name{display:block;font-size:14px}
-.branch-option-meta{display:block;font-size:12px;opacity:.72;margin-top:2px}
+.branch-switcher{position:relative;flex:0 0 auto}
+.branch-switcher-btn{display:inline-flex;align-items:center;gap:7px;max-width:210px;border:1px solid var(--line);background:var(--slate-2);color:var(--text-dim);border-radius:7px;padding:8px 10px;font:700 11px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:border-color .16s ease,color .16s ease}
+.branch-switcher-btn:hover,.branch-switcher-btn[aria-expanded="true"]{border-color:color-mix(in srgb,var(--blue) 55%,var(--line));color:var(--text)}
+.branch-switcher-btn .bs-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.branch-switcher-btn .bs-caret{flex:0 0 auto;font-size:8px;opacity:.6;transition:transform .16s ease}
+.branch-switcher-btn[aria-expanded="true"] .bs-caret{transform:rotate(180deg)}
+.bs-dot{flex:0 0 auto;width:7px;height:7px;border-radius:999px;background:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 22%,transparent),0 0 9px color-mix(in srgb,var(--blue) 60%,transparent)}
+.branch-switcher-menu{position:absolute;right:0;top:calc(100% + 7px);min-width:252px;max-width:min(320px,calc(100vw - 28px));background:rgba(14,15,19,.97);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:11px;padding:5px;z-index:70;box-shadow:0 18px 44px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.04)}
+.branch-switcher-menu .bs-head{display:block;padding:7px 10px 6px;font:600 8.5px var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--text-faint)}
+.branch-option{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:transparent;color:var(--text-dim);border:0;border-radius:8px;padding:9px 10px;font:inherit;cursor:pointer}
+.branch-option:hover{background:rgba(255,255,255,.055);color:var(--text)}
+.branch-option.on{background:color-mix(in srgb,var(--blue) 15%,transparent);color:var(--text)}
+.branch-option-text{min-width:0;flex:1 1 auto}
+.branch-option-name{display:block;font:700 12px var(--display);letter-spacing:.04em;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.branch-option-meta{display:block;font:600 8.5px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint);margin-top:3px}
+.branch-option.on .branch-option-meta{color:color-mix(in srgb,var(--blue-bright) 72%,var(--text-faint))}
+.branch-option .bs-check{flex:0 0 auto;font-size:11px;color:var(--blue-bright);opacity:0}
+.branch-option.on .bs-check{opacity:1}
+@media(max-width:720px){.branch-switcher-btn{max-width:118px;padding:7px 8px;font-size:10px;gap:5px}.branch-switcher-menu{min-width:214px}}
 </style>
 </head>
 <body>
@@ -75,7 +85,7 @@
           <label>Password<input id="cloudSignUpPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>
           <label>Confirm password<input id="cloudSignUpConfirm" type="password" autocomplete="new-password" placeholder="Repeat password" onkeydown="if(event.key==='Enter')fit4lifeCloudSignUp()"></label>
         </div>
-        <label class="cloud-auth-checkbox"><input id="cloudSignUpConsent" type="checkbox"><span>I understand that this creates a client account at FIT4LIFE, and that my trainer can see the workouts and check-ins I record in it.</span></label>
+        <label class="cloud-auth-checkbox"><input id="cloudSignUpConsent" type="checkbox"><span>I understand that this creates a client account at <b data-brand-name>FIT4LIFE</b>, and that my trainer can see the workouts and check-ins I record in it.</span></label>
       </div>
       <button class="cloud-auth-submit" id="cloudSignUpSubmit" onclick="fit4lifeCloudSignUp()">Create client account</button>
       <div class="cloud-auth-note">Use the address your trainer already has on file for you \u2014 an account can only be created for an address they have added. If it is refused, check the spelling or ask them to add it. You go straight in afterwards and complete a short consultation. Trainer access is requested separately and approved by gym staff.</div>
@@ -131,7 +141,7 @@
 
 <div class="topbar">
   <div class="topbar-inner">
-    <div class="mark" role="img" aria-label="FIT4LIFE"></div>
+    <div class="mark" role="img" aria-label="Portal" data-brand-label></div>
     <div class="brand-txt">
       <div class="brand-name"><span class="grad-text">FIT4LIFE</span></div>
       <div class="brand-sub">BYU&#8209;Idaho Trainer Tools</div>
@@ -160,9 +170,9 @@
   <!-- LEVEL 1: ROLE GATE -->
   <section class="view active" id="view-home">
     <div class="role-hero hero">
-      <div class="granite-logo-lockup" aria-label="FIT 4 LIFE"><div class="granite-logo-main">FIT 4 LIFE</div><div class="granite-logo-sub">Professional Training System</div></div>
+      <div class="granite-logo-lockup" aria-label="Portal" data-brand-label><div class="granite-logo-main" data-brand-name>FIT 4 LIFE</div><div class="granite-logo-sub">Professional Training System</div></div>
       <div class="role-hero-copy" id="roleHeroCopy">
-        <h1>How are you using<br><span class="grad-text">FIT4LIFE today?</span></h1>
+        <h1>How are you using<br><span class="grad-text"><span data-brand-name>FIT4LIFE</span> today?</span></h1>
         <p>Owners can open the coaching workspace or verify the client experience. Trainer accounts open the coaching workspace directly, and clients open only their own record.</p>
       </div>
     </div>
@@ -291,7 +301,7 @@
           <div id="consultationReview" class="consultation-review"></div>
           <div class="consultation-consents">
             <label><input id="consultationTruth" type="checkbox"> My answers are accurate to the best of my knowledge.</label>
-            <label><input id="consultationPrivacy" type="checkbox"> I understand these answers are shared with approved Fit4Life trainers for coaching.</label>
+            <label><input id="consultationPrivacy" type="checkbox"> I understand these answers are shared with approved <b data-brand-name>Fit4Life</b> trainers for coaching.</label>
             <label><input id="consultationNotMedical" type="checkbox"> I understand this questionnaire and the workout generator do not provide medical diagnosis or clearance.</label>
           </div>
         </section>
@@ -1202,7 +1212,7 @@
     <div class="result-label" style="margin:16px 0 8px">Scan comparability</div>
     <div class="summary-checks scan-quality"><label><input id="inBodySameTime" type="checkbox"> Similar time of day</label><label><input id="inBodyHydration" type="checkbox"> Usual hydration</label><label><input id="inBodyRestroom" type="checkbox"> Restroom beforehand</label><label><input id="inBodyNoExercise" type="checkbox"> No recent exercise</label></div>
     <div class="tool-actions"><button class="small-btn primary" onclick="saveInBodyScan()">Save scan</button><button class="small-btn" onclick="closeInBodyModal()">Cancel</button></div>
-    <p class="storage-note">Use repeated scans under similar testing conditions when interpreting change. FIT4LIFE uses these values as coaching context, not as a medical diagnosis.</p>
+    <p class="storage-note">Use repeated scans under similar testing conditions when interpreting change. <span data-brand-name>FIT4LIFE</span> uses these values as coaching context, not as a medical diagnosis.</p>
   </div>
 </div>
 
@@ -1362,34 +1372,34 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9"></script>
-<script src="cloud-sync.js?v=20261109-v162-branches-r1"></script>
-<script src="js/engine/exercise-library.js?v=20261109-v162-branches-r1"></script>
-<script src="js/engine/session-engine.js?v=20261109-v162-branches-r1"></script>
-<script src="js/engine/session-builders.js?v=20261109-v162-branches-r1"></script>
-<script src="js/engine/personalization.js?v=20261109-v162-branches-r1"></script>
-<script src="js/engine/booking-import.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/navigation.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/program-app.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/forms.js?v=20261109-v162-branches-r1"></script>
-<script src="js/engine/generation.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/rendering.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/calculations-timers.js?v=20261109-v162-branches-r1"></script>
-<script src="js/engine/multiweek-programs.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/readiness-progress.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/client-consultation.js?v=20261109-v162-branches-r1"></script>
-<script src="js/trainer/trainer-hub.js?v=20261109-v162-branches-r1"></script>
-<script src="js/trainer/coaching-support.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/role-governance.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/action-calendar.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/workout-feedback-reports.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/booking-import-ui.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/trainer-audits.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/area-art.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/branch-switcher.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/work-areas.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/area-tools.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/walkthrough.js?v=20261109-v162-branches-r1"></script>
-<script src="js/app/intro-video.js?v=20261109-v162-branches-r1"></script>
-<script src="js/init.js?v=20261109-v162-branches-r1"></script>
+<script src="cloud-sync.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/engine/exercise-library.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/engine/session-engine.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/engine/session-builders.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/engine/personalization.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/engine/booking-import.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/navigation.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/program-app.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/forms.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/engine/generation.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/rendering.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/calculations-timers.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/engine/multiweek-programs.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/readiness-progress.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/client-consultation.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/trainer/trainer-hub.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/trainer/coaching-support.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/role-governance.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/action-calendar.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/workout-feedback-reports.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/booking-import-ui.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/trainer-audits.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/area-art.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/branch-switcher.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/work-areas.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/area-tools.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/walkthrough.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/app/intro-video.js?v=20261109-v163-branch-identity-r1"></script>
+<script src="js/init.js?v=20261109-v163-branch-identity-r1"></script>
 </body>
 </html>

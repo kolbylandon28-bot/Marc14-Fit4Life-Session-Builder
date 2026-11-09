@@ -33,21 +33,32 @@ function syncBranchSwitcher() {
   const current = activeBranch();
   const button = byId("branchSwitcherBtn");
   if (button) {
-    button.textContent = (current ? current.name : "Pick a branch") + " ▾";
+    button.innerHTML = '<span class="bs-dot" aria-hidden="true"></span>'
+      + '<span class="bs-name">' + escapeHtml(current ? current.name : "Pick a branch") + '</span>'
+      + '<span class="bs-caret" aria-hidden="true">▼</span>';
+    button.setAttribute("aria-label", "Branch: " + (current ? current.name : "none chosen"));
     button.setAttribute("aria-expanded", branchSwitcherOpen ? "true" : "false");
   }
   const menu = byId("branchSwitcherMenu");
   if (!menu) return;
   menu.style.display = branchSwitcherOpen ? "" : "none";
   if (!branchSwitcherOpen) return;
-  menu.innerHTML = rows.map((row) => {
+  menu.innerHTML = '<span class="bs-head">Your branches</span>' + rows.map((row) => {
     const on = current && row.organization_id === current.organization_id;
+    const brand = row.brand_config && typeof row.brand_config === "object" ? row.brand_config : {};
+    const tint = brand.primary || "";
+    const dot = tint
+      ? ' style="background:' + escapeHtml(tint) + ';box-shadow:0 0 0 2px ' + escapeHtml(tint) + '33,0 0 9px ' + escapeHtml(tint) + '99"'
+      : '';
     return '<button type="button" class="branch-option' + (on ? ' on' : '') + '"'
       + (on ? ' aria-current="true"' : '')
       + ' onclick="chooseBranch(\'' + escapeHtml(row.organization_id) + '\')">'
+      + '<span class="bs-dot" aria-hidden="true"' + dot + '></span>'
+      + '<span class="branch-option-text">'
       + '<span class="branch-option-name">' + escapeHtml(row.name) + '</span>'
       + '<span class="branch-option-meta">' + escapeHtml(branchTypeLabel(row))
-      + (branchRoleLabel(row) ? ' · ' + escapeHtml(branchRoleLabel(row)) : '') + '</span></button>';
+      + (branchRoleLabel(row) ? ' · ' + escapeHtml(branchRoleLabel(row)) : '') + '</span></span>'
+      + '<span class="bs-check" aria-hidden="true">✓</span></button>';
   }).join("");
 }
 

@@ -207,7 +207,7 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
     background-blend-mode:normal,screen,screen,normal;
   }
   body::before{
-    content:"F4L";
+    content:var(--brand-watermark,"F4L");
     position:fixed;
     left:50%;
     top:53%;
@@ -216,16 +216,20 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
     pointer-events:none;
     color:transparent;
     -webkit-text-fill-color:transparent;
-    -webkit-text-stroke:clamp(3px,.24vw,4px) color-mix(in srgb,var(--event-accent) 86%,white 14%);
+    -webkit-text-stroke:clamp(3px,.24vw,4px) var(--brand-watermark-halo,color-mix(in srgb,var(--event-accent) 86%,white 14%));
     paint-order:stroke fill;
-    font:italic 800 clamp(150px,27vw,410px)/.8 var(--display);
-    letter-spacing:.105em;
-    text-indent:.105em;
+    font:var(--brand-watermark-style,italic) var(--brand-watermark-weight,800) clamp(150px,27vw,410px)/.8 var(--brand-watermark-family,var(--display));
+    letter-spacing:var(--brand-watermark-track,.105em);
+    text-indent:var(--brand-watermark-track,.105em);
     white-space:nowrap;
-    text-shadow:0 0 2px color-mix(in srgb,var(--event-accent) 35%,white 65%),0 0 10px color-mix(in srgb,var(--event-accent) 58%,transparent),0 0 28px color-mix(in srgb,var(--event-accent) 38%,transparent),0 0 64px color-mix(in srgb,var(--event-accent-2) 24%,transparent);
+    text-shadow:var(--brand-watermark-shadow,0 0 2px color-mix(in srgb,var(--event-accent) 35%,white 65%),0 0 10px color-mix(in srgb,var(--event-accent) 58%,transparent),0 0 28px color-mix(in srgb,var(--event-accent) 38%,transparent),0 0 64px color-mix(in srgb,var(--event-accent-2) 24%,transparent));
     filter:drop-shadow(0 0 16px color-mix(in srgb,var(--event-accent) 24%,transparent));
   }
-  body::after{content:"F4L";position:fixed;left:50%;top:53%;z-index:0;transform:translate(-50%,-50%);pointer-events:none;color:#07090c;-webkit-text-fill-color:transparent;-webkit-text-stroke:1px color-mix(in srgb,var(--event-accent) 18%,rgba(184,207,226,.16));paint-order:stroke fill;font:italic 800 clamp(150px,27vw,410px)/.8 var(--display);letter-spacing:.105em;text-indent:.105em;white-space:nowrap;background:linear-gradient(168deg,#010204 0%,color-mix(in srgb,var(--event-accent) 13%,#171c22) 21%,#05070a 39%,color-mix(in srgb,var(--event-accent-2) 10%,#11161c) 52%,#020305 72%,color-mix(in srgb,var(--event-accent) 9%,#1b222a) 87%,#040507 100%);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 3px 2px rgba(0,0,0,.8))}
+  body::after{content:var(--brand-watermark,"F4L");position:fixed;left:50%;top:53%;z-index:0;transform:translate(-50%,-50%);pointer-events:none;color:#07090c;-webkit-text-fill-color:transparent;-webkit-text-stroke:1px var(--brand-watermark-edge,color-mix(in srgb,var(--event-accent) 18%,rgba(184,207,226,.16)));paint-order:stroke fill;font:var(--brand-watermark-style,italic) var(--brand-watermark-weight,800) clamp(150px,27vw,410px)/.8 var(--brand-watermark-family,var(--display));letter-spacing:var(--brand-watermark-track,.105em);text-indent:var(--brand-watermark-track,.105em);white-space:nowrap;background:var(--brand-watermark-ink,linear-gradient(168deg,#010204 0%,color-mix(in srgb,var(--event-accent) 13%,#171c22) 21%,#05070a 39%,color-mix(in srgb,var(--event-accent-2) 10%,#11161c) 52%,#020305 72%,color-mix(in srgb,var(--event-accent) 9%,#1b222a) 87%,#040507 100%));-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 3px 2px rgba(0,0,0,.8))}
+
+  body::before,body::after,.cloud-auth-gate::before,.cloud-auth-gate::after{
+    font-size:var(--brand-watermark-size,clamp(150px,27vw,410px));
+  }
 
   .portal-theme-scene{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;opacity:var(--theme-scene-opacity);transition:opacity .35s ease}
   .portal-theme-scene::before{content:"";position:absolute;inset:0;z-index:0;background-image:var(--theme-scene);background-repeat:no-repeat;background-position:center calc(100% + 20px);background-size:min(1450px,100vw) auto;mix-blend-mode:screen;filter:saturate(.96) contrast(1.04);-webkit-mask-image:linear-gradient(to bottom,transparent 0,transparent 24%,rgba(0,0,0,.34) 47%,#000 68%,#000 100%),linear-gradient(to right,transparent 0,#000 14%,#000 86%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,transparent 24%,rgba(0,0,0,.34) 47%,#000 68%,#000 100%),linear-gradient(to right,transparent 0,#000 14%,#000 86%,transparent 100%);-webkit-mask-composite:source-in;mask-composite:intersect}
@@ -246,7 +250,7 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   .topbar-inner{max-width:1000px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:13px}
   .mark{width:42px;height:42px;border-radius:8px;overflow:hidden;flex:0 0 auto;display:grid;place-items:center;border:1px solid rgba(90,166,240,.32);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 5px 16px rgba(0,0,0,.5);background:linear-gradient(132deg,rgba(255,255,255,.035),transparent 36%),linear-gradient(145deg,#24242a,#0d0d10)}
   .mark img{display:none}
-  .mark::before{content:"F4L";font:italic 800 16px var(--display);letter-spacing:.01em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .mark::before{content:var(--brand-mark,"F4L");font:italic 800 16px var(--display);letter-spacing:.01em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
   .brand-txt{display:flex;flex-direction:column;line-height:1}
   .brand-name{font-family:var(--display);font-style:italic;font-weight:800;font-size:21px;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap}
   .brand-sub{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-faint);font-weight:500;margin-top:3px}
@@ -270,8 +274,8 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
 
   .cloud-auth-gate{position:fixed;inset:0;z-index:1000;display:none;align-items:flex-start;justify-content:center;padding:22px;background-image:linear-gradient(180deg,rgba(7,8,11,.78),rgba(7,8,11,.92)),var(--theme-scene,none),radial-gradient(circle at 50% 18%,rgba(61,108,225,.2),transparent 34%),url("dark-rock-background-v2.jpg");background-position:center,center bottom,center,center;background-size:auto,min(1450px,100vw) auto,auto,cover;background-repeat:no-repeat;background-blend-mode:normal,screen,screen,soft-light;overflow:auto}
   .cloud-auth-gate.open{display:flex}
-  .cloud-auth-gate::before{content:"F4L";position:fixed;left:50%;top:50%;z-index:0;transform:translate(-50%,-50%);pointer-events:none;color:transparent;-webkit-text-fill-color:transparent;-webkit-text-stroke:clamp(3px,.24vw,4px) color-mix(in srgb,var(--event-accent) 86%,white 14%);paint-order:stroke fill;font:italic 800 clamp(150px,27vw,410px)/.8 var(--display);letter-spacing:.105em;text-indent:.105em;white-space:nowrap;text-shadow:0 0 2px color-mix(in srgb,var(--event-accent) 35%,white 65%),0 0 10px color-mix(in srgb,var(--event-accent) 58%,transparent),0 0 28px color-mix(in srgb,var(--event-accent) 38%,transparent),0 0 64px color-mix(in srgb,var(--event-accent-2) 24%,transparent);filter:drop-shadow(0 0 16px color-mix(in srgb,var(--event-accent) 24%,transparent))}
-  .cloud-auth-gate::after{content:"F4L";position:fixed;left:50%;top:50%;z-index:0;transform:translate(-50%,-50%);pointer-events:none;color:#07090c;-webkit-text-fill-color:transparent;-webkit-text-stroke:1px color-mix(in srgb,var(--event-accent) 18%,rgba(184,207,226,.16));paint-order:stroke fill;font:italic 800 clamp(150px,27vw,410px)/.8 var(--display);letter-spacing:.105em;text-indent:.105em;white-space:nowrap;background:linear-gradient(168deg,#010204 0%,color-mix(in srgb,var(--event-accent) 13%,#171c22) 21%,#05070a 39%,color-mix(in srgb,var(--event-accent-2) 10%,#11161c) 52%,#020305 72%,color-mix(in srgb,var(--event-accent) 9%,#1b222a) 87%,#040507 100%);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 3px 2px rgba(0,0,0,.8))}
+  .cloud-auth-gate::before{content:var(--brand-watermark,"F4L");position:fixed;left:50%;top:50%;z-index:0;transform:translate(-50%,-50%);pointer-events:none;color:transparent;-webkit-text-fill-color:transparent;-webkit-text-stroke:clamp(3px,.24vw,4px) var(--brand-watermark-halo,color-mix(in srgb,var(--event-accent) 86%,white 14%));paint-order:stroke fill;font:var(--brand-watermark-style,italic) var(--brand-watermark-weight,800) clamp(150px,27vw,410px)/.8 var(--brand-watermark-family,var(--display));letter-spacing:var(--brand-watermark-track,.105em);text-indent:var(--brand-watermark-track,.105em);white-space:nowrap;text-shadow:var(--brand-watermark-shadow,0 0 2px color-mix(in srgb,var(--event-accent) 35%,white 65%),0 0 10px color-mix(in srgb,var(--event-accent) 58%,transparent),0 0 28px color-mix(in srgb,var(--event-accent) 38%,transparent),0 0 64px color-mix(in srgb,var(--event-accent-2) 24%,transparent));filter:drop-shadow(0 0 16px color-mix(in srgb,var(--event-accent) 24%,transparent))}
+  .cloud-auth-gate::after{content:var(--brand-watermark,"F4L");position:fixed;left:50%;top:50%;z-index:0;transform:translate(-50%,-50%);pointer-events:none;color:#07090c;-webkit-text-fill-color:transparent;-webkit-text-stroke:1px var(--brand-watermark-edge,color-mix(in srgb,var(--event-accent) 18%,rgba(184,207,226,.16)));paint-order:stroke fill;font:var(--brand-watermark-style,italic) var(--brand-watermark-weight,800) clamp(150px,27vw,410px)/.8 var(--brand-watermark-family,var(--display));letter-spacing:var(--brand-watermark-track,.105em);text-indent:var(--brand-watermark-track,.105em);white-space:nowrap;background:var(--brand-watermark-ink,linear-gradient(168deg,#010204 0%,color-mix(in srgb,var(--event-accent) 13%,#171c22) 21%,#05070a 39%,color-mix(in srgb,var(--event-accent-2) 10%,#11161c) 52%,#020305 72%,color-mix(in srgb,var(--event-accent) 9%,#1b222a) 87%,#040507 100%));-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 3px 2px rgba(0,0,0,.8))}
   body.cloud-auth-locked{overflow:hidden}
   .cloud-auth-card{position:relative;z-index:1;margin:auto;width:min(470px,100%);border:1px solid rgba(90,166,240,.22);border-radius:16px;background:linear-gradient(150deg,rgba(27,28,34,.97),rgba(11,12,16,.98));box-shadow:0 30px 90px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.04);padding:30px}
   .cloud-auth-brand{font:italic 800 42px/1.02 var(--display);text-transform:uppercase;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -308,7 +312,7 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   .cloud-auth-request-meta b{color:var(--text);font-weight:600;text-align:right}
   @media(max-width:560px){.cloud-auth-card{padding:23px 19px}.cloud-auth-row{grid-template-columns:1fr}.cloud-auth-card h1{font-size:29px}.cloud-auth-brand{font-size:37px}}
 
-  @media(max-width:720px){body::before,body::after,.cloud-auth-gate::before,.cloud-auth-gate::after{font-size:45vw;top:48%}.portal-theme-scene::before{background-position:center calc(100% + 10px);background-size:850px auto}.portal-theme-particles i:nth-child(n+8){display:none}.cloud-status{max-width:105px}.cloud-account-btn{padding:7px 8px;font-size:10px}.topbar-inner{padding-left:12px;padding-right:12px;gap:8px}.brand-sub{display:none}.brand-name{font-size:16px}.portal-context,.portal-theme-badge{display:none!important}
+  @media(max-width:720px){body::before,body::after,.cloud-auth-gate::before,.cloud-auth-gate::after{font-size:var(--brand-watermark-size-sm,45vw);top:48%}.portal-theme-scene::before{background-position:center calc(100% + 10px);background-size:850px auto}.portal-theme-particles i:nth-child(n+8){display:none}.cloud-status{max-width:105px}.cloud-account-btn{padding:7px 8px;font-size:10px}.topbar-inner{padding-left:12px;padding-right:12px;gap:8px}.brand-sub{display:none}.brand-name{font-size:16px}.portal-context,.portal-theme-badge{display:none!important}
   /* "Tutorials" is a great deal wider than the single character it replaced, and the topbar
      already carries a long "Back to client home". Tightened here, and the brand allowed to
      truncate, so the row cannot push itself sideways on a phone. */
@@ -2112,7 +2116,7 @@ body.sandbox-on{
    no stroke and no glow, set light enough to read straight through. */
 body.sandbox-on::after{display:none}
 body.sandbox-on::before{
-  content:"F4L";
+  content:var(--brand-watermark,"F4L");
   position:fixed;left:50%;top:50%;z-index:0;
   transform:translate(-50%,-50%);
   pointer-events:none;white-space:nowrap;

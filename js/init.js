@@ -1,3 +1,10 @@
+function installBrandName() {
+  try {
+    const brand = JSON.parse(localStorage.getItem("fit4life_gym_brand_v1") || "{}");
+    return String(brand && brand.name ? brand.name : "FIT4LIFE");
+  } catch (_) { return "FIT4LIFE"; }
+}
+
 /* ---------- secondary menus ---------- */
 const SECONDARY_MENU_CLOSERS = {
   reviewModal:"closeWorkoutReview",
@@ -97,9 +104,9 @@ function showInstallBanner(mode) {
   banner.className = "install-banner";
   banner.setAttribute("role","complementary");
   banner.innerHTML = mode === "ios"
-    ? '<div class="install-banner-copy"><b>Add FIT4LIFE to your home screen</b><span>Tap the Share button, then <b>Add to Home Screen</b>.</span></div>'
+    ? '<div class="install-banner-copy"><b>Add ' + installBrandName() + ' to your home screen</b><span>Tap the Share button, then <b>Add to Home Screen</b>.</span></div>'
       + '<div class="install-banner-actions"><button type="button" class="small-btn" id="installDismissBtn">Got it</button></div>'
-    : '<div class="install-banner-copy"><b>Install FIT4LIFE</b><span>Get an app icon and a full-screen workout view.</span></div>'
+    : '<div class="install-banner-copy"><b>Install ' + installBrandName() + '</b><span>Get an app icon and a full-screen workout view.</span></div>'
       + '<div class="install-banner-actions"><button type="button" class="small-btn primary" id="installAcceptBtn">Install</button><button type="button" class="small-btn" id="installDismissBtn">Not now</button></div>';
   document.body.appendChild(banner);
   const dismiss = document.getElementById("installDismissBtn");

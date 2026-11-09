@@ -596,6 +596,19 @@ function renderAreaHome() {
 /* Five groups, because five is what a phone's bottom bar holds without a More sheet, and
    because seventeen flat entries is a list rather than a structure. Every old destination
    key still works; what changed is where it is found. */
+/* Managing held nine entries because BYU-Idaho runs a building. An employer branch needs
+   approvals and settings and nothing else, so each entry names the module it belongs to. */
+const NAV_MODULE = {
+  "area-home":"facility", areas:"facility", files:"facility", archive:"facility",
+  hours:"timeclock", audits:"audits", team:"staff", access:"staff"
+};
+
+function navKeyAllowedHere(navKey) {
+  const needed = NAV_MODULE[navKey];
+  if (!needed) return true;
+  return typeof window.fit4lifeModuleEnabled !== "function" || window.fit4lifeModuleEnabled(needed);
+}
+
 const COACH_NAV_GROUPS = [
   ["My area", ["area-home"], "\u25F1"],
   ["Today", ["dashboard", "actions", "messages"], "\u2302"],
@@ -645,6 +658,7 @@ function groupCoachSidebar() {
     allowed[label] = keys.filter((navKey) => {
       const button = bar.querySelector('[data-coach-nav="' + navKey + '"]');
       if (!button) return false;
+      if (!navKeyAllowedHere(navKey)) return false;
       if (navKey === "area-home") return Boolean(key);
       if (COACHING_NAV_KEYS.includes(navKey) && !coachingHere) return false;
       return !(button.hasAttribute("data-owner-only") && !isFit4LifeOwner());
