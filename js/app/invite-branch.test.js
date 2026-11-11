@@ -40,5 +40,19 @@ t("two keep the portal slug for public signup",
 t("the client invite follows the active branch",
   /sendClientInvite[\s\S]{0,900}organization_slug: invitingOrganizationSlug\(\)/.test(src), true);
 
+/* V168: the dialog must not ask a private client for a BYU-Idaho email or a BYU-Idaho tier. */
+const rp = require("fs").readFileSync(require("path").join(__dirname, "readiness-progress.js"), "utf8");
+const labelFn = rp.match(/function inviteEmailLabel\(\) \{[\s\S]*?\n\}/)[0];
+const tiersFn = rp.match(/function branchUsesTiers\(\) \{[\s\S]*?\n\}/)[0];
+const label = (orgType, modules) => new Function("window", tiersFn + labelFn + "; return inviteEmailLabel;")(
+  { fit4lifeOrgType: orgType, fit4lifeOrgModules: modules, fit4lifeModuleEnabled: (n) => (modules[n] !== false) })();
+
+t("BYU-Idaho still asks for a BYU-I email", label("university", { tiers: true }), "BYU-I email");
+t("your own branch asks for an email address", label("individual", { tiers: false }), "Email address");
+t("an employer branch asks for an email address", label("employer", { tiers: false }), "Email address");
+t("the tier field is conditional", /branchUsesTiers\(\) \?/.test(rp), true);
+t("hiding it still leaves the field readable by the save path", /<input type="hidden" id="inviteTier"/.test(rp), true);
+t("tiers is a module", /tiers:false/.test(src) && /tiers:true/.test(src), true);
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

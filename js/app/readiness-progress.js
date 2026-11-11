@@ -809,6 +809,20 @@ let inviteRequestToken = 0;
 // the person had even been contacted. A trainer only knows three things at that point:
 // who they are, their BYU-I email, and possibly what they signed up for. Everything else
 // is the client's to answer in the questionnaire.
+/* BYU-Idaho's dialog asked for a "BYU-I email" and a membership tier that comes from their
+   booking system. Neither means anything in a private-coaching or employer branch. */
+function branchUsesTiers() {
+  return typeof window.fit4lifeModuleEnabled !== "function" || window.fit4lifeModuleEnabled("tiers");
+}
+
+function inviteEmailLabel() {
+  return branchUsesTiers() && (window.fit4lifeOrgType || "") === "university" ? "BYU-I email" : "Email address";
+}
+
+function inviteEmailPlaceholder() {
+  return branchUsesTiers() && (window.fit4lifeOrgType || "") === "university" ? "name@byui.edu" : "name@example.com";
+}
+
 function openInviteClientDialog() {
   if (!requireTrainerMutation("create client profiles")) return null;
   let modal = byId("inviteClientModal");
@@ -820,8 +834,8 @@ function openInviteClientDialog() {
       + '<div class="compact-grid">'
       + '<div class="compact-field"><label for="inviteFirstName">First name</label><input id="inviteFirstName" maxlength="40" autocomplete="off"></div>'
       + '<div class="compact-field"><label for="inviteLastName">Last name</label><input id="inviteLastName" maxlength="40" autocomplete="off"></div>'
-      + '<div class="compact-field wide"><label for="inviteEmail">BYU-I email</label><input id="inviteEmail" type="email" autocomplete="off" placeholder="name@byui.edu"><span class="storage-note">This is how their account links to this profile, so it must match the address they sign up with.</span></div>'
-      + '<div class="compact-field"><label for="inviteTier">Membership tier <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><select id="inviteTier" onchange="syncInviteTierDefault()"></select></div>'
+      + '<div class="compact-field wide"><label for="inviteEmail">' + inviteEmailLabel() + '</label><input id="inviteEmail" type="email" autocomplete="off" placeholder="' + inviteEmailPlaceholder() + '"><span class="storage-note">This is how their account links to this profile, so it must match the address they sign up with.</span></div>'
+      + (branchUsesTiers() ? '<div class="compact-field"><label for="inviteTier">Membership tier <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><select id="inviteTier" onchange="syncInviteTierDefault()"></select></div>' : '<input type="hidden" id="inviteTier" value="">')
       + '<div class="compact-field"><label for="inviteProgrammedDays">Programmed days / week <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><select id="inviteProgrammedDays"><option value="">From their tier</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>'
       + '</div>'
       + '<div id="inviteClientFeedback" class="storage-note"></div>'

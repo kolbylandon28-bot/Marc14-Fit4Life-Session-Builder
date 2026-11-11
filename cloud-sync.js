@@ -469,10 +469,10 @@
      university and keeps every facility screen, Journey is an employer and never had
      a pool. An explicit modules entry always wins over the default. */
   const MODULE_DEFAULTS = {
-    university: { facility:true,  timeclock:true,  volunteers:true,  audits:true,  booking_import:true,  consultation:true, staff:true  },
-    gym:        { facility:true,  timeclock:true,  volunteers:false, audits:true,  booking_import:false, consultation:true, staff:true  },
-    employer:   { facility:false, timeclock:false, volunteers:false, audits:false, booking_import:false, consultation:true, staff:false },
-    individual: { facility:false, timeclock:false, volunteers:false, audits:false, booking_import:false, consultation:true, staff:false }
+    university: { facility:true,  timeclock:true,  volunteers:true,  audits:true,  booking_import:true,  consultation:true, staff:true,  tiers:true  },
+    gym:        { facility:true,  timeclock:true,  volunteers:false, audits:true,  booking_import:false, consultation:true, staff:true,  tiers:true  },
+    employer:   { facility:false, timeclock:false, volunteers:false, audits:false, booking_import:false, consultation:true, staff:false, tiers:false },
+    individual: { facility:false, timeclock:false, volunteers:false, audits:false, booking_import:false, consultation:true, staff:false, tiers:false }
   };
 
   function moduleEnabled(name) {
