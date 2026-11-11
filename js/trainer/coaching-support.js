@@ -377,6 +377,21 @@ function applyBrandText(brand) {
   document.querySelectorAll("[data-brand-label]").forEach((node) => { node.setAttribute("aria-label", name); });
 }
 
+function brandLuminance(hex) {
+  const v = String(hex || "").replace("#", "").trim();
+  if (!/^[0-9a-fA-F]{6}$/.test(v)) return 0;
+  const channel = (n) => { const c = n / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  return 0.2126 * channel(parseInt(v.slice(0,2),16))
+       + 0.7152 * channel(parseInt(v.slice(2,4),16))
+       + 0.0722 * channel(parseInt(v.slice(4,6),16));
+}
+
+function brandLabelColour(primary, accent) {
+  // The gradient runs accent -> primary, and the label sits across both.
+  const mean = (brandLuminance(primary) + brandLuminance(accent)) / 2;
+  return mean > 0.42 ? "#0b0d10" : "#ffffff";
+}
+
 function applyBrandWatermark(brand) {
   const root = document.documentElement;
   if (!root || !root.style) return;
@@ -447,6 +462,10 @@ function applyGymBrand() {
   /* --grad ends on --blue-deep, which nothing ever set from the brand - so a gold or green
      branch still faded into Fit4Life blue. Derived from the branch's own colour instead. */
   document.documentElement.style.setProperty("--blue-deep","color-mix(in srgb," + primary + " 62%, #05070c)");
+  /* Primary buttons paint the brand gradient and used a hardcoded white label. A branch whose
+     primary IS white - Of Our Making - got white text on a white button. Pick the label from
+     how bright the brand actually is, using the sRGB relative-luminance formula. */
+  document.documentElement.style.setProperty("--on-brand", brandLabelColour(primary, bright));
   document.documentElement.style.setProperty("--blue-glow","color-mix(in srgb," + bright + " 18%, transparent)");
   document.documentElement.style.setProperty("--event-accent",theme.a); document.documentElement.style.setProperty("--event-accent-2",theme.b); document.documentElement.dataset.portalTheme = normalizedPortalTheme(brand.theme);
   const name = document.querySelector && (document.querySelector(".brand-name .grad-text") || document.querySelector(".brand-name")), sub = document.querySelector && document.querySelector(".brand-sub"), auth = document.querySelector && document.querySelector(".cloud-auth-brand"), lockup = document.querySelector && document.querySelector(".granite-logo-main"), lockupWrap = document.querySelector && document.querySelector(".granite-logo-lockup");
