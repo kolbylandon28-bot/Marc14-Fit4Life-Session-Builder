@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-11-11-v169-button-contrast-r1";
+const CACHE_NAME = "fit4life-shell-2026-11-11-v170-training-locations-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20261111-v169-button-contrast-r1";
+const ASSET_VERSION = "20261111-v170-training-locations-r1";
 const SHELL = [
   "/",
   "/index.html",
@@ -11,6 +11,7 @@ const SHELL = [
   "/js/app/action-calendar.js?v=" + ASSET_VERSION,
   "/js/app/trainer-audits.js?v=" + ASSET_VERSION,
   "/js/app/area-art.js?v=" + ASSET_VERSION,
+  "/js/app/training-locations.js?v=" + ASSET_VERSION,
   "/js/app/branch-switcher.js?v=" + ASSET_VERSION,
   "/js/app/work-areas.js?v=" + ASSET_VERSION,
   "/js/app/area-tools.js?v=" + ASSET_VERSION,

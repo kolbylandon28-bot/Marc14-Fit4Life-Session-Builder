@@ -34,6 +34,7 @@ function profileWithIntakeFilters(profileValue,options) {
   if (!intake || !Object.keys(intake).length) return profile;
   const schedule = intake.schedule || {}, goals = Array.isArray(intake.goals) && intake.goals.length ? uniqueProfileValues(intake.goals).slice(0,2) : profile.goals;
   const zones = Array.isArray(intake.equipmentZones) && intake.equipmentZones.length ? uniqueProfileValues(intake.equipmentZones) : profile.zones;
+  const intakeLocationList = Array.isArray(intake.locations) && intake.locations.length ? intake.locations : null;
   const trainingDays = Array.isArray(schedule.trainingDays) && schedule.trainingDays.length ? uniqueProfileValues(schedule.trainingDays.map(Number)).filter((day) => day >= 1 && day <= 6).sort((a,b) => a - b) : profile.trainingDays;
   const previousDerived = uniqueProfileValues(profile.intakeDerivedInjuries || []), nonDerivedProfileInjuries = (profile.injuries || []).filter((key) => !previousDerived.includes(key));
   const explicitManual = Array.isArray(profile.manualInjuries) ? uniqueProfileValues([...profile.manualInjuries,...nonDerivedProfileInjuries]) : nonDerivedProfileInjuries;
@@ -44,6 +45,7 @@ function profileWithIntakeFilters(profileValue,options) {
     zones:zones && zones.length ? zones : profile.zones,manualInjuries,injuries,intakeDerivedInjuries:derived,
     preferredName:intake.identity && intake.identity.preferredName || profile.preferredName || "",contactEmail:intake.identity && intake.identity.email || profile.contactEmail || "",
     contactPhone:intake.identity && intake.identity.phone || profile.contactPhone || "",trainingLocation:intake.location || profile.trainingLocation || "",
+    locations:intakeLocationList || profile.locations || [],activeLocationId:intake.activeLocationId || profile.activeLocationId || "",
     occupation:intake.occupation || profile.occupation || "",consistencyBarriers:intake.barriers || profile.consistencyBarriers || "",equipmentNotes:intake.equipmentNotes || profile.equipmentNotes || "",
     sleepBaseline:intake.sleep || profile.sleepBaseline || "",stressBaseline:intake.stress || profile.stressBaseline || "",activityBaseline:intake.activity || profile.activityBaseline || "",
     nutritionSupport:intake.nutritionSupport || profile.nutritionSupport || "",confidence:intake.confidence || profile.confidence || "",coachingStyle:intake.coachingStyle || profile.coachingStyle || "",
@@ -286,7 +288,13 @@ function intakeFromFields(existing,trainerMode) {
   const value = (id) => String(byId(id) && byId(id).value || "").trim(), checked = (id) => Boolean(byId(id) && byId(id).checked);
   const goals = [value("intakePrimaryGoal"),value("intakeSecondaryGoal")].filter((goal,index,array) => goal && array.indexOf(goal) === index);
   const trainingDays = INTAKE_DAY_IDS.map((id,index) => checked(id) ? index + 1 : null).filter(Boolean);
-  const equipmentZones = Object.entries(INTAKE_EQUIPMENT_FIELDS).filter(([,id]) => checked(id)).map(([zone]) => zone);
+  /* The twelve checkboxes now describe ONE place. equipmentZones keeps meaning "what this
+     client can use right now" so every existing reader is unaffected; locations carries the
+     rest. */
+  const savedLocations = typeof intakeLocationsForSave === "function" ? intakeLocationsForSave() : [];
+  const activeSaved = savedLocations[typeof intakeLocationIndex === "number" ? intakeLocationIndex : 0] || savedLocations[0] || null;
+  const equipmentZones = activeSaved ? [...(activeSaved.zones || [])]
+    : Object.entries(INTAKE_EQUIPMENT_FIELDS).filter(([,id]) => checked(id)).map(([zone]) => zone);
   const previousContract = normalizeGoalContract(existing && existing.goalContract || {},null,existing || {});
   const milestoneLabels = [value("intakeGoalMilestone1"),value("intakeGoalMilestone2"),value("intakeGoalMilestone3")];
   const now = new Date().toISOString();
@@ -305,7 +313,7 @@ function intakeFromFields(existing,trainerMode) {
     goals,
     goalContract,successDefinition:goalContract.definitionOfSuccess,why:goalContract.deeperReason,location:value("intakeLocation"),occupation:value("intakeOccupation"),barriers:value("intakeBarriers"),
     schedule:{daysPerWeek:Number(value("intakeDaysPerWeek")) || null,sessionMinutes:Number(value("intakeSessionMinutes")) || null,trainingDays},
-    equipmentZones,equipmentNotes:value("intakeEquipmentNotes"),
+    equipmentZones,locations:savedLocations,activeLocationId:activeSaved ? activeSaved.id : "",equipmentNotes:value("intakeEquipmentNotes"),
     health:{heart:value("intakeHeart"),chest:value("intakeChest"),dizzy:value("intakeDizzy"),boneJoint:value("intakeBoneJoint"),medication:value("intakeMedication"),otherMedical:value("intakeOtherMedical")},
     currentPain:value("intakeCurrentPain"),medicalNotes:value("intakeMedicalNotes"),sleep:value("intakeSleep"),stress:value("intakeStress"),activity:value("intakeActivity"),nutritionSupport:value("intakeNutritionSupport"),
     confidence:value("intakeConfidence"),coachingStyle:value("intakeCoachingStyle"),unfamiliar:value("intakeUnfamiliar"),
@@ -326,7 +334,12 @@ function setIntakeFields(intakeValue) {
   const selectedDays = schedule.trainingDays && schedule.trainingDays.length ? schedule.trainingDays.map(Number) : profile.trainingDays || inferredTrainingDays(profile,profile.availableDays || 3);
   INTAKE_DAY_IDS.forEach((id,index) => { if (byId(id)) byId(id).checked = selectedDays.includes(index + 1); });
   const selectedZones = intake.equipmentZones && intake.equipmentZones.length ? intake.equipmentZones : profile.zones || [];
-  Object.entries(INTAKE_EQUIPMENT_FIELDS).forEach(([zone,id]) => { if (byId(id)) byId(id).checked = selectedZones.includes(zone); });
+  /* The places editor owns these checkboxes now; it ticks them for whichever place is open. */
+  if (typeof primeIntakeLocations === "function") {
+    primeIntakeLocations({ ...profile, locations: intake.locations || profile.locations, activeLocationId: intake.activeLocationId || profile.activeLocationId, zones: selectedZones });
+  } else {
+    Object.entries(INTAKE_EQUIPMENT_FIELDS).forEach(([zone,id]) => { if (byId(id)) byId(id).checked = selectedZones.includes(zone); });
+  }
   [["intakeTruth",consent.truth],["intakePrivacy",consent.privacy],["intakeNotMedical",consent.notMedical],["intakeTrainerReviewed",intake.trainerReviewed]].forEach(([id,value]) => { if (byId(id)) byId(id).checked = Boolean(value); });
   updateGoalContractFields();
 }
@@ -488,10 +501,174 @@ function profilesInActiveArea(list) {
   const key = typeof activeWorkArea === "function" ? activeWorkArea() : "";
   return key ? all.filter((profile) => profileInArea(profile, key)) : all;
 }
+/* Which branch's floor, if any, can a client fall back on. "Has premises" is exactly the
+   facility module: BYU-Idaho runs a building, an employer whose seven people train in seven
+   different places does not. A branch with no premises has nothing safe to assume, so a
+   client there must say where they train before anything is generated. */
+/* ---------- the "where you train" step ----------
+   The twelve checkboxes are reused as the editor for ONE place at a time rather than being
+   rewritten as a dynamic form. The bar above them picks which place is being edited, so all
+   the existing field plumbing keeps working. */
+let intakeLocations = [];
+let intakeLocationIndex = 0;
+
+function currentIntakeLocation() { return intakeLocations[intakeLocationIndex] || null; }
+
+function renderIntakeLocationBar() {
+  const bar = byId("intakeLocationBar");
+  if (!bar) return;
+  bar.innerHTML = intakeLocations.map((loc, i) => '<button type="button" role="tab" class="intake-location-chip'
+    + (i === intakeLocationIndex ? ' on' : '') + '" aria-selected="' + (i === intakeLocationIndex) + '"'
+    + ' onclick="selectIntakeLocation(' + i + ')">'
+    + (loc.source === "org" ? '<span class="chip-lock" aria-hidden="true">\u{1F512}</span>' : '')
+    + '<span>' + escapeHtml(loc.name || "Untitled") + '</span>'
+    + '<span class="chip-count">' + (loc.zones || []).length + '</span></button>').join("");
+
+  const kind = byId("intakeLocationKind");
+  if (kind && !kind.options.length) {
+    kind.innerHTML = Object.entries(LOCATION_KINDS)
+      .map(([key, meta]) => '<option value="' + key + '">' + escapeHtml(meta.label) + '</option>').join("");
+  }
+  const active = currentIntakeLocation(), locked = Boolean(active && active.source === "org");
+  const note = byId("intakeLocationLocked"), remove = byId("intakeLocationRemove");
+  if (note) {
+    note.style.display = locked ? "" : "none";
+    note.textContent = locked
+      ? "This is " + (active.name || "your gym") + "'s own equipment list, kept up to date for you. Add your own places below for anywhere else you train."
+      : "";
+  }
+  if (remove) remove.style.display = (!locked && intakeLocations.length > 1) ? "" : "none";
+  ["intakeLocationName","intakeLocationKind","intakeEquipmentNotes"].forEach((id) => {
+    const field = byId(id); if (field) field.disabled = locked;
+  });
+  Object.values(INTAKE_EQUIPMENT_FIELDS).forEach((id) => { const box = byId(id); if (box) box.disabled = locked; });
+}
+
+function loadIntakeLocationIntoFields() {
+  const loc = currentIntakeLocation();
+  if (!loc) return;
+  if (byId("intakeLocationName")) byId("intakeLocationName").value = loc.name || "";
+  if (byId("intakeLocationKind")) byId("intakeLocationKind").value = loc.kind || "other";
+  if (byId("intakeEquipmentNotes")) byId("intakeEquipmentNotes").value = loc.notes || "";
+  Object.entries(INTAKE_EQUIPMENT_FIELDS).forEach(([zone, id]) => {
+    const box = byId(id); if (box) box.checked = (loc.zones || []).includes(zone);
+  });
+  renderIntakeLocationBar();
+}
+
+/* Called on every keystroke and tick, so what is on screen is always what is stored. */
+function syncIntakeLocationFromFields() {
+  const loc = currentIntakeLocation();
+  if (!loc || loc.source === "org") return;
+  loc.name = (byId("intakeLocationName") && byId("intakeLocationName").value) || "";
+  loc.kind = (byId("intakeLocationKind") && byId("intakeLocationKind").value) || "other";
+  loc.notes = (byId("intakeEquipmentNotes") && byId("intakeEquipmentNotes").value) || "";
+  loc.zones = Object.entries(INTAKE_EQUIPMENT_FIELDS)
+    .filter(([, id]) => byId(id) && byId(id).checked).map(([zone]) => zone);
+  renderIntakeLocationBar();
+}
+
+function selectIntakeLocation(index) {
+  syncIntakeLocationFromFields();
+  intakeLocationIndex = Math.max(0, Math.min(index, intakeLocations.length - 1));
+  loadIntakeLocationIntoFields();
+}
+
+function addIntakeLocation() {
+  syncIntakeLocationFromFields();
+  intakeLocations.push(makeLocation({ name: "", kind: "home" }));
+  intakeLocationIndex = intakeLocations.length - 1;
+  loadIntakeLocationIntoFields();
+  const field = byId("intakeLocationName"); if (field) field.focus();
+}
+
+function removeIntakeLocation() {
+  const loc = currentIntakeLocation();
+  if (!loc || loc.source === "org" || intakeLocations.length < 2) return;
+  intakeLocations.splice(intakeLocationIndex, 1);
+  intakeLocationIndex = Math.max(0, intakeLocationIndex - 1);
+  loadIntakeLocationIntoFields();
+}
+
+/* Opening the step. An org floor is always present and always first; the client's own places
+   follow, migrated from whatever single equipment list they had before. */
+function primeIntakeLocations(profile) {
+  const ctx = trainingLocationContext();
+  const normalized = normalizeLocations(profile || {}, ctx);
+  intakeLocations = normalized.length ? normalized.map(makeLocation) : [makeLocation({ name: "", kind: "gym" })];
+  const wanted = profile && profile.activeLocationId;
+  const at = intakeLocations.findIndex((loc) => loc.id === wanted);
+  intakeLocationIndex = at >= 0 ? at : 0;
+  loadIntakeLocationIntoFields();
+}
+
+function intakeLocationsForSave() {
+  syncIntakeLocationFromFields();
+  return intakeLocations
+    .filter((loc) => loc.source === "org" || (loc.zones || []).length || String(loc.name || "").trim())
+    .map(makeLocation);
+}
+
+function trainingLocationContext() {
+  let orgZones = [], orgName = "";
+  try { const kit = typeof currentGymEquipment === "function" ? currentGymEquipment() : {};
+        orgZones = Array.isArray(kit.zones) ? kit.zones : []; } catch (_) {}
+  try { const brand = typeof currentGymBrand === "function" ? currentGymBrand() : {};
+        orgName = String(brand && brand.name || ""); } catch (_) {}
+  const hasFloor = typeof window === "undefined" || typeof window.fit4lifeModuleEnabled !== "function"
+    ? true
+    : window.fit4lifeModuleEnabled("facility");
+  return { orgName, orgZones: hasFloor ? orgZones : [], orgHasFloor: hasFloor };
+}
+
+function withTrainingLocations(profile) {
+  if (!profile || typeof applyActiveLocation !== "function") return profile;
+  try { return applyActiveLocation(profile, trainingLocationContext()); } catch (_) { return profile; }
+}
+
+/* Switching where you are training rewrites profile.zones, which is what the generator and
+   eight other files read. One write point, nothing else changes. */
+function setTrainingLocation(profileId, newLocationId) {
+  const profiles = loadProfiles(), index = profiles.findIndex((item) => item.id === profileId);
+  if (index < 0) return false;
+  const updated = withTrainingLocations({ ...profiles[index], activeLocationId: newLocationId });
+  updated.updatedAt = new Date().toISOString();
+  profiles[index] = updated;
+  if (!writeProfiles(profiles)) return false;
+  if (typeof refreshProfileSelects === "function") refreshProfileSelects();
+  return true;
+}
+
+function saveTrainingLocation(profileId, location) {
+  const profiles = loadProfiles(), index = profiles.findIndex((item) => item.id === profileId);
+  if (index < 0) return false;
+  const current = profiles[index];
+  const list = Array.isArray(current.locations) ? [...current.locations] : [];
+  const incoming = makeLocation(location);
+  const at = list.findIndex((item) => item.id === incoming.id);
+  // The branch's own floor is not the client's to rewrite.
+  if (at >= 0 && list[at].source === "org") return false;
+  if (at >= 0) list[at] = incoming; else list.push(incoming);
+  const updated = withTrainingLocations({ ...current, locations: list, activeLocationId: incoming.id });
+  updated.updatedAt = new Date().toISOString();
+  profiles[index] = updated;
+  return writeProfiles(profiles);
+}
+
+function removeTrainingLocation(profileId, targetId) {
+  const profiles = loadProfiles(), index = profiles.findIndex((item) => item.id === profileId);
+  if (index < 0) return false;
+  const list = (profiles[index].locations || []).filter((item) => item.id !== targetId || item.source === "org");
+  const updated = withTrainingLocations({ ...profiles[index], locations: list, activeLocationId: "" });
+  updated.updatedAt = new Date().toISOString();
+  profiles[index] = updated;
+  return writeProfiles(profiles);
+}
+
 function loadProfiles() {
   try {
     const data = JSON.parse(localStorage.getItem(PROFILES_KEY) || "[]");
-    return Array.isArray(data) ? data.map((profile) => profileWithIntakeFilters(migratedTierProfile(profile))) : [];
+    return Array.isArray(data) ? data.map((profile) => withTrainingLocations(profileWithIntakeFilters(migratedTierProfile(profile)))) : [];
   } catch (_) { return []; }
 }
 const PROFILE_STORAGE_LIMIT = 1000;
