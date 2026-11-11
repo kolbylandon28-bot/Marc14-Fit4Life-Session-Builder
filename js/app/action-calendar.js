@@ -369,6 +369,7 @@ function ensureCalendarEventDialog() {
         <div class="compact-field wide" data-calendar-custom><label for="calendarEventTitleInput">Title</label><input id="calendarEventTitleInput" maxlength="100" placeholder="Training appointment or follow-up"></div>
         <div class="compact-field" data-calendar-custom><label for="calendarEventClient">Client</label><select id="calendarEventClient" onchange="calendarEventClientChanged()"></select></div><div class="compact-field" data-calendar-custom><label for="calendarEventPartner">Partner client <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><select id="calendarEventPartner"></select></div>
         <div class="compact-field" data-calendar-custom><label for="calendarEventTrainer">Trainer</label><select id="calendarEventTrainer"></select></div>
+        <div class="compact-field" data-calendar-custom><label for="calendarEventArea">Area</label><select id="calendarEventArea"></select></div>
         <div class="compact-field" data-calendar-schedule><label for="calendarEventDate">Date</label><input id="calendarEventDate" type="date"></div>
         <div class="compact-field" data-calendar-schedule><label for="calendarEventStart">Start time <span class="calendar-optional">optional</span></label><input id="calendarEventStart" type="time"></div>
         <div class="compact-field" data-calendar-custom><label for="calendarEventEnd">End</label><input id="calendarEventEnd" type="time"></div>
@@ -390,6 +391,11 @@ function calendarSelectOptions() {
   byId("calendarEventPartner").innerHTML = '<option value="">No partner</option>' + profiles.map((profile) => '<option value="' + escapeHtml(profile.id) + '">' + escapeHtml(profile.name) + '</option>').join("");
   byId("calendarEventClient").innerHTML = '<option value="">No specific client</option>' + profiles.map((profile) => '<option value="' + escapeHtml(profile.id) + '">' + escapeHtml(profile.name) + (profile.assignedTrainerName ? ' · ' + escapeHtml(profile.assignedTrainerName) : ' · Shared') + '</option>').join("");
   byId("calendarEventTrainer").innerHTML = '<option value="">Coaching team / unassigned</option>' + trainers.map((trainer) => '<option value="' + escapeHtml(trainer.id) + '" data-name="' + escapeHtml(trainer.name) + '">' + escapeHtml(trainer.name) + '</option>').join("");
+  const areaSelect = byId("calendarEventArea");
+  if (areaSelect) {
+    const areas = typeof workAreas === "function" ? workAreas() : [];
+    areaSelect.innerHTML = '<option value="">Whole building</option>' + areas.map((area) => '<option value="' + escapeHtml(area.area_key) + '">' + escapeHtml(area.name) + '</option>').join("");
+  }
 }
 function calendarSetFeedback(message,tone) {
   const feedback = byId("calendarEventFeedback");
@@ -456,6 +462,9 @@ function openCalendarEventEditor(eventId,dateKey,type) {
   byId("calendarEventDate").value = event && event.date || dateKey || coachCalendarState.anchor; byId("calendarEventStart").value = event && event.startTime || ""; byId("calendarEventEnd").value = event && event.endTime || "";
   byId("calendarEventStart").disabled = false; byId("calendarEventEnd").disabled = false;
   byId("calendarEventLocation").value = event && event.location || ""; byId("calendarEventLocation").disabled = false;
+  // A session booked while standing in the Pool is a Pool session until someone says otherwise.
+  if (byId("calendarEventArea")) byId("calendarEventArea").value = event ? (event.areaKey || "")
+    : (coachCalendarState.area || (typeof activeWorkArea === "function" ? activeWorkArea() : "") || "");
   byId("calendarEventNotes").value = event && event.notes || ""; byId("calendarEventNotes").disabled = false; byId("calendarEventReason").value = "";
   byId("calendarEventNotify").checked = true; byId("calendarEventNotify").disabled = false;
   byId("calendarAssignmentAction").value = sourceAssignment && event.status === "missed" ? "followup" : "reschedule";
@@ -540,7 +549,7 @@ function saveCalendarEvent() {
   const cancelledBy = statusValue === "cancelled" ? (byId("calendarEventCancelledBy") ? byId("calendarEventCancelledBy").value : "client") : "";
   const cancelOutcome = cancelledBy ? cancellationOutcome({ profileId, date, startTime:byId("calendarEventStart").value }, cancelledBy) : null;
   const partnerSelect = byId("calendarEventPartner"), partnerProfile = partnerSelect && partnerSelect.value ? loadProfiles().find((item) => item.id === partnerSelect.value) : null;
-  const next = {id:eventId || "calendar-event-" + Date.now() + "-" + Math.random().toString(16).slice(2),source:"calendar",type:byId("calendarEventType").value,title:byId("calendarEventTitleInput").value.trim(),profileId,client:profile && profile.name || "",trainerId:trainerSelect.value,trainerName:trainerOption && trainerOption.dataset.name || trainerOption && trainerOption.textContent || "Coaching team",date,startTime:byId("calendarEventStart").value,endTime:byId("calendarEventEnd").value,status:byId("calendarEventStatus").value,location:byId("calendarEventLocation").value.trim(),notes:byId("calendarEventNotes").value.trim(),cancelledBy:cancelledBy,cancelRollsOver:cancelOutcome ? cancelOutcome.rollsOver : undefined,partnerProfileId:partnerProfile && partnerProfile.id || "",partnerClient:partnerProfile && partnerProfile.name || "",assignmentId:existing && existing.assignmentId || "",createdAt:existing && existing.createdAt || new Date().toISOString(),updatedAt:new Date().toISOString(),updatedBy:calendarIdentity().name};
+  const next = {id:eventId || "calendar-event-" + Date.now() + "-" + Math.random().toString(16).slice(2),source:"calendar",type:byId("calendarEventType").value,title:byId("calendarEventTitleInput").value.trim(),profileId,client:profile && profile.name || "",trainerId:trainerSelect.value,trainerName:trainerOption && trainerOption.dataset.name || trainerOption && trainerOption.textContent || "Coaching team",date,startTime:byId("calendarEventStart").value,endTime:byId("calendarEventEnd").value,status:byId("calendarEventStatus").value,location:byId("calendarEventLocation").value.trim(),areaKey:byId("calendarEventArea") ? byId("calendarEventArea").value : (existing && existing.areaKey || ""),notes:byId("calendarEventNotes").value.trim(),cancelledBy:cancelledBy,cancelRollsOver:cancelOutcome ? cancelOutcome.rollsOver : undefined,partnerProfileId:partnerProfile && partnerProfile.id || "",partnerClient:partnerProfile && partnerProfile.name || "",assignmentId:existing && existing.assignmentId || "",createdAt:existing && existing.createdAt || new Date().toISOString(),updatedAt:new Date().toISOString(),updatedBy:calendarIdentity().name};
   if (!next.title) { calendarSetFeedback("Add a clear calendar title.","error"); return false; }
   if (next.startTime && next.endTime && calendarDate(next.date,next.endTime) <= calendarDate(next.date,next.startTime)) { calendarSetFeedback("End time must be after start time.","error"); return false; }
   // endTime, title and notes left this list deliberately: making something longer or
@@ -601,6 +610,32 @@ function setCalendarArea(key) {
   renderCoachCalendarModule();
 }
 
+/* Which side of the building an event belongs to. A stamp on the event wins; failing
+   that the client's own areas decide, so a gym-only client's session never lands on the
+   pool calendar. Nothing known shows everywhere - the same choice as the roster, because
+   an appointment nobody can see is worse than one on an extra screen. */
+function calendarEventAreas(event, profile) {
+  if (!event) return [];
+  if (event.areaKey) return [String(event.areaKey)];
+  const who = profile === undefined && event.profileId && typeof calendarProfile === "function"
+    ? calendarProfile(event.profileId) : profile;
+  const areas = who && Array.isArray(who.areas) ? who.areas : [];
+  return areas.filter(Boolean).map(String);
+}
+function calendarEventInArea(event, areaKey, profile) {
+  if (!areaKey) return true;
+  const areas = calendarEventAreas(event, profile);
+  return !areas.length || areas.indexOf(String(areaKey)) >= 0;
+}
+// Everything the area you are looking at should see. One profile lookup for the whole
+// list rather than one per event.
+function calendarEventsHere(events) {
+  const source = Array.isArray(events) ? events : allCoachCalendarEvents();
+  const key = coachCalendarState.area;
+  if (!key) return source;
+  const people = new Map(loadProfiles().map((profile) => [profile.id, profile]));
+  return source.filter((event) => calendarEventInArea(event, key, event.profileId ? (people.get(event.profileId) || null) : null));
+}
 function calendarEventMatches(event) {
   const profile = calendarProfile(event.profileId);
   const hour = event.startTime ? Number(String(event.startTime).split(":")[0]) : -1;
@@ -608,7 +643,7 @@ function calendarEventMatches(event) {
   // Two switches on top of the existing filters: the rota, and the people coming in.
   if (coachCalendarState.hideShifts && CALENDAR_SHIFT_TYPES.includes(event.type)) return false;
   if (coachCalendarState.hideClients && CALENDAR_CLIENT_TYPES.includes(event.type)) return false;
-  if (coachCalendarState.area && event.areaKey && event.areaKey !== coachCalendarState.area) return false;
+  if (!calendarEventInArea(event, coachCalendarState.area, profile)) return false;
   return (!coachCalendarState.client || event.profileId === coachCalendarState.client)
     && (!coachCalendarState.trainer || (coachCalendarState.trainer === "__shared" ? !event.trainerId : event.trainerId === coachCalendarState.trainer))
     && (!coachCalendarState.type || event.type === coachCalendarState.type)
@@ -817,8 +852,10 @@ function weeklySessionBalance(profile,weekStartKey,events) {
            entitled, booked, gap, tracked, status: !tracked ? "untracked" : gap === 0 ? "met" : booked === 0 ? "none" : "short" };
 }
 function weeklySessionBalances(weekStartKey,events) {
-  const source = Array.isArray(events) ? events : allCoachCalendarEvents();
-  return loadProfiles().map((profile) => weeklySessionBalance(profile,weekStartKey,source))
+  const source = calendarEventsHere(events);
+  const here = coachCalendarState.area && typeof profileInArea === "function"
+    ? loadProfiles().filter((profile) => profileInArea(profile, coachCalendarState.area)) : loadProfiles();
+  return here.map((profile) => weeklySessionBalance(profile,weekStartKey,source))
     .filter((row) => row.tracked)
     .sort((a,b) => (b.gap - a.gap) || String(a.client).localeCompare(String(b.client)));
 }
@@ -871,7 +908,7 @@ function upcomingSessionAttentionItems() {
 /* ---------- daily prep ---------- */
 // The same data asked the way a coach actually starts the day.
 function dailyPrepSummary(dateKey) {
-  const events = allCoachCalendarEvents().filter((event) => event.date === dateKey && !["cancelled"].includes(event.status));
+  const events = calendarEventsHere().filter((event) => event.date === dateKey && !["cancelled"].includes(event.status));
   const sessions = events.filter((event) => WORKOUT_BEARING_TYPES.includes(event.type));
   return { dateKey, total:events.length, sessions:sessions.length,
            unprepared:sessions.filter((event) => !event.workout).length,
@@ -1081,7 +1118,12 @@ function calendarHourColumnHtml() {
    Two questions a block cannot answer: is this room staffed right now, and are the
    volunteers in. Staffed shades itself from the shifts, because asking anyone to enter
    their own cover twice is how it stops being true. */
-const calendarTopFor = (minutes) => ((minutes - CALENDAR_GRID_START_HOUR * 60) / 60) * 44;
+/* One hour on the grid. The stylesheet draws the lines from --calendar-hour-h and this
+   positions the events; the two must stay equal or every event sits off its line. It was
+   written as a bare 44 in five places AND declared here as a constant nothing used. */
+const CALENDAR_PIXELS_PER_HOUR = 44;
+
+const calendarTopFor = (minutes) => ((minutes - CALENDAR_GRID_START_HOUR * 60) / 60) * CALENDAR_PIXELS_PER_HOUR;
 
 function calendarMergeSpans(spans) {
   const sorted = spans.filter((span) => span && span.end > span.start).sort((a, b) => a.start - b.start);
@@ -1100,7 +1142,7 @@ function calendarBandsHtml(dateKey, events) {
   const staffed = calendarMergeSpans(onDay.filter((event) => event.type === "shift").map(spanOf));
   const volunteers = calendarMergeSpans(onDay.filter((event) => event.type === "volunteer").map(spanOf));
   const band = (span, kind, label) => {
-    const top = calendarTopFor(span.start), height = ((span.end - span.start) / 60) * 44;
+    const top = calendarTopFor(span.start), height = ((span.end - span.start) / 60) * CALENDAR_PIXELS_PER_HOUR;
     if (height <= 0) return "";
     return '<div class="calendar-band band-' + kind + '" style="top:' + top.toFixed(1) + 'px;height:' + height.toFixed(1) + 'px"'
       + ' aria-hidden="true"><span>' + escapeHtml(label) + '</span></div>';
@@ -1112,10 +1154,10 @@ function calendarBandsHtml(dateKey, events) {
 function calendarPlacedEventHtml(event) {
   const start = calendarMinutes(event.startTime);
   const end = calendarMinutes(event.endTime);
-  const top = ((start - CALENDAR_GRID_START_HOUR * 60) / 60) * 44;
+  const top = ((start - CALENDAR_GRID_START_HOUR * 60) / 60) * CALENDAR_PIXELS_PER_HOUR;
   // A missing or backwards end time still gets a readable block rather than a sliver.
   const minutes = end != null && end > start ? end - start : 60;
-  const height = Math.max(22, (minutes / 60) * 44);
+  const height = Math.max(22, (minutes / 60) * CALENDAR_PIXELS_PER_HOUR);
   const tier = typeof calendarTier === "function" ? calendarTier(loadProfiles().find((p) => p.id === event.profileId)) : "unset";
   // The type decides the colour, and every block says what it is in words too, because a
   // trainer who cannot tell the green from the red still has to read the schedule.
@@ -1137,7 +1179,7 @@ function calendarDayColumnHtml(dateKey, events, label, options) {
   const timed = pool.filter((event) => calendarMinutes(event.startTime) != null)
     .sort((a, b) => calendarMinutes(a.startTime) - calendarMinutes(b.startTime));
   const untimed = pool.filter((event) => calendarMinutes(event.startTime) == null);
-  const height = (CALENDAR_GRID_END_HOUR - CALENDAR_GRID_START_HOUR + 1) * 44;
+  const height = (CALENDAR_GRID_END_HOUR - CALENDAR_GRID_START_HOUR + 1) * CALENDAR_PIXELS_PER_HOUR;
   const chips = untimed.map((event) => '<span class="calendar-allday type-' + escapeHtml(event.type) + '" title="'
     + escapeHtml(event.title || "") + '">' + escapeHtml(event.title || "Workout") + '</span>').join("");
   return '<div class="calendar-daycol">' + (label ? '<div class="calendar-daycol-head">' + label + '</div>' : '')
@@ -1296,7 +1338,7 @@ window.renderCoachModule = function v6RenderCoachModule(destination) {
    change how long it is. Everything snaps to a quarter of an hour, everything checks the
    same permission gate the server checks, and everything offers one undo. */
 const CALENDAR_SNAP_MINUTES = 15;
-const CALENDAR_PIXELS_PER_HOUR = 44;
+
 let calendarUndo = null;
 
 const calendarSnap = (minutes) => Math.max(CALENDAR_GRID_START_HOUR * 60,

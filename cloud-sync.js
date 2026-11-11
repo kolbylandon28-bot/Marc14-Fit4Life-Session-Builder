@@ -288,7 +288,14 @@
   }
 
   function authRedirectUrl() {
-    const gym = requestedPortalSlug();
+    /* The link in an invite email has to name the branch, or she arrives with nothing on the
+       URL, the app resolves the DEFAULT branch, and she is greeted by another customer's
+       name - then parked on "waiting for a trainer to approve you" that never resolves.
+       The branch switcher strips ?gym= from the URL, so the parameter cannot be the source.
+       The backup link shown in the same dialog already did this correctly; the emailed one
+       did not. Public self-signup is unaffected: nobody is signed in, so cloudOrganizationSlug
+       is empty and the portal link is still the only thing to go on. */
+    const gym = cloudOrganizationSlug || requestedPortalSlug();
     return publicSiteUrl("/", gym ? { gym } : {});
   }
 

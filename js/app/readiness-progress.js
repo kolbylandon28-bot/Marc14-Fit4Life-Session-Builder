@@ -1260,7 +1260,21 @@ function openCreateProfileEditor() {
   prepareProfileTrainerMenu('', '');
   renderProfileEditorChoices(); renderProfileExercisePreferences(); byId("profileEditorTitle").textContent = "Create client profile"; byId("profileEditorCopy").textContent = "Create the client record now. A workout or multi-week program can be assigned later—neither is created by this form."; byId("profileEditorSaveBtn").textContent = "Create profile"; setProfileEditorDeleteControls(false); byId("profileEditorModal").classList.add("open"); setTimeout(() => byId("profileEditName").focus(),20);
 }
+/* Membership tiers are BYU-Idaho's, and they come from an external booking system. A private
+   client has no tier and no "sessions per week" with a facility - they train the number of
+   days they agreed with their coach, which section 3 already asks. So the tier machinery is
+   hidden rather than relabelled, and the heading stops promising a membership. */
+function syncBranchSpecificProfileFields() {
+  const usesTiers = typeof branchUsesTiers !== "function" || branchUsesTiers();
+  if (!document.querySelectorAll) return;
+  document.querySelectorAll("[data-tiers-only]").forEach((node) => { node.hidden = !usesTiers; });
+  document.querySelectorAll("[data-section-goals]").forEach((node) => {
+    node.textContent = usesTiers ? "2 \u00b7 Membership and goals" : "2 \u00b7 Goals and training style";
+  });
+}
+
 function openProfileEditor(profileId, target) {
+  syncBranchSpecificProfileFields();
   if (!requireTrainerMutation("edit client profiles")) return null;
   const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) { showToast("Choose a saved profile to edit"); return; }
   profileEditorTarget = target || null; profileEditorDraft = { areas: [...(profile.areas || [])], muscles: [...(profile.muscles || [])], injuries: [...(profile.injuries || [])], zones: [...(profile.zones || [])], preferences:{ ...(profile.exercisePreferences || {}) },cardioModes:normalizeCardioPreferences(profile.cardioModes || profile.cardioMode),trainingDays:inferredTrainingDays(profile,profile.availableDays || 3),limitationAssessments:JSON.parse(JSON.stringify(profile.limitationAssessments || {})) };

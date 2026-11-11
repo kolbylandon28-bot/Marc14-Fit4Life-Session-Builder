@@ -147,23 +147,30 @@ html[data-portal-theme="independence"]{--theme-scene:url("theme-assets/independe
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   color:var(--tier-flex);background:color-mix(in srgb,var(--tier-flex) 16%,transparent);
   border:1px dashed color-mix(in srgb,var(--tier-flex) 45%,transparent)}
-.calendar-timegrid{margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+/* The hour labels and the hour lines are drawn by two different elements, so they only line
+   up if they agree on where the grid starts and how tall an hour is. They did not: every day
+   column sits under a header, the label column has no header, and only the client view
+   compensated - with a hardcoded number. Both now read the same two variables, and the JS
+   positions events from the same hour height. */
+.calendar-timegrid{margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  --calendar-head-h:26px; --calendar-hour-h:44px}
 .calendar-timegrid-head{display:flex;align-items:center;justify-content:space-between;gap:10px;
   padding:9px 12px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--line) 22%,transparent)}
 .calendar-timegrid-head b{font:800 12px var(--mono);letter-spacing:.03em}
 .calendar-timegrid-body{display:flex;overflow:auto;max-height:62vh}
-.calendar-hours{flex:0 0 54px;border-right:1px solid var(--line)}
-.calendar-timegrid.client .calendar-hours{padding-top:52px}
-.calendar-hour{height:44px;position:relative}
+.calendar-hours{flex:0 0 54px;border-right:1px solid var(--line);padding-top:var(--calendar-head-h);box-sizing:content-box}
+
+.calendar-hour{height:var(--calendar-hour-h);position:relative;box-sizing:border-box}
 .calendar-hour span{position:absolute;top:-6px;right:6px;font:700 9px var(--mono);color:var(--text-faint)}
 .calendar-daycol{flex:1 1 0;min-width:104px;border-right:1px solid var(--line)}
 .calendar-daycol:last-child{border-right:0}
-.calendar-daycol-head{padding:6px 4px;text-align:center;font:700 9px var(--mono);letter-spacing:.04em;
+.calendar-daycol-head{height:var(--calendar-head-h);box-sizing:border-box;padding:5px 4px;text-align:center;
+  font:700 9px var(--mono);letter-spacing:.04em;line-height:1.2;overflow:hidden;
   color:var(--text-faint);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel,#101116);z-index:2}
-.calendar-timegrid.client .calendar-daycol-head{height:26px;box-sizing:border-box;padding:5px 4px}
+
 .calendar-daycol-head .is-today{color:#fff;background:var(--blue-glow);padding:2px 6px;border-radius:99px}
 .calendar-daycol-body{position:relative;background-image:repeating-linear-gradient(to bottom,
-  color-mix(in srgb,var(--line) 55%,transparent) 0 1px,transparent 1px 44px)}
+  color-mix(in srgb,var(--line) 55%,transparent) 0 1px,transparent 1px var(--calendar-hour-h))}
 .calendar-daycol-empty{position:absolute;top:10px;left:0;right:0;text-align:center;
   font:700 9px var(--mono);color:var(--text-faint);opacity:.55}
 .calendar-slot{position:absolute;left:3px;right:3px;display:block;overflow:hidden;text-align:left;

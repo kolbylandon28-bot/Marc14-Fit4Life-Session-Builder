@@ -456,6 +456,9 @@ function applyGymBrand() {
   const theme = portalThemePreset(brand.theme);
   applyBrandWatermark(brand);
   applyBrandText(brand);
+  /* Branch-specific fields follow the branch, so they are right the moment you switch rather
+     than only the next time a dialog opens. */
+  try { if (typeof syncBranchSpecificProfileFields === "function") syncBranchSpecificProfileFields(); } catch (_) {}
   const primary = brand.primary || "#3E6BE0", bright = brand.accent || "#5AA6F0";
   document.documentElement.style.setProperty("--blue",primary);
   document.documentElement.style.setProperty("--blue-bright",bright);

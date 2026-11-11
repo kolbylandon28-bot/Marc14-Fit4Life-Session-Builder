@@ -95,5 +95,16 @@ t("there is a plain black and white theme", /mono:\{ label:"Black & white"/.test
 t("the theme swatch renders the live mark", /escapeHtml\(brandMarkNow\(\)\)/.test(cs), true);
 t("a script wordmark keeps its lower case", /script \? word : word\.toUpperCase\(\)/.test(cs), true);
 
+/* V171: BYU-Idaho's membership tiers must not appear in a branch that has none. */
+const rp2 = require("fs").readFileSync(require("path").join(__dirname, "readiness-progress.js"), "utf8");
+const idx = require("fs").readFileSync(require("path").join(__dirname, "..", "..", "index.html"), "utf8");
+t("the tier fields are tagged", (idx.match(/data-tiers-only/g) || []).length >= 2, true);
+t("the membership tier field is one of them", /data-tiers-only><label for="profileEditTier"/.test(idx), true);
+t("so is sessions per week", /data-tiers-only><label for="profileEditSessionsPerWeek"/.test(idx), true);
+t("one switch hides them all", /querySelectorAll\("\[data-tiers-only\]"\)/.test(rp2), true);
+t("the heading stops promising a membership", /Goals and training style/.test(rp2), true);
+t("the editor applies it on open", /function openProfileEditor[\s\S]{0,80}syncBranchSpecificProfileFields\(\)/.test(rp2), true);
+t("switching branches reapplies it", /syncBranchSpecificProfileFields/.test(cs), true);
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);
