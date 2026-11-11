@@ -242,7 +242,7 @@ function trainerAttentionSnapshot() {
 
     const activity = progress.filter((entry) => progressEntryBelongsToClient(entry,profile)).sort((a,b) => String(b.date).localeCompare(String(a.date)))[0];
     const profileAge = now - new Date(profile.updatedAt || profile.createdAt || now).getTime();
-    if ((activity && now - new Date(activity.date).getTime() > 21 * 86400000) || (!activity && profileAge > 21 * 86400000)) push({id:"inactive:" + profile.id + ":" + String(activity && activity.id || "none"),profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"inactive",rank:6,createdAt:activity && activity.date || profile.updatedAt,label:"Follow-up due",detail:activity ? "No recorded activity for more than 21 days." : "No workout activity has been recorded for this client."});
+    if ((activity && now - new Date(activity.date).getTime() > 21 * 86400000) || (!activity && profileAge > 21 * 86400000 && assignmentsForClient(profile.id).length > 0)) push({id:"inactive:" + profile.id + ":" + String(activity && activity.id || "none"),profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"inactive",rank:6,createdAt:activity && activity.date || profile.updatedAt,label:"Follow-up due",detail:activity ? "No recorded activity for more than 21 days." : "No workout activity has been recorded for this client."});
 
     const program = savedProgramFor(profile), programAssignments = program ? assignments.filter((item) => item.profileId === profile.id && item.programId === program.id) : [], future = programAssignments.filter((item) => ["assigned","in_progress"].includes(assignmentStatus(item)));
     if (program && programAssignments.length && future.length <= 1) push({id:"program-ending:" + profile.id + ":" + program.id,profileId:profile.id,client:profile.name,trainer:profile.assignedTrainerName || "Coaching team",kind:"program",urgency:"high",rank:2,createdAt:program.savedAt || program.createdAt,label:"Program running out",detail:future.length ? "Only one published workout remains." : "No published workout remains in the current program."});
@@ -277,8 +277,12 @@ function trainerAttentionSnapshot() {
   // so the snapshot still works if that file is absent.
   if (typeof upcomingSessionAttentionItems === "function") { try { upcomingSessionAttentionItems().forEach(push); } catch (error) {} }
   if (typeof followUpAttentionItems === "function") { try { followUpAttentionItems().forEach(push); } catch (error) {} }
+  /* The badge used to count every receipt row that was DUE, not every row the trainer can
+     actually see, so a dismissed or snoozed row still showed in the count with nothing
+     behind it. Count what survives the filter. */
   const attentionState = loadAttentionState(), visibleItems = items.filter((item) => attentionItemIsVisible(item,attentionState)).sort((a,b) => Number(a.rank || 9) - Number(b.rank || 9) || Number(b.primaryCoach) - Number(a.primaryCoach) || new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
-  return {unanswered,assignmentReviews,checkinReviews,intakeReviews,recoveryOverdue,formalReviews,receiptRequests,recognition,trainerRequests,ownerRequests,automationAlerts,reviews:intakeReviews.length + assignmentReviews.length + checkinReviews.length + receiptRequests.length,items:visibleItems};
+  const visibleReceiptRequests = visibleItems.filter((item) => ["receipt_formal","receipt_weekly"].includes(item.kind));
+  return {unanswered,assignmentReviews,checkinReviews,intakeReviews,recoveryOverdue,formalReviews,receiptRequests,recognition,trainerRequests,ownerRequests,automationAlerts,reviews:intakeReviews.length + assignmentReviews.length + checkinReviews.length + visibleReceiptRequests.length,items:visibleItems};
 }
 function openCoachAttentionItem(profileId,kind,itemId) {
   if (kind === "trainer_request") { openCoachDestination(window.fit4lifeCloudRole === "owner" ? "access" : "approvals"); return; }

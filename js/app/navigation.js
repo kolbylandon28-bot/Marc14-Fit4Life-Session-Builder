@@ -380,9 +380,19 @@ function progressReceiptDueStatus(profile,type) {
   const cadence = type === "formal" ? "formal" : "weekly", receipts = progressReceiptsForProfile(profile.id,false), draft = receipts.find((item) => item.type === cadence && item.status === "draft");
   const startAt = draft && draft.periodStart || receiptPeriodStart(profile,cadence), assignments = reviewedAssignmentsSince(profile,startAt), startTime = receiptDate(startAt) || Date.now();
   const days = Math.max(0,Math.floor((Date.now() - startTime) / 86400000));
-  const due = Boolean(draft) || (cadence === "formal" ? assignments.length >= 4 || days >= 28 : assignments.length >= 2 && (days >= 7 || assignments.length >= 3));
+  /* A four-week review of nothing is not a review. The formal arm used to fire on elapsed
+     time alone, so any client older than 28 days with no published receipt was permanently
+     "due" - seven never-activated clients produced seven identical rows that nothing could
+     clear. The weekly arm beside it always required evidence; the formal arm now matches it.
+     A draft only pins the row once a trainer has actually written something, because simply
+     OPENING the editor persists an empty draft. */
+  const draftHasContent = Boolean(draft && (String(draft.summary || "").trim() || String(draft.note || "").trim() || String(draft.body || "").trim() || draft.publishedAt));
+  const enoughWork = cadence === "formal"
+    ? assignments.length >= 4 || (days >= 28 && assignments.length >= 2)
+    : assignments.length >= 2 && (days >= 7 || assignments.length >= 3);
+  const due = draftHasContent || enoughWork;
   const dueAt = new Date(startTime + (cadence === "formal" ? 28 : 7) * 86400000).toISOString();
-  return {due,type:cadence,draft,count:assignments.length,days,startAt,dueAt,assignments,reason:draft ? "A trainer draft is waiting to be published." : cadence === "formal" ? assignments.length >= 4 ? assignments.length + " reviewed workouts are ready for the four-week decision." : "The four-week review date has arrived." : assignments.length >= 3 ? assignments.length + " reviewed workouts are ready for a client update." : "The weekly coaching update is due."};
+  return {due,type:cadence,draft,count:assignments.length,days,startAt,dueAt,assignments,reason:draft ? "A trainer draft is waiting to be published." : cadence === "formal" ? assignments.length >= 4 ? assignments.length + " reviewed workouts are ready for the four-week decision." : "Four weeks have passed and there are reviewed workouts to decide on." : assignments.length >= 3 ? assignments.length + " reviewed workouts are ready for a client update." : "The weekly coaching update is due."};
 }
 function nextProgressReceiptRequest(profile) {
   const formal = progressReceiptDueStatus(profile,"formal"); if (formal.due) return formal;

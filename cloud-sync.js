@@ -306,6 +306,15 @@
   }
   window.fit4lifeCloudInviteDiagnostics = inviteDiagnostics;
 
+  /* An invite sent by a signed-in trainer belongs to the branch they are STANDING IN, not to
+     a ?gym= parameter. The branch switcher strips that parameter, so an invite sent from any
+     branch other than the one in the URL was being stamped "fit-4-life" and the new client
+     landed in BYU-Idaho. Public self-signup still uses the portal slug: nobody is signed in
+     yet, so the link is all there is. */
+  function invitingOrganizationSlug() {
+    return cloudOrganizationSlug || portalOrganizationSlug || "fit-4-life";
+  }
+
   async function sendClientInvite(email, fullName) {
     // An email cannot be un-sent by a snapshot restore.
     if (practiceSealed()) return { ok:false, error:"Practice mode: no invite was sent." };
@@ -322,7 +331,7 @@
             full_name: fullName || "",
             requested_role: "client",
             registration_source: "fit4life_trainer_invite",
-            organization_slug: portalOrganizationSlug || "fit-4-life"
+            organization_slug: invitingOrganizationSlug()
           }
         }
       });
@@ -356,6 +365,9 @@
     const id = String(organizationId || "").trim();
     if (!id || id === cloudOrganizationId) return false;
     rememberBranchId(id);
+    /* The reload below wipes this branch's cache. Anything still sitting in the push
+       debounce - a dismissal made seconds ago - would go with it. */
+    try { if (typeof flushCloudSync === "function") flushCloudSync(); } catch (_) {}
     try {
       const url = new URL(window.location.href);
       url.searchParams.delete("gym");
@@ -1566,6 +1578,17 @@
     return flushCloudSync(cloudRole === "client" ? "activity" : "plan");
   };
 
+  function mergeAttentionState(local, remote) {
+    const out = { ...(local || {}) };
+    Object.keys(remote || {}).forEach((id) => {
+      const mine = out[id], theirs = remote[id];
+      if (!mine) { out[id] = theirs; return; }
+      const a = recordTime(mine.updatedAt || mine.dismissedAt), b = recordTime(theirs.updatedAt || theirs.dismissedAt);
+      out[id] = b > a ? theirs : mine;
+    });
+    return out;
+  }
+
   function applyOrganizationBundle(payload) {
     if (!payload) return;
     writeJson(CLOUD_KEYS.requests, payload.profileRequests || []);
@@ -1575,7 +1598,11 @@
     writeJson(CLOUD_KEYS.marketPrograms, payload.marketPrograms || []);
     writeJson(CLOUD_KEYS.automations, payload.automations || []);
     writeJson(CLOUD_KEYS.automationAlerts, payload.automationAlerts || []);
-    writeJson(CLOUD_KEYS.attentionState, payload.attentionState || {});
+    /* Every entry here carries updatedAt, so the newer one wins per item rather than the
+       whole object being replaced. A wholesale write destroyed a dismissal or snooze that
+       was still inside the 650ms push debounce - which is why clearing an action row
+       "never really worked". */
+    writeJson(CLOUD_KEYS.attentionState, mergeAttentionState(readJson(CLOUD_KEYS.attentionState, {}), payload.attentionState || {}));
     writeJson(CLOUD_KEYS.exerciseLibraryEdits, payload.exerciseLibraryEdits || []);
     writeJson(CLOUD_KEYS.ownerRequests, payload.ownerRequests || []);
     writeJson(CLOUD_KEYS.coachTaskClaims, payload.coachTaskClaims || []);
@@ -2474,7 +2501,7 @@
           full_name: fullName || "",
           requested_role: role === "staff" ? "staff" : "trainer",
           registration_source: "fit4life_staff_invite",
-          organization_slug: portalOrganizationSlug || "fit-4-life"
+          organization_slug: invitingOrganizationSlug()
         }
       }
     });
