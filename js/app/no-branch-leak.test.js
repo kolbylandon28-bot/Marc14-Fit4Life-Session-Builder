@@ -37,7 +37,16 @@ const UNSAFE = [
   [/organization_id\s+in\s*\(\s*select/i,                     "loose: every org the caller belongs to"],
   [/order\s+by\s+\w*\.?created_at\s+asc[\s\S]{0,120}?limit\s+1/i, "the caller's OLDEST membership"],
   [/select\s+\w*\.?organization_id\s+into\s+\w+[\s\S]{0,400}?limit\s+1/i, "inlines its own limit 1"],
+  /* Pattern four, found 2026-11-11: an existence check against memberships with NO
+     organization filter - "is this person staff ANYWHERE". The owner belongs to three
+     branches, so it answers yes from inside any of them. */
+  [/from\s+public\.memberships[\s\S]{0,260}?(?!.*organization_id)\)/i, null],
 ];
+/* Checked separately because it needs a negative match across the whole predicate. */
+function unfilteredMembershipLookup(chunk) {
+  const blocks = chunk.match(/from\s+public\.memberships\b[\s\S]{0,300}?(?=\n\s*(?:if|then|return|raise|;|end)|$)/gi) || [];
+  return blocks.some((b) => /user_id\s*=/.test(b) && !/organization_id/.test(b));
+}
 
 /* Functions redefined by a migration are judged on the migration, which is what is live. */
 const migrated = new Set();
@@ -60,7 +69,8 @@ function offenders(dir, only) {
       if (name === "fit4life_active_org" || name === "fit4life_my_org") return;
       if (only && !only(name)) return;
       if (chunk.includes("fit4life_active_org")) return;
-      UNSAFE.forEach(([re, why]) => { if (re.test(chunk)) out.push(name + " — " + why); });
+      UNSAFE.forEach(([re, why]) => { if (why && re.test(chunk)) out.push(name + " — " + why); });
+      if (unfilteredMembershipLookup(chunk)) out.push(name + " — asks \"is this person staff ANYWHERE\"");
     });
   });
   return [...new Set(out)];

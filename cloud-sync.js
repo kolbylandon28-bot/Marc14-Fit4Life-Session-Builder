@@ -2404,7 +2404,7 @@
 
   window.fit4lifeCloudApproveRegistration = async function fit4lifeCloudApproveRegistration(requestId) {
     if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return false;
-    const response = await cloudClient.rpc("approve_fit4life_registration", { target_request: requestId });
+    const response = await orgRpc("approve_fit4life_registration", { target_request: requestId });
     if (response.error) {
       if (typeof showToast === "function") showToast(response.error.message || "The account could not be approved");
       return false;
@@ -2421,7 +2421,7 @@
     const settings = options || {}, kind = settings.kind === "trainer" ? "trainer" : "client";
     if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return false;
     if (!settings.skipConfirm && !window.confirm("Reject this " + kind + " account request? The person will keep their login but will not receive " + kind + " access.")) return false;
-    const response = await cloudClient.rpc("reject_fit4life_registration", { target_request: requestId, trainer_note: "Please contact the gym so a trainer can verify your account details." });
+    const response = await orgRpc("reject_fit4life_registration", { target_request: requestId, trainer_note: "Please contact the gym so a trainer can verify your account details." });
     if (response.error) {
       if (typeof showToast === "function") showToast(response.error.message || "The request could not be rejected");
       return false;
@@ -2433,7 +2433,7 @@
 
   window.fit4lifeCloudListTrainers = async function fit4lifeCloudListTrainers() {
     if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return [];
-    const response = await cloudClient.rpc("list_fit4life_trainers");
+    const response = await orgRpc("list_fit4life_trainers", {});
     if (response.error) { console.error("Trainer list failed", response.error); return null; }
     window.fit4lifeCloudTrainers = Array.isArray(response.data) ? response.data : [];
     // Tiers come from a separate additive RPC rather than by redefining list_fit4life_trainers,
@@ -2834,7 +2834,7 @@
   window.fit4lifeCloudSetTrainerTier = async function fit4lifeCloudSetTrainerTier(userId, tier) {
     if (!cloudClient || cloudRole !== "owner") { if (typeof showToast === "function") showToast("Only an owner can change a trainer's tier"); return false; }
     if (!userId || !["staff_standard","staff_premium"].includes(tier)) return false;
-    const response = await cloudClient.rpc("set_fit4life_trainer_tier", { target_user:userId, target_tier:tier });
+    const response = await orgRpc("set_fit4life_trainer_tier", { target_user:userId, target_tier:tier });
     if (response.error) {
       if (typeof showToast === "function") showToast(response.error.message || "The trainer tier could not be saved");
       return false;
@@ -2883,7 +2883,7 @@
 
   window.fit4lifeCloudApproveTrainer = async function fit4lifeCloudApproveTrainer(email, displayName) {
     if (!cloudClient || cloudRole !== "owner") return { ok:false,message:"Only an active owner can approve trainer access." };
-    const response = await cloudClient.rpc("approve_fit4life_trainer_account", { target_email:normalizedEmail(email),target_display_name:String(displayName || "").trim() });
+    const response = await orgRpc("approve_fit4life_trainer_account", { target_email:normalizedEmail(email),target_display_name:String(displayName || "").trim() });
     if (response.error) return { ok:false,message:response.error.message || "Trainer approval failed." };
     await window.fit4lifeCloudListTrainers();
     return { ok:true,data:response.data };
@@ -2899,7 +2899,7 @@
       return {ok:true};
     }
     if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return { ok:false,message:"Trainer access is required." };
-    const response = await cloudClient.rpc("update_my_fit4life_staff_name", { target_display_name:String(displayName || "").trim() });
+    const response = await orgRpc("update_my_fit4life_staff_name", { target_display_name:String(displayName || "").trim() });
     if (response.error) return { ok:false,message:response.error.message || "The display name could not be saved." };
     await window.fit4lifeCloudListTrainers();
     return { ok:true };
@@ -2907,7 +2907,7 @@
 
   window.fit4lifeCloudDeactivateTrainer = async function fit4lifeCloudDeactivateTrainer(userId) {
     if (!cloudClient || cloudRole !== "owner") return { ok:false,message:"Only the owner can deactivate trainer accounts." };
-    const response = await cloudClient.rpc("deactivate_fit4life_trainer_account", { target_user:userId });
+    const response = await orgRpc("deactivate_fit4life_trainer_account", { target_user:userId });
     if (response.error) return { ok:false,message:response.error.message || "Trainer deactivation failed." };
     await window.fit4lifeCloudListTrainers();
     return { ok:true };
