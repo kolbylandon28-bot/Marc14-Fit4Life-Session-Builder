@@ -1249,7 +1249,7 @@ function renderCoachSettings(out) {
       ? renderOrganizationModule()
       : '<section class="coach-module-card"><h3>Gym setup</h3><p>The active theme appears here automatically. Only an owner can publish a different holiday theme or change shared setup.</p><div class="tool-actions"><button class="small-btn" onclick="openOwnerRequestDialog(\'organization_setting\',\'\',\'\',\'Change the shared holiday theme, gym appearance, or shared setup\')">Request a change</button></div></section>';
   } else {
-    if (typeof bookingImportPanelHtml === "function") panels += bookingImportPanelHtml();
+    if (typeof bookingImportPanelHtml === 'function' && (typeof window.fit4lifeModuleEnabled !== 'function' || window.fit4lifeModuleEnabled('booking_import'))) panels += bookingImportPanelHtml();
     if (owner) panels += archivedClientsPanelHtml();
     if (owner) panels += trainerLinksPanelHtml();
     if (typeof inviteEmailTestPanelHtml === "function") panels += inviteEmailTestPanelHtml();

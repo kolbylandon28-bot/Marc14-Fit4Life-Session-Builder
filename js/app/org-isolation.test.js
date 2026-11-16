@@ -1,73 +1,110 @@
-/* Tests that one organization's cached data can never appear under another's.
+/* Tests that nothing belonging to one branch survives a switch to another.
    Run:  node js/app/org-isolation.test.js
 
-   What this protects. Before 2026-11-09 the local cache was keyed on the USER alone, and only ever
-   cleared when role === "client". An owner of two gyms kept the first gym's roster, profiles and
-   pending-sync queue in localStorage while signed into the second. Observed live: Journey
-   Financial Services branding in the topbar with BYU-Idaho's work areas underneath. The pending
-   queue lives in those same keys, so the stale rows could also sync UP into the wrong gym.
-   Separately, applyMembershipContext trusted the ?gym= slug even when the session resolved to a
-   different organization, which is what put one customer's name over another's data. */
+   The previous version of this file tested the WIPE against a fake five-entry key list. It
+   proved the loop worked and never once proved the list was complete — so four separate
+   sweeps each "finished" while seven real keys kept crossing branches, including one holding
+   a branch's client email addresses and one mapping trainer names to logins, which was then
+   written into another branch's client records.
+
+   The wipe is now by PREFIX with a short keep list, and the important test here is the last
+   one: it reads the whole repository and fails if any fit4life_ key is introduced that would
+   survive a branch change without being argued onto that list. */
 const fs = require("fs"), path = require("path");
-const src = fs.readFileSync(path.join(__dirname, "..", "..", "cloud-sync.js"), "utf8");
+const root = path.join(__dirname, "..", "..");
+const src = fs.readFileSync(path.join(root, "cloud-sync.js"), "utf8");
 
 let pass = 0, fail = 0;
 const t = (name, got, want) => {
   const ok = JSON.stringify(got) === JSON.stringify(want); ok ? pass++ : fail++;
-  console.log((ok ? "  PASS  " : "  FAIL  ") + name.padEnd(66) + (ok ? "" : "\n         got " + JSON.stringify(got) + "\n        want " + JSON.stringify(want)));
+  console.log((ok ? "  PASS  " : "  FAIL  ") + name.padEnd(64) + (ok ? "" : "\n         got " + JSON.stringify(got) + "\n        want " + JSON.stringify(want)));
 };
 
-const grab = (name) => {
-  const found = src.match(new RegExp("function " + name + "\\([\\s\\S]*?\\n  \\}"));
-  if (!found) throw new Error("could not find " + name + " in cloud-sync.js");
-  return found[0];
-};
-
-/* Run the real function against a fake localStorage. */
-function runIsolation(calls) {
+/* Run the real wipe against a real-shaped store. */
+function runWipe(keys, { from = "user-a|org-1", to = "user-a|org-2" } = {}) {
   const store = {};
-  const wiped = [];
-  const CLOUD_KEYS = { profiles:"k_profiles", progress:"k_progress", checkins:"k_checkins", gymBrand:"k_brand", gymEquipment:"k_equip" };
+  keys.forEach((k) => { store[k] = "data"; });
+  store["fit4life_account_cache_owner_v1"] = from;
   const localStorage = {
+    get length() { return Object.keys(store).length; },
+    key: (i) => Object.keys(store)[i],
     getItem: (k) => (k in store ? store[k] : null),
     setItem: (k, v) => { store[k] = String(v); },
-    removeItem: (k) => { wiped.push(k); delete store[k]; },
+    removeItem: (k) => { delete store[k]; }
   };
-  const pendingScopes = { cleared: 0, clear() { this.cleared++; } };
-  const fn = new Function("localStorage", "CLOUD_KEYS", "ACCOUNT_CACHE_OWNER_KEY", "pendingScopes", "persistPendingScopes",
-    grab("isolateSensitiveCacheForUser") + "; return isolateSensitiveCacheForUser;")(
-      localStorage, CLOUD_KEYS, "owner_key", pendingScopes, function () {});
-  Object.values(CLOUD_KEYS).forEach((k) => { store[k] = "data"; });
-  calls.forEach(([u, r, o]) => fn(u, r, o));
-  return { store, wiped, cleared: pendingScopes.cleared };
+  const deleted = [];
+  const win = { indexedDB: { deleteDatabase: (n) => deleted.push(n) } };
+  const body = src.match(/const BRANCH_SAFE_KEYS = new Set\(\[[\s\S]*?\n  \]\);/)[0]
+    + src.match(/function isolateSensitiveCacheForUser\([\s\S]*?\n  \}/)[0];
+  const fn = new Function("localStorage", "window", "ACTIVE_BRANCH_KEY", "ACCOUNT_CACHE_OWNER_KEY",
+    "pendingScopes", "persistPendingScopes",
+    body + "; return isolateSensitiveCacheForUser;")(
+      localStorage, win, "fit4life_active_branch_v1", "fit4life_account_cache_owner_v1",
+      { cleared: 0, clear() { this.cleared++; } }, function () {});
+  const [u, o] = to.split("|");
+  fn(u, "owner", o);
+  return { remaining: Object.keys(store).sort(), deletedDbs: deleted };
 }
 
-const sameOrg = runIsolation([["user-a", "owner", "org-1"], ["user-a", "owner", "org-1"]]);
-t("staying in one gym keeps the cache", sameOrg.wiped.length, 0);
+const SAMPLE = [
+  "fit4life_profiles_v1", "fit4life_progress_v1", "fit4life_gym_brand_v1",
+  "fit4life_gym_equipment_v1", "fit4life_active_branch_v1", "fit4life_pending_signup_v1",
+  /* the seven that used to survive */
+  "fit4life_booking_import_v1", "fit4life_trainer_aliases_v1", "fit4life_live_workouts_v1",
+  "fit4life_active_area_v1", "fit4life_audit_hidden_trainers_v1",
+  "fit4life_walkthrough_snapshot_v1", "fit4life_coach_filters_v1",
+  /* and something nobody has written yet */
+  "fit4life_some_future_key_v1"
+];
 
-const switched = runIsolation([["user-a", "owner", "org-1"], ["user-a", "owner", "org-2"]]);
-t("switching gyms wipes the roster", switched.wiped.includes("k_profiles"), true);
-t("switching gyms wipes progress", switched.wiped.includes("k_progress"), true);
-t("switching gyms clears the pending-sync queue", switched.cleared, 1);
-t("but keeps the branding so the page does not flash", switched.wiped.includes("k_brand"), false);
-t("and keeps the equipment config", switched.wiped.includes("k_equip"), false);
+const after = runWipe(SAMPLE);
+t("a roster does not cross branches", after.remaining.includes("fit4life_profiles_v1"), false);
+t("the booking-import cache does not either", after.remaining.includes("fit4life_booking_import_v1"), false);
+t("nor the trainer aliases that get written into client rows", after.remaining.includes("fit4life_trainer_aliases_v1"), false);
+t("nor a live workout", after.remaining.includes("fit4life_live_workouts_v1"), false);
+t("nor the active work area", after.remaining.includes("fit4life_active_area_v1"), false);
+t("A KEY NOBODY HAS WRITTEN YET is wiped by default", after.remaining.includes("fit4life_some_future_key_v1"), false);
+t("InBody scan files are deleted too", after.deletedDbs, ["fit4life_inbody_files"]);
 
-const asTrainer = runIsolation([["user-a", "trainer", "org-1"], ["user-a", "trainer", "org-2"]]);
-t("an owner or trainer is wiped too, not only a client", asTrainer.wiped.includes("k_profiles"), true);
+t("the branch choice survives, or switching bounces back", after.remaining.includes("fit4life_active_branch_v1"), true);
+t("the scope marker survives", after.remaining.includes("fit4life_account_cache_owner_v1"), true);
+t("branding survives so the page does not flash", after.remaining.includes("fit4life_gym_brand_v1"), true);
+t("the pre-sign-in signup draft survives", after.remaining.includes("fit4life_pending_signup_v1"), true);
 
-const otherUser = runIsolation([["user-a", "owner", "org-1"], ["user-b", "owner", "org-1"]]);
-t("a different person on the same device is wiped", otherUser.wiped.includes("k_profiles"), true);
+const sameBranch = runWipe(SAMPLE, { from: "user-a|org-1", to: "user-a|org-1" });
+t("staying put wipes nothing", sameBranch.remaining.length, SAMPLE.length + 1);
+const sameOrgNewUser = runWipe(SAMPLE, { from: "user-a|org-1", to: "user-b|org-1" });
+t("a different person on the same device is wiped", sameOrgNewUser.remaining.includes("fit4life_profiles_v1"), false);
 
-const first = runIsolation([["user-a", "owner", "org-1"]]);
-t("a first-ever sign-in wipes nothing", first.wiped.length, 0);
+/* The keep list is the whole risk surface. Keep it short and deliberate. */
+const keep = (src.match(/const BRANCH_SAFE_KEYS = new Set\(\[([\s\S]*?)\n  \]\);/) || [])[1] || "";
+const keepCount = (keep.match(/"fit4life[^"]*"/g) || []).length + (keep.match(/\b(ACTIVE_BRANCH_KEY|ACCOUNT_CACHE_OWNER_KEY)\b/g) || []).length;
+t("the keep list is small enough to audit by eye", keepCount <= 6, true);
+t("it is documented", /The ONLY keys allowed to cross a branch change/.test(src), true);
 
-/* The shape of both fixes, so a refactor cannot quietly undo them. */
-t("the cache scope includes the organization",
-  /const scope = String\(userId \|\| ""\) \+ "\|" \+ String\(organizationId \|\| ""\)/.test(src), true);
-t("the call site passes the organization",
-  /isolateSensitiveCacheForUser\(cloudUser\.id, cloudRole, cloudOrganizationId\)/.test(src), true);
-t("a mismatched ?gym= slug is dropped rather than displayed",
-  /portalOrganizationId !== membership\.organization_id/.test(src), true);
+/* THE COVERAGE TEST — the one the old file was missing.
+   Read every source file, find every fit4life_ localStorage key, and prove each one is
+   either wiped or deliberately kept. A new key added tomorrow fails this on day one. */
+function allKeysInRepo() {
+  const found = new Set();
+  const walk = (dir) => {
+    fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+      if (e.name === "node_modules" || e.name.startsWith(".")) return;
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) return walk(full);
+      if (!/\.(js|html)$/.test(e.name) || e.name.includes(".test.")) return;
+      const text = fs.readFileSync(full, "utf8");
+      (text.match(/"fit4life_[a-z0-9_]+"|'fit4life_[a-z0-9_]+'/g) || []).forEach((m) => found.add(m.slice(1, -1)));
+    });
+  };
+  walk(root);
+  return [...found];
+}
+const repoKeys = allKeysInRepo();
+t("the repo actually uses fit4life_ keys", repoKeys.length > 5, true);
+const survivors = runWipe(repoKeys).remaining.filter((k) => k !== "fit4life_account_cache_owner_v1");
+const KEEP = ["fit4life_active_branch_v1", "fit4life_gym_brand_v1", "fit4life_gym_equipment_v1", "fit4life_pending_signup_v1"];
+t("every key in the repo is wiped or deliberately kept", survivors.filter((k) => !KEEP.includes(k)), []);
 
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

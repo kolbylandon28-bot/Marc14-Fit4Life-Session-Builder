@@ -68,7 +68,9 @@ function offenders(dir, only) {
       const name = m[1];
       if (name === "fit4life_active_org" || name === "fit4life_my_org") return;
       if (only && !only(name)) return;
-      if (chunk.includes("fit4life_active_org")) return;
+      /* A function that merely MENTIONS the chokepoint used to pass, even if it also
+         resolved the org a second way elsewhere in its body. Only skip when the unsafe
+         patterns are absent too, which the checks below decide. */
       UNSAFE.forEach(([re, why]) => { if (why && re.test(chunk)) out.push(name + " — " + why); });
       if (unfilteredMembershipLookup(chunk)) out.push(name + " — asks \"is this person staff ANYWHERE\"");
     });

@@ -203,16 +203,39 @@
      owner of two gyms kept the first gym's roster in localStorage while signed into the second -
      the wrong gym's clients on screen, and the pending-sync queue able to push them up into the
      new gym. Any change of either half wipes it, for every role. */
+  /* The ONLY keys allowed to cross a branch change. Each needs a reason:
+     - the branch choice itself, or switching bounces straight back
+     - the scope marker this function compares against
+     - the brand and equipment, kept so the page does not flash the wrong colours mid-switch
+     - the pre-sign-in signup draft, which belongs to nobody's branch yet */
+  const BRANCH_SAFE_KEYS = new Set([
+    ACTIVE_BRANCH_KEY,
+    ACCOUNT_CACHE_OWNER_KEY,
+    "fit4life_gym_brand_v1",
+    "fit4life_gym_equipment_v1",
+    "fit4life_pending_signup_v1"
+  ]);
+
   function isolateSensitiveCacheForUser(userId, role, organizationId) {
     const scope = String(userId || "") + "|" + String(organizationId || "");
     let previous = "";
     try { previous = localStorage.getItem(ACCOUNT_CACHE_OWNER_KEY) || ""; } catch (_) {}
     if (previous && previous !== scope) {
-      Object.values(CLOUD_KEYS).forEach((key) => {
-        if (key !== CLOUD_KEYS.gymBrand && key !== CLOUD_KEYS.gymEquipment) {
-          try { localStorage.removeItem(key); } catch (_) {}
-        }
+      /* This used to wipe only the keys listed in CLOUD_KEYS, so any key nobody remembered to
+         add survived a branch change. Seven did - including one holding a branch's real client
+         email addresses and one mapping trainer names to logins, which was then written into
+         ANOTHER branch's client records. Wiping by prefix inverts the burden: a new key is
+         cleared by default and has to be argued onto the keep list. */
+      let keys = [];
+      try { for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i)); } catch (_) {}
+      keys.forEach((key) => {
+        if (!key || key.indexOf("fit4life") !== 0) return;
+        if (BRANCH_SAFE_KEYS.has(key)) return;
+        try { localStorage.removeItem(key); } catch (_) {}
       });
+      /* InBody scan files are body-composition records and live outside localStorage, so the
+         wipe could never reach them. */
+      try { if (window.indexedDB) window.indexedDB.deleteDatabase("fit4life_inbody_files"); } catch (_) {}
       pendingScopes.clear();
       persistPendingScopes();
     }
@@ -2858,9 +2881,15 @@
 
   window.fit4lifeCloudPendingBookingImports = async function fit4lifeCloudPendingBookingImports() {
     if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return [];
+    /* Without this filter the list returned EVERY branch's pending roster export, because the
+       policy asks "is the caller a member anywhere" rather than comparing the row's branch.
+       Opening one then diffed another customer's students against this branch's roster and
+       offered to create them all. */
+    if (!cloudOrganizationId) return [];
     const response = await cloudClient
       .from("booking_imports")
       .select("id,fingerprint,filename,subject,sender,csv_body,received_at")
+      .eq("organization_id", cloudOrganizationId)
       .eq("status","pending")
       .order("received_at",{ ascending:false })
       .limit(10);
@@ -2871,9 +2900,11 @@
   window.fit4lifeCloudMarkBookingImport = async function fit4lifeCloudMarkBookingImport(id,status) {
     if (!cloudClient || !(cloudRole === "owner" || cloudRole === "trainer")) return false;
     if (!["applied","ignored"].includes(status)) return false;
+    if (!cloudOrganizationId) return false;
     const response = await cloudClient
       .from("booking_imports")
       .update({ status, applied_at:new Date().toISOString(), applied_by:cloudUser && cloudUser.id || null })
+      .eq("organization_id", cloudOrganizationId)
       .eq("id",id);
     if (response.error) { console.error("Could not mark the import",response.error); return false; }
     return true;
