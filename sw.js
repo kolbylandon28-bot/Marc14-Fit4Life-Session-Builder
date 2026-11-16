@@ -1,6 +1,6 @@
-const CACHE_NAME = "fit4life-shell-2026-11-16-v177-leak-five-r1";
+const CACHE_NAME = "fit4life-shell-2026-11-16-v178-domain-r1";
 const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.9";
-const ASSET_VERSION = "20261116-v177-leak-five-r1";
+const ASSET_VERSION = "20261116-v178-domain-r1";
 const SHELL = [
   "/",
   "/index.html",
