@@ -1060,13 +1060,21 @@
       requested_role: meta.requested_role === "trainer" ? "trainer" : "client",
       status: "pending"
     };
-    if (portalOrganizationId) row.organization_id = portalOrganizationId;
+    /* Without a branch this row is orphaned, and a real client became invisible to her
+       trainer because of it: no profile, no request, nothing for him to see. The active
+       branch is the right answer when she is signed in; the portal link is all there is
+       before that. */
+    const requestOrganization = cloudOrganizationId || portalOrganizationId;
+    if (requestOrganization) row.organization_id = requestOrganization;
     const response = await cloudClient.from("registration_requests").insert(row).select().maybeSingle();
     if (response.error) {
-      // 42P01 missing table, 42501 RLS refusal. Both mean the database is not set up for
-      // self-signup yet; neither deserves an alarming error on a client's device.
-      if (response.error.code !== "42P01" && response.error.code !== "42501") {
+      /* A missing table genuinely means self-signup is not installed and is not worth
+         alarming anyone over. A REFUSAL when we knew the branch is a real failure that used
+         to be swallowed, leaving the person stranded with nobody told. */
+      const expected = response.error.code === "42P01" || (response.error.code === "42501" && !requestOrganization);
+      if (!expected) {
         console.error("Registration request could not be created", response.error);
+        window.fit4lifeRegistrationRequestFailed = response.error.message || String(response.error.code || "refused");
       }
       return null;
     }
@@ -2045,8 +2053,12 @@
         }
         showPendingRequest({ email: cloudUser.email || "", status: "pending" }, false);
         setText("cloudPendingIcon", "!");
-        setText("cloudPendingTitle", "No client access assigned");
-        setText("cloudPendingCopy", "This login exists, but it is not connected to a client profile or registration request for " + portalName() + ". Contact that gym's trainer.");
+        setText("cloudPendingTitle", "Almost there");
+        /* The button below this already re-runs the claim, so the old copy ("contact that
+           gym's trainer") told the client there was nothing to try when in fact one tap
+           would connect them the moment their trainer adds them. */
+        setText("cloudPendingCopy", "Your trainer has not added you to " + portalName() + " yet, or they added you a moment ago. If they have just added you, press Check again.");
+        setText("cloudPendingCheck", "Check again");
         cloudStatus("Access not assigned", "error");
       }
       return;
