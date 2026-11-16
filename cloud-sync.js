@@ -7,6 +7,11 @@
   /* Deliberately NOT a CLOUD_KEY. Switching branches wipes those, and the choice
      of branch has to outlive the wipe or the switch bounces back. */
   const ACTIVE_BRANCH_KEY = "fit4life_active_branch_v1";
+  /* Same reason, one step earlier: manifest start_url is "/", so a PWA relaunch carries no
+     ?gym=. Without this a pending client is re-scoped to the is_default branch, her real
+     request row stops being found, and a SECOND pending request is filed in the wrong
+     branch - which the per-branch unique now permits and nothing in the app can undo. */
+  const PORTAL_SLUG_KEY = "fit4life_portal_slug_v1";
   const REMEMBER_SIGN_IN_KEY = "fit4life_remember_sign_in_v1";
   const CLOUD_KEYS = {
     profiles: "fit4life_profiles_v1",
@@ -79,8 +84,12 @@
   let organizationRefreshListenersBound = false;
   let cloudRegistrationRequests = [];
   let portalOrganizationId = "";
-  let portalOrganizationSlug = "fit-4-life";
+  let portalOrganizationSlug = "";
   let portalPublicRegistrationEnabled = true;
+  /* Resolved once per slug, not per call: every registration lookup would otherwise cost a
+     round trip. Cleared implicitly by a different slug arriving. */
+  let signupBranchSlug = "";
+  let signupBranchId = "";
   let cloudOrganizationSlug = "";
   let authMode = "signin";
   const pendingScopes = new Set();
@@ -207,13 +216,17 @@
      - the branch choice itself, or switching bounces straight back
      - the scope marker this function compares against
      - the brand and equipment, kept so the page does not flash the wrong colours mid-switch
-     - the pre-sign-in signup draft, which belongs to nobody's branch yet */
+     - the pre-sign-in signup draft, which belongs to nobody's branch yet
+     - the portal slug, or a PWA relaunch loses the branch she signed up to
+   Written as literals rather than the consts, so the wipe can be lifted out and run on its
+   own in a test harness. */
   const BRANCH_SAFE_KEYS = new Set([
     ACTIVE_BRANCH_KEY,
     ACCOUNT_CACHE_OWNER_KEY,
     "fit4life_gym_brand_v1",
     "fit4life_gym_equipment_v1",
-    "fit4life_pending_signup_v1"
+    "fit4life_pending_signup_v1",
+    "fit4life_portal_slug_v1"
   ]);
 
   function isolateSensitiveCacheForUser(userId, role, organizationId) {
@@ -341,8 +354,9 @@
      branch other than the one in the URL was being stamped "fit-4-life" and the new client
      landed in BYU-Idaho. Public self-signup still uses the portal slug: nobody is signed in
      yet, so the link is all there is. */
+  /* No branch, no link. A default here put one gym's invite in another gym's inbox. */
   function invitingOrganizationSlug() {
-    return cloudOrganizationSlug || portalOrganizationSlug || "fit-4-life";
+    return cloudOrganizationSlug || portalOrganizationSlug || "";
   }
 
   async function sendClientInvite(email, fullName) {
@@ -435,6 +449,43 @@
     } catch (_) {}
   }
 
+  function storedPortalSlug() {
+    try { return String(localStorage.getItem(PORTAL_SLUG_KEY) || "").trim(); } catch (_) { return ""; }
+  }
+
+  function rememberPortalSlug(slug) {
+    try {
+      if (slug) localStorage.setItem(PORTAL_SLUG_KEY, String(slug));
+      else localStorage.removeItem(PORTAL_SLUG_KEY);
+    } catch (_) {}
+  }
+
+  /* The branch the USER's OWN signup recorded. signUp writes organization_slug into
+     user_metadata, where nothing can strip it - not the switcher, not a PWA start_url, not a
+     forwarded link. Resolved through the same RPC the portal path uses. */
+  async function signupMetadataBranchId() {
+    if (!cloudClient || !cloudUser) return "";
+    const slug = String((cloudUser.user_metadata || {}).organization_slug || "").trim().toLowerCase();
+    if (!slug) return "";
+    if (signupBranchSlug === slug && signupBranchId) return signupBranchId;
+    const response = await cloudClient.rpc("resolve_gym_portal", { requested_slug: slug, requested_hostname: null });
+    const row = !response.error && Array.isArray(response.data) ? response.data[0] : null;
+    // A failed resolve is not cached, so a transient error does not pin the wrong branch.
+    if (!row || !row.organization_id) return "";
+    signupBranchSlug = slug;
+    signupBranchId = row.organization_id;
+    return signupBranchId;
+  }
+
+  /* The one order every registration-request path uses: the branch she is standing in, then
+     the branch her own signup recorded, then the portal link. A ?gym= parameter is last
+     because it is the only one of the three that can simply be absent. */
+  async function requestBranchId() {
+    if (cloudOrganizationId) return cloudOrganizationId;
+    const fromSignup = await signupMetadataBranchId();
+    return fromSignup || portalOrganizationId || "";
+  }
+
   /* One membership resolves silently - that is every client and every single-gym trainer.
      More than one must be CHOSEN. Taking rows[0] is exactly how one customer's screens
      opened over another customer's data, so this refuses to guess and asks instead. */
@@ -470,6 +521,8 @@
     if (portalOrganizationId && portalOrganizationId !== membership.organization_id) {
       portalOrganizationSlug = "";
       portalOrganizationId = "";
+      // The stored copy goes too, or the next launch resurrects the slug just dropped.
+      rememberPortalSlug("");
       try { localStorage.removeItem(CLOUD_KEYS.gymBrand); } catch (_) {}
     }
     if (portalOrganizationSlug) window.fit4lifeCloudOrganizationSlug = portalOrganizationSlug;
@@ -527,14 +580,20 @@
     if (context.equipment_config && typeof context.equipment_config === "object") writeJson(CLOUD_KEYS.gymEquipment, context.equipment_config);
     lastOrganizationSettingsLoadedAt = Date.now();
     try { if (typeof applyGymBrand === "function") applyGymBrand(); } catch (_) {}
+    /* The tab used to be hidden outright on a closed branch, which also shut out the people
+       the branch is FOR: Of Our Making is closed and has a trainer-created client who could
+       not reach a signup form at all. The address is what decides, and the address is not
+       known until it is typed - so the form stays reachable and fit4life_email_is_preapproved
+       decides on submit. A stranger still gets the same refusal. */
     const signupTab = document.querySelector && document.querySelector('[data-auth-mode="signup"]');
-    if (signupTab) signupTab.style.display = portalPublicRegistrationEnabled ? "" : "none";
+    if (signupTab) signupTab.style.display = "";
     return context;
   }
 
   async function loadPortalContext() {
     if (!cloudClient) return null;
-    const slug = requestedPortalSlug();
+    // URL first, then the slug the last resolved visit left behind.
+    const slug = requestedPortalSlug() || storedPortalSlug();
     const hostname = String(window.location.hostname || "").toLowerCase();
     let response = await cloudClient.rpc("resolve_gym_portal", {
       requested_slug: slug || null,
@@ -545,8 +604,12 @@
       response = await cloudClient.rpc("resolve_gym_portal", { requested_slug: null, requested_hostname: null });
       context = !response.error && Array.isArray(response.data) ? response.data[0] : null;
     }
-    if (context) return applyPortalContext(context);
-    portalOrganizationSlug = slug || "fit-4-life";
+    if (context) {
+      // Stored from the resolved row, so a hostname-resolved branch survives a relaunch too.
+      rememberPortalSlug(context.slug || slug);
+      return applyPortalContext(context);
+    }
+    portalOrganizationSlug = slug || "";
     return null;
   }
 
@@ -1034,8 +1097,11 @@
       }
     }
 
-    const claim = portalOrganizationId
-      ? await cloudClient.rpc("claim_my_client_profile_for_org", { target_organization: portalOrganizationId })
+    /* The same resolver the lookup and the file use, or the claim lands in one branch
+       while her request sits in another. */
+    const claimBranch = await requestBranchId();
+    const claim = claimBranch
+      ? await cloudClient.rpc("claim_my_client_profile_for_org", { target_organization: claimBranch })
       : await cloudClient.rpc("claim_my_client_profile");
     if (claim.error) {
       const activation = await cloudClient.rpc("activate_my_fit4life_client_account");
@@ -1053,10 +1119,21 @@
 
   async function getMyRegistrationRequest() {
     if (!cloudClient || !cloudUser) return null;
-    const response = await cloudClient
+    /* Scoped to the branch in play, because the caller files a new request ONLY when this
+       returns null. Unscoped, one row in ANY branch answered for every branch: a login that
+       already had a request at BYU-Idaho was shown that branch's pending or rejected screen
+       forever and never filed a request in the gym it was actually signing up to. The same
+       branch createMyRegistrationRequest files into, so a lookup and a file agree. Before a
+       branch is resolved there is nothing to scope to and the newest row is still the best
+       answer this can give. */
+    // Resolved through requestBranchId, so her own signup beats an absent ?gym=.
+    const requestOrganization = await requestBranchId();
+    let lookup = cloudClient
       .from("registration_requests")
       .select("*")
-      .eq("user_id", cloudUser.id)
+      .eq("user_id", cloudUser.id);
+    if (requestOrganization) lookup = lookup.eq("organization_id", requestOrganization);
+    const response = await lookup
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -1073,28 +1150,59 @@
   // trigger, and when that did not fire the client sat on a "pending" screen for a request
   // that did not exist while no trainer could see them. Created here so the route works
   // whether or not a trigger also does it. Only ever called after a lookup found nothing.
+  /* username and full_name are NOT NULL with no default, and full_name carries a >= 2
+     character CHECK. Every insert here used to omit username outright, so the recovery
+     path raised 23502 on every single call and the person was left on the pending screen
+     for a request that was never written. Derived the same way the database trigger
+     derives them, so a row written here and a row written by the trigger match. */
+  function registrationIdentity(user, meta) {
+    const fallback = "client-" + String(user.id || "").slice(0, 8);
+    let fullName = String(meta.full_name || meta.name || meta.display_name || "").trim();
+    if (fullName.length < 2) fullName = String(user.email || "").split("@")[0].trim();
+    if (fullName.length < 2) fullName = fallback;
+    let username = String(meta.username || "").trim() || fullName;
+    username = username.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+    return { fullName, username: username || fallback };
+  }
+
   async function createMyRegistrationRequest() {
     if (!cloudClient || !cloudUser) return null;
     const meta = cloudUser.user_metadata || {};
-    const row = {
-      user_id: cloudUser.id,
-      email: normalizedEmail(cloudUser.email || ""),
-      full_name: meta.full_name || "",
-      requested_role: meta.requested_role === "trainer" ? "trainer" : "client",
-      status: "pending"
-    };
+    /* A trainer request is a different table path with a different approval queue
+       (queue_fit4life_trainer_registration). Filing one as a client request would both be
+       refused by RLS and misrepresent them, so it is not attempted here. */
+    if (meta.requested_role === "trainer") {
+      window.fit4lifeRegistrationRequestFailed = "A trainer account has to be requested by a branch owner.";
+      return null;
+    }
     /* Without a branch this row is orphaned, and a real client became invisible to her
        trainer because of it: no profile, no request, nothing for him to see. The active
        branch is the right answer when she is signed in; the portal link is all there is
-       before that. */
-    const requestOrganization = cloudOrganizationId || portalOrganizationId;
-    if (requestOrganization) row.organization_id = requestOrganization;
+       before that. organization_id is NOT NULL, so with no branch there is nothing to
+       write and saying so beats a swallowed constraint error. */
+    // Same resolution as the lookup, or a file lands in a branch the lookup never reads.
+    const requestOrganization = await requestBranchId();
+    if (!requestOrganization) {
+      window.fit4lifeRegistrationRequestFailed = "No branch was resolved for this sign-up, so there is nowhere to file it.";
+      return null;
+    }
+    const identity = registrationIdentity(cloudUser, meta);
+    const row = {
+      user_id: cloudUser.id,
+      organization_id: requestOrganization,
+      email: normalizedEmail(cloudUser.email || ""),
+      full_name: identity.fullName,
+      username: identity.username,
+      requested_role: "client",
+      status: "pending"
+    };
     const response = await cloudClient.from("registration_requests").insert(row).select().maybeSingle();
     if (response.error) {
       /* A missing table genuinely means self-signup is not installed and is not worth
-         alarming anyone over. A REFUSAL when we knew the branch is a real failure that used
-         to be swallowed, leaving the person stranded with nobody told. */
-      const expected = response.error.code === "42P01" || (response.error.code === "42501" && !requestOrganization);
+         alarming anyone over. Everything else reaching here is a real failure that used to
+         be swallowed, leaving the person stranded with nobody told - the branch is known by
+         this point, so a refusal is never expected. */
+      const expected = response.error.code === "42P01";
       if (!expected) {
         console.error("Registration request could not be created", response.error);
         window.fit4lifeRegistrationRequestFailed = response.error.message || String(response.error.code || "refused");
@@ -1247,7 +1355,17 @@
     if (cloudRegistrationChannel) cloudClient.removeChannel(cloudRegistrationChannel);
     cloudRegistrationChannel = cloudClient
       .channel("fit4life-registration-" + cloudUser.id)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "registration_requests", filter: "user_id=eq." + cloudUser.id }, async () => {
+      /* Realtime takes one filter expression, so the login is matched there and the branch
+         here. A review in another branch used to re-run the whole session and paint that
+         branch's pending screen over the one the person is signing up to. Read fresh each
+         time rather than captured, so a branch switch does not leave a stale watch. With no
+         branch resolved yet, every row for this login still counts. */
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "registration_requests", filter: "user_id=eq." + cloudUser.id }, async (payload) => {
+        const changed = payload && (payload.new || payload.old);
+        const changedOrganization = changed && changed.organization_id;
+        // Same resolution again, or a stale branch discards the trainer's real approval.
+        const watchedOrganization = await requestBranchId();
+        if (watchedOrganization && changedOrganization && changedOrganization !== watchedOrganization) return;
         const sessionResponse = await cloudClient.auth.getSession();
         if (sessionResponse.data && sessionResponse.data.session) await handleSession(sessionResponse.data.session);
       })
@@ -2202,9 +2320,18 @@
       check_email: email,
       target_organization: portalOrganizationId || null
     });
-    if (preapproved.error) {
-      console.warn("FIT 4 LIFE pre-approval check unavailable - allowing signup", preapproved.error.message || preapproved.error);
-    } else if (preapproved.data === false) {
+    const checkUnavailable = Boolean(preapproved.error);
+    if (checkUnavailable) console.warn("FIT 4 LIFE pre-approval check unavailable - allowing signup", preapproved.error.message || preapproved.error);
+    const addressOnFile = !checkUnavailable && preapproved.data !== false;
+    /* A closed branch still admits an address its own trainer already put on file - that is
+       the only route a trainer-created client ever has to a login, and it is live right now.
+       A stranger keeps the old refusal, and so does everyone while the check is unavailable:
+       with nothing to verify against, a closed branch stays closed. */
+    if (!portalPublicRegistrationEnabled && !addressOnFile) {
+      authMessage("This gym is not accepting public client account requests. Ask a trainer for an invitation.", true);
+      return false;
+    }
+    if (!checkUnavailable && !addressOnFile) {
       authMessage("Your trainer has not added this address yet. Check the spelling, or ask them to add you.", true);
       return false;
     }
@@ -2224,8 +2351,10 @@
       authMessage("The secure account service is still connecting. Try again in a moment.", true);
       return false;
     }
-    if (!portalPublicRegistrationEnabled) {
-      authMessage("This gym is not accepting public client account requests. Ask a trainer for an invitation.", true);
+    /* Refuse rather than guess. The branch decides who reads her health answers, so a
+       sign-up that cannot name one has no safe default. */
+    if (!portalOrganizationSlug) {
+      authMessage("This link does not name a gym, so the account cannot be created. Ask your trainer for their gym's link.", true);
       return false;
     }
     const button = document.getElementById("cloudSignUpSubmit");
@@ -2243,7 +2372,7 @@
             username,
             requested_role: "client",
             registration_source: "fit4life_web",
-            organization_slug: portalOrganizationSlug || "fit-4-life"
+            organization_slug: portalOrganizationSlug
           }
         }
       });
@@ -2309,6 +2438,12 @@
       authMessage("Confirm the email-verification and staff-confirmation requirements.", true);
       return false;
     }
+    /* Refuse rather than guess. The branch decides who reads her health answers, so a
+       sign-up that cannot name one has no safe default. */
+    if (!portalOrganizationSlug) {
+      authMessage("This link does not name a gym, so the account cannot be created. Ask your trainer for their gym's link.", true);
+      return false;
+    }
     const button = document.getElementById("cloudTrainerSignUpSubmit");
     button.disabled = true;
     button.textContent = "Submitting request…";
@@ -2323,7 +2458,7 @@
             full_name: fullName,
             requested_role: "trainer",
             registration_source: "fit4life_trainer_request",
-            organization_slug: portalOrganizationSlug || "fit-4-life"
+            organization_slug: portalOrganizationSlug
           }
         }
       });

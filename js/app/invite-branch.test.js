@@ -27,7 +27,11 @@ t("standing in your own branch invites into it", run("of-our-making", ""), "of-o
 t("the active branch beats a stale URL parameter", run("of-our-making", "fit-4-life"), "of-our-making");
 t("standing in Journey invites into Journey", run("journey", ""), "journey");
 t("with no active branch the portal link is used", run("", "journey"), "journey");
-t("with neither, it falls back rather than failing", run("", ""), "fit-4-life");
+/* Was: falls back to "fit-4-life". That fallback is what put one gym's invite in another
+   gym's inbox, and it is why every first-timer on a new domain landed in BYU-Idaho. With no
+   branch there is no safe default, so it now returns empty and the caller refuses. */
+t("with neither, it refuses rather than guessing", run("", ""), "");
+t("no hardcoded branch is left in the resolver", /\|\| "fit-4-life"/.test(body), false);
 
 /* Which call sites changed, and which deliberately did not. */
 const sites = src.split("\n")
@@ -35,8 +39,12 @@ const sites = src.split("\n")
   .filter((x) => x.l.includes("organization_slug:"));
 t("there are still four signup paths", sites.length, 4);
 t("two follow the active branch", sites.filter((x) => x.l.includes("invitingOrganizationSlug()")).length, 2);
-t("two keep the portal slug for public signup",
-  sites.filter((x) => x.l.includes('portalOrganizationSlug || "fit-4-life"')).length, 2);
+t("two carry the portal slug, undefaulted",
+  sites.filter((x) => /organization_slug: portalOrganizationSlug\s*$/.test(x.l.trim())).length, 2);
+t("neither public signup path defaults the branch",
+  sites.filter((x) => x.l.includes('"fit-4-life"')).length, 0);
+t("both public signup paths refuse without a branch",
+  (src.match(/if \(!portalOrganizationSlug\) \{/g) || []).length, 2);
 t("the client invite follows the active branch",
   /sendClientInvite[\s\S]{0,900}organization_slug: invitingOrganizationSlug\(\)/.test(src), true);
 
