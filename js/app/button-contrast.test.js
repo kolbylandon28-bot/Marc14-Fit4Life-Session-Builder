@@ -47,5 +47,18 @@ t("they read the variable instead",
 t("the fallback is still white, so an unbranded load looks unchanged",
   /var\(--on-brand,#fff\)/.test(css), true);
 
+/* V175: the first sweep looked for color:#fff and missed the `white` KEYWORD, so the
+   selected tab in a segmented control stayed white-on-white. Catch every spelling. */
+function brandBgWithLightText(sheet) {
+  const BRAND = /background(?:-color)?:\s*var\(--(?:blue|blue-bright|blue-deep|grad|event-accent|event-accent-2)\)/;
+  const LIGHT = /color:\s*(white|#fff\b|#ffffff\b|rgb\(255,\s*255,\s*255\))/i;
+  return (sheet.match(/\{[^{}]*\}/g) || []).filter((b) => BRAND.test(b) && LIGHT.test(b));
+}
+t("no brand background forces a light label", brandBgWithLightText(css).length, 0);
+t("the segmented control reads the variable",
+  /\.segment-btn\.on\{[^}]*color:var\(--on-brand,#fff\)/.test(css), true);
+t("so does the calendar view toggle",
+  /calendar-view-btn\.on[^}]*color:var\(--on-brand,#fff\)/.test(css), true);
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

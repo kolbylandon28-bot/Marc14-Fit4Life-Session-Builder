@@ -594,6 +594,29 @@ function parseRestSeconds(value) {
 }
 function startActiveRest(exercise,block) { const rx = exercise.rx || block && block.rx || {}; setRestTimer(parseRestSeconds(rx.rest)); toggleRestTimer(); }
 function restartCurrentActiveRest() { const data = activeAssignmentAndSession(), unit = activeWorkoutUnits(data.session,activeWorkout.shortened)[activeWorkout.unitIndex]; if (!unit) return; const exercise = unit.items[activeWorkout.pairIndex] || unit.items[0]; startActiveRest(exercise,unit.block); }
+/* "Weight" alone is ambiguous the moment someone picks up two dumbbells: 50, or 100? The
+   app did not know either, so every progression comparison rested on a guess. A dumbbell or
+   kettlebell is logged as ONE implement - what a lifter means, and what the rack is labelled
+   with. A barbell is logged as everything on it, bar included. Where only one implement is
+   used, like a goblet squat, the two are the same number, so per-implement is always safe. */
+const LOAD_MODES = {
+  dumbbell:   { mode: "per_dumbbell", hint: "each dumbbell" },
+  kettlebell: { mode: "per_bell",     hint: "each bell" },
+  rack:       { mode: "total",        hint: "bar + plates" },
+  platform:   { mode: "total",        hint: "bar + plates" },
+  cable:      { mode: "stack",        hint: "the stack" },
+  machine:    { mode: "stack",        hint: "the stack" }
+};
+
+function loadModeFor(exercise) {
+  return LOAD_MODES[exercise && exercise.zone] || { mode: "total", hint: "" };
+}
+
+function weightFieldLabel(exercise) {
+  const hint = loadModeFor(exercise).hint;
+  return hint ? "Weight \u00b7 " + hint : "Weight";
+}
+
 function activeSetField(label,input,className) { const wrap = el('div',className || ''); wrap.append(el('label','',label),input); return wrap; }
 function progressEntryBelongsToClient(entry,profile) { return Boolean(entry && profile && (entry.profileId === profile.id || (!entry.profileId && clientMatches(entry.client,profile.name)))); }
 function activeWorkoutHistoryHtml(profile,exercise,currentSessionId) {
@@ -677,7 +700,7 @@ function buildSupersetPartnerRow(data,unit,partner,roundNumber) {
 
   const row = el('div','active-set-row superset-partner' + (saved ? ' saved' : ''));
   row.append(el('div','active-set-number','A2 · set ' + nextUnset));
-  if (!bodyweightOnly && !cardioOnly) row.append(activeSetField('Weight',load));
+  if (!bodyweightOnly && !cardioOnly) row.append(activeSetField(weightFieldLabel(partner),load));
   row.append(activeSetField(cardioOnly ? 'Minutes / distance' : bodyweightOnly ? 'Reps / seconds' : 'Reps',reps),activeSetField('Effort',effort,'active-effort'));
   return { row, partner, nextUnset, saved, bodyweightOnly, cardioOnly,
            unitValue:(recommendation && recommendation.unit) || (previous && previous.unit) || 'lb' };
@@ -826,7 +849,7 @@ function renderActiveWorkoutInner() {
   if (saved && saved.data) { if (saved.data.load != null) load.value = saved.data.load; if (saved.data.reps != null) reps.value = saved.data.reps; }
   else if (draft) { load.value = draft.load || ""; reps.value = draft.reps || ""; }
   else { if (recommendation && recommendation.load) load.value = recommendation.load; const target = plannedRepTarget(rx); if (target) reps.value = target; }
-  const row = el('div','active-set-row' + (saved ? ' saved' : '')); row.append(el('div','active-set-number','Set ' + nextUnset)); if (!bodyweightOnly && !cardioOnly) row.append(activeSetField('Weight',load)); row.append(activeSetField(cardioOnly ? 'Minutes / distance' : bodyweightOnly ? 'Reps / seconds' : 'Reps',reps),activeSetField('Effort',effort,'active-effort')); const save = el('button','small-btn primary',saved ? 'Update result' : 'Log & continue'); save.dataset.wt = 'log-set'; save.onclick = () => saveActiveSet(exercise,nextUnset,saved && saved.id,bodyweightOnly,cardioOnly,recommendation && recommendation.unit || previous && previous.unit || 'lb'); const skip = el('button','small-btn',saved ? 'Saved' : 'Skip set'); skip.dataset.wt = 'skip-set'; skip.disabled = Boolean(saved); skip.onclick = () => skipCurrentActiveSet(); row.append(save,skip);
+  const row = el('div','active-set-row' + (saved ? ' saved' : '')); row.append(el('div','active-set-number','Set ' + nextUnset)); if (!bodyweightOnly && !cardioOnly) row.append(activeSetField(weightFieldLabel(exercise),load)); row.append(activeSetField(cardioOnly ? 'Minutes / distance' : bodyweightOnly ? 'Reps / seconds' : 'Reps',reps),activeSetField('Effort',effort,'active-effort')); const save = el('button','small-btn primary',saved ? 'Update result' : 'Log & continue'); save.dataset.wt = 'log-set'; save.onclick = () => saveActiveSet(exercise,nextUnset,saved && saved.id,bodyweightOnly,cardioOnly,recommendation && recommendation.unit || previous && previous.unit || 'lb'); const skip = el('button','small-btn',saved ? 'Saved' : 'Skip set'); skip.dataset.wt = 'skip-set'; skip.disabled = Boolean(saved); skip.onclick = () => skipCurrentActiveSet(); row.append(save,skip);
   const demoBlock = exercise.video ? '<div class="active-demo"><div><div style="font-size:34px">▶</div><b>Demonstration video</b><span>Tap to play</span></div></div>' : '';
   const card = '<article class="active-exercise-card"><header class="active-exercise-head"><div class="client-section-label">' + escapeHtml(unit.block.title) + '</div><h1>' + escapeHtml(exercise.name) + '</h1><p>' + escapeHtml(ZONE_LABELS[exercise.zone] || exercise.zone) + ' · ' + escapeHtml(unit.type === 'superset' ? 'Optional paired block' : 'Straight sets') + '</p></header>' + demoBlock + pair + calibrationCapture + '<div class="active-cue"><b>Coaching cue</b><p>' + escapeHtml(exercise.cue || 'Use controlled technique and stop if pain changes the movement.') + '</p></div><div class="active-prescription"><div><span>Sets</span><b>' + planned + '</b></div><div><span>Reps</span><b>' + escapeHtml(rx.reps || 'Coach set') + '</b></div><div><span>Tempo</span><b>' + escapeHtml(rx.tempo || 'Controlled') + '</b></div><div><span>RPE / RIR</span><b>' + escapeHtml(rx.rpe || 'Coach set') + '</b></div><div><span>Rest</span><b>' + escapeHtml(rx.rest || 'As needed') + '</b></div></div><div class="active-previous">Previous performance · ' + escapeHtml(previous ? (previous.load == null ? previous.unit === 'bodyweight' ? 'Bodyweight' : 'Completed' : previous.load + ' ' + previous.unit) + (previous.reps == null ? '' : ' × ' + previous.reps) : 'No previous result') + '</div>' + history + setSelector + '<div class="active-set-list" id="activeSetMount"></div><div class="active-tools"><button class="small-btn" data-wt="add-warmup-set" onclick="addActiveWarmupSet()">+ Warm-up set</button><button class="small-btn" data-wt="add-working-set" onclick="addActiveWorkingSet()">+ Working set</button><button class="small-btn" data-wt="replace-exercise" onclick="replaceActiveExercise()">Replace exercise</button><button class="small-btn" data-wt="record-note" onclick="recordActiveNote()">Record note</button><button class="small-btn danger" data-wt="workout-report-pain" onclick="openClientPainReport()">Report pain</button><button class="small-btn" data-wt="skip-exercise" onclick="skipCurrentActiveExercise()">Skip exercise</button></div>' + (!unitDone ? '<div class="active-progress-lock">The next exercise stays locked until every current set is logged or intentionally skipped. Skips are saved for your trainer instead of disappearing.</div>' : '') + '<div class="tool-actions" style="padding:0 20px 20px;justify-content:space-between"><button class="small-btn" onclick="moveActiveUnit(-1)" ' + (activeWorkout.unitIndex === 0 ? 'disabled' : '') + '>Previous</button><button class="small-btn primary" data-wt="' + (activeWorkout.unitIndex === units.length - 1 ? 'finish-workout' : 'continue-unit') + '" onclick="moveActiveUnit(1)" ' + (!unitDone ? 'disabled title="Write down or skip every round on this exercise first, then this button turns on."' : '') + '>' + (activeWorkout.unitIndex === units.length - 1 ? 'Finish workout' : 'Continue') + '</button></div></article>';
   const readinessToday = data.session.readinessToday, activeGoal = goalContractFor(data.profile);
