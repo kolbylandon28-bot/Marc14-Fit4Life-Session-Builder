@@ -106,6 +106,11 @@ function syncProgramMode(preserveDays) {
       days.value = hasTwo ? "2" : (days.options.length ? days.options[days.options.length - 1].value : "1");
     }
     if (note) note.innerHTML = "<b>Starter rhythm · recommended for new clients</b>Two recognizable workouts repeat for three weeks. Week 1 learns the plan, Week 2 repeats it with a small progression, and Week 3 builds confidence without swapping the exercise menu. A client review follows Week 1.";
+  } else if (mode === "return") {
+    /* Three weeks like the starter, but his days stay his own - a returning lifter who
+       trained five days is not put on two. */
+    weeks.value = "3"; weeks.disabled = true;
+    if (note) note.innerHTML = "<b>Return rhythm \u00b7 trained before, been away</b>Three weeks to re-establish loads, not to learn the movements. Week 1 measures where the strength actually is, Week 2 adds only where every rep was clean, Week 3 makes it repeatable. A review follows Week 1 and again before a progressive block.";
   } else {
     weeks.disabled = false; if (weeks.value === "3") weeks.value = "8";
     if (note) note.innerHTML = "<b>Ongoing progressive program</b>Primary compounds remain consistent through four-week phases, accessories can rotate every two weeks, and every fourth week includes a formal coach review and fatigue reduction.";
@@ -136,8 +141,11 @@ function loadProgramProfile() {
   programFilters.injuries = [...(profile.injuries || [])]; programFilters.zones = [...(profile.zones || [])];
   paintProgramFilters();
   const safety = document.querySelector(".program-safety-section");
-  if (safety) safety.open = Boolean(programFilters.injuries.length || programFilters.zones.length);
+  /* Open when equipment is MISSING too, not only when it is set - the empty case is the one
+     that silently hands over a full gym, so it is the one that has to be seen. */
+  if (safety) safety.open = Boolean(programFilters.injuries.length || !programFilters.zones.length);
   renderProgramBaselineGate();
+  paintProgramEntryButtons();
   showToast("Loaded " + profile.name + " into the program builder");
 }
 function programSplit(days) {
@@ -219,6 +227,37 @@ function starterProgramPhase(week) {
     reviewPrompt:"Review adherence, confidence, pain, preferred exercises, and goal fit before moving into the next coach-approved phase.",
   };
 }
+/* Starter teaches a rhythm to someone who has never had one. Return is the opposite problem:
+   he knows every movement and has lost the loads, so the caution goes on WEIGHT, not technique.
+   Teaching him the exercise order would insult him and he would ignore the whole plan. */
+function returnProgramPhase(week) {
+  if (week === 1) return {
+    name:"Find today's numbers",
+    setDelta:-1,
+    rpe:"RPE 6-7 \u00b7 3-4 reps left",
+    directive:"Work from where you are now, not where you were. Every set ends with reps to spare - this week measures, it does not test.",
+    reviewRequired:true,
+    reviewType:"return_week_1",
+    reviewTitle:"Week 1 return review",
+    reviewPrompt:"Ask what felt rusty rather than hard, where the old niggles spoke up, how the loads compared to memory, and whether the week fit the schedule.",
+  };
+  if (week === 2) return {
+    name:"Rebuild",
+    setDelta:0,
+    rpe:"RPE 7-8 \u00b7 2-3 reps left",
+    directive:"Same movements. Add 2.5-5% only where every rep last week was clean. Chasing an old number is how the back goes.",
+  };
+  return {
+    name:"Consolidate",
+    setDelta:0,
+    rpe:"RPE 8 \u00b7 about 2 reps left",
+    directive:"Hold these loads and make them repeatable. The next block is where it climbs; this week earns the right to it.",
+    reviewRequired:true,
+    reviewType:"return_completion",
+    reviewTitle:"Return to progressive",
+    reviewPrompt:"Review honest effort, any pain, which lifts are back and which are not, before moving into a progressive block.",
+  };
+}
 function adjustSetCount(value, delta) {
   const n = parseInt(value, 10);
   return Number.isFinite(n) ? String(Math.max(1, n + delta)) : value;
@@ -262,7 +301,9 @@ function rotateProgramAccessories(session,week,seed) {
   enrichSessionMetadata(session); session.accessoryRotation = { cadenceWeeks:PROGRAMMING_POLICY.accessoryRotationWeeks, round:rotationRound, note:"Accessories rotated while primary compound benchmarks remained stable." }; return session;
 }
 function programPhaseForSetup(setup, week) {
-  const phase = setup.programMode === "starter" ? starterProgramPhase(week) : programPhase(week), route = resolvedTrainingRoute(setup);
+  const phase = setup.programMode === "starter" ? starterProgramPhase(week)
+    : setup.programMode === "return" ? returnProgramPhase(week)
+    : programPhase(week), route = resolvedTrainingRoute(setup);
   const starter = setup.programMode === "starter";
   if (route === "cardio") {
     const directives = { Foundation:"Establish a repeatable pace and finish with room to continue.", Rebuild:"Re-establish smooth pacing before adding work again.", Build:"Add a small amount of time or one repeat only when the previous pace stayed even.", Overload:"Use the longest planned aerobic duration or one extra quality repeat—never both at once.", Deload:"Reduce cardio duration about 25–30% and keep the entire session conversational." };
@@ -448,6 +489,8 @@ function applyProgramDayDefaults(program,profile) {
 function generateCalibrationProgram() {
   if (!requireTrainerMutation("build client calibration workouts")) return null;
   const profiles = loadProfiles(), profileIndex = profiles.findIndex((profile) => profile.id === byId("programProfile").value), profile = profiles[profileIndex]; if (!profile) { showToast("Select a saved client profile first"); return null; }
+  const calibrationBlock = equipmentBlockedReason(profile);
+  if (calibrationBlock) { showToast(calibrationBlock); return null; }
   // Coaching runs one workout at a time: build a single calibration session that
   // carries the client's next outstanding baseline anchors. Clients training once,
   // twice, or three times a week simply reach a complete baseline over more or
@@ -475,9 +518,44 @@ function generateCalibrationProgram() {
   if (!writeProfiles(profiles)) { currentProgram = null; showToast("The calibration plan could not be saved to the client profile. Try again before assigning it."); return null; }
   renderProgram(); renderProgramBaselineGate(); byId("programPrintBtn").disabled = false; byId("programApproveBtn").disabled = false; byId("programSaveBtn").disabled = true; byId("programSaveOnlyBtn").disabled = true; showToast("Calibration workout built · " + sessionDomains.length + " baseline anchor" + (sessionDomains.length === 1 ? "" : "s") + (outstanding.length > sessionDomains.length ? " · the rest follow in later workouts" : "")); return currentProgram;
 }
+/* Two explicit entries instead of one silent default. The mode used to be chosen FOR the
+   trainer from the experience dropdown, so afterwards nobody could tell whether the starter
+   rhythm was a decision or a guess. Both buttons are always available and only HIGHLIGHTED by
+   experience - a client whose dropdown says "intermediate" can still plainly need either. */
+/* generationBlockedReason was written to stop exactly this and then never called, so a client
+   whose equipment nobody recorded was handed the whole library - barbells included. An empty
+   zones list reads as "no filter" to the session engine (session-engine.js:1179), not as
+   "unknown", so silence meant a full commercial gym. A branch with its own floor still falls
+   back to it; a branch without one has nothing safe to assume. */
+function equipmentBlockedReason(profile) {
+  if (typeof generationBlockedReason !== "function" || typeof trainingLocationContext !== "function") return "";
+  try { return generationBlockedReason(profile, trainingLocationContext()) || ""; } catch (_) { return ""; }
+}
+
+function buildProgramInMode(mode) {
+  const select = byId("programMode");
+  if (!select) return null;
+  select.value = mode;
+  syncProgramMode(mode === "return");
+  renderProgramBaselineGate();
+  return generateProgram();
+}
+function buildStarterProgram() { return buildProgramInMode("starter"); }
+function buildReturnProgram() { return buildProgramInMode("return"); }
+
+/* Recommend, never gate. Hiding the other button would mean lying to the dropdown to reach it. */
+function paintProgramEntryButtons() {
+  const experience = Number(byId("programExp") && byId("programExp").value || 0);
+  const starter = byId("programStarterBtn"), returning = byId("programReturnBtn");
+  if (starter) starter.classList.toggle("primary", experience === 1);
+  if (returning) returning.classList.toggle("primary", experience > 1);
+}
+
 function generateProgram() {
   const selectedProfile = loadProfiles().find((profile) => profile.id === byId("programProfile").value);
   if (!selectedProfile) { showToast("Select a saved client profile before building a tailored program"); return null; }
+  const equipmentBlock = equipmentBlockedReason(selectedProfile);
+  if (equipmentBlock) { showToast(equipmentBlock); return null; }
   if (!baselineCanTailor(selectedProfile)) { showToast("Tailored programming is locked until " + selectedProfile.name + " completes calibration and a trainer verifies the baseline"); renderProgramBaselineGate(); return null; }
   const cardioModes = normalizeCardioPreferences(programCardioModes);
   const programMode = syncProgramMode(true);
@@ -488,9 +566,10 @@ function generateProgram() {
     experience: Number(byId("programExp").value),
     age: Math.max(18, Math.min(90, Math.round(numberFrom("programAge", 30)))),
     days: Number(byId("programDays").value),
-    weeks: programMode === "starter" ? 3 : Number(byId("programWeeks").value),
+    weeks: (programMode === "starter" || programMode === "return") ? 3 : Number(byId("programWeeks").value),
     programMode,
     starter:programMode === "starter",
+    returning:programMode === "return",
     minutes: Number(byId("programMinutes").value) || sessionMinutesForProfile(selectedProfile),
     focus: byId("programFocus").value,
     trainingStyle: byId("programStyle").value || "auto", cardioMode: cardioModes[0], cardioModes,
@@ -512,7 +591,7 @@ function generateProgram() {
     const number = i + 1, phase = programPhaseForSetup(setup,number);
     return { number, phase, reviewRequired:!!phase.reviewRequired, reviewType:phase.reviewType || "", days: bases.map((day,di) => { const progressed = progressSession(day.session,phase); if (number === 1) applyReadinessTrendToSession(progressed); applyCompoundAnchorContinuity(progressed); if (!setup.starter) rotateProgramAccessories(progressed,number,seed + di * 37); finalizeGeneratedSession(progressed); return { name:day.name,session:progressed }; }) };
   });
-  currentProgram = applyProgramDayDefaults({ setup, weeks, starter:setup.starter, starterReviewWeek:setup.starter ? 1 : null, createdAt: new Date().toISOString(), lifecycle:"draft", versionNumber:1, versions:[], approval:{ status:"draft", required:true } },selectedProfile);
+  currentProgram = applyProgramDayDefaults({ setup, weeks, starter:setup.starter, starterReviewWeek:(setup.starter || setup.returning) ? 1 : null, createdAt: new Date().toISOString(), lifecycle:"draft", versionNumber:1, versions:[], approval:{ status:"draft", required:true } },selectedProfile);
   renderProgram();
   byId("programPrintBtn").disabled = false;
   byId("programApproveBtn").disabled = false; byId("programSaveBtn").disabled = true; byId("programSaveOnlyBtn").disabled = true;

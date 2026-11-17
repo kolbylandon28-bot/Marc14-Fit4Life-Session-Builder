@@ -80,5 +80,39 @@ t("a very long name is cut", L.makeLocation({ name: "x".repeat(200) }).name.leng
 t("the summary reads plainly", L.locationSummary(L.makeLocation({ name: "Garage", zones: ["band"] })), "Garage · 1 equipment type");
 t("an empty one says so", /nothing ticked/.test(L.locationSummary(L.makeLocation({ name: "Garage" }))), true);
 
+/* The gate existed and nothing called it. generationBlockedReason was written with a comment
+   explaining the exact failure - "declaring nothing used to hand over the ENTIRE library,
+   barbells included" - and then was never wired to a caller, so the failure it describes was
+   live the whole time. session-engine.js:1179 reads an empty zones list as "no filter", so
+   silence meant a full commercial gym, not an unknown. Assert the WIRING, not just the rule. */
+const mw = require("fs").readFileSync(require("path").join(__dirname, "..", "engine", "multiweek-programs.js"), "utf8");
+
+t("the equipment gate has a caller at all",
+  /function equipmentBlockedReason/.test(mw), true);
+t("it routes through generationBlockedReason",
+  /generationBlockedReason\(profile, trainingLocationContext\(\)\)/.test(mw), true);
+t("a full program refuses when equipment is unknown",
+  /const equipmentBlock = equipmentBlockedReason\(selectedProfile\);[\s\S]{0,120}?return null;/.test(mw), true);
+t("so does a calibration session",
+  /const calibrationBlock = equipmentBlockedReason\(profile\);[\s\S]{0,120}?return null;/.test(mw), true);
+t("the equipment panel opens when nothing is ticked, not only when something is",
+  /!programFilters\.zones\.length/.test(mw), true);
+
+/* Two explicit entries, so the mode is a recorded decision rather than a guess from a dropdown. */
+t("a Return rhythm exists for someone who trained before",
+  /function returnProgramPhase/.test(mw), true);
+t("it rebuilds load rather than teaching the movements",
+  /Work from where you are now, not where you were/.test(mw), true);
+t("it holds three weeks like the starter",
+  /\(programMode === "starter" \|\| programMode === "return"\) \? 3/.test(mw), true);
+t("but it does not force his days down to two",
+  /mode === "return"[\s\S]{0,400}?weeks\.value = "3"; weeks\.disabled = true;/.test(mw), true);
+t("both entry buttons exist",
+  /function buildStarterProgram/.test(mw) && /function buildReturnProgram/.test(mw), true);
+t("experience highlights a button, it never hides one",
+  /classList\.toggle\("primary"/.test(mw), true);
+t("week one of a return is reviewed, like week one of a starter",
+  /reviewType:"return_week_1"/.test(mw), true);
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

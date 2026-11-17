@@ -49,6 +49,7 @@ function runWipe(keys, { from = "user-a|org-1", to = "user-a|org-2" } = {}) {
 const SAMPLE = [
   "fit4life_profiles_v1", "fit4life_progress_v1", "fit4life_gym_brand_v1",
   "fit4life_gym_equipment_v1", "fit4life_active_branch_v1", "fit4life_pending_signup_v1",
+  "fit4life_portal_slug_v1",
   /* the seven that used to survive */
   "fit4life_booking_import_v1", "fit4life_trainer_aliases_v1", "fit4life_live_workouts_v1",
   "fit4life_active_area_v1", "fit4life_audit_hidden_trainers_v1",
@@ -70,6 +71,13 @@ t("the branch choice survives, or switching bounces back", after.remaining.inclu
 t("the scope marker survives", after.remaining.includes("fit4life_account_cache_owner_v1"), true);
 t("branding survives so the page does not flash", after.remaining.includes("fit4life_gym_brand_v1"), true);
 t("the pre-sign-in signup draft survives", after.remaining.includes("fit4life_pending_signup_v1"), true);
+/* The branch a client signed up to has to outlive the wipe for the same reason the branch
+   CHOICE does. manifest start_url is "/", so a PWA relaunch carries no ?gym= and there is
+   nothing else to go on: without this she is re-scoped to the is_default branch and files a
+   second pending request there. It holds a slug, not a roster, so it crosses safely. */
+t("the portal slug survives, or a relaunch loses her branch", after.remaining.includes("fit4life_portal_slug_v1"), true);
+t("it is on the keep list for a stated reason", /the portal slug, or a PWA relaunch loses the branch/.test(src), true);
+t("and it is not a CLOUD_KEY", /portalSlug:\s*"fit4life_portal_slug/.test(src), false);
 
 const sameBranch = runWipe(SAMPLE, { from: "user-a|org-1", to: "user-a|org-1" });
 t("staying put wipes nothing", sameBranch.remaining.length, SAMPLE.length + 1);
@@ -103,7 +111,8 @@ function allKeysInRepo() {
 const repoKeys = allKeysInRepo();
 t("the repo actually uses fit4life_ keys", repoKeys.length > 5, true);
 const survivors = runWipe(repoKeys).remaining.filter((k) => k !== "fit4life_account_cache_owner_v1");
-const KEEP = ["fit4life_active_branch_v1", "fit4life_gym_brand_v1", "fit4life_gym_equipment_v1", "fit4life_pending_signup_v1"];
+const KEEP = ["fit4life_active_branch_v1", "fit4life_gym_brand_v1", "fit4life_gym_equipment_v1",
+  "fit4life_pending_signup_v1", "fit4life_portal_slug_v1"];
 t("every key in the repo is wiped or deliberately kept", survivors.filter((k) => !KEEP.includes(k)), []);
 
 console.log("\n" + pass + " passed, " + fail + " failed");

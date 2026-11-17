@@ -1,0 +1,741 @@
+======================================================================
+TABLE approved_devices   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+device_id text not null
+name text
+area_key text
+approved_at timestamp with time zone
+approved_by uuid
+revoked_at timestamp with time zone
+last_seen_at timestamp with time zone
+created_at timestamp with time zone not null default now()
+-- CONSTRAINTS
+approved_devices_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+approved_devices_pkey: PRIMARY KEY (id)
+-- INDEXES
+CREATE UNIQUE INDEX approved_devices_org_device_idx ON public.approved_devices USING btree (organization_id, device_id)
+CREATE UNIQUE INDEX approved_devices_pkey ON public.approved_devices USING btree (id)
+-- POLICIES
+approved_devices_owner [ALL to authenticated]
+  USING ( SELECT is_org_owner(approved_devices.organization_id) AS is_org_owner)
+  CHECK ( SELECT is_org_owner(approved_devices.organization_id) AS is_org_owner)
+-- TRIGGERS
+(none)
+======================================================================
+TABLE area_events   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+area_key text not null
+title text not null
+kind text not null default 'event'::text
+starts_at timestamp with time zone not null
+ends_at timestamp with time zone not null
+location text
+capacity integer
+lead_user_id uuid
+lead_name text
+note text
+created_by uuid
+created_at timestamp with time zone not null default now()
+deleted_at timestamp with time zone
+deleted_by uuid
+delete_reason text
+-- CONSTRAINTS
+area_events_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+area_events_pkey: PRIMARY KEY (id)
+-- INDEXES
+CREATE INDEX area_events_area_time_idx ON public.area_events USING btree (organization_id, area_key, starts_at)
+CREATE INDEX area_events_live_idx ON public.area_events USING btree (organization_id, area_key) WHERE (deleted_at IS NULL)
+CREATE UNIQUE INDEX area_events_pkey ON public.area_events USING btree (id)
+-- POLICIES
+area_events_owner_write [ALL to authenticated]
+  USING ( SELECT is_org_owner(area_events.organization_id) AS is_org_owner)
+  CHECK ( SELECT is_org_owner(area_events.organization_id) AS is_org_owner)
+area_events_read [SELECT to authenticated]
+  USING (organization_id IN ( SELECT m.organization_id
+   FROM memberships m
+  WHERE ((m.user_id = auth.uid()) AND m.is_active)))
+-- TRIGGERS
+(none)
+======================================================================
+TABLE area_files   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+area_key text not null
+category text not null default 'General'::text
+title text not null
+body text
+link_url text
+link_label text
+sort_order integer not null default 0
+is_active boolean not null default true
+created_by uuid
+created_at timestamp with time zone not null default now()
+updated_at timestamp with time zone not null default now()
+-- CONSTRAINTS
+area_files_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+area_files_pkey: PRIMARY KEY (id)
+-- INDEXES
+CREATE INDEX area_files_area_idx ON public.area_files USING btree (organization_id, area_key, is_active, category, sort_order)
+CREATE UNIQUE INDEX area_files_pkey ON public.area_files USING btree (id)
+-- POLICIES
+area_files_owner_write [ALL to authenticated]
+  USING ( SELECT is_org_owner(area_files.organization_id) AS is_org_owner)
+  CHECK ( SELECT is_org_owner(area_files.organization_id) AS is_org_owner)
+area_files_read [SELECT to authenticated]
+  USING (organization_id IN ( SELECT m.organization_id
+   FROM memberships m
+  WHERE ((m.user_id = auth.uid()) AND m.is_active)))
+-- TRIGGERS
+(none)
+======================================================================
+TABLE area_task_done   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+task_id uuid not null
+done_on date not null
+done_by uuid
+done_at timestamp with time zone not null default now()
+note text
+-- CONSTRAINTS
+area_task_done_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+area_task_done_pkey: PRIMARY KEY (id)
+area_task_done_task_id_fkey: FOREIGN KEY (task_id) REFERENCES area_tasks(id) ON DELETE CASCADE
+-- INDEXES
+CREATE UNIQUE INDEX area_task_done_once_idx ON public.area_task_done USING btree (task_id, done_on)
+CREATE UNIQUE INDEX area_task_done_pkey ON public.area_task_done USING btree (id)
+-- POLICIES
+area_task_done_owner_write [ALL to authenticated]
+  USING ( SELECT is_org_owner(area_task_done.organization_id) AS is_org_owner)
+  CHECK ( SELECT is_org_owner(area_task_done.organization_id) AS is_org_owner)
+area_task_done_read [SELECT to authenticated]
+  USING (organization_id IN ( SELECT m.organization_id
+   FROM memberships m
+  WHERE ((m.user_id = auth.uid()) AND m.is_active)))
+-- TRIGGERS
+(none)
+======================================================================
+TABLE area_tasks   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+area_key text not null
+title text not null
+detail text
+repeats text not null default 'once'::text
+due_on date
+assigned_to uuid
+assigned_name text
+sort_order integer not null default 0
+is_active boolean not null default true
+created_by uuid
+created_at timestamp with time zone not null default now()
+-- CONSTRAINTS
+area_tasks_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+area_tasks_pkey: PRIMARY KEY (id)
+-- INDEXES
+CREATE INDEX area_tasks_area_idx ON public.area_tasks USING btree (organization_id, area_key, is_active, sort_order)
+CREATE UNIQUE INDEX area_tasks_pkey ON public.area_tasks USING btree (id)
+-- POLICIES
+area_tasks_owner_write [ALL to authenticated]
+  USING ( SELECT is_org_owner(area_tasks.organization_id) AS is_org_owner)
+  CHECK ( SELECT is_org_owner(area_tasks.organization_id) AS is_org_owner)
+area_tasks_read [SELECT to authenticated]
+  USING (organization_id IN ( SELECT m.organization_id
+   FROM memberships m
+  WHERE ((m.user_id = auth.uid()) AND m.is_active)))
+-- TRIGGERS
+(none)
+======================================================================
+TABLE audit_trainers   rls_enabled=true
+-- COLUMNS
+id text not null
+organization_id uuid not null
+trainer_key text not null
+payload jsonb not null
+updated_at timestamp with time zone not null default now()
+-- CONSTRAINTS
+audit_trainers_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+audit_trainers_organization_id_trainer_key_key: UNIQUE (organization_id, trainer_key)
+audit_trainers_pkey: PRIMARY KEY (id)
+-- INDEXES
+CREATE UNIQUE INDEX audit_trainers_organization_id_trainer_key_key ON public.audit_trainers USING btree (organization_id, trainer_key)
+CREATE UNIQUE INDEX audit_trainers_pkey ON public.audit_trainers USING btree (id)
+-- POLICIES
+audit_trainers_owner_all [ALL to authenticated]
+  USING ( SELECT is_org_owner(audit_trainers.organization_id) AS is_org_owner)
+  CHECK ( SELECT is_org_owner(audit_trainers.organization_id) AS is_org_owner)
+-- TRIGGERS
+(none)
+======================================================================
+TABLE booking_imports   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+fingerprint text not null
+filename text
+subject text
+sender text
+csv_body text not null
+received_at timestamp with time zone not null default now()
+applied_at timestamp with time zone
+applied_by uuid
+status text not null default 'pending'::text
+organization_id uuid not null
+-- CONSTRAINTS
+booking_imports_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+booking_imports_pkey: PRIMARY KEY (id)
+booking_imports_status_check: CHECK ((status = ANY (ARRAY['pending'::text, 'applied'::text, 'ignored'::text])))
+-- INDEXES
+CREATE UNIQUE INDEX booking_imports_org_fingerprint_key ON public.booking_imports USING btree (organization_id, fingerprint)
+CREATE INDEX booking_imports_org_idx ON public.booking_imports USING btree (organization_id)
+CREATE INDEX booking_imports_pending_idx ON public.booking_imports USING btree (received_at DESC) WHERE (status = 'pending'::text)
+CREATE UNIQUE INDEX booking_imports_pkey ON public.booking_imports USING btree (id)
+-- POLICIES
+booking_imports_select_staff [SELECT to authenticated]
+  USING is_org_trainer(organization_id)
+booking_imports_update_staff [UPDATE to authenticated]
+  USING is_org_trainer(organization_id)
+  CHECK is_org_trainer(organization_id)
+-- TRIGGERS
+CREATE TRIGGER booking_imports_fill_org BEFORE INSERT ON public.booking_imports FOR EACH ROW EXECUTE FUNCTION fill_missing_organization()
+======================================================================
+TABLE client_profiles   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+auth_user_id uuid
+full_name text not null
+username citext not null
+email citext
+status text not null default 'active'::text
+created_by uuid
+created_at timestamp with time zone not null default now()
+updated_at timestamp with time zone not null default now()
+external_id text not null
+booking_email text
+-- CONSTRAINTS
+client_profiles_auth_user_id_fkey: FOREIGN KEY (auth_user_id) REFERENCES auth.users(id) ON DELETE SET NULL
+client_profiles_auth_user_id_key: UNIQUE (auth_user_id)
+client_profiles_created_by_fkey: FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL
+client_profiles_full_name_check: CHECK ((char_length(TRIM(BOTH FROM full_name)) >= 2))
+client_profiles_organization_id_email_key: UNIQUE (organization_id, email)
+client_profiles_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+client_profiles_organization_id_username_key: UNIQUE (organization_id, username)
+client_profiles_pkey: PRIMARY KEY (id)
+client_profiles_status_check: CHECK ((status = ANY (ARRAY['active'::text, 'inactive'::text, 'archived'::text])))
+-- INDEXES
+CREATE UNIQUE INDEX client_profiles_auth_user_id_key ON public.client_profiles USING btree (auth_user_id)
+CREATE INDEX client_profiles_auth_user_idx ON public.client_profiles USING btree (auth_user_id)
+CREATE INDEX client_profiles_booking_email_lower ON public.client_profiles USING btree (lower(booking_email))
+CREATE INDEX client_profiles_email_lower ON public.client_profiles USING btree (lower((email)::text))
+CREATE UNIQUE INDEX client_profiles_external_id_idx ON public.client_profiles USING btree (organization_id, external_id)
+CREATE INDEX client_profiles_lookup_idx ON public.client_profiles USING btree (organization_id, username, email)
+CREATE UNIQUE INDEX client_profiles_organization_id_email_key ON public.client_profiles USING btree (organization_id, email)
+CREATE UNIQUE INDEX client_profiles_organization_id_username_key ON public.client_profiles USING btree (organization_id, username)
+CREATE UNIQUE INDEX client_profiles_pkey ON public.client_profiles USING btree (id)
+-- POLICIES
+client_profiles_delete_owner [DELETE to authenticated]
+  USING ( SELECT is_org_owner(client_profiles.organization_id) AS is_org_owner)
+client_profiles_insert_trainer [INSERT to authenticated]
+  CHECK is_org_trainer(organization_id)
+client_profiles_select_allowed [SELECT to authenticated]
+  USING ((auth_user_id = auth.uid()) OR is_org_trainer(organization_id))
+client_profiles_update_trainer [UPDATE to authenticated]
+  USING is_org_trainer(organization_id)
+  CHECK is_org_trainer(organization_id)
+-- TRIGGERS
+CREATE TRIGGER client_profiles_owner_status_guard BEFORE UPDATE OF status ON public.client_profiles FOR EACH ROW EXECUTE FUNCTION protect_fit4life_client_status()
+CREATE TRIGGER client_profiles_touch_updated_at BEFORE UPDATE ON public.client_profiles FOR EACH ROW EXECUTE FUNCTION touch_updated_at()
+CREATE TRIGGER fit4life_no_clients_in_template BEFORE INSERT ON public.client_profiles FOR EACH ROW EXECUTE FUNCTION fit4life_reject_template_rows()
+======================================================================
+TABLE membership_audit_log   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+target_user_id uuid not null
+action text not null
+previous_role text
+new_role text
+previous_active boolean
+new_active boolean
+changed_by uuid
+change_reason text
+changed_at timestamp with time zone not null default now()
+-- CONSTRAINTS
+membership_audit_log_changed_by_fkey: FOREIGN KEY (changed_by) REFERENCES auth.users(id) ON DELETE SET NULL
+membership_audit_log_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+membership_audit_log_pkey: PRIMARY KEY (id)
+-- INDEXES
+CREATE UNIQUE INDEX membership_audit_log_pkey ON public.membership_audit_log USING btree (id)
+CREATE INDEX membership_audit_org_time_idx ON public.membership_audit_log USING btree (organization_id, changed_at DESC)
+-- POLICIES
+membership_audit_owner_select [SELECT to authenticated]
+  USING ( SELECT is_org_owner(membership_audit_log.organization_id) AS is_org_owner)
+-- TRIGGERS
+(none)
+======================================================================
+TABLE memberships   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+user_id uuid not null
+role text not null
+is_active boolean not null default true
+created_at timestamp with time zone not null default now()
+updated_at timestamp with time zone not null default now()
+trainer_tier text not null default 'staff_standard'::text
+-- CONSTRAINTS
+memberships_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+memberships_organization_id_user_id_key: UNIQUE (organization_id, user_id)
+memberships_pkey: PRIMARY KEY (id)
+memberships_role_check: CHECK ((role = ANY (ARRAY['owner'::text, 'trainer'::text, 'client'::text, 'staff'::text])))
+memberships_trainer_tier_check: CHECK ((trainer_tier = ANY (ARRAY['staff_standard'::text, 'staff_premium'::text])))
+memberships_user_id_fkey: FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+-- INDEXES
+CREATE UNIQUE INDEX memberships_organization_id_user_id_key ON public.memberships USING btree (organization_id, user_id)
+CREATE UNIQUE INDEX memberships_pkey ON public.memberships USING btree (id)
+CREATE INDEX memberships_user_idx ON public.memberships USING btree (user_id, is_active)
+-- POLICIES
+memberships_delete_owner [DELETE to authenticated]
+  USING ( SELECT is_org_owner(memberships.organization_id) AS is_org_owner)
+memberships_insert_owner [INSERT to authenticated]
+  CHECK ( SELECT is_org_owner(memberships.organization_id) AS is_org_owner)
+memberships_select_allowed [SELECT to authenticated]
+  USING ((user_id = auth.uid()) OR is_org_trainer(organization_id))
+memberships_update_owner [UPDATE to authenticated]
+  USING ( SELECT is_org_owner(memberships.organization_id) AS is_org_owner)
+  CHECK ( SELECT is_org_owner(memberships.organization_id) AS is_org_owner)
+platform_admin_read_memberships [SELECT to authenticated]
+  USING is_platform_admin()
+-- TRIGGERS
+CREATE TRIGGER fit4life_no_client_members_in_template BEFORE INSERT ON public.memberships FOR EACH ROW EXECUTE FUNCTION fit4life_reject_template_rows()
+CREATE TRIGGER memberships_last_owner_guard BEFORE DELETE OR UPDATE ON public.memberships FOR EACH ROW EXECUTE FUNCTION protect_fit4life_last_owner()
+CREATE TRIGGER memberships_owner_security_audit BEFORE INSERT OR DELETE OR UPDATE ON public.memberships FOR EACH ROW EXECUTE FUNCTION audit_and_protect_fit4life_membership()
+CREATE TRIGGER memberships_touch_updated_at BEFORE UPDATE ON public.memberships FOR EACH ROW EXECUTE FUNCTION touch_updated_at()
+======================================================================
+TABLE organizations   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+slug citext not null
+name text not null
+created_at timestamp with time zone not null default now()
+updated_at timestamp with time zone not null default now()
+brand_config jsonb not null default '{}'::jsonb
+equipment_config jsonb not null default '{}'::jsonb
+public_registration_enabled boolean not null default true
+org_type text not null default 'gym'::text
+modules jsonb not null default '{}'::jsonb
+config jsonb not null default '{}'::jsonb
+require_real_name boolean not null default true
+email_policy jsonb not null default '{}'::jsonb
+is_template boolean not null default false
+-- CONSTRAINTS
+organizations_org_type_check: CHECK (((org_type IS NULL) OR (org_type = ANY (ARRAY['university'::text, 'gym'::text, 'employer'::text, 'individual'::text]))))
+organizations_pkey: PRIMARY KEY (id)
+organizations_slug_key: UNIQUE (slug)
+-- INDEXES
+CREATE UNIQUE INDEX organizations_pkey ON public.organizations USING btree (id)
+CREATE UNIQUE INDEX organizations_slug_key ON public.organizations USING btree (slug)
+-- POLICIES
+fit4life_organizations_member_read [SELECT to authenticated]
+  USING (EXISTS ( SELECT 1
+   FROM memberships membership
+  WHERE ((membership.organization_id = organizations.id) AND (membership.user_id = ( SELECT auth.uid() AS uid)) AND membership.is_active)))
+fit4life_organizations_owner_setup_update [UPDATE to authenticated]
+  USING ( SELECT is_org_owner(organizations.id) AS is_org_owner)
+  CHECK ( SELECT is_org_owner(organizations.id) AS is_org_owner)
+organizations_select_member [SELECT to authenticated]
+  USING is_org_member(id)
+platform_admin_read_orgs [SELECT to authenticated]
+  USING is_platform_admin()
+-- TRIGGERS
+CREATE TRIGGER organizations_owner_setup_guard BEFORE UPDATE OF brand_config, equipment_config ON public.organizations FOR EACH ROW EXECUTE FUNCTION protect_fit4life_organization_setup()
+CREATE TRIGGER organizations_touch_updated_at BEFORE UPDATE ON public.organizations FOR EACH ROW EXECUTE FUNCTION touch_updated_at()
+======================================================================
+TABLE platform_admins   rls_enabled=true
+-- COLUMNS
+user_id uuid not null
+note text
+created_at timestamp with time zone not null default now()
+-- CONSTRAINTS
+platform_admins_pkey: PRIMARY KEY (user_id)
+platform_admins_user_id_fkey: FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+-- INDEXES
+CREATE UNIQUE INDEX platform_admins_pkey ON public.platform_admins USING btree (user_id)
+-- POLICIES
+platform_admins_self_read [SELECT to authenticated]
+  USING (user_id = auth.uid())
+-- TRIGGERS
+(none)
+======================================================================
+TABLE registration_requests   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+user_id uuid not null
+email citext not null
+full_name text not null
+username citext not null
+status text not null default 'pending'::text
+reviewed_by uuid
+reviewed_at timestamp with time zone
+review_note text
+created_at timestamp with time zone not null default now()
+updated_at timestamp with time zone not null default now()
+requested_role text not null default 'client'::text
+-- CONSTRAINTS
+registration_requests_full_name_check: CHECK ((char_length(TRIM(BOTH FROM full_name)) >= 2))
+registration_requests_organization_id_email_key: UNIQUE (organization_id, email)
+registration_requests_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+registration_requests_pkey: PRIMARY KEY (id)
+registration_requests_requested_role_check: CHECK ((requested_role = ANY (ARRAY['client'::text, 'trainer'::text])))
+registration_requests_reviewed_by_fkey: FOREIGN KEY (reviewed_by) REFERENCES auth.users(id) ON DELETE SET NULL
+registration_requests_status_check: CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])))
+registration_requests_user_id_fkey: FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+registration_requests_user_id_key: UNIQUE (user_id)
+-- INDEXES
+CREATE UNIQUE INDEX registration_requests_one_pending ON public.registration_requests USING btree (user_id) WHERE (status = 'pending'::text)
+CREATE UNIQUE INDEX registration_requests_organization_id_email_key ON public.registration_requests USING btree (organization_id, email)
+CREATE UNIQUE INDEX registration_requests_pkey ON public.registration_requests USING btree (id)
+CREATE INDEX registration_requests_role_status_idx ON public.registration_requests USING btree (organization_id, requested_role, status, created_at)
+CREATE INDEX registration_requests_status_idx ON public.registration_requests USING btree (organization_id, status, created_at DESC)
+CREATE UNIQUE INDEX registration_requests_user_id_key ON public.registration_requests USING btree (user_id)
+CREATE INDEX registration_requests_user_idx ON public.registration_requests USING btree (user_id, status)
+-- POLICIES
+f4l_regreq_insert_self [INSERT to authenticated]
+  CHECK ((user_id = auth.uid()) AND (requested_role = 'client'::text))
+f4l_regreq_read_self [SELECT to authenticated]
+  USING (user_id = auth.uid())
+f4l_regreq_read_staff [SELECT to authenticated]
+  USING (EXISTS ( SELECT 1
+   FROM memberships m
+  WHERE ((m.user_id = auth.uid()) AND (m.role = ANY (ARRAY['owner'::text, 'trainer'::text])) AND (m.organization_id = registration_requests.organization_id))))
+f4l_regreq_update_staff [UPDATE to authenticated]
+  USING ((EXISTS ( SELECT 1
+   FROM memberships m
+  WHERE ((m.user_id = auth.uid()) AND (m.role = ANY (ARRAY['owner'::text, 'trainer'::text])) AND (m.organization_id = registration_requests.organization_id)))) AND (user_id <> auth.uid()))
+registration_requests_select_allowed [SELECT to authenticated]
+  USING ((user_id = auth.uid()) OR is_org_trainer(organization_id))
+-- TRIGGERS
+CREATE TRIGGER fit4life_no_registrations_in_template BEFORE INSERT ON public.registration_requests FOR EACH ROW EXECUTE FUNCTION fit4life_reject_template_rows()
+CREATE TRIGGER registration_requests_touch_updated_at BEFORE UPDATE ON public.registration_requests FOR EACH ROW EXECUTE FUNCTION touch_updated_at()
+======================================================================
+TABLE staff_areas   rls_enabled=true
+-- COLUMNS
+organization_id uuid not null
+user_id uuid not null
+area_key text not null
+created_at timestamp with time zone not null default now()
+can_schedule boolean not null default false
+can_edit_hours boolean not null default false
+-- CONSTRAINTS
+staff_areas_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+staff_areas_pkey: PRIMARY KEY (organization_id, user_id, area_key)
+-- INDEXES
+CREATE UNIQUE INDEX staff_areas_pkey ON public.staff_areas USING btree (organization_id, user_id, area_key)
+-- POLICIES
+staff_areas_owner_write [ALL to authenticated]
+  USING ( SELECT is_org_owner(staff_areas.organization_id) AS is_org_owner)
+  CHECK ( SELECT is_org_owner(staff_areas.organization_id) AS is_org_owner)
+staff_areas_read_own [SELECT to authenticated]
+  USING ((user_id = auth.uid()) OR ( SELECT is_org_owner(staff_areas.organization_id) AS is_org_owner))
+-- TRIGGERS
+(none)
+======================================================================
+TABLE staff_invites   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+email text not null
+full_name text
+role text not null default 'trainer'::text
+invited_by uuid
+created_at timestamp with time zone not null default now()
+accepted_at timestamp with time zone
+accepted_by uuid
+revoked_at timestamp with time zone
+areas text[] not null default '{}'::text[]
+-- CONSTRAINTS
+staff_invites_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+staff_invites_pkey: PRIMARY KEY (id)
+staff_invites_role_check: CHECK ((role = ANY (ARRAY['trainer'::text, 'owner'::text, 'staff'::text])))
+-- INDEXES
+CREATE UNIQUE INDEX staff_invites_org_email_idx ON public.staff_invites USING btree (organization_id, lower(email))
+CREATE UNIQUE INDEX staff_invites_pkey ON public.staff_invites USING btree (id)
+-- POLICIES
+staff_invites_owner_all [ALL to authenticated]
+  USING ( SELECT is_org_owner(staff_invites.organization_id) AS is_org_owner)
+  CHECK ( SELECT is_org_owner(staff_invites.organization_id) AS is_org_owner)
+-- TRIGGERS
+(none)
+======================================================================
+TABLE staff_profiles   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+user_id uuid not null
+display_name text not null
+is_active boolean not null default true
+created_at timestamp with time zone not null default now()
+updated_at timestamp with time zone not null default now()
+-- CONSTRAINTS
+staff_profiles_display_name_check: CHECK ((char_length(TRIM(BOTH FROM display_name)) >= 2))
+staff_profiles_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+staff_profiles_organization_id_user_id_key: UNIQUE (organization_id, user_id)
+staff_profiles_pkey: PRIMARY KEY (id)
+staff_profiles_user_id_fkey: FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+-- INDEXES
+CREATE INDEX staff_profiles_org_active_idx ON public.staff_profiles USING btree (organization_id, is_active, display_name)
+CREATE UNIQUE INDEX staff_profiles_organization_id_user_id_key ON public.staff_profiles USING btree (organization_id, user_id)
+CREATE UNIQUE INDEX staff_profiles_pkey ON public.staff_profiles USING btree (id)
+-- POLICIES
+staff_profiles_owner_delete [DELETE to authenticated]
+  USING is_org_owner(organization_id)
+staff_profiles_owner_insert [INSERT to authenticated]
+  CHECK is_org_owner(organization_id)
+staff_profiles_owner_update [UPDATE to authenticated]
+  USING is_org_owner(organization_id)
+  CHECK is_org_owner(organization_id)
+staff_profiles_select_trainers [SELECT to authenticated]
+  USING is_org_trainer(organization_id)
+-- TRIGGERS
+CREATE TRIGGER staff_profiles_touch_updated_at BEFORE UPDATE ON public.staff_profiles FOR EACH ROW EXECUTE FUNCTION touch_updated_at()
+======================================================================
+TABLE sync_records   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+client_id uuid
+record_type text not null
+record_key text not null default 'default'::text
+payload jsonb not null default '{}'::jsonb
+version bigint not null default 1
+created_by uuid
+updated_by uuid
+created_at timestamp with time zone not null default now()
+updated_at timestamp with time zone not null default now()
+deleted_at timestamp with time zone
+-- CONSTRAINTS
+sync_records_client_id_fkey: FOREIGN KEY (client_id) REFERENCES client_profiles(id) ON DELETE CASCADE
+sync_records_created_by_fkey: FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL
+sync_records_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+sync_records_pkey: PRIMARY KEY (id)
+sync_records_record_key_check: CHECK ((char_length(TRIM(BOTH FROM record_key)) > 0))
+sync_records_record_type_check: CHECK ((char_length(TRIM(BOTH FROM record_type)) > 0))
+sync_records_updated_by_fkey: FOREIGN KEY (updated_by) REFERENCES auth.users(id) ON DELETE SET NULL
+-- INDEXES
+CREATE INDEX sync_records_client_updated_idx ON public.sync_records USING btree (client_id, updated_at DESC)
+CREATE UNIQUE INDEX sync_records_identity_idx ON public.sync_records USING btree (organization_id, COALESCE(client_id, '00000000-0000-0000-0000-000000000000'::uuid), record_type, record_key)
+CREATE UNIQUE INDEX sync_records_pkey ON public.sync_records USING btree (id)
+-- POLICIES
+sync_records_delete_allowed [DELETE to authenticated]
+  USING (is_org_trainer(organization_id) OR ((client_id IS NOT NULL) AND client_can_write_record(client_id, record_type)))
+sync_records_insert_allowed [INSERT to authenticated]
+  CHECK (is_org_trainer(organization_id) OR ((client_id IS NOT NULL) AND client_can_write_record(client_id, record_type)))
+sync_records_select_allowed [SELECT to authenticated]
+  USING (is_org_trainer(organization_id) OR ((client_id IS NOT NULL) AND can_access_client(client_id)))
+sync_records_update_allowed [UPDATE to authenticated]
+  USING (is_org_trainer(organization_id) OR ((client_id IS NOT NULL) AND client_can_write_record(client_id, record_type)))
+  CHECK (is_org_trainer(organization_id) OR ((client_id IS NOT NULL) AND client_can_write_record(client_id, record_type)))
+-- TRIGGERS
+CREATE TRIGGER sync_records_prepare BEFORE INSERT OR UPDATE ON public.sync_records FOR EACH ROW EXECUTE FUNCTION prepare_sync_record()
+======================================================================
+TABLE time_entries   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+area_key text not null
+user_id uuid not null
+clock_in timestamp with time zone not null default now()
+clock_out timestamp with time zone
+device_id text
+estimated boolean not null default false
+confirmed_at timestamp with time zone
+confirmed_by uuid
+note text
+history jsonb not null default '[]'::jsonb
+created_at timestamp with time zone not null default now()
+-- CONSTRAINTS
+time_entries_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+time_entries_pkey: PRIMARY KEY (id)
+-- INDEXES
+CREATE UNIQUE INDEX time_entries_one_open_idx ON public.time_entries USING btree (organization_id, user_id) WHERE (clock_out IS NULL)
+CREATE INDEX time_entries_org_time_idx ON public.time_entries USING btree (organization_id, clock_in DESC)
+CREATE UNIQUE INDEX time_entries_pkey ON public.time_entries USING btree (id)
+-- POLICIES
+time_entries_owner_write [ALL to authenticated]
+  USING ( SELECT is_org_owner(time_entries.organization_id) AS is_org_owner)
+  CHECK ( SELECT is_org_owner(time_entries.organization_id) AS is_org_owner)
+time_entries_read [SELECT to authenticated]
+  USING ((user_id = auth.uid()) OR ( SELECT is_org_owner(time_entries.organization_id) AS is_org_owner))
+-- TRIGGERS
+(none)
+======================================================================
+TABLE trainer_audits   rls_enabled=true
+-- COLUMNS
+id text not null
+organization_id uuid not null
+trainer_key text not null
+audit_date date
+flagged boolean not null default false
+payload jsonb not null
+updated_at timestamp with time zone not null default now()
+-- CONSTRAINTS
+trainer_audits_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+trainer_audits_pkey: PRIMARY KEY (id)
+-- INDEXES
+CREATE INDEX trainer_audits_org_date_idx ON public.trainer_audits USING btree (organization_id, audit_date DESC)
+CREATE UNIQUE INDEX trainer_audits_pkey ON public.trainer_audits USING btree (id)
+CREATE INDEX trainer_audits_trainer_idx ON public.trainer_audits USING btree (organization_id, trainer_key)
+-- POLICIES
+trainer_audits_owner_all [ALL to authenticated]
+  USING ( SELECT is_org_owner(trainer_audits.organization_id) AS is_org_owner)
+  CHECK ( SELECT is_org_owner(trainer_audits.organization_id) AS is_org_owner)
+-- TRIGGERS
+(none)
+======================================================================
+TABLE trainer_name_aliases   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+normalized_name text not null
+source_name text not null
+trainer_user_id uuid
+display_name text
+email text
+status text not null default 'unresolved'::text
+first_seen_at timestamp with time zone not null default now()
+last_seen_at timestamp with time zone not null default now()
+seen_count integer not null default 1
+resolved_by uuid
+resolved_at timestamp with time zone
+organization_id uuid not null
+-- CONSTRAINTS
+trainer_name_aliases_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+trainer_name_aliases_pkey: PRIMARY KEY (id)
+trainer_name_aliases_status_check: CHECK ((status = ANY (ARRAY['unresolved'::text, 'linked'::text, 'external'::text, 'ignored'::text])))
+-- INDEXES
+CREATE INDEX trainer_name_aliases_org_idx ON public.trainer_name_aliases USING btree (organization_id)
+CREATE UNIQUE INDEX trainer_name_aliases_org_name_key ON public.trainer_name_aliases USING btree (organization_id, normalized_name)
+CREATE UNIQUE INDEX trainer_name_aliases_pkey ON public.trainer_name_aliases USING btree (id)
+-- POLICIES
+trainer_aliases_select_staff [SELECT to authenticated]
+  USING is_org_trainer(organization_id)
+trainer_aliases_write_owner [ALL to authenticated]
+  USING is_org_owner(organization_id)
+  CHECK is_org_owner(organization_id)
+-- TRIGGERS
+CREATE TRIGGER trainer_name_aliases_fill_org BEFORE INSERT ON public.trainer_name_aliases FOR EACH ROW EXECUTE FUNCTION fill_missing_organization()
+======================================================================
+TABLE volunteer_shifts   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+area_key text not null default 'gym'::text
+shift_date date not null
+starts_at timestamp with time zone not null
+ends_at timestamp with time zone not null
+names text[] not null default '{}'::text[]
+open_spots integer not null default 0
+synced_at timestamp with time zone not null default now()
+-- CONSTRAINTS
+volunteer_shifts_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+volunteer_shifts_pkey: PRIMARY KEY (id)
+-- INDEXES
+CREATE INDEX volunteer_shifts_day_idx ON public.volunteer_shifts USING btree (organization_id, shift_date)
+CREATE UNIQUE INDEX volunteer_shifts_pkey ON public.volunteer_shifts USING btree (id)
+-- POLICIES
+volunteer_shifts_read [SELECT to authenticated]
+  USING (organization_id IN ( SELECT m.organization_id
+   FROM memberships m
+  WHERE ((m.user_id = auth.uid()) AND m.is_active)))
+-- TRIGGERS
+(none)
+======================================================================
+TABLE volunteer_sync_state   rls_enabled=true
+-- COLUMNS
+organization_id uuid not null
+last_synced_at timestamp with time zone
+last_rows integer not null default 0
+last_error text
+-- CONSTRAINTS
+volunteer_sync_state_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+volunteer_sync_state_pkey: PRIMARY KEY (organization_id)
+-- INDEXES
+CREATE UNIQUE INDEX volunteer_sync_state_pkey ON public.volunteer_sync_state USING btree (organization_id)
+-- POLICIES
+volunteer_sync_read [SELECT to authenticated]
+  USING (organization_id IN ( SELECT m.organization_id
+   FROM memberships m
+  WHERE ((m.user_id = auth.uid()) AND m.is_active)))
+-- TRIGGERS
+(none)
+======================================================================
+TABLE work_areas   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+area_key text not null
+name text not null
+sort_order integer not null default 0
+is_active boolean not null default true
+created_at timestamp with time zone not null default now()
+is_coaching boolean not null default false
+has_events boolean not null default false
+-- CONSTRAINTS
+work_areas_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+work_areas_pkey: PRIMARY KEY (id)
+-- INDEXES
+CREATE UNIQUE INDEX work_areas_org_key_idx ON public.work_areas USING btree (organization_id, area_key)
+CREATE UNIQUE INDEX work_areas_pkey ON public.work_areas USING btree (id)
+-- POLICIES
+work_areas_owner_write [ALL to authenticated]
+  USING ( SELECT is_org_owner(work_areas.organization_id) AS is_org_owner)
+  CHECK ( SELECT is_org_owner(work_areas.organization_id) AS is_org_owner)
+work_areas_read [SELECT to authenticated]
+  USING (organization_id IN ( SELECT m.organization_id
+   FROM memberships m
+  WHERE ((m.user_id = auth.uid()) AND m.is_active)))
+-- TRIGGERS
+(none)
+======================================================================
+TABLE work_shifts   rls_enabled=true
+-- COLUMNS
+id uuid not null default gen_random_uuid()
+organization_id uuid not null
+area_key text not null
+user_id uuid
+staff_name text
+starts_at timestamp with time zone not null
+ends_at timestamp with time zone not null
+note text
+created_by uuid
+created_at timestamp with time zone not null default now()
+updated_at timestamp with time zone not null default now()
+updated_by uuid
+history jsonb not null default '[]'::jsonb
+published boolean not null default true
+deleted_at timestamp with time zone
+deleted_by uuid
+delete_reason text
+-- CONSTRAINTS
+work_shifts_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+work_shifts_pkey: PRIMARY KEY (id)
+-- INDEXES
+CREATE INDEX work_shifts_area_time_idx ON public.work_shifts USING btree (organization_id, area_key, starts_at)
+CREATE INDEX work_shifts_live_idx ON public.work_shifts USING btree (organization_id, area_key) WHERE (deleted_at IS NULL)
+CREATE UNIQUE INDEX work_shifts_pkey ON public.work_shifts USING btree (id)
+-- POLICIES
+work_shifts_owner_write [ALL to authenticated]
+  USING ( SELECT is_org_owner(work_shifts.organization_id) AS is_org_owner)
+  CHECK ( SELECT is_org_owner(work_shifts.organization_id) AS is_org_owner)
+work_shifts_read [SELECT to authenticated]
+  USING (organization_id IN ( SELECT m.organization_id
+   FROM memberships m
+  WHERE ((m.user_id = auth.uid()) AND m.is_active)))
+-- TRIGGERS
+(none)
