@@ -528,8 +528,28 @@ function generateCalibrationProgram() {
    "unknown", so silence meant a full commercial gym. A branch with its own floor still falls
    back to it; a branch without one has nothing safe to assume. */
 function equipmentBlockedReason(profile) {
+  /* The trainer ticking equipment HERE is the question being answered - these chips are what
+     feed the generator as setup.zones. The gate was reading only the client's saved location,
+     so a trainer could tick every chip on the screen and still be refused by a message
+     pointing at a different screen. Ticked here counts; it is then written back so the answer
+     sticks to her location and nobody is asked twice. */
+  if (programFilters.zones.length) {
+    persistProgramZonesToLocation(profile);
+    return "";
+  }
   if (typeof generationBlockedReason !== "function" || typeof trainingLocationContext !== "function") return "";
   try { return generationBlockedReason(profile, trainingLocationContext()) || ""; } catch (_) { return ""; }
+}
+
+/* Only fills a gap - never overwrites equipment the client set for a place they train. */
+function persistProgramZonesToLocation(profile) {
+  if (!profile || typeof saveTrainingLocation !== "function" || typeof activeLocation !== "function") return;
+  try {
+    const context = typeof trainingLocationContext === "function" ? trainingLocationContext() : {};
+    const active = activeLocation(profile, context);
+    if (!active || active.source === "org" || active.zones.length) return;
+    saveTrainingLocation(profile.id, { ...active, zones: [...programFilters.zones] });
+  } catch (_) {}
 }
 
 function buildProgramInMode(mode) {

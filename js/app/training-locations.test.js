@@ -114,5 +114,18 @@ t("experience highlights a button, it never hides one",
 t("week one of a return is reviewed, like week one of a starter",
   /reviewType:"return_week_1"/.test(mw), true);
 
+/* Reported live 2026-11-16: "no matter what i click or dont click it tells me tick what is
+   available at gym". The chips in the program builder write to programFilters.zones; the gate
+   read the client's SAVED location. Two different stores, so ticking every chip on the screen
+   could never satisfy a message pointing at a different screen. */
+t("ticking equipment in the builder satisfies the gate",
+  /if \(programFilters\.zones\.length\) \{[\s\S]{0,160}?return "";/.test(mw), true);
+t("and the answer is written back so nobody is asked twice",
+  /function persistProgramZonesToLocation/.test(mw), true);
+t("it only fills a gap, never overwrites what the client set",
+  /if \(!active \|\| active\.source === "org" \|\| active\.zones\.length\) return;/.test(mw), true);
+t("an org floor is still never overwritten by a trainer's chips",
+  /active\.source === "org"/.test(mw), true);
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);
