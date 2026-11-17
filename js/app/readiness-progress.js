@@ -443,6 +443,9 @@ async function saveClientIntake() {
 
 let profileEditorTarget = null;
 let profileEditorDraft = { areas: [], muscles: [], injuries: [], zones: [], preferences:{}, cardioModes:["any"], trainingDays:[1,3,5] };
+// What the consultation had already contributed when the editor opened - so a save can tell
+// "the trainer unticked this" from "this arrived from the client after the form was filled".
+let profileEditorConsultationBaseline = null;
 function loadProgress() {
   try {
     const data = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "[]");
@@ -1000,6 +1003,15 @@ function inviteEmailPlaceholder() {
   return branchUsesTiers() && (window.fit4lifeOrgType || "") === "university" ? "name@byui.edu" : "name@example.com";
 }
 
+/* Help line under a client email field. FIT4LIFE_ALLOW_ANY_EMAIL is on, so no branch may
+   promise a domain rule - BYU-Idaho only points at the login their students already have. */
+function inviteEmailNote() {
+  const matching = "This is how their account links to this profile, so it must match the address they sign up with.";
+  return branchUsesTiers() && (window.fit4lifeOrgType || "") === "university"
+    ? "Their BYU-I login is the usual address here. " + matching
+    : matching;
+}
+
 function openInviteClientDialog() {
   if (!requireTrainerMutation("create client profiles")) return null;
   let modal = byId("inviteClientModal");
@@ -1142,7 +1154,7 @@ function createInvitedClient() {
   if (name.length < 2) { feedback.textContent = "Enter their first and last name."; return null; }
   // The email is the link between the invite and the account they create, so it has to
   // be right. A personal address here means their sign-up never finds this profile.
-  if (!isByuiEmail(email)) { feedback.textContent = "Use their BYU-I email address, ending in @byui.edu."; return null; }
+  if (!isByuiEmail(email)) { feedback.textContent = inviteEmailLabel() + ": use a full address, like " + inviteEmailPlaceholder() + ". It must match the address they sign up with."; return null; }
   // An imported client already has a profile carrying their booking email, so this check
   // refused the very invite that would give them a login - they were locked out permanently
   // with no route back. An existing profile that has never been invited is now ADOPTED:
@@ -1251,8 +1263,10 @@ function createInvitedClient() {
   return created;
 }
 function openCreateProfileEditor() {
+  // Create leaked tier fields and the BYU-I wording until an Edit had run once.
+  syncBranchSpecificProfileFields();
   if (!requireTrainerMutation("create client profiles")) return null;
-  profileEditorTarget = null; profileEditorDraft = { areas:[],muscles:[],injuries:[],zones:[],preferences:{},cardioModes:["any"],trainingDays:[1,3,5],limitationAssessments:{} };
+  profileEditorTarget = null; profileEditorConsultationBaseline = null; profileEditorDraft = { areas:[],muscles:[],injuries:[],zones:[],preferences:{},cardioModes:["any"],trainingDays:[1,3,5],limitationAssessments:{} };
   prepareProfileEditorMenus(); byId("profileEditId").value = ""; byId("profileEditName").value = ""; byId("profileEditUsername").value = ""; byId("profileEditEmail").value = ""; byId("profileEditBookingEmail").value = "";
   byId("profileEditPrimary").value = "general"; byId("profileEditSecondary").value = ""; byId("profileEditStyle").value = "auto";
   byId("profileEditExperience").value = "1"; byId("profileEditAge").value = "30"; byId("profileEditMinutes").value = "60"; byId("profileEditPhase").value = "general"; byId("profileEditDays").value = "3";
@@ -1271,6 +1285,35 @@ function syncBranchSpecificProfileFields() {
   document.querySelectorAll("[data-section-goals]").forEach((node) => {
     node.textContent = usesTiers ? "2 \u00b7 Membership and goals" : "2 \u00b7 Goals and training style";
   });
+  // Per-module and per-org-type markup. Default-on when cloud-sync has not published a
+  // module list, same as branchUsesTiers - an unknown org_type hides, never leaks.
+  const moduleOn = (name) => typeof window.fit4lifeModuleEnabled !== "function" || window.fit4lifeModuleEnabled(name);
+  const orgType = String(window.fit4lifeOrgType || "");
+  document.querySelectorAll("[data-module]").forEach((node) => { node.hidden = !moduleOn(node.getAttribute("data-module")); });
+  document.querySelectorAll("[data-org-type]").forEach((node) => {
+    node.hidden = !String(node.getAttribute("data-org-type") || "").split(/\s+/).filter(Boolean).includes(orgType);
+  });
+  document.querySelectorAll("[data-email-label]").forEach((node) => { node.textContent = inviteEmailLabel(); });
+  document.querySelectorAll("[data-email-note]").forEach((node) => { node.textContent = inviteEmailNote(); });
+  document.querySelectorAll("[data-email-placeholder]").forEach((node) => { node.placeholder = inviteEmailPlaceholder(); });
+  /* An option whose VALUE is meaningful on every branch but whose WORDS are not. #programMinutes
+     value="" is the sentinel for "use this client's own session length"; hiding it selected a
+     hard 30 min for every program on a non-tier branch. Relabel, never hide. */
+  document.querySelectorAll("[data-tiers-text][data-plain-text]").forEach((node) => {
+    node.textContent = node.getAttribute(usesTiers ? "data-tiers-text" : "data-plain-text") || node.textContent;
+  });
+  // A hidden <option> left selected still reads - and saves - as another branch's value.
+  const optionHidden = (option) => Boolean(option) && (option.hidden
+    || (option.parentNode && option.parentNode.tagName === "OPTGROUP" && option.parentNode.hidden));
+  const gatedSelects = new Set();
+  document.querySelectorAll("option[data-tiers-only],option[data-module],option[data-org-type],optgroup[data-tiers-only],optgroup[data-module],optgroup[data-org-type]")
+    .forEach((node) => { const select = node.closest && node.closest("select"); if (select) gatedSelects.add(select); });
+  gatedSelects.forEach((select) => {
+    if (!select.options || !select.options.length) return;
+    if (select.selectedIndex >= 0 && !optionHidden(select.options[select.selectedIndex])) return;
+    const visible = Array.prototype.filter.call(select.options,(option) => !optionHidden(option))[0];
+    select.selectedIndex = visible ? visible.index : -1;
+  });
 }
 
 function openProfileEditor(profileId, target) {
@@ -1278,6 +1321,7 @@ function openProfileEditor(profileId, target) {
   if (!requireTrainerMutation("edit client profiles")) return null;
   const profile = loadProfiles().find((item) => item.id === profileId); if (!profile) { showToast("Choose a saved profile to edit"); return; }
   profileEditorTarget = target || null; profileEditorDraft = { areas: [...(profile.areas || [])], muscles: [...(profile.muscles || [])], injuries: [...(profile.injuries || [])], zones: [...(profile.zones || [])], preferences:{ ...(profile.exercisePreferences || {}) },cardioModes:normalizeCardioPreferences(profile.cardioModes || profile.cardioMode),trainingDays:inferredTrainingDays(profile,profile.availableDays || 3),limitationAssessments:JSON.parse(JSON.stringify(profile.limitationAssessments || {})) };
+  profileEditorConsultationBaseline = { injuries:[...(profile.consultationDerivedInjuries || [])], preferenceIds:[...(profile.consultationDerivedPreferenceIds || [])] };
   byId("profileEditId").value = profile.id; byId("profileEditName").value = profile.name; byId("profileEditUsername").value = profileUsername(profile); byId("profileEditEmail").value = profile.email || ""; byId("profileEditBookingEmail").value = profile.bookingEmail || "";
   prepareProfileEditorMenus();
   byId("profileEditPrimary").value = profile.goals && profile.goals[0] || "general"; byId("profileEditSecondary").value = profile.goals && profile.goals[1] || "";
@@ -1413,7 +1457,23 @@ function saveProfileEditor() {
   const tierChanged = String(previousProfile.membershipTier || "") !== String(nextTier || "");
   const updates = { membershipTier: nextTier, sessionsPerWeek: Number(byId("profileEditSessionsPerWeek").value) || 0,
     programmedDays: tierChanged ? 0 : (Number(previousProfile.programmedDays) || 0), name: byId("profileEditName").value, username: byId("profileEditUsername").value, email:byId("profileEditEmail").value.trim().toLowerCase(), bookingEmail:byId("profileEditBookingEmail").value.trim().toLowerCase(), goals, trainingStyle:byId("profileEditStyle").value, cardioMode:cardioModes[0], cardioModes, experience: Number(byId("profileEditExperience").value), age: Number(byId("profileEditAge").value), minutes: Number(byId("profileEditMinutes").value), areas: [...(profileEditorDraft.areas || [])], muscles: [...profileEditorDraft.muscles], injuries: [...profileEditorDraft.injuries], limitationAssessments:JSON.parse(JSON.stringify(profileEditorDraft.limitationAssessments || {})), zones: [...profileEditorDraft.zones], trainingPhase:byId("profileEditPhase").value, availableDays:Number(byId("profileEditDays").value), trainingDays:[...(profileEditorDraft.trainingDays || [])], sport:byId("profileEditSport").value, sportSchedule:byId("profileEditSchedule").value, competitionDate:byId("profileEditCompetition").value, exercisePreferences:{ ...profileEditorDraft.preferences }, assignedTrainerId:selectedAssignment.id, assignedTrainerName:selectedAssignment.name, assignedTrainerEmail:selectedAssignment.email };
-  if (updates.email && !(typeof window.fit4lifeIsByuiEmail === "function" ? window.fit4lifeIsByuiEmail(updates.email) : (window.FIT4LIFE_ALLOW_ANY_EMAIL || /@byui\.edu$/i.test(updates.email)))) { showToast("Client login email must be a BYU-I email ending in @byui.edu"); byId("profileEditEmail").focus(); return null; }
+  if (updates.email && !(typeof window.fit4lifeIsByuiEmail === "function" ? window.fit4lifeIsByuiEmail(updates.email) : (window.FIT4LIFE_ALLOW_ANY_EMAIL || /@byui\.edu$/i.test(updates.email)))) { showToast(inviteEmailLabel() + ": use a full address, like " + inviteEmailPlaceholder() + ". This is the one they sign in with."); byId("profileEditEmail").focus(); return null; }
+  // The form holds a snapshot from when the editor opened. A consultation that synced in
+  // after that is not represented there, so a plain save dropped what the client reported.
+  // Only the newly arrived tags come back - a limitation the trainer unticked stays off.
+  if (previous && profileEditorConsultationBaseline) {
+    const baseline = profileEditorConsultationBaseline;
+    (previous.consultationDerivedInjuries || []).forEach((tag) => {
+      if (baseline.injuries.includes(tag) || updates.injuries.includes(tag)) return;
+      updates.injuries.push(tag);
+      updates.limitationAssessments[tag] = normalizedLimitationAssessment(previous.limitationAssessments && previous.limitationAssessments[tag]);
+    });
+    (previous.consultationDerivedPreferenceIds || []).forEach((id) => {
+      if (baseline.preferenceIds.includes(id) || Object.prototype.hasOwnProperty.call(updates.exercisePreferences,id)) return;
+      const value = previous.exercisePreferences && previous.exercisePreferences[id];
+      if (value) updates.exercisePreferences[id] = value;
+    });
+  }
   if (window.fit4lifeCloudRole === 'trainer' && previous) {
     const protectedLimitations = (previous.injuries || []).filter((tag) => { const item = normalizedLimitationAssessment(previous.limitationAssessments && previous.limitationAssessments[tag]); return tag === 'medicalhold' || item.severity === 'severe' || item.ability === 'cannot' || item.decision === 'hold'; });
     const cleared = protectedLimitations.filter((tag) => { const next = normalizedLimitationAssessment(updates.limitationAssessments && updates.limitationAssessments[tag]); return !updates.injuries.includes(tag) || !(tag === 'medicalhold' || next.severity === 'severe' || next.ability === 'cannot' || next.decision === 'hold'); });

@@ -71,20 +71,40 @@ function offenders(dir, only) {
       /* A function that merely MENTIONS the chokepoint used to pass, even if it also
          resolved the org a second way elsewhere in its body. Only skip when the unsafe
          patterns are absent too, which the checks below decide. */
-      UNSAFE.forEach(([re, why]) => { if (why && re.test(chunk)) out.push(name + " — " + why); });
-      if (unfilteredMembershipLookup(chunk)) out.push(name + " — asks \"is this person staff ANYWHERE\"");
+      /* Refinement 2026-11-16, after this test produced four false positives. Two of the
+         patterns describe a function that resolves the org LOOSELY. They are not a leak
+         when the org is already PINNED by an equality against the chokepoint in the same
+         body — there the subquery is a permission check that can only narrow. Pinning does
+         NOT excuse fit4life_my_org() or an inlined limit 1: those ARE a second, competing
+         answer to "which org", which is the thing that broke three times. */
+      const pinned = /organization_id\s*=\s*public\.fit4life_active_org\s*\(/i.test(chunk);
+      const NARROWING_ONLY = new Set(["loose: every org the caller belongs to"]);
+      UNSAFE.forEach(([re, why]) => {
+        if (!why || !re.test(chunk)) return;
+        if (pinned && NARROWING_ONLY.has(why)) return;
+        out.push(name + " — " + why);
+      });
+      if (!pinned && unfilteredMembershipLookup(chunk)) out.push(name + " — asks \"is this person staff ANYWHERE\"");
     });
   });
   return [...new Set(out)];
 }
 
-/* What is LIVE: a migrated function must go through the chokepoint. */
-const liveOffenders = offenders("supabase/migrations");
-t("no migrated function guesses its organization", liveOffenders, []);
+/* FLAW FIXED 2026-11-16: this used to judge "what is live" by reading
+   supabase/migrations. A migration is an INTENTION. v172 sat written-and-unapplied for a
+   week while this test read it and reported green, and V178 was applied while this test
+   could not see it at all. The authority is supabase/live-functions/ — one file per
+   function, verbatim pg_get_functiondef output from the real database. Writing a migration
+   can no longer turn the alarm green; only applying one and re-dumping can. */
+const liveOffenders = offenders("supabase/live-functions");
+t("no live function guesses its organization", liveOffenders, []);
 
-/* What is NOT yet migrated and still guesses — the backlog, which must be empty. */
-const backlog = offenders("supabase/functions", (n) => !migrated.has(n));
-t("no unmigrated function is left guessing", backlog, []);
+/* The dump has to exist and be plausible, or the check above passes on an empty folder. */
+t("the live dump is present", listSql("supabase/live-functions").length > 50, true);
+
+/* Anything written but not yet applied is a backlog item, not a pass. */
+const unapplied = [...migrated].filter((n) => !listSql("supabase/live-functions").includes(n + ".sql"));
+t("every migrated function reached the database", unapplied, []);
 
 /* ---------- 2. the browser ---------- */
 const cs = read("cloud-sync.js");

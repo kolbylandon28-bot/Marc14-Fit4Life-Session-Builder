@@ -41,12 +41,23 @@ function isByuiEmail(value) {
 }
 window.fit4lifeIsByuiEmail = isByuiEmail;
 
+/* Branch label for the address field - "BYU-I email" only on a university branch.
+   No domain rule is enforced in pilot mode, so no message may promise one. */
+function consultationEmailLabel() {
+  return typeof inviteEmailLabel === "function" ? inviteEmailLabel() : "Email";
+}
+
 function clientConsultationComplete(profile) {
   const consultation = profile && profile.consultation;
   return Boolean(consultation && consultation.version >= CLIENT_CONSULTATION_VERSION && consultation.status === "submitted" && consultation.submittedAt);
 }
+/* Never conclude a client is new while we are still finding out who they are. Sign-in sets the
+   role long before the account's own data lands, and on a device with no cache the gate read
+   an empty profile and forced a completed consultation to be filled in again. */
 function clientNeedsRequiredConsultation() {
-  return (window.fit4lifeCloudRole || "") === "client" && !clientConsultationComplete(activeClientProfile());
+  if ((window.fit4lifeCloudRole || "") !== "client") return false;
+  if (window.fit4lifeCloudReady && !window.fit4lifeFirstPullDone) return false;
+  return !clientConsultationComplete(activeClientProfile());
 }
 function consultationOptionButtons(items,name,selected,type) {
   const chosen = new Set(Array.isArray(selected) ? selected : selected ? [selected] : []), inputType = type || "checkbox";
@@ -148,7 +159,7 @@ function validateConsultationStep(step,data) {
   const fail = (message,id) => { consultationSetAlert(message,true); if (id && byId(id)) byId(id).focus(); return false; };
   consultationSetAlert("",false);
   if (step === 1) {
-    if (!isByuiEmail(data.identity.email)) return fail("Client access requires a verified BYU-I email ending in @byui.edu. Sign out and contact the Fit4Life team if your login email needs to be corrected.","consultationEmail");
+    if (!isByuiEmail(data.identity.email)) return fail("Enter a complete address in the " + consultationEmailLabel() + " field. Sign out and ask your trainer if the address on your account needs correcting.","consultationEmail");
     if (String(data.identity.phone || "").replace(/\D/g,"").length < 7) return fail("Enter a phone number the coaching team can use.","consultationPhone");
     if (!data.identity.age || data.identity.age < 13 || data.identity.age > 100) return fail("Enter an age from 13 to 100.","consultationAge");
     if (!data.fitnessLevel) return fail("Choose your current fitness level.");
@@ -217,7 +228,7 @@ function openClientConsultation(required) {
     && maybePlayIntroVideo(profile, () => openClientConsultation(required))) return true;
   clientConsultationRequiredMode = Boolean(required) || !clientConsultationComplete(profile);
   populateClientConsultation(profile); show("client-consultation"); showConsultationStep(1);
-  if (!isByuiEmail((window.fit4lifeCloudIdentity || {}).email || profile.email)) consultationSetAlert("Client accounts require a verified BYU-I email ending in @byui.edu. Sign out and contact Fit4Life to correct this account before continuing.",true);
+  if (!isByuiEmail((window.fit4lifeCloudIdentity || {}).email || profile.email)) consultationSetAlert("This account has no usable email address on file. Sign out and ask your trainer to correct the address before continuing.",true);
   return true;
 }
 
@@ -360,8 +371,8 @@ async function persistClientConsultation(status) {
   byId("consultationSubmitBtn").disabled = false;
   if (!cloudSaved) {
     const pendingProfiles = loadProfiles(), pendingIndex = pendingProfiles.findIndex((item) => item.id === profile.id);
-    if (pendingIndex >= 0) { const pendingAt = new Date().toISOString(); pendingProfiles[pendingIndex] = {...pendingProfiles[pendingIndex],consultation:{...pendingProfiles[pendingIndex].consultation,status:"pending_sync",syncPending:true,updatedAt:pendingAt},updatedAt:pendingAt}; writeProfiles(pendingProfiles); }
-    consultationSetAlert("Your answers are saved on this device, but they have not reached the shared Fit4Life record yet. Check your connection and press Submit consultation again.",true); return false;
+    if (pendingIndex >= 0) { const pendingAt = new Date().toISOString(); pendingProfiles[pendingIndex] = {...pendingProfiles[pendingIndex],consultation:{...pendingProfiles[pendingIndex].consultation,syncPending:true,updatedAt:pendingAt},updatedAt:pendingAt}; writeProfiles(pendingProfiles); }
+    consultationSetAlert("Your answers are saved on this device, but they have not reached your coaching record yet. Check your connection and press Submit consultation again.",true); return false;
   }
   clientConsultationRequiredMode = false; showToast("Trainer Consultation submitted"); openClientTab("home"); return true;
 }
@@ -387,7 +398,7 @@ function clientConsultationClientCardHtml(profile,trainerPreview) {
 function consultationAnswerRows(profile) {
   const data = profile && profile.consultation || {}, limitations = data.limitations || {};
   return [
-    ["BYU-I email",data.identity && data.identity.email || profile && profile.email || "Not recorded"],["Phone",data.identity && data.identity.phone || profile && profile.phone || "Not recorded"],
+    [consultationEmailLabel(),data.identity && data.identity.email || profile && profile.email || "Not recorded"],["Phone",data.identity && data.identity.phone || profile && profile.phone || "Not recorded"],
     ["Fitness level",consultationLabel(CLIENT_CONSULTATION_FITNESS,data.fitnessLevel)],["Past activity",data.pastActivities || "Not recorded"],["Usual effort",data.usualRpe ? data.usualRpe + "/10 · " + consultationRpeLabel(data.usualRpe) : "Not recorded"],
     ["Exercise interests",consultationListLabels(CLIENT_CONSULTATION_INTERESTS,data.interests)],["Primary goal",consultationLabel(CLIENT_CONSULTATION_GOALS,data.primaryGoal)],["Secondary goals",consultationListLabels(CLIENT_CONSULTATION_GOALS,data.secondaryGoals)],
     ["Favorite exercises",data.favoriteExercises || "None recorded"],["Least favorite exercises",data.leastFavoriteExercises || "None recorded"],["Unfamiliar exercises",data.unfamiliarExercises || "None recorded"],
@@ -426,7 +437,7 @@ function openTrainerConsultationReview(profileId) {
 function closeTrainerConsultationReview() { byId("trainerConsultationModal").classList.remove("open"); trainerConsultationProfileId = ""; }
 async function markTrainerConsultationReviewed() {
   const profiles = loadProfiles(), index = profiles.findIndex((profile) => profile.id === trainerConsultationProfileId); if (index < 0) return false;
-  const now = new Date().toISOString(), identity = currentAccountIdentity(); profiles[index] = {...profiles[index],consultation:{...profiles[index].consultation,reviewedAt:now,reviewedBy:identity.displayName || identity.email || "Fit4Life trainer",updatedAt:now},limitationReviewRequired:false,updatedAt:now};
+  const now = new Date().toISOString(), identity = currentAccountIdentity(); profiles[index] = {...profiles[index],consultation:{...profiles[index].consultation,reviewedAt:now,reviewedBy:identity.displayName || identity.email || "Trainer",updatedAt:now},limitationReviewRequired:false,updatedAt:now};
   if (!writeProfiles(profiles)) return false;
   const cloudSaved = typeof window.fit4lifeCloudSaveProfileNow === "function" ? await window.fit4lifeCloudSaveProfileNow() : false;
   closeTrainerConsultationReview(); if (typeof renderTrainerHub === "function") renderTrainerHub(profiles[index].name); if (typeof renderTrainerAttention === "function") renderTrainerAttention();

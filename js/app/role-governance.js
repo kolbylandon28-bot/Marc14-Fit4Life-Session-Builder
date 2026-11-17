@@ -287,7 +287,16 @@ function saveCoachNote(profileId) {
   if (!writeLocalArray(COACH_NOTES_KEY,notes,1000)) return null; renderTrainerAnalysis(profile && profile.name || selectedTrainerClient); showToast(coachNoteVisibilityLabel(visibility) + " saved"); return true;
 }
 function archiveCoachNote(id,profileId) { if (!isFit4LifeOwner()) { showToast("Only an owner can archive protected coaching notes"); return false; } const notes = loadCoachNotes(), note = notes.find((item) => item.id === id); if (!note) return false; note.archivedAt = new Date().toISOString(); note.archivedBy = currentAccountIdentity().displayName; writeLocalArray(COACH_NOTES_KEY,notes,1000); const profile = loadProfiles().find((item) => item.id === profileId); renderTrainerAnalysis(profile && profile.name || selectedTrainerClient); return true; }
-function clientCoachNotesHtml(profile) { const notes = profile ? coachNotesForProfile(profile.id,"client") : []; return '<section class="client-card wide"><div class="client-section-label">Coach feedback</div><h3>Updates from your coaching team</h3><p>All approved FIT4LIFE trainers may review your record and cover normal coaching work. If you have a primary coach, they lead your plan while the rest of the team can still help.</p><div class="coach-note-list">' + (notes.map((note) => '<article class="coach-note client"><b>' + escapeHtml(note.authorName || "Coaching team") + ' · ' + new Date(note.createdAt).toLocaleDateString() + '</b><p>' + escapeHtml(note.text) + '</p></article>').join("") || '<div class="empty-state">No new coach feedback.</div>') + '</div></section>'; }
+/* Branch's own stored brand_config, never currentGymBrand()'s hardcoded fallback -
+   an unresolved branch must not inherit the original branch's name. */
+function coachTeamLabel() {
+  try {
+    const brand = typeof loadLocalObject === "function" ? loadLocalObject("fit4life_gym_brand_v1",{}) : {};
+    const name = window.fit4lifeOrgType ? String(brand.name || "").trim() : "";
+    return name ? "All approved " + escapeHtml(name) + " trainers" : "Every approved trainer on your coaching team";
+  } catch (_) { return "Every approved trainer on your coaching team"; }
+}
+function clientCoachNotesHtml(profile) { const notes = profile ? coachNotesForProfile(profile.id,"client") : []; return '<section class="client-card wide"><div class="client-section-label">Coach feedback</div><h3>Updates from your coaching team</h3><p>' + coachTeamLabel() + ' may review your record and cover normal coaching work. If you have a primary coach, they lead your plan while the rest of the team can still help.</p><div class="coach-note-list">' + (notes.map((note) => '<article class="coach-note client"><b>' + escapeHtml(note.authorName || "Coaching team") + ' · ' + new Date(note.createdAt).toLocaleDateString() + '</b><p>' + escapeHtml(note.text) + '</p></article>').join("") || '<div class="empty-state">No new coach feedback.</div>') + '</div></section>'; }
 
 function ownerOnlyMutation(action,type,profileId,subjectId,summary) {
   if (isFit4LifeOwner()) return true;

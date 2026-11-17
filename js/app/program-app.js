@@ -153,7 +153,7 @@ function renderClientProgress(profile) {
 }
 function currentAccountIdentity() {
   const identity = window.fit4lifeCloudIdentity || {};
-  return { id:identity.id || '',email:identity.email || '',role:identity.role || window.fit4lifeCloudRole || '',displayName:identity.displayName || (identity.email ? identity.email.split('@')[0] : '') || 'FIT 4 LIFE coach' };
+  return { id:identity.id || '',email:identity.email || '',role:identity.role || window.fit4lifeCloudRole || '',displayName:identity.displayName || (identity.email ? identity.email.split('@')[0] : '') || 'Coach' };
 }
 function messageSenderRole(message) { return message.senderRole || (message.from === 'coach' ? 'trainer' : 'client'); }
 function messageIsMine(message,viewerRole) {
@@ -1226,9 +1226,17 @@ function renderCoachModule(destination) {
    brand. Same panels, three groups, one on screen at a time. Tutorials already left for its
    own dialog, so what is here is only settings. */
 let coachSettingsTab = "account";
-const COACH_SETTINGS_TABS = [["account","My account"],["gym","Gym details"],["imports","Imports and checks"]];
+/* The imports tab only opens panels gated on booking_import, so an ungated tab button landed
+   a branch without it on an empty screen and still fired the arrivals fetch. */
+function coachSettingsTabs() {
+  const tabs = [["account","My account"],["gym","Gym details"]];
+  if (typeof window.fit4lifeModuleEnabled !== "function" || window.fit4lifeModuleEnabled("booking_import")) {
+    tabs.push(["imports","Imports and checks"]);
+  }
+  return tabs;
+}
 function setCoachSettingsTab(tab) {
-  coachSettingsTab = COACH_SETTINGS_TABS.some(([key]) => key === tab) ? tab : "account";
+  coachSettingsTab = coachSettingsTabs().some(([key]) => key === tab) ? tab : "account";
   const out = byId("coachModuleContent");
   if (out) renderCoachSettings(out);
 }
@@ -1237,7 +1245,7 @@ function renderCoachSettings(out) {
   const owner = window.fit4lifeCloudRole === 'owner';
   const tabs = '<section class="coach-module-card" style="grid-column:1/-1;padding:10px 12px">'
     + '<div class="calendar-view-toggle">'
-    + COACH_SETTINGS_TABS.map(([key,label]) => '<button class="segment-btn ' + (coachSettingsTab === key ? 'on' : '')
+    + coachSettingsTabs().map(([key,label]) => '<button class="segment-btn ' + (coachSettingsTab === key ? 'on' : '')
         + '" onclick="setCoachSettingsTab(\'' + key + '\')">' + escapeHtml(label) + '</button>').join('')
     + '</div></section>';
 
@@ -1251,7 +1259,8 @@ function renderCoachSettings(out) {
   } else {
     if (typeof bookingImportPanelHtml === 'function' && (typeof window.fit4lifeModuleEnabled !== 'function' || window.fit4lifeModuleEnabled('booking_import'))) panels += bookingImportPanelHtml();
     if (owner) panels += archivedClientsPanelHtml();
-    if (owner) panels += trainerLinksPanelHtml();
+    // Name links only exist to map an imported booking report, so they follow that module.
+    if (owner && (typeof window.fit4lifeModuleEnabled !== 'function' || window.fit4lifeModuleEnabled('booking_import'))) panels += trainerLinksPanelHtml();
     if (typeof inviteEmailTestPanelHtml === "function") panels += inviteEmailTestPanelHtml();
   }
   out.innerHTML = tabs + panels;
@@ -1273,7 +1282,7 @@ function bindDataHandlers(root,selector,handler) {
 // account once. Owner-only, because one row here re-points every future import for that name.
 function trainerLinksPanelHtml() {
   return '<section class="coach-module-card"><h3>Trainer name links</h3>'
-    + '<p>Jason\u2019s report names trainers but sends no email address. Link each name to the account it belongs to, once.</p>'
+    + '<p>The booking report names trainers but sends no email address. Link each name to the account it belongs to, once.</p>'
     + '<div class="tool-actions"><button class="small-btn primary" onclick="openTrainerLinks()">Trainer name links</button></div></section>';
 }
 function openTrainerLinks() {
@@ -1293,7 +1302,7 @@ async function refreshTrainerLinks() {
   const names = [...new Set([...seen, ...aliases.map((a) => a.source_name)])].filter(Boolean).sort();
   if (!names.length) { out.innerHTML = '<div class="storage-note">No trainer names have arrived from a booking report yet. Read one in and they will appear here.</div>'; return true; }
   const options = (selected) => '<option value="">Not linked</option>'
-    + '<option value="__external"' + (selected === "__external" ? " selected" : "") + '>Not a FIT4LIFE trainer</option>'
+    + '<option value="__external"' + (selected === "__external" ? " selected" : "") + '>Not one of our trainers</option>'
     + roster.map((trainer) => '<option value="' + escapeHtml(trainer.user_id) + '"' + (selected === trainer.user_id ? " selected" : "") + '>'
         + escapeHtml(trainer.display_name || trainer.email) + '</option>').join("");
   out.innerHTML = names.map((name) => {
@@ -1302,7 +1311,7 @@ async function refreshTrainerLinks() {
     const selected = alias.status === "external" ? "__external" : (alias.trainer_user_id || "");
     return '<div class="trainer-link-row"><div><b>' + escapeHtml(name) + '</b><span>'
       + (alias.status === "linked" ? "linked to " + escapeHtml(alias.display_name || "an account")
-         : alias.status === "external" ? "not a FIT4LIFE trainer" : "not linked yet") + '</span></div>'
+         : alias.status === "external" ? "not one of our trainers" : "not linked yet") + '</span></div>'
       + '<select data-trainer-link data-key="' + escapeHtml(key) + '" data-name="' + escapeHtml(name) + '">' + options(selected) + '</select></div>';
   }).join("");
   out.querySelectorAll("[data-trainer-link]").forEach((select) => {

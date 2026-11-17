@@ -147,7 +147,8 @@ function inviteEmailTestPanelHtml() {
   return '<section class="advanced-card wide"><h3>Invite email self-test</h3>'
     + '<p>Confirms the invite email actually sends, using the identical path a real client invite uses. Send it to yourself first, before inviting anyone.</p>'
     + '<div class="compact-field wide"><label for="inviteTestEmail">Send a test invite to</label>'
-    + '<input id="inviteTestEmail" type="email" value="' + escapeHtml(identity.email || "") + '" placeholder="you@byui.edu"></div>'
+    // branch placeholder, not a hardcoded domain
+    + '<input id="inviteTestEmail" type="email" value="' + escapeHtml(identity.email || "") + '" placeholder="' + escapeHtml(typeof inviteEmailPlaceholder === "function" ? inviteEmailPlaceholder() : "name@example.com") + '"></div>'
     + '<div class="tool-actions"><button class="small-btn" onclick="runInviteDiagnostics()">Check setup</button>'
     + '<button class="small-btn primary" onclick="sendTestInvite()">Send test email</button>'
     + '<button class="small-btn" onclick="sendNewClientTestInvite()">Test as a brand-new client</button></div>'
@@ -304,7 +305,8 @@ const PORTAL_THEME_PRESETS = {
 function normalizedPortalTheme(theme) { return Object.prototype.hasOwnProperty.call(PORTAL_THEME_PRESETS,theme) ? theme : "neon"; }
 function portalThemePreset(theme) { return PORTAL_THEME_PRESETS[normalizedPortalTheme(theme)]; }
 function currentGymBrand() {
-  const fallback = { name:"FIT 4 LIFE",sub:"BYU-Idaho Trainer Tools",primary:"#3E6BE0",accent:"#5AA6F0",theme:"neon" }, saved = loadLocalObject(GYM_BRAND_KEY,fallback);
+  // branch-neutral sub; an unset brand must not wear another branch's name
+  const fallback = { name:"Training Portal",sub:"Trainer Tools",primary:"#3E6BE0",accent:"#5AA6F0",theme:"neon" }, saved = loadLocalObject(GYM_BRAND_KEY,fallback);
   return { ...fallback,...saved,theme:normalizedPortalTheme(saved.theme) };
 }
 /* ---------- named equipment ---------- */

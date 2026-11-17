@@ -180,7 +180,7 @@
     if (!requireTrainerMutation("link a trainer name")) return false;
     const roster = (window.fit4lifeCloudTrainers || []).filter((trainer) => trainer.is_active !== false);
     if (!roster.length) { showToast("No trainer accounts have loaded yet"); return false; }
-    const options = [{ value:"", label:"Not linked" }, { value:"__external", label:"Not a FIT4LIFE trainer" }]
+    const options = [{ value:"", label:"Not linked" }, { value:"__external", label:"Not one of our trainers" }]
       .concat(roster.map((trainer) => ({ value:trainer.user_id, label:trainer.display_name || trainer.email })));
     const choice = await askForChoice('Which account is "' + name + '"?', options,
       { note:"Saved once and reused on every future import.", confirmLabel:"Link" });

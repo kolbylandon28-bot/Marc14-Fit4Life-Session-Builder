@@ -61,5 +61,32 @@ console.log("\n--- exact names still win outright ---");
 t("an exact name matches only itself",        n("cable chest fly"), 1);
 t("a specific name is not widened",           n("lat pulldown"), 1);
 
+/* The onboarding repeat, reported 2026-11-16: a client logged back in and was made to redo a
+   consultation she had already submitted. Two causes. (1) A failed push demoted her status out
+   of "submitted", and clientConsultationComplete() tests that exact string. (2) cloudReady goes
+   true when the ROLE resolves, long before her own data arrives, so on a device with no cache
+   the gate read an empty profile and concluded she was new. */
+const consultSrc = fs.readFileSync(path.join(__dirname, "client-consultation.js"), "utf8");
+const syncSrc = fs.readFileSync(path.join(__dirname, "..", "..", "cloud-sync.js"), "utf8");
+
+t("a failed push no longer demotes a submitted consultation",
+  /status:"pending_sync"/.test(consultSrc), false);
+t("the sync-pending flag is still set so the retry queue knows",
+  /syncPending:true/.test(consultSrc), true);
+t("the gate waits for this account's first pull",
+  /window\.fit4lifeCloudReady && !window\.fit4lifeFirstPullDone/.test(consultSrc), true);
+t("the gate still only applies to clients",
+  /\(window\.fit4lifeCloudRole \|\| ""\) !== "client"\) return false/.test(consultSrc), true);
+t("cloud-sync publishes the first-pull flag",
+  /window\.fit4lifeFirstPullDone = true;/.test(syncSrc), true);
+t("and clears it on every sign-out and account change",
+  (syncSrc.match(/window\.fit4lifeFirstPullDone = false;/g) || []).length, 3);
+t("an explicit save queues its scope before flushing, so a pull in flight cannot drop it",
+  /pendingScopes\.add\(scope\);\s*\n\s*persistPendingScopes\(\);\s*\n\s*return flushCloudSync\(scope\);/.test(syncSrc), true);
+t("submitted is judged by the act, not by one exact string",
+  /function consultationSubmitted/.test(syncSrc), true);
+t("and activityBundle uses it",
+  /clientConsultationProfile: consultationSubmitted\(consultation\)/.test(syncSrc), true);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

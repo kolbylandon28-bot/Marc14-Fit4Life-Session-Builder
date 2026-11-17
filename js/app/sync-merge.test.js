@@ -176,7 +176,6 @@ t("the booking address is pushed too",        /booking_email: normalizedEmail\(p
 t("and read back",                            /bookingEmail: row\.booking_email/.test(sync), true);
 // Selects are built rather than literal now, so the property to check is that the built list
 // carries the column when the database has it.
-t("the built column list includes it",        /profilesHaveBookingEmail \? "booking_email," : ""/.test(sync), true);
 t("the column is added if missing",           /add column if not exists booking_email/.test(sql), true);
 t("and both are matched on",                  /lower\(p\.email\)[\s\S]{0,80}lower\(p\.booking_email\)/.test(sql), true);
 
@@ -184,15 +183,180 @@ console.log("\n--- the app must work before the SQL is run ---");
 // Asking Postgres for a column that does not exist rejects the WHOLE query. Four of the
 // profile reads rethrow, so a missing booking_email emptied the entire client roster on the
 // trainer side - the app broke on upload and only recovered once the SQL was run.
-t("the column list is built, not hardcoded",  /function profileColumns\(\)/.test(sync), true);
-t("no read hardcodes the new column",         /select\("id,organization_id[^"]*booking_email/.test(sync), false);
-t("it is probed once at startup",             /probeBookingEmailColumn/.test(sync), true);
-t("and only 42703 switches it off",           /String\(response\.error\.code \|\| ""\) === "42703"/.test(sync), true);
-// A network blip or an empty table must not disable the column for the rest of the session.
-t("other errors leave it alone",              /if \(response\.error && String\(response\.error\.code/.test(sync), true);
+// Reads name no columns at all now. "*" cannot ask for something that is missing, so there is
+// no flag for a read to depend on and nothing to get wrong before the migration is run.
+t("reads name no columns",                    /select\("id,organization_id[^"]*"\)/.test(sync), false);
+t("they select everything instead",           (sync.match(/from\("client_profiles"\)[\s\S]{0,120}?select\("\*"\)/g) || []).length >= 4, true);
+// The earlier attempt probed at startup, before there was a session - so RLS answered instead
+// of Postgres and the missing-column code never appeared. Detected on the write instead, which
+// is the one place Postgres itself rejects it.
+t("the missing column is noticed on a write", /function noteMissingBookingEmail/.test(sync), true);
+t("only 42703 or the column name counts",     /code !== "42703" && !\/booking_email\/\.test\(message\)/.test(sync), true);
+t("the upsert retries without it",            /noteMissingBookingEmail\(response\.error\)\) \{[\s\S]{0,200}upsert\(rows/.test(sync), true);
+t("and no startup probe remains",             /probeBookingEmailColumn/.test(sync), false);
 t("the upsert omits it when absent",          /profilesHaveBookingEmail \? \{ booking_email/.test(sync), true);
 t("the probe runs before anything reads",     sync.indexOf("await probeBookingEmailColumn") < sync.indexOf("await loadPortalContext"), true);
 t("and it says which file to run",            /RUN-THIS-IN-SUPABASE-PREAPPROVED-EMAILS\.sql/.test(sync), true);
 
-console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);
+console.log("\n--- functions must be reachable from where they are called ---");
+// liveWorkoutCardHtml sat at column 0 but before the closing brace of the function above it,
+// so it was nested and did not exist outside that function. renderTrainerAnalysis called it on
+// every client click, threw ReferenceError, and the client page never rendered. Indentation
+// shows nothing here and brace counting trips over regex literals, so ask the engine instead:
+// load the script the way the browser does and see what is actually reachable. Declarations
+// hoist before any statement runs, so top-level code wanting a real browser can throw without
+// changing the answer. window points at the context so window.x = fn lands like it does live.
+const vm = require("vm");
+function scriptGlobals(source) {
+  const ctx = vm.createContext({});
+  ctx.window = ctx; ctx.globalThis = ctx;
+  try { new vm.Script(source).runInContext(ctx, { timeout: 5000 }); } catch (e) { /* hoisting already happened */ }
+  return ctx;
+}
+const appScripts = [];
+(function walk(dir) {
+  fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+    const p = dir + path.sep + e.name;
+    if (e.isDirectory()) walk(p);
+    else if (e.name.endsWith(".js") && !e.name.includes(".test.")) appScripts.push(p);
+  });
+})(R + "js");
+appScripts.push(R + "cloud-sync.js");
+
+const hubSrc = fs.readFileSync(R + "js/trainer/trainer-hub.js", "utf8");
+const hubGlobals = scriptGlobals(hubSrc);
+["liveWorkoutCardHtml", "renderTrainerAnalysis", "trainerClientDetailsContent",
+ "trainerClientOverviewContent", "trainerAssignmentLoopHtml"].forEach((name) => {
+  t("reachable: " + name,                     typeof hubGlobals[name], "function");
+});
+// A check that cannot fail is not a check. This is the shipped text with the declaration put
+// back inside the function that swallowed it.
+const broken = hubSrc
+  .replace(/^function liveWorkoutCardHtml\(profile\) \{/m, "function trapItHere() {\nfunction liveWorkoutCardHtml(profile) {")
+  .replace(/^function renderTrainerAnalysis\(client\) \{/m, "}\nfunction renderTrainerAnalysis(client) {");
+t("and the check fails on the shipped bug",   typeof scriptGlobals(broken).liveWorkoutCardHtml, "undefined");
+
+// Every declaration in every script has to survive being loaded, not just this one file.
+const trapped = appScripts.filter((file) => {
+  const source = fs.readFileSync(file, "utf8");
+  const globals = scriptGlobals(source);
+  return (source.match(/^function ([A-Za-z0-9_$]+)\s*\(/gm) || [])
+    .map((line) => line.replace(/^function /, "").replace(/\s*\($/, ""))
+    .some((name) => typeof globals[name] !== "function");
+});
+t("no script has a trapped declaration",      trapped.map((f) => f.replace(R, "")).join(", "), "");
+
+// An onclick in a generated string is resolved by name at click time, so a handler that is not
+// reachable is a button that silently does nothing - the same failure, one layer out.
+const reachable = new Set();
+appScripts.forEach((file) => {
+  const globals = scriptGlobals(fs.readFileSync(file, "utf8"));
+  Object.keys(globals).forEach((k) => { if (typeof globals[k] === "function") reachable.add(k); });
+});
+const handlers = new Set();
+appScripts.forEach((file) => {
+  const source = fs.readFileSync(file, "utf8");
+  for (const m of source.matchAll(/on(?:click|change|input|submit)=\\?"([A-Za-z0-9_$]+)\(/g)) handlers.add(m[1]);
+});
+t("inline handlers are worth checking",       handlers.size > 150, true);
+t("every inline handler resolves",            [...handlers].filter((h) => !reachable.has(h)).join(", "), "");
+
+console.log("\n--- a client account has to find its own profile ---");
+// A client sees only rows stamped with their auth_user_id. Nothing stamped it for anyone who
+// already had a membership, so they saw zero profiles, got dropped on the old lookup menu, and
+// never reached the questionnaire either - it is gated behind having a profile.
+const linkerSrc = sync.match(/async function linkOwnClientProfile\(\)[\s\S]*?\n  \}/)[0];
+function runLinker(responses, orgId) {
+  const calls = [];
+  const cloudClient = { rpc: async (name, args) => { calls.push({ name, args }); return responses[name] || { error: { message: "not installed" } }; } };
+  const fn = new Function("cloudClient", "cloudOrganizationId", linkerSrc + "; return linkOwnClientProfile;")(cloudClient, orgId || "");
+  return fn().then((ok) => ({ ok, calls }));
+}
+const ORG = "org-1";
+return (async () => {
+  let r = await runLinker({ fit4life_link_my_client_profile: { data: 1 } }, ORG);
+  t("the additive function is asked first",    r.calls[0].name, "fit4life_link_my_client_profile");
+  t("it is scoped to the organization",        r.calls[0].args.target_organization, ORG);
+  t("linking one profile counts as linked",    r.ok, true);
+  t("and nothing else is called",              r.calls.length, 1);
+
+  r = await runLinker({ fit4life_link_my_client_profile: { data: 0 } }, ORG);
+  t("matching nothing is not a link",          r.ok, false);
+  t("a no-match does not fall through",        r.calls.length, 1);
+
+  // Before the migration is run that function does not exist, so the older claim still has to
+  // be tried - otherwise shipping the code before the SQL would help nobody.
+  r = await runLinker({ claim_my_client_profile_for_org: { data: null } }, ORG);
+  t("an uninstalled function falls back",      r.calls.map((c) => c.name).join(" then "),
+                                               "fit4life_link_my_client_profile then claim_my_client_profile_for_org");
+  t("and the fallback counts as linked",       r.ok, true);
+  r = await runLinker({ claim_my_client_profile: { data: null } }, "");
+  t("with no org, the plain claim is used",    r.calls[1].name, "claim_my_client_profile");
+  r = await runLinker({}, ORG);
+  t("both failing is not a link",              r.ok, false);
+
+  console.log("\n--- and the pull must not strand them ---");
+  t("the link is asked for when nothing is visible",
+    /cloudRole === "client" && !visibleProfileRows\.length && !clientProfileLinkTried/.test(sync), true);
+  t("tried once per session, not every sync",  /clientProfileLinkTried = true;/.test(sync), true);
+  t("a successful link re-reads the profiles", /if \(await linkOwnClientProfile\(\)\)[\s\S]{0,200}from\("client_profiles"\)/.test(sync), true);
+  t("the re-read is scoped to the org",        /relinked[\s\S]{0,160}eq\("organization_id", cloudOrganizationId\)/.test(sync), true);
+  // Overwriting the device list with nothing left them with no way back in, because the
+  // lookup searches that same list.
+  t("an unlinked client's list is not wiped",  /const clientHasNoVisibleRow = cloudRole === "client" && !profiles\.length && !profileRows\.length/.test(sync), true);
+  t("archiving still takes effect",            /!profileRows\.length/.test(sync), true);
+  t("the write is guarded by it",              /if \(!clientHasNoVisibleRow\) writeJson\(CLOUD_KEYS\.profiles/.test(sync), true);
+  // The database treats a missing status as active; the code demanded the exact string.
+  t("a row with no status counts as active",   /\(row\.status \|\| "active"\) === "active"/.test(sync), true);
+  t("pending is still not active",             (function () { const f = (row) => (row.status || "active") === "active";
+    return [f({}), f({ status: "active" }), f({ status: "pending" }), f({ status: "archived" })].join(","); })(), "true,true,false,false");
+
+  console.log("\n--- the SQL that does the linking ---");
+  const linkSql = fs.readFileSync(R + "RUN-THIS-IN-SUPABASE-CLIENT-PROFILE-LINK.sql", "utf8");
+  t("it adds the column it depends on",        /add column if not exists booking_email/.test(linkSql), true);
+  t("it matches the caller's verified address", /from auth\.users u\s*\n\s*where u\.id = auth\.uid\(\)/.test(linkSql), true);
+  t("on either address",                       /coalesce\(p\.email[\s\S]{0,80}coalesce\(p\.booking_email/.test(linkSql), true);
+  t("it never takes a claimed profile",        (linkSql.match(/p\.auth_user_id is null/g) || []).length >= 2, true);
+  t("it refuses when more than one matches",   /if match_count <> 1 then\s*\n\s*return 0;/.test(linkSql), true);
+  t("it skips archived rows",                  /coalesce\(p\.status, 'active'\) <> 'archived'/.test(linkSql), true);
+  t("anon cannot call it",                     /grant execute on function public\.fit4life_link_my_client_profile\(uuid\) to anon/.test(linkSql), false);
+  t("signed-in accounts can",                  /grant execute on function public\.fit4life_link_my_client_profile\(uuid\) to authenticated/.test(linkSql), true);
+
+  /* The consultation clobber, found 2026-11-16 from a real report: a client submitted her
+     consultation and the trainer saw nothing. clientIntake was protected in this merge;
+     clientConsultation was not, so it fell through the plain spread and whichever side pushed
+     last won. The trainer's copy carried an empty consultation, so his sync erased her answers
+     with no error on either side. */
+  const bundleApi = new Function(
+    [grab("recordTime"), grab("newestObject"), grab("mergeActiveWorkout"), grab("mergeRecords"),
+     grab("meaningfulIntake"), grab("intakeTime"), grab("consultationTime"),
+     grab("mergeBundlePayload")].join("\n")
+    + "; return { mergeBundlePayload };")();
+  const mb = (a, b) => bundleApi.mergeBundlePayload("client_activity", a, b);
+
+  const answered = { status: "submitted", goals: ["strength"], updatedAt: "2026-11-16T10:00:00Z" };
+  const newer    = { status: "submitted", goals: ["fatloss"],  updatedAt: "2026-11-16T18:00:00Z" };
+  const clientSide  = { clientConsultation: answered, clientConsultationUpdatedAt: "2026-11-16T10:00:00Z",
+                        clientConsultationProfile: { phone: "555" } };
+  const trainerSide = { clientConsultation: {}, clientConsultationUpdatedAt: null,
+                        clientConsultationProfile: {} };
+
+  t("a trainer's empty consultation cannot erase a submitted one",
+    JSON.stringify(mb(clientSide, trainerSide).clientConsultation), JSON.stringify(answered));
+  t("and it survives in the other push order too",
+    JSON.stringify(mb(trainerSide, clientSide).clientConsultation), JSON.stringify(answered));
+  t("the submitted-at stamp travels with it",
+    mb(clientSide, trainerSide).clientConsultationUpdatedAt, "2026-11-16T10:00:00Z");
+  t("the derived profile is not blanked either",
+    JSON.stringify(mb(clientSide, trainerSide).clientConsultationProfile), JSON.stringify({ phone: "555" }));
+  t("two answered consultations go by time, not by who pushed last",
+    mb({ clientConsultation: newer,    clientConsultationUpdatedAt: "2026-11-16T18:00:00Z" },
+       { clientConsultation: answered, clientConsultationUpdatedAt: "2026-11-16T10:00:00Z" }
+      ).clientConsultation.goals[0], "fatloss");
+  t("the intake it was modelled on still behaves the same way",
+    JSON.stringify(mb({ clientIntake: { answers: { a: 1 } } }, { clientIntake: {} }).clientIntake),
+    JSON.stringify({ answers: { a: 1 } }));
+
+  console.log(`\n${pass} passed, ${fail} failed`);
+  process.exit(fail ? 1 : 0);
+})();

@@ -11,6 +11,11 @@ const WORK_AREA_DEFAULTS = [
   ["pool", "Pool"],
   ["gym", "Gym"]
 ];
+/* These five ARE BYU-Idaho's rooms, and the art and the coaching/event defaults are keyed
+   to them. So they stay, and no other branch is ever seeded with or offered them. */
+function branchUsesStandardAreas() { /* The five are BYU-Idaho's rooms, so only BYU-Idaho is seeded with them - but ANY branch
+     running a facility still needs to add areas one at a time. Gate the SEED, not the feature. */
+  return (window.fit4lifeOrgType || "") === "university"; }
 /* Two switches, deliberately apart: the job decides whether they touch client records at
    all, the areas decide only where they clock in, whose schedule they see and whose tasks
    they pick up. A lifeguard cleared for the gym desk still gets no client records. */
@@ -108,9 +113,11 @@ function renderAreaListCard() {
     + '<button class="small-btn" onclick="renameWorkArea(\'' + escapeHtml(area.area_key) + '\')">Rename</button>'
     + '<button class="small-btn" onclick="toggleWorkArea(\'' + escapeHtml(area.area_key) + '\',' + (area.is_active === false ? 'true' : 'false') + ')">' + (area.is_active === false ? 'Show' : 'Hide') + '</button></div></div>').join('') + '</div>'
     : '<div class="empty-state">No areas yet.</div>';
-  const seed = areas.length ? '' : '<div class="tool-actions"><button class="small-btn primary" onclick="addStandardWorkAreas()">Add the standard five</button></div>';
+  const seed = areas.length || !branchUsesStandardAreas() ? '' : '<div class="tool-actions"><button class="small-btn primary" onclick="addStandardWorkAreas()">Add the standard five</button></div>';
   return '<section class="coach-module-card" style="grid-column:1/-1"><h3>Areas</h3>'
-    + '<p class="storage-note">Maintenance, I-Center, Equipment Center, Pool and Gym to start. Add your own; they carry through to schedules, clocks and tasks.</p>'
+    + '<p class="storage-note">' + (branchUsesStandardAreas()
+      ? 'Maintenance, I-Center, Equipment Center, Pool and Gym to start. Add your own; they carry through to schedules, clocks and tasks.'
+      : 'Name the parts of your gym people work in. They carry through to schedules, clocks and tasks.') + '</p>'
     + seed + rows
     + '<div class="compact-grid" style="margin-top:12px"><div class="compact-field"><label for="newAreaName">Add an area</label><input id="newAreaName" placeholder="Front desk"></div></div>'
     + '<div class="tool-actions"><button class="small-btn" onclick="addWorkAreaFromForm()">Add area</button></div></section>';
@@ -140,6 +147,8 @@ function loadWorkAreasOnce(force) {
 
 async function seedStandardAreasIfEmpty() {
   if (standardAreasSeeded) return;
+  // A new gym must not come up holding BYU-Idaho's rooms.
+  if (!branchUsesStandardAreas()) return;
   if (window.fit4lifeWorkAreasAvailable !== true) return;
   if (!isFit4LifeOwner()) return;
   if ((window.fit4lifeWorkAreas || []).length) return;
@@ -148,6 +157,7 @@ async function seedStandardAreasIfEmpty() {
 }
 
 async function addStandardWorkAreas(quiet) {
+  if (!branchUsesStandardAreas()) return;
   for (let index = 0; index < WORK_AREA_DEFAULTS.length; index++) {
     const [key, name] = WORK_AREA_DEFAULTS[index];
     await window.fit4lifeCloudSaveWorkArea(key, name, index, true, COACHING_DEFAULTS.includes(key), EVENT_DEFAULTS.includes(key));
@@ -529,7 +539,9 @@ function renderHomeChoices() {
     grid.innerHTML = '<button class="tool-card role-card primary" onclick="openCoachDestination(\'areas\')">'
       + '<span class="tc-tag">First run</span>'
       + '<div class="tc-icon" aria-hidden="true">' + (typeof areaGlyphSvg === "function" ? areaGlyphSvg("default", "") : '') + '</div>'
-      + '<div class="tc-title">Set up your areas</div><div class="tc-desc">Maintenance, I-Center, Equipment Center, Pool and Gym — then invite people into them.</div>'
+      + '<div class="tc-title">Set up your areas</div><div class="tc-desc">' + (branchUsesStandardAreas()
+        ? 'Maintenance, I-Center, Equipment Center, Pool and Gym — then invite people into them.'
+        : 'Name the parts of your gym people work in — then invite people into them.') + '</div>'
       + '<span class="role-action">Open areas &amp; people →</span></button>';
   }
   renderHomeSideDoors(owner);

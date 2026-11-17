@@ -72,6 +72,11 @@
   let knownBranches = [];
   let cloudReady = false;
   let cloudApplying = false;
+  /* cloudReady goes true when the ROLE resolves, which is long before this account's own data
+     arrives. The forced-consultation gate read local state in that window and concluded a real
+     client was brand new, so she was sent back through onboarding she had already completed.
+     Nothing may decide a client is new until their first pull has actually landed. */
+  let cloudFirstPullDone = false;
   let cloudPushing = false;
   let cloudPullTimer = null;
   let cloudPushTimer = null;
@@ -308,7 +313,8 @@
 
   function accountDisplayName(user) {
     const metadata = user && user.user_metadata || {};
-    return String(metadata.display_name || metadata.full_name || metadata.name || (user && user.email ? user.email.split("@")[0] : "FIT 4 LIFE coach")).trim();
+    // Last-resort label, shown on any branch - no brand name.
+    return String(metadata.display_name || metadata.full_name || metadata.name || (user && user.email ? user.email.split("@")[0] : "Coach")).trim();
   }
 
   function configuredPublicSiteUrl() {
@@ -855,6 +861,24 @@
       if (meaningfulIntake(left.clientIntake) && meaningfulIntake(right.clientIntake)) {
         merged.clientIntake = intakeTime(right.clientIntake, right) >= intakeTime(left.clientIntake, left) ? right.clientIntake : left.clientIntake;
       } else if (meaningfulIntake(left.clientIntake)) merged.clientIntake = left.clientIntake;
+      /* Same rule the intake already had, and for the same reason. The consultation fell
+         through the plain spread above, so a trainer syncing with an empty one wiped the
+         answers a client had just submitted - she filled it in, he saw nothing. An answered
+         consultation is never replaced by a blank one; two answered ones go by time. */
+      const leftConsult = left.clientConsultation, rightConsult = right.clientConsultation;
+      const leftHas = meaningfulIntake(leftConsult), rightHas = meaningfulIntake(rightConsult);
+      if (leftHas && rightHas) {
+        const keepRight = consultationTime(rightConsult, right) >= consultationTime(leftConsult, left);
+        merged.clientConsultation = keepRight ? rightConsult : leftConsult;
+        merged.clientConsultationUpdatedAt = keepRight ? right.clientConsultationUpdatedAt : left.clientConsultationUpdatedAt;
+        if (meaningfulIntake(keepRight ? right.clientConsultationProfile : left.clientConsultationProfile)) {
+          merged.clientConsultationProfile = keepRight ? right.clientConsultationProfile : left.clientConsultationProfile;
+        }
+      } else if (leftHas) {
+        merged.clientConsultation = leftConsult;
+        merged.clientConsultationUpdatedAt = left.clientConsultationUpdatedAt;
+        if (meaningfulIntake(left.clientConsultationProfile)) merged.clientConsultationProfile = left.clientConsultationProfile;
+      }
       return merged;
     }
 
@@ -977,7 +1001,8 @@
     }
     const copy = {
       signin: ["Sign in to your workspace", "Access your workouts and progress from any device."],
-      signup: ["Create your client account", "Use your BYU-I email, verify the message, then complete the required Trainer Consultation."],
+      // Pre-sign-in: no branch resolved, so no branch name and no domain rule.
+      signup: ["Create your client account", "Use the email address your trainer has on file, verify the message, then complete the required Trainer Consultation."],
       trainer_signup: ["Request trainer access", "Create a verified login, then wait for an approved gym trainer or owner to confirm trainer permissions."],
       reset: ["Reset your password", "We will email you a secure link to choose a new password."],
       update: ["Choose a new password", "Enter a new password for your training account."],
@@ -1021,7 +1046,7 @@
       setText("cloudPendingTitle", "Check your email");
       setText("cloudPendingCopy", trainerRequest
         ? "Open the verification email sent to your address. After verification, an approved gym trainer or owner can confirm access from the Trainer Access center."
-        : "Open the verification message sent to your BYU-I email. After verification, return here and sign in to complete the required Trainer Consultation.");
+        : "Open the verification message sent to your email address. After verification, return here and sign in to complete the required Trainer Consultation.");
       setText("cloudPendingCheck", "I verified my email");
     } else if (trainerRequest) {
       setText("cloudPendingIcon", "⏳");
@@ -1031,7 +1056,7 @@
     } else {
       setText("cloudPendingIcon", "✓");
       setText("cloudPendingTitle", "Finish client activation");
-      setText("cloudPendingCopy", "Your BYU-I email is verified. Sign in again if needed; the app will connect your protected client profile and open the required Trainer Consultation.");
+      setText("cloudPendingCopy", "Your email address is verified. Sign in again if needed; the app will connect your protected client profile and open the required Trainer Consultation.");
       setText("cloudPendingCheck", "Open client workspace");
     }
     showAuthGate(true);
@@ -1568,7 +1593,7 @@
       clientIntakeUpdatedAt: profile.intake && profile.intake.updatedAt || null,
       clientConsultation: consultation,
       clientConsultationUpdatedAt: consultation.updatedAt || consultation.submittedAt || null,
-      clientConsultationProfile: consultation.status === "submitted" ? {
+      clientConsultationProfile: consultationSubmitted(consultation) ? {
         sourceSubmittedAt:consultation.lastClientSubmittedAt || consultation.submittedAt || null,
         phone:profile.phone || "",contactPhone:profile.contactPhone || "",age:profile.age,experience:profile.experience,goals:profile.goals || [],trainingStyle:profile.trainingStyle || "auto",
         pastPhysicalActivities:profile.pastPhysicalActivities || "",fitnessInterests:profile.fitnessInterests || [],usualTrainingRpe:profile.usualTrainingRpe || null,coachingPriorities:profile.coachingPriorities || [],coachingPreferenceNote:profile.coachingPreferenceNote || "",
@@ -1730,8 +1755,15 @@
     return pushPending();
   }
 
+  /* flushCloudSync skips the queue while a pull is applying, which is right for the
+     automatic path and wrong for a button. A client pressing Submit during a pull had her
+     scope silently dropped, the save reported failure, and her consultation was demoted out
+     of "submitted" - so the trainer saw nothing. An explicit save always queues. */
   window.fit4lifeCloudSaveProfileNow = function fit4lifeCloudSaveProfileNow() {
-    return flushCloudSync(cloudRole === "client" ? "activity" : "plan");
+    const scope = cloudRole === "client" ? "activity" : "plan";
+    pendingScopes.add(scope);
+    persistPendingScopes();
+    return flushCloudSync(scope);
   };
 
   function mergeAttentionState(local, remote) {
@@ -1791,6 +1823,14 @@
     if (activityReady && !planReady) return activityIntake;
     if (!planReady && !activityReady) return {};
     return intakeTime(activityIntake,activity) >= intakeTime(planIntake,plan) ? activityIntake : planIntake;
+  }
+
+  /* Submitted is submitted. The status string alone was the gate, so one failed push
+     turned answered questions back into nothing the trainer could see. */
+  function consultationSubmitted(consultation) {
+    if (!consultation || typeof consultation !== "object") return false;
+    return consultation.status === "submitted"
+      || Boolean(consultation.lastClientSubmittedAt || consultation.submittedAt);
   }
 
   function consultationTime(consultation,bundle) {
@@ -2107,6 +2147,8 @@
       }
       await loadOrganizationSettings();
       cloudApplying = false;
+      cloudFirstPullDone = true;
+      window.fit4lifeFirstPullDone = true;
       refreshVisibleApp();
       cloudStatus("Saved across devices", "synced");
     } catch (error) {
@@ -2151,6 +2193,8 @@
     cloudUser = session && session.user ? session.user : null;
     if (!cloudUser) {
       cloudReady = false;
+      cloudFirstPullDone = false;
+      window.fit4lifeFirstPullDone = false;
       window.fit4lifeCloudReady = false;
       window.fit4lifeCloudRole = "";
       cloudRole = "";
@@ -2169,6 +2213,8 @@
     const membership = await getMembership();
     if (!membership) {
       cloudReady = false;
+      cloudFirstPullDone = false;
+      window.fit4lifeFirstPullDone = false;
       window.fit4lifeCloudReady = false;
       window.fit4lifeCloudRole = "";
       cloudRole = "";
@@ -2303,7 +2349,8 @@
       return false;
     }
     if (!clientByuiEmail(email)) {
-      authMessage("Client accounts require a BYU-I email ending in @byui.edu. Trainers may use a personal or BYU-I email from the separate trainer request form.", true);
+      // States what is actually checked: address shape only, no domain rule.
+      authMessage("Enter a valid email address. Client accounts use the address your trainer has on file; trainers request access from the separate trainer form.", true);
       return false;
     }
     /* Signing up is trainer-initiated: the address has to already be on file as a client.
@@ -2344,7 +2391,7 @@
       return false;
     }
     if (!consent) {
-      authMessage("Confirm that you will verify the message sent to your BYU-I email.", true);
+      authMessage("Confirm that you will verify the message sent to your email address.", true);
       return false;
     }
     if (!cloudClient) {
@@ -2423,7 +2470,7 @@
       return false;
     }
     if (!email || !email.includes("@")) {
-      authMessage("Enter a valid personal or BYU-I email address for the trainer request.", true);
+      authMessage("Enter a valid email address for the trainer request.", true);
       return false;
     }
     if (password.length < 8) {
@@ -2565,7 +2612,7 @@
       if (pending.email) document.getElementById("cloudAuthEmail").value = pending.email;
       authMessage(pending.requested_role === "trainer"
         ? "After verifying your email, sign in to check whether an approved gym trainer or owner confirmed trainer access."
-        : "After verifying your BYU-I email, sign in to complete the required Trainer Consultation.", false);
+        : "After verifying your email address, sign in to complete the required Trainer Consultation.", false);
       return false;
     }
     await handleSession(sessionResponse.data.session);
@@ -3127,6 +3174,8 @@
     cloudChannel = null;
     try { sessionStorage.removeItem("fit4life_trainer_unlocked"); } catch (_) {}
     cloudReady = false;
+    cloudFirstPullDone = false;
+    window.fit4lifeFirstPullDone = false;
     cloudUser = null;
     cloudRole = "";
     clearCloudOrganizationContext();

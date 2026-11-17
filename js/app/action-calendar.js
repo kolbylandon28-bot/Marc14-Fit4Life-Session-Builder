@@ -21,6 +21,11 @@ const BILLABLE_CALENDAR_TYPES = ["appointment"]
 // Types a workout can hang off. A consultation is a conversation, not a session,
 // so it must never claim a workout or warn about missing one.
 const WORKOUT_BEARING_TYPES = ["appointment"];
+/* Rooms, rosters and area calendars belong to a facility. A private practice has none. */
+const CALENDAR_FACILITY_TYPES = ["shift","lesson","clinic","training","meeting","cleaning","closure","event","volunteer"];
+/* Unknown context means on, so nothing regresses before the branch lands. */
+function calendarModuleOn(name) { return typeof window.fit4lifeModuleEnabled !== "function" || window.fit4lifeModuleEnabled(name); }
+function calendarUsesTiers() { return typeof branchUsesTiers !== "function" || branchUsesTiers(); }
 const CALENDAR_STATUS_LABELS = { scheduled:"Scheduled", in_progress:"In progress", completed:"Completed", cancelled:"Cancelled", missed:"Missed", rescheduled:"Rescheduled" };
 const coachActionCenterState = { category:"all", ownership:"all", query:"" };
 const coachCalendarState = { view:"week", viewChosen:false, anchor:calendarDateKey(new Date()), client:"", trainer:"", type:"", status:"", tier:"", time:"",
@@ -104,7 +109,7 @@ function allCoachCalendarEvents() {
   // The appointment is the anchor and the workout hangs off it. Without this, booking a
   // session and building its workout produced two chips for one real event, and a coach
   // had to work out which was which.
-  const volunteers = (window.fit4lifeVolunteerShifts || []).map((row, index) => ({
+  const volunteers = (calendarModuleOn("volunteers") ? (window.fit4lifeVolunteerShifts || []) : []).map((row, index) => ({
     id:"volunteer:" + index, source:"volunteer-sheet", sourceId:"", type:"volunteer",
     title:(row.names || []).join(", ") || "Volunteers", client:"", profileId:"",
     trainerId:"", trainerName:"", areaKey:row.area_key || "gym",
@@ -369,11 +374,11 @@ function ensureCalendarEventDialog() {
         <div class="compact-field wide" data-calendar-custom><label for="calendarEventTitleInput">Title</label><input id="calendarEventTitleInput" maxlength="100" placeholder="Training appointment or follow-up"></div>
         <div class="compact-field" data-calendar-custom><label for="calendarEventClient">Client</label><select id="calendarEventClient" onchange="calendarEventClientChanged()"></select></div><div class="compact-field" data-calendar-custom><label for="calendarEventPartner">Partner client <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><select id="calendarEventPartner"></select></div>
         <div class="compact-field" data-calendar-custom><label for="calendarEventTrainer">Trainer</label><select id="calendarEventTrainer"></select></div>
-        <div class="compact-field" data-calendar-custom><label for="calendarEventArea">Area</label><select id="calendarEventArea"></select></div>
+        <div class="compact-field" data-calendar-custom data-module="facility"><label for="calendarEventArea">Area</label><select id="calendarEventArea"></select></div>
         <div class="compact-field" data-calendar-schedule><label for="calendarEventDate">Date</label><input id="calendarEventDate" type="date"></div>
         <div class="compact-field" data-calendar-schedule><label for="calendarEventStart">Start time <span class="calendar-optional">optional</span></label><input id="calendarEventStart" type="time"></div>
         <div class="compact-field" data-calendar-custom><label for="calendarEventEnd">End</label><input id="calendarEventEnd" type="time"></div>
-        <div class="compact-field wide" data-calendar-custom><label for="calendarEventLocation">Location</label><input id="calendarEventLocation" maxlength="100" placeholder="Fit4Life, office, phone, or video"></div>
+        <div class="compact-field wide" data-calendar-custom><label for="calendarEventLocation">Location</label><input id="calendarEventLocation" maxlength="100" placeholder="Gym, office, phone, or video"></div>
         <div class="compact-field wide" data-calendar-custom><label for="calendarEventNotes">Internal details</label><textarea id="calendarEventNotes" rows="3" placeholder="Preparation or coaching context"></textarea></div>
         <div class="compact-field wide"><label id="calendarEventReasonLabel" for="calendarEventReason">Reason for this schedule change</label><textarea id="calendarEventReason" rows="2" placeholder="Briefly explain why the date or time is changing"></textarea></div>
         <label class="calendar-notify-check"><input id="calendarEventNotify" type="checkbox" checked> Record a client/team schedule notice</label>
@@ -444,6 +449,8 @@ function openCalendarEventEditor(eventId,dateKey,type) {
   modal.querySelectorAll("[data-calendar-custom]").forEach((field) => { field.hidden = Boolean(sourceAssignment); });
   modal.querySelectorAll("[data-calendar-assignment]").forEach((field) => { field.hidden = !sourceAssignment; });
   modal.querySelectorAll("[data-calendar-schedule]").forEach((field) => { field.hidden = false; });
+  // Last, because the three sweeps above unhide by mode alone. No building, no room to pick.
+  modal.querySelectorAll("[data-module]").forEach((field) => { if (!calendarModuleOn(field.dataset.module)) field.hidden = true; });
   byId("calendarEventId").value = event && event.id || ""; byId("calendarEventSourceId").value = sourceAssignment ? event.sourceId : "";
   byId("calendarEventSource").textContent = sourceAssignment ? "Assigned workout · schedule" : event ? "Calendar item" : "New calendar item";
   byId("calendarEventTitle").textContent = sourceAssignment ? "Update assigned workout" : event ? "Edit " + event.title : "Schedule coaching work";
@@ -511,7 +518,7 @@ function syncCalendarCancelFields() {
   note.textContent = cancellationSummaryText(draft, by.value);
 }
 function saveCalendarEvent() {
-  if (!isFit4LifeStaff()) { calendarSetFeedback("Only approved Fit4Life staff can save calendar changes.","error"); return false; }
+  if (!isFit4LifeStaff()) { calendarSetFeedback("Only approved staff can save calendar changes.","error"); return false; }
   const eventId = byId("calendarEventId").value, sourceId = byId("calendarEventSourceId").value, existing = eventId ? calendarEventById(eventId) : null, reason = byId("calendarEventReason").value.trim(), date = byId("calendarEventDate").value, startTime = byId("calendarEventStart").value;
   if (sourceId) {
     const action = byId("calendarAssignmentAction") && byId("calendarAssignmentAction").value || "reschedule", assignments = loadAssignedWorkouts(), assignment = assignments.find((item) => item.id === sourceId);
@@ -572,6 +579,7 @@ function saveCalendarEvent() {
 
 /* Who is working and who is coming in, as two switches, plus which room. */
 function volunteerSyncNoteHtml() {
+  if (!calendarModuleOn("volunteers")) return "";
   const state = window.fit4lifeVolunteerSync;
   if (!state || !state.last_synced_at) return "";
   const minutes = Math.round((Date.now() - new Date(state.last_synced_at).getTime()) / 60000);
@@ -865,7 +873,7 @@ function weeklyBalancePanelHtml(weekStartKey,events) {
   const head = '<div class="balance-head"><b>Sessions owed this week</b><span>' + (total ? total + ' unbooked across ' + owed.length + ' client' + (owed.length === 1 ? '' : 's') : 'Every tracked client is fully booked') + '</span></div>';
   if (!owed.length) return '<section class="coach-module-card weekly-balance good">' + head + '</section>';
   const list = owed.slice(0,12).map((row) => '<button type="button" class="balance-row" onclick="openCalendarClient(' + calendarJsArg(row.profileId) + ',\'workout\')">'
-    + '<span class="tier-badge tier-' + escapeHtml(row.tier || 'unset') + '">' + escapeHtml(row.tierShort) + '</span>'
+    + (calendarUsesTiers() ? '<span class="tier-badge tier-' + escapeHtml(row.tier || 'unset') + '">' + escapeHtml(row.tierShort) + '</span>' : '')
     + '<b>' + escapeHtml(row.client) + '</b>'
     + '<span class="balance-count' + (row.booked === 0 ? ' none' : '') + '">' + row.booked + ' of ' + row.entitled + '</span></button>').join("");
   return '<section class="coach-module-card weekly-balance">' + head + '<div class="balance-list">' + list + '</div>'
@@ -1077,7 +1085,7 @@ function calendarEventChip(event) {
   const workoutTag = !carries ? ''
     : event.workout ? '<span class="chip-workout ready">' + escapeHtml(event.workout.title) + '</span>'
     : '<span class="chip-workout missing">No workout yet</span>';
-  return '<button class="calendar-event-chip ' + escapeHtml(event.type) + ' ' + escapeHtml(event.status) + ' tier-' + escapeHtml(tier) + (carries && !event.workout ? ' needs-workout' : '') + '" onclick="openCalendarSessionSummary(\'' + escapeHtml(event.id) + '\')"><span>' + escapeHtml(event.startTime ? calendarFormatTime(event.startTime) : event.type === "workout" ? "Workout" : "All day") + '</span><b>' + escapeHtml(heading) + '</b><em class="chip-foot"><span class="tier-badge tier-' + escapeHtml(tier) + '">' + escapeHtml(calendarTierShort(event.tier)) + '</span>' + workoutTag + soloTag + escapeHtml(event.trainerName || "Shared team") + '</em></button>';
+  return '<button class="calendar-event-chip ' + escapeHtml(event.type) + ' ' + escapeHtml(event.status) + ' tier-' + escapeHtml(tier) + (carries && !event.workout ? ' needs-workout' : '') + '" onclick="openCalendarSessionSummary(\'' + escapeHtml(event.id) + '\')"><span>' + escapeHtml(event.startTime ? calendarFormatTime(event.startTime) : event.type === "workout" ? "Workout" : "All day") + '</span><b>' + escapeHtml(heading) + '</b><em class="chip-foot">' + (calendarUsesTiers() ? '<span class="tier-badge tier-' + escapeHtml(tier) + '">' + escapeHtml(calendarTierShort(event.tier)) + '</span>' : '') + workoutTag + soloTag + escapeHtml(event.trainerName || "Shared team") + '</em></button>';
 }
 function calendarRangeLabel() {
   const anchor = calendarDate(coachCalendarState.anchor);
@@ -1140,7 +1148,8 @@ function calendarBandsHtml(dateKey, events) {
   const onDay = (events || []).filter((event) => event.date === dateKey && calendarMinutes(event.startTime) != null);
   const spanOf = (event) => ({ start: calendarMinutes(event.startTime), end: calendarMinutes(event.endTime) || calendarMinutes(event.startTime) + 60 });
   const staffed = calendarMergeSpans(onDay.filter((event) => event.type === "shift").map(spanOf));
-  const volunteers = calendarMergeSpans(onDay.filter((event) => event.type === "volunteer").map(spanOf));
+  const volunteers = calendarModuleOn("volunteers")
+    ? calendarMergeSpans(onDay.filter((event) => event.type === "volunteer").map(spanOf)) : [];
   const band = (span, kind, label) => {
     const top = calendarTopFor(span.start), height = ((span.end - span.start) / 60) * CALENDAR_PIXELS_PER_HOUR;
     if (height <= 0) return "";
@@ -1266,6 +1275,13 @@ function moveCoachCalendar(direction) {
   coachCalendarState.anchor = calendarDateKey(anchor); renderCoachCalendarModule();
 }
 function setCalendarFilter(key,value) { coachCalendarState[key] = value; renderCoachCalendarModule(); }
+/* Only the kinds this branch can actually have. */
+function calendarTypeFilterEntries() {
+  return Object.entries(CALENDAR_TYPE_LABELS).filter(([type]) => {
+    if (type === "volunteer") return calendarModuleOn("facility") && calendarModuleOn("volunteers");
+    return CALENDAR_FACILITY_TYPES.includes(type) ? calendarModuleOn("facility") : true;
+  });
+}
 function calendarFilterSelect(id,label,key,options) { return '<label class="calendar-filter"><span>' + escapeHtml(label) + '</span><select id="' + id + '" onchange="setCalendarFilter(\'' + key + '\',this.value)"><option value="">All ' + escapeHtml(label.toLowerCase()) + '</option>' + options.map(([value,text]) => '<option value="' + escapeHtml(value) + '"' + (coachCalendarState[key] === value ? ' selected' : '') + '>' + escapeHtml(text) + '</option>').join("") + '</select></label>'; }
 // A seven-column week grid cannot work at phone width - it needs roughly 1085px.
 // Rather than shrinking it into something unreadable, phones open on the agenda,
@@ -1287,7 +1303,7 @@ function renderCoachCalendarModule() {
   const profiles = loadProfiles(), trainers = calendarTrainerOptions(), tiers = [...new Set(profiles.map(calendarTier))].filter(Boolean).sort((a,b) => calendarTierLabel(a).localeCompare(calendarTierLabel(b))), allEvents = allCoachCalendarEvents(), events = allEvents.filter(calendarEventMatches);
   const upcoming = events.filter((event) => calendarDate(event.date) >= calendarDate(calendarDateKey(new Date())) && !["cancelled","completed"].includes(event.status)).length, missed = events.filter((event) => event.status === "missed").length;
   const views = ["day","week","month","agenda"].map((view) => '<button class="calendar-view-btn ' + (coachCalendarState.view === view ? "on" : "") + '" onclick="setCoachCalendarView(\'' + view + '\')">' + view[0].toUpperCase() + view.slice(1) + '</button>').join("");
-  out.innerHTML = '<section class="coach-module-card operational-calendar"><div class="calendar-topbar"><div><span class="client-section-label">Operational calendar</span><h3>' + escapeHtml(calendarRangeLabel()) + '</h3><p>Appointments, assigned workouts, and coaching follow-ups share one schedule. Shared clients remain visible to every approved trainer.</p></div><div class="tool-actions"><button class="small-btn" onclick="setCoachCalendarAnchor(\'' + calendarDateKey(new Date()) + '\')">Today</button><button class="small-btn primary" onclick="openCalendarEventEditor()">+ Schedule</button></div></div><div class="calendar-stats"><div><b>' + upcoming + '</b><span>Upcoming</span></div><div><b>' + missed + '</b><span>Missed / follow-up</span></div><div><b>' + events.filter((event) => event.type === "workout").length + '</b><span>Assigned workouts</span></div><div><b>' + events.filter((event) => event.type === "appointment").length + '</b><span>Appointments</span></div></div><div class="calendar-controls"><div class="calendar-range-controls"><button onclick="moveCoachCalendar(-1)" aria-label="Previous">‹</button><button onclick="moveCoachCalendar(1)" aria-label="Next">›</button><strong>' + escapeHtml(calendarRangeLabel()) + '</strong></div><div class="calendar-view-toggle">' + views + '</div></div><div class="calendar-filters">' + calendarFilterSelect("calendarClientFilter","Clients","client",profiles.map((profile) => [profile.id,profile.name])) + calendarFilterSelect("calendarTrainerFilter","Trainers","trainer",[["__shared","Coaching team / unassigned"],...trainers.map((trainer) => [trainer.id,trainer.name])]) + calendarFilterSelect("calendarTypeFilter","Types","type",Object.entries(CALENDAR_TYPE_LABELS)) + calendarFilterSelect("calendarStatusFilter","Statuses","status",Object.entries(CALENDAR_STATUS_LABELS)) + calendarFilterSelect("calendarTierFilter","Tiers","tier",tiers.map((tier) => [tier,calendarTierLabel(tier)])) + calendarFilterSelect("calendarTimeFilter","Times","time",[["all_day","All-day items"],["morning","Morning · before noon"],["afternoon","Afternoon · noon–5 PM"],["evening","Evening · after 5 PM"]]) + '</div>' + calendarScopeBarHtml() + volunteerSyncNoteHtml() + '<div class="calendar-canvas">' + dailyPrepPanelHtml() + weeklyBalancePanelHtml(membershipWeekStartKey(coachCalendarState.anchor),allEvents) + calendarGridHtml(events) + '</div></section>';
+  out.innerHTML = '<section class="coach-module-card operational-calendar"><div class="calendar-topbar"><div><span class="client-section-label">Operational calendar</span><h3>' + escapeHtml(calendarRangeLabel()) + '</h3><p>Appointments, assigned workouts, and coaching follow-ups share one schedule. Shared clients remain visible to every approved trainer.</p></div><div class="tool-actions"><button class="small-btn" onclick="setCoachCalendarAnchor(\'' + calendarDateKey(new Date()) + '\')">Today</button><button class="small-btn primary" onclick="openCalendarEventEditor()">+ Schedule</button></div></div><div class="calendar-stats"><div><b>' + upcoming + '</b><span>Upcoming</span></div><div><b>' + missed + '</b><span>Missed / follow-up</span></div><div><b>' + events.filter((event) => event.type === "workout").length + '</b><span>Assigned workouts</span></div><div><b>' + events.filter((event) => event.type === "appointment").length + '</b><span>Appointments</span></div></div><div class="calendar-controls"><div class="calendar-range-controls"><button onclick="moveCoachCalendar(-1)" aria-label="Previous">‹</button><button onclick="moveCoachCalendar(1)" aria-label="Next">›</button><strong>' + escapeHtml(calendarRangeLabel()) + '</strong></div><div class="calendar-view-toggle">' + views + '</div></div><div class="calendar-filters">' + calendarFilterSelect("calendarClientFilter","Clients","client",profiles.map((profile) => [profile.id,profile.name])) + calendarFilterSelect("calendarTrainerFilter","Trainers","trainer",[["__shared","Coaching team / unassigned"],...trainers.map((trainer) => [trainer.id,trainer.name])]) + calendarFilterSelect("calendarTypeFilter","Types","type",calendarTypeFilterEntries()) + calendarFilterSelect("calendarStatusFilter","Statuses","status",Object.entries(CALENDAR_STATUS_LABELS)) + (calendarUsesTiers() ? calendarFilterSelect("calendarTierFilter","Tiers","tier",tiers.map((tier) => [tier,calendarTierLabel(tier)])) : '') + calendarFilterSelect("calendarTimeFilter","Times","time",[["all_day","All-day items"],["morning","Morning · before noon"],["afternoon","Afternoon · noon–5 PM"],["evening","Evening · after 5 PM"]]) + '</div>' + calendarScopeBarHtml() + volunteerSyncNoteHtml() + '<div class="calendar-canvas">' + dailyPrepPanelHtml() + weeklyBalancePanelHtml(membershipWeekStartKey(coachCalendarState.anchor),allEvents) + calendarGridHtml(events) + '</div></section>';
   bindCalendarGrid();
   // Slots carry the event id in a data attribute rather than an inline handler.
   if (typeof bindDataHandlers === "function") bindDataHandlers(out,"[data-calendar-open]",(button) => openCalendarEventEditor(button.dataset.calendarOpen));
@@ -1325,7 +1341,7 @@ window.renderCoachModule = function v6RenderCoachModule(destination) {
     Promise.all([
       window.fit4lifeCloudListShifts(null, null, null),
       typeof window.fit4lifeCloudListAreaEvents === "function" ? window.fit4lifeCloudListAreaEvents(null, null, null) : null,
-      typeof window.fit4lifeCloudListVolunteerShifts === "function" ? window.fit4lifeCloudListVolunteerShifts(null, null) : null
+      calendarModuleOn("volunteers") && typeof window.fit4lifeCloudListVolunteerShifts === "function" ? window.fit4lifeCloudListVolunteerShifts(null, null) : null
     ]).then(() => renderCoachCalendarModule()).catch(() => { window.fit4lifeShiftsLoadedForCalendar = false; });
   }
   if (destination === "team") { if (title) title.textContent = "Team"; if (eyebrow) eyebrow.textContent = "Coach workspace"; if (copy) copy.textContent = "Who is coaching whom, how the work is spread, and the workouts your colleagues have saved."; renderTeamModule(); return; }

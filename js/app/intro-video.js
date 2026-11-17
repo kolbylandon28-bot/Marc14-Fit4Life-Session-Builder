@@ -39,7 +39,7 @@ function openIntroVideo(options) {
     overlay.setAttribute("aria-modal", "true");
     overlay.setAttribute("aria-labelledby", "introVideoTitle");
     overlay.innerHTML = '<div class="intro-video-card">'
-      + '<span class="intro-video-kicker">Welcome to FIT 4 LIFE</span>'
+      + '<span class="intro-video-kicker">Welcome</span>'
       + '<h2 id="introVideoTitle">Start here</h2>'
       + '<video id="introVideoPlayer" class="intro-video-player" controls playsinline preload="metadata" poster="' + INTRO_VIDEO_POSTER + '">'
       + '<source src="' + INTRO_VIDEO_SRC + '" type="video/mp4">'
